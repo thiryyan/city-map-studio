@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16161a">
+<title>City Map Studio — Atelier d'affiches cartographiques</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:ital,wght@0,300;0,400;0,600;1,400&family=Space+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#16161a; --panel:#1e1e23; --panel2:#26262c; --line:#34343c; --txt:#ececf1; --mut:#9a9aa6;
+  --acc:#c5a059; --acc2:#e2c27f; --danger:#e5484d; --r:12px;
+  --sab:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
+button,input,select{font:inherit;color:inherit}
+#app{display:grid;height:100dvh;grid-template-rows:56dvh 1fr;grid-template-columns:100%}
+#stage{grid-row:1;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,#2b2b31 0%,#151518 75%);display:flex;align-items:center;justify-content:center;touch-action:none}
+#panel{grid-row:2;display:flex;flex-direction:column;min-height:0;background:var(--panel);border-top:1px solid var(--line)}
+@media (min-width:900px){
+  #app{grid-template-rows:100dvh;grid-template-columns:400px 1fr}
+  #panel{grid-row:1;grid-column:1;border-top:0;border-right:1px solid var(--line)}
+  #stage{grid-row:1;grid-column:2}
+}
+.brand{display:none;padding:16px 18px 6px;font-weight:600;letter-spacing:.04em}
+.brand small{display:block;color:var(--mut);font-weight:400;letter-spacing:0;font-size:12px}
+@media (min-width:900px){.brand{display:block}}
+.tabs{display:flex;gap:4px;padding:8px 10px 0;border-bottom:1px solid var(--line);flex:none}
+.tabs button{flex:1;background:none;border:0;padding:10px 4px 11px;color:var(--mut);font-weight:500;border-bottom:2px solid transparent;cursor:pointer}
+.tabs button.on{color:var(--txt);border-bottom-color:var(--acc)}
+.tabbody{flex:1;overflow-y:auto;padding:14px 14px 24px;-webkit-overflow-scrolling:touch}
+.tab{display:none}.tab.on{display:block}
+.foot{flex:none;padding:10px 12px calc(10px + var(--sab));border-top:1px solid var(--line);background:var(--panel)}
+.status{font-size:12px;color:var(--mut);margin-bottom:8px;display:flex;gap:6px;align-items:center;min-height:16px}
+.dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex:none}.dot.busy{background:#facc15}.dot.err{background:var(--danger)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;min-height:40px}
+.btn:active{transform:scale(.98)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600;width:100%;min-height:48px;font-size:15px}
+.btn.on{border-color:var(--acc);color:var(--acc2)}
+.btn.sm{min-height:34px;padding:6px 10px;font-size:13px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+h3{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px;font-weight:600}
+h3:first-child{margin-top:2px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>.grow{flex:1;min-width:0}
+input[type=text],input[type=search],input[type=number]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;min-height:42px}
+input[type=text]:focus,input[type=search]:focus{border-color:var(--acc)}
+@media (max-width:899px){input[type=text],input[type=search],input[type=number]{font-size:16px}} /* iOS : pas de zoom à la saisie */
+label.f{display:block;margin:10px 0 4px;color:var(--mut);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer;font-size:13px}
+.chip.on{border-color:var(--acc);color:var(--acc2)}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:none;padding:8px 6px;border-radius:8px;cursor:pointer;color:var(--mut);font-size:13px}
+.seg button.on{background:var(--acc);color:#141414;font-weight:600}
+.slider{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;margin:10px 0}
+.slider span{color:var(--mut);font-size:12px}.slider output{font-size:12px;color:var(--txt);font-variant-numeric:tabular-nums}
+.slider input{grid-column:1/3;width:100%;accent-color:var(--acc);height:28px}
+.tog{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.tog input{width:20px;height:20px;accent-color:var(--acc)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;text-align:center;font-size:11px;color:var(--mut)}
+.card canvas{display:block;width:100%;height:auto;border-radius:3px;margin-bottom:4px;box-shadow:0 1px 3px #0006}
+.card.on{border-color:var(--acc);color:var(--txt)}
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.theme{border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel2);font-size:11px}
+.theme .sw{display:flex;height:34px}.theme .sw i{flex:1}
+.theme div.n{padding:5px 7px;color:var(--mut)}
+.theme.on{border-color:var(--acc)}.theme.on div.n{color:var(--txt)}
+.colors{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.colors label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut)}
+.colors input{width:34px;height:28px;border:1px solid var(--line);border-radius:6px;background:none;padding:0;flex:none}
+.marks{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.marks .card canvas{box-shadow:none;background:#fff}
+.results{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.res{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px}
+.res .t{margin-bottom:6px;color:var(--txt)}
+.res .row .btn{flex:1}
+.hint{font-size:12px;color:var(--mut);margin:6px 0}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+/* poster */
+#poster{position:relative;box-shadow:0 18px 50px #000a,0 2px 6px #0008;background:#fff;flex:none}
+#poster canvas{position:absolute;left:0;top:0;width:100%;height:100%}
+#cvOver{pointer-events:none;z-index:3}
+#cvUnder{z-index:1}
+#slot{position:absolute;z-index:2;overflow:hidden}
+#slot.circle{clip-path:circle(50% at 50% 50%)}
+#mlMap,#opCanvas{position:absolute;inset:0;width:100%;height:100%}
+#opCanvas{touch-action:none;cursor:grab}
+#slot.placing #opCanvas,#slot.placing .maplibregl-canvas-container{cursor:crosshair!important}
+.fab{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:10}
+.fab button{width:40px;height:40px;border-radius:10px;border:1px solid #ffffff22;background:#1e1e23e6;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.fab button.on{background:var(--acc);color:#141414}
+.banner{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:10;background:#1e1e23f0;border:1px solid var(--acc);border-radius:999px;padding:6px 6px 6px 14px;display:none;align-items:center;gap:10px;font-size:13px;white-space:nowrap;box-shadow:0 6px 20px #0008}
+.banner.show{display:flex}
+.placehint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:10;background:var(--acc);color:#141414;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;display:none}
+.placehint.show{display:block}
+#toast{position:fixed;left:50%;bottom:calc(90px + var(--sab));transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:#2b2b31;border:1px solid var(--line);padding:10px 14px;border-radius:10px;z-index:100;max-width:90vw;font-size:13px;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%)}
+#toast.err{border-color:var(--danger)}
+#busy,#result{position:fixed;inset:0;background:#000b;z-index:90;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px}
+#busy.show,#result.show{display:flex}
+.spin{width:38px;height:38px;border:3px solid #fff3;border-top-color:var(--acc);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#result .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;max-width:420px;width:100%;max-height:100%;display:flex;flex-direction:column;gap:10px}
+#result img{width:100%;max-height:52dvh;object-fit:contain;background:#111;border-radius:8px}
+#result .row .btn{flex:1}
+.xl{display:none}@media (min-width:900px){.xl{display:inline}}
+.warn{background:#3a2a12;border:1px solid #8a6a2a;color:#f5deb0;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:10px}
+.warn b{color:#fff}
+.diag{margin-top:8px;font-size:12px;display:flex;flex-direction:column;gap:4px}
+.diag div{display:flex;gap:8px;align-items:baseline}.diag .ok{color:#4ade80}.diag .ko{color:var(--danger)}.diag .wt{color:#facc15}
+.diag small{color:var(--mut)}
+#fileBlock ol{margin:6px 0 10px;padding-left:18px;color:var(--mut);font-size:12px}#fileBlock li{margin:3px 0}#fileBlock a{color:var(--acc2)}
+.credit{font-size:11px;color:var(--mut);margin-top:6px}
+.credit a{color:var(--mut)}
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="stage">
+    <div id="poster">
+      <canvas id="cvUnder"></canvas>
+      <div id="slot"><div id="mlMap"></div><canvas id="opCanvas"></canvas></div>
+      <canvas id="cvOver"></canvas>
+    </div>
+    <div class="fab">
+      <button id="bZoomIn" title="Zoom avant" aria-label="Zoom avant"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button id="bZoomOut" title="Zoom arrière" aria-label="Zoom arrière"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button id="bPlace" title="Placer le repère" aria-label="Placer le repère"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 17.5S3.5 12.6 3.5 7.6A3.6 3.6 0 0 1 10 5.4a3.6 3.6 0 0 1 6.5 2.2c0 5-6.5 9.9-6.5 9.9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
+      <button id="bToMarker" title="Centrer sur le repère" aria-label="Centrer sur le repère"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="1.8" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg></button>
+    </div>
+    <div class="placehint" id="placeHint">Touchez la carte pour placer le repère</div>
+    <div class="banner" id="banner"><span id="bannerTxt">Zone modifiée</span><button class="btn sm on" id="bRefresh">Actualiser les vecteurs</button></div>
+  </section>
+
+  <aside id="panel">
+    <div class="brand">City Map Studio<small>Atelier d'affiches cartographiques</small></div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="lieu" class="on">Lieu</button>
+      <button data-tab="style">Style</button>
+      <button data-tab="repere">Repère</button>
+      <button data-tab="textes">Textes</button>
+    </nav>
+    <div class="tabbody">
+      <!-- LIEU -->
+      <div class="tab on" id="tab-lieu">
+        <div class="warn" id="envWarn" hidden></div>
+        <h3>Rechercher une adresse ou une ville</h3>
+        <form class="row" id="searchForm" autocomplete="off">
+          <input class="grow" type="search" id="q" placeholder="Ex. : Château de Blois" enterkeyhint="search">
+          <button class="btn" type="submit">Chercher</button>
+        </form>
+        <div class="results" id="results"></div>
+        <h3>Villes</h3>
+        <div class="chips" id="presets"></div>
+        <h3>Lieu de rencontre</h3>
+        <div class="mono" id="markerTxt"></div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn grow" id="bPlace2">Placer le repère sur la carte</button>
+          <button class="btn" id="bMarkerCenter">Au centre</button>
+        </div>
+        <form class="row" id="markerForm" autocomplete="off" style="margin-top:8px">
+          <input class="grow" type="text" id="markerIn" inputmode="text" enterkeyhint="done" aria-label="Coordonnées du lieu de rencontre" placeholder="Coordonnées : 47.5861, 1.3359">
+          <button class="btn" type="submit">Placer</button>
+        </form>
+        <p class="hint">Décimal (47.5861, 1.3359 · 47,5861 ; 1,3359), DMS (47° 35′ 10″ N, 1° 20′ 09″ E) ou lien Google Maps / OpenStreetMap. La carte se recentre si le point sort du cadre.</p>
+        <h3>Cadrage</h3>
+        <div class="slider"><span>Zoom</span><output id="oZoom"></output><input type="range" id="zoom" min="10" max="18" step="0.1"></div>
+        <h3>Moteur cartographique</h3>
+        <div class="seg" id="engineSeg">
+          <button data-v="maplibre">Vectoriel GPU</button>
+          <button data-v="overpass">Overpass</button>
+          <button data-v="file">Fichier (hors ligne)</button>
+        </div>
+        <p class="hint" id="engineHint"></p>
+        <div id="opBlock" style="display:none">
+          <button class="btn" id="bRefresh2" style="width:100%">Actualiser les vecteurs Overpass</button>
+        </div>
+        <div id="fileBlock" style="display:none">
+          <ol>
+            <li>Cadrez la zone voulue, puis ouvrez <a id="lnkApi" target="_blank" rel="noopener">la requête Overpass</a> (le navigateur affiche ou télécharge un fichier JSON). Alternative : <a id="lnkTurbo" target="_blank" rel="noopener">overpass-turbo</a> → Exporter → « données brutes », ou <a href="https://www.openstreetmap.org/export" target="_blank" rel="noopener">openstreetmap.org/export</a> (fichier .osm).</li>
+            <li>Enregistrez le fichier, puis importez-le ici. Formats acceptés : JSON Overpass, .osm (XML) ou GeoJSON.</li>
+          </ol>
+          <label class="btn" style="width:100%">Importer un fichier de données<input type="file" id="fileIn" accept=".json,.geojson,.osm,.xml,application/json,application/geo+json,text/xml" hidden></label>
+        </div>
+        <button class="btn" id="bDiag" style="width:100%;margin-top:10px">Diagnostiquer la connexion</button>
+        <div class="diag" id="diag"></div>
+        <h3>Calques</h3>
+        <label class="tog">Parcs et espaces verts<input type="checkbox" data-k="layers.parks"></label>
+        <label class="tog">Bâtiments<input type="checkbox" data-k="layers.buildings"></label>
+        <label class="tog">Voies ferrées<input type="checkbox" data-k="layers.rail"></label>
+        <p class="credit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL) · Tuiles <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · Rendu MapLibre GL · Géocodage Nominatim</p>
+      </div>
+      <!-- STYLE -->
+      <div class="tab" id="tab-style">
+        <h3>Gabarit</h3>
+        <div class="cards" id="layouts"></div>
+        <div class="slider"><span>Marge (passe-partout)</span><output id="oMargin"></output><input type="range" data-k="margin" min="3" max="12" step="0.5"></div>
+        <label class="tog" id="ringTog">Anneau du médaillon<input type="checkbox" data-k="ring"></label>
+        <h3>Thème</h3>
+        <div class="themes" id="themes"></div>
+        <h3>Touche d'or</h3>
+        <div class="chips">
+          <button class="chip" data-gold="water">Fleuve</button>
+          <button class="chip" data-gold="roadMajor">Grands axes</button>
+          <button class="chip" data-gold="marker">Repère</button>
+          <button class="chip" data-gold="frame">Filets</button>
+        </div>
+        <h3>Tracé</h3>
+        <div class="slider"><span>Épaisseur des rues</span><output id="oStroke"></output><input type="range" data-k="stroke" min="0.5" max="2.5" step="0.05"></div>
+        <div class="slider"><span>Mise en valeur des cours d'eau</span><output id="oWater"></output><input type="range" data-k="waterMult" min="0.5" max="3" step="0.1"></div>
+        <h3>Couleurs</h3>
+        <div class="colors" id="colors"></div>
+        <label class="tog" style="margin-top:8px">Mention © OpenStreetMap sur l'affiche<input type="checkbox" data-k="attribution"></label>
+      </div>
+      <!-- REPERE -->
+      <div class="tab" id="tab-repere">
+        <h3>Style du repère</h3>
+        <div class="marks cards" id="marks"></div>
+        <div class="seg" id="fillSeg" style="margin-top:10px">
+          <button data-v="1">Plein</button><button data-v="0">Contour</button>
+        </div>
+        <div class="slider"><span>Taille</span><output id="oMSize"></output><input type="range" data-k="markerSize" min="10" max="300" step="5"></div>
+        <div class="slider"><span>Opacité</span><output id="oMOp"></output><input type="range" data-k="markerOpacity" min="0.2" max="1" step="0.05"></div>
+        <h3>Couleur</h3>
+        <div class="row">
+          <div class="chips grow" id="mColors"></div>
+          <input type="color" id="mColor" style="width:44px;height:36px;border:1px solid var(--line);border-radius:8px;background:none;padding:0">
+        </div>
+      </div>
+      <!-- TEXTES -->
+      <div class="tab" id="tab-textes">
+        <h3>Police</h3>
+        <div class="seg" id="fontSeg">
+          <button data-v="serif" style="font-family:'Playfair Display',serif">Serif</button>
+          <button data-v="sans" style="font-family:Montserrat,sans-serif">Sans</button>
+          <button data-v="mono" style="font-family:'Space Mono',monospace">Mono</button>
+        </div>
+        <label class="f">Titre (ville)</label><input type="text" data-k="texts.title">
+        <label class="f">Sous-titre / région</label><input type="text" data-k="texts.subtitle">
+        <label class="f">Dédicace</label><input type="text" data-k="texts.dedication">
+        <label class="f">Noms</label><input type="text" data-k="texts.names">
+        <label class="f">Date</label><input type="text" data-k="texts.date">
+        <h3>Coordonnées</h3>
+        <div class="seg" id="coordSeg"><button data-v="dec">Décimal</button><button data-v="dms">Degrés ° ′ ″</button></div>
+        <label class="f">Texte affiché (vide = automatique depuis le repère)</label>
+        <input type="text" data-k="coordsManual" id="coordsManual">
+        <p class="hint">Le sous-titre s'affiche dans les gabarits Cadre, Fondu et Médaillon ; le gabarit Souvenir reprend la mise en page du modèle.</p>
+      </div>
+    </div>
+    <div class="foot">
+      <div class="status"><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span></div>
+      <button class="btn pri" id="bExport">Exporter l'affiche HD<span class="xl">&nbsp;· 2480 × 3508 px</span>&nbsp;· 300 DPI</button>
+    </div>
+  </aside>
+</div>
+<div id="toast"></div>
+<div id="busy"><div class="spin"></div><div id="busyTxt">Génération de l'affiche…</div></div>
+<div id="result"><div class="box">
+  <img id="resImg" alt="Aperçu de l'affiche exportée">
+  <div class="hint" id="resInfo"></div>
+  <div class="hint">Si le téléchargement ne démarre pas, faites un appui long sur l'image puis « Enregistrer l'image ».</div>
+  <div class="row"><a class="btn pri" id="resDl" download>Télécharger</a><button class="btn" id="resShare" style="display:none">Partager</button></div>
+  <button class="btn" id="resClose">Fermer</button>
+</div></div>
+
+<script>
+'use strict';
+/* =========================================================================
+   City Map Studio — 100 % open source
+   Licence MIT © Thiryyan (cf. LICENSE)
+   MapLibre GL JS (BSD-3) · OpenFreeMap (données OSM ODbL, schéma © OpenMapTiles CC-BY 4.0) · Overpass API · Nominatim
+   ========================================================================= */
+
+// ---------- Constantes ----------
+const EXPORT_W = 2480, EXPORT_H = 3508, RATIO = EXPORT_H / EXPORT_W;
+const REF_W = 800;               // largeur de référence du cadre carte (zoom de référence)
+const MARKER_BASE = 0.055;       // 100 % = 5,5 % de la largeur de l'affiche
+const GOLD = '#C5A059';
+const OFM_URL = 'https://tiles.openfreemap.org/planet';
+// overpass-api.de en dernier : depuis juin 2026 il renvoie 406 aux clients sans Referer (fichier local, aperçus)
+const OVERPASS = ['https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass-api.de/api/interpreter'];
+const ML_VERSION = '4.7.1';
+// lib/ : copie embarquée dans le dépôt (BSD-3, cf. lib/LICENSE-maplibre-gl.txt) ; les CDN restent en secours
+const ML_CDNS = ['lib/',`https://unpkg.com/maplibre-gl@${ML_VERSION}/dist/`,`https://cdn.jsdelivr.net/npm/maplibre-gl@${ML_VERSION}/dist/`,`https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/${ML_VERSION}/`];
+const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+const STORE_KEY = 'cityMapStudio.v2';
+
+const FONTS = {
+  serif:{fam:'"Playfair Display", Georgia, "Times New Roman", serif', load:['400 20px "Playfair Display"','italic 400 20px "Playfair Display"']},
+  sans:{fam:'Montserrat, "Helvetica Neue", Arial, sans-serif', load:['400 20px Montserrat','300 20px Montserrat','italic 400 20px Montserrat']},
+  mono:{fam:'"Space Mono", "Courier New", monospace', load:['400 20px "Space Mono"','italic 400 20px "Space Mono"']}
+};
+
+const COLOR_LABELS = {paper:'Papier',land:'Terre',water:'Eau',park:'Parcs',building:'Bâtiments',roadMajor:'Rues principales',roadMinor:'Rues secondaires',path:'Chemins',rail:'Voies ferrées',text:'Texte',frame:'Filets',marker:'Repère'};
+const THEMES = {
+  souvenir:{name:'Souvenir (modèle)',c:{paper:'#FFFFFF',land:'#F2F2F2',water:'#C9D9DE',park:'#E2E2E2',building:'#D8D8D8',roadMajor:'#111111',roadMinor:'#4A4A4A',path:'#8E8E8E',rail:'#9A9A9A',text:'#111111',frame:'#111111',marker:'#D0312D'}},
+  galerie:{name:'Galerie Or & Noir',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#E9DDBF',park:'#F1F1F1',building:'#ECECEC',roadMajor:'#18181B',roadMinor:'#3F3F46',path:'#8A8A93',rail:'#A1A1AA',text:'#18181B',frame:'#C5A059',marker:'#C5A059'}},
+  onyx:{name:'Prestige Onyx & Or',c:{paper:'#0F1115',land:'#0F1115',water:'#2A2415',park:'#16171C',building:'#1A1B21',roadMajor:'#D4AF37',roadMinor:'#8C7A3E',path:'#5E5432',rail:'#6B5E33',text:'#F3E5AB',frame:'#D4AF37',marker:'#F3E5AB'}},
+  blanc:{name:'Blanc minimaliste',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#E5E7EB',park:'#F3F4F6',building:'#EEEEEE',roadMajor:'#111111',roadMinor:'#3A3A3A',path:'#9CA3AF',rail:'#9CA3AF',text:'#111111',frame:'#111111',marker:'#111111'}},
+  creme:{name:'Crème & Encre',c:{paper:'#F4EFE6',land:'#F4EFE6',water:'#D6E0E2',park:'#E9E3D6',building:'#E6DFD2',roadMajor:'#2C2A29',roadMinor:'#57534E',path:'#A8A29E',rail:'#A8A29E',text:'#2C2A29',frame:'#2C2A29',marker:'#C5A059'}},
+  nuit:{name:'Nuit boréale',c:{paper:'#0B192C',land:'#0B192C',water:'#1E3E62',park:'#10213A',building:'#132640',roadMajor:'#E2E8F0',roadMinor:'#94A3B8',path:'#475569',rail:'#64748B',text:'#E2E8F0',frame:'#D4AF37',marker:'#D4AF37'}},
+  sepia:{name:'Sépia vintage',c:{paper:'#EFE6D5',land:'#EFE6D5',water:'#DFD2B8',park:'#E6DCC6',building:'#E2D6BF',roadMajor:'#433422',roadMinor:'#6B5A43',path:'#A8957A',rail:'#A8957A',text:'#433422',frame:'#433422',marker:'#8B2635'}}
+};
+
+const LAYOUTS = [['souvenir','Souvenir'],['classic','Cadre'],['fade','Fondu'],['medallion','Médaillon']];
+const MARKERS = [['heartGeo','Cœur géo.'],['dot','Point'],['heart','Cœur'],['ring','Anneau'],['pin','Épingle']];
+const MARKER_COLORS = [['Or','#C5A059'],['Rouge','#D0312D'],['Noir','#111111'],['Blanc','#FFFFFF']];
+
+const PRESETS = [
+  ['Blois · Loire',47.5861,1.3359,14,'Blois','Val de Loire • France'],
+  ['Paris · Seine',48.8566,2.3470,13.6,'Paris','Île-de-France • France'],
+  ['Venise · Lagune',45.4380,12.3300,13.6,'Venezia','Vénétie • Italie'],
+  ['New York',40.7580,-73.9855,13.2,'New York','Manhattan • USA'],
+  ['Bordeaux · Garonne',44.8410,-0.5700,13.6,'Bordeaux','Gironde • France'],
+  ['Kyoto · Kamo',35.0116,135.7681,13.6,'Kyoto','Kansai • Japon'],
+  ['Lyon · Rhône',45.7600,4.8320,13.6,'Lyon','Rhône • France']
+];
+
+// Hiérarchie routière (largeur de base en px pour un cadre de 800 px)
+const ROADS = [
+  ['path',0.45,'path'],['service',0.55,'roadMinor'],['minor',0.9,'roadMinor'],['tertiary',1.3,'roadMinor'],
+  ['secondary',1.8,'roadMajor'],['primary',2.4,'roadMajor'],['trunk',2.8,'roadMajor'],['motorway',3.2,'roadMajor']
+];
+const HW_CLASS = {motorway:'motorway',motorway_link:'motorway',trunk:'trunk',trunk_link:'trunk',primary:'primary',primary_link:'primary',
+  secondary:'secondary',secondary_link:'secondary',tertiary:'tertiary',tertiary_link:'tertiary',residential:'minor',living_street:'minor',
+  unclassified:'minor',service:'service',footway:'path',path:'path',cycleway:'path',steps:'path',track:'path',pedestrian:'path'};
+const WATERWAY_W = {river:3,canal:2,stream:0.8};
+
+// ---------- État ----------
+const DEFAULT_STATE = {
+  engine:'maplibre', layout:'souvenir', theme:'souvenir', colors:{...THEMES.souvenir.c},
+  center:{lat:47.5861,lon:1.3359}, zoom:14, marker:{lat:47.5861,lon:1.3359},
+  markerStyle:'heart', markerFill:true, markerSize:100, markerOpacity:1,
+  coordFormat:'dec', coordsManual:'',
+  texts:{title:'Blois',subtitle:'Val de Loire • France',dedication:'Là où tout a commencé',names:'Camille & Julien',date:'Le 14 juillet 2023'},
+  font:'serif', margin:6.5, stroke:1, waterMult:1, ring:true, attribution:true,
+  layers:{parks:true,buildings:true,rail:true}
+};
+let st = loadState();
+const ui = {placing:false, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
+let mlMap = null, opData = null, opLoading = false;
+let mlLib = 'loading', mlCdn = '', mlFailMsg = '';   // état de la librairie MapLibre
+
+// ---------- Politique Overpass : suspension après 406 / 429 ----------
+// Un serveur qui répond 406 (client refusé) ou 429 (quota) n'est plus jamais réessayé
+// automatiquement pendant la durée de suspension, y compris après un rechargement (localStorage).
+const OP_BLOCK_KEY = 'cityMapStudio.opBlocked';
+const OP_BLOCK_MS = {406: 24*3600e3, 429: 3600e3};
+let opBlock = (()=>{ try{ return JSON.parse(localStorage.getItem(OP_BLOCK_KEY)||'{}')||{}; }catch(e){ return {}; } })();
+function opBlockInfo(url){
+  const b=opBlock[url]; if(!b) return null;
+  if(b.until<=Date.now()){ delete opBlock[url]; try{localStorage.setItem(OP_BLOCK_KEY,JSON.stringify(opBlock))}catch(e){} return null; }
+  return b;
+}
+function opSuspend(url,status,retryAfter){
+  const ra=parseInt(retryAfter,10), ms=Math.max(OP_BLOCK_MS[status]||3600e3, isFinite(ra)?ra*1000:0);
+  opBlock[url]={status,until:Date.now()+ms};
+  try{ localStorage.setItem(OP_BLOCK_KEY,JSON.stringify(opBlock)); }catch(e){}
+}
+const opAvailable = () => OVERPASS.filter(u=>!opBlockInfo(u));
+const hhmm = t => new Date(t).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'});
+const opBlockMsg = b => `suspendu après HTTP ${b.status} · nouvel essai possible ${hhmm(b.until)}`;
+
+function loadState(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STORE_KEY)||'null');
+    if(s && typeof s==='object'){
+      return {...structuredClone(DEFAULT_STATE),...s,
+        colors:{...DEFAULT_STATE.colors,...(s.colors||{})},
+        texts:{...DEFAULT_STATE.texts,...(s.texts||{})},
+        layers:{...DEFAULT_STATE.layers,...(s.layers||{})}};
+    }
+  }catch(e){}
+  return structuredClone(DEFAULT_STATE);
+}
+let saveT=0;
+function saveState(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){}},300)}
+function getPath(o,p){return p.split('.').reduce((a,k)=>a?.[k],o)}
+function setPath(o,p,v){const ks=p.split('.');const last=ks.pop();ks.reduce((a,k)=>a[k],o)[last]=v}
+
+// ---------- Mathématiques ----------
+const D2R = Math.PI/180;
+const merc = lat => Math.log(Math.tan(Math.PI/4 + lat*D2R/2));
+const imerc = m => (2*Math.atan(Math.exp(m)) - Math.PI/2)/D2R;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const zoomFactor = z => clamp(Math.pow(2,(z-14)*0.5),0.5,2);
+function worldSize(rectW, z){return 512*Math.pow(2,z)*rectW/REF_W}
+function project(lat, lon, rect, view){
+  const S = worldSize(rect.w, view.zoom);
+  return {x: rect.x + rect.w/2 + (lon-view.center.lon)/360*S,
+          y: rect.y + rect.h/2 - (merc(lat)-merc(view.center.lat))*S/(2*Math.PI)};
+}
+function unproject(px, py, rect, view){
+  const S = worldSize(rect.w, view.zoom);
+  const lon = view.center.lon + (px - rect.x - rect.w/2)/S*360;
+  const m = merc(view.center.lat) - (py - rect.y - rect.h/2)*2*Math.PI/S;
+  return {lat: imerc(m), lon};
+}
+function viewBounds(view, aspect, pad=0){ // aspect = h/w du cadre
+  const S = worldSize(REF_W, view.zoom), hw = REF_W/2*(1+pad), hh = REF_W*aspect/2*(1+pad);
+  const m0 = merc(view.center.lat);
+  return {w: view.center.lon - hw/S*360, e: view.center.lon + hw/S*360,
+          s: imerc(m0 - hh*2*Math.PI/S), n: imerc(m0 + hh*2*Math.PI/S)};
+}
+function dms(v,pos,neg){
+  const a=Math.abs(v); let d=Math.floor(a); const mf=(a-d)*60; let m=Math.floor(mf); let s=Math.round((mf-m)*600)/10;
+  if(s>=60){s=0;m++} if(m>=60){m=0;d++}
+  return `${d}° ${String(m).padStart(2,'0')}′ ${s.toFixed(1).padStart(4,'0')}″ ${v>=0?pos:neg}`;
+}
+function coordText(){
+  if(st.coordsManual.trim()) return st.coordsManual.trim();
+  const {lat,lon}=st.marker;
+  return st.coordFormat==='dms' ? `${dms(lat,'N','S')}, ${dms(lon,'E','W')}` : `${lat.toFixed(7)}, ${lon.toFixed(7)}`;
+}
+
+// ---------- Géométrie des gabarits ----------
+function geom(s, W, H){
+  const m = W*s.margin/100;
+  switch(s.layout){
+    case 'classic': return {m, map:{x:m,y:m,w:W-2*m,h:H-2*m-0.36*W}};
+    case 'fade': return {m, map:{x:0,y:0,w:W,h:H*0.80}};
+    case 'medallion': { const d=W-2*m-0.12*W; return {m, map:{x:(W-d)/2,y:m+0.075*W,w:d,h:d,circle:true}}; }
+    default: return {m, map:{x:m,y:m+0.104*W,w:W-2*m,h:H-2*m-0.214*W}};
+  }
+}
+function clipMap(ctx, r){
+  ctx.beginPath();
+  if(r.circle) ctx.arc(r.x+r.w/2, r.y+r.h/2, r.w/2, 0, Math.PI*2); else ctx.rect(r.x,r.y,r.w,r.h);
+  ctx.clip();
+}
+
+// ---------- Typographie ----------
+function fontStr(size, o={}){return `${o.italic?'italic ':''}${o.weight||400} ${size}px ${FONTS[st.font].fam}`}
+function textW(ctx, t, sp, size){return ctx.measureText(t).width + (t.length>1 ? sp*size*(t.length-1) : 0)}
+/** Dessine un texte avec interlettrage et réduction automatique ; renvoie la largeur dessinée */
+function drawText(ctx, t, x, y, o){
+  if(!t) return 0;
+  let size=o.size; const sp=o.spacing||0;
+  ctx.font=fontStr(size,o);
+  let w=textW(ctx,t,sp,size);
+  if(o.maxW && w>o.maxW){ size*=o.maxW/w; ctx.font=fontStr(size,o); w=textW(ctx,t,sp,size); }
+  ctx.fillStyle=o.color; ctx.textBaseline='alphabetic';
+  let sx = o.align==='center' ? x-w/2 : o.align==='right' ? x-w : x;
+  if(!sp){ ctx.textAlign='left'; ctx.fillText(t,sx,y); return w; }
+  ctx.textAlign='left';
+  for(const ch of t){ ctx.fillText(ch,sx,y); sx += ctx.measureText(ch).width + sp*size; }
+  return w;
+}
+function hline(ctx,x1,x2,y,lw,color){ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke()}
+
+function drawCartouche(ctx, W, y0, m){
+  const c=st.colors, t=st.texts, cx=W/2, maxW=W-2*m-0.04*W;
+  drawText(ctx,(t.title||'').toUpperCase(),cx,y0+0.115*W,{size:0.075*W,spacing:0.2,align:'center',color:c.text,maxW});
+  if(t.subtitle){
+    const sw=drawText(ctx,t.subtitle.toUpperCase(),cx,y0+0.165*W,{size:0.021*W,spacing:0.32,align:'center',color:c.text,maxW:maxW*0.7});
+    const gap=0.025*W, len=0.07*W, yy=y0+0.165*W-0.007*W;
+    hline(ctx,cx-sw/2-gap-len,cx-sw/2-gap,yy,0.0016*W,c.frame); hline(ctx,cx+sw/2+gap,cx+sw/2+gap+len,yy,0.0016*W,c.frame);
+  }
+  drawText(ctx,coordText(),cx,y0+0.207*W,{size:0.019*W,spacing:0.12,align:'center',color:c.text,maxW});
+  drawText(ctx,t.dedication,cx,y0+0.262*W,{size:0.034*W,italic:true,align:'center',color:c.text,maxW});
+  drawText(ctx,t.names,cx,y0+0.300*W,{size:0.024*W,italic:true,align:'center',color:c.text,maxW});
+  drawText(ctx,(t.date||'').toUpperCase(),cx,y0+0.338*W,{size:0.017*W,spacing:0.3,align:'center',color:c.text,maxW});
+}
+
+// ---------- Repères vectoriels (unité : rayon r) ----------
+function markerPath(ctx, style){
+  ctx.beginPath();
+  if(style==='heart'){
+    ctx.moveTo(0,-0.42);
+    ctx.bezierCurveTo(-0.15,-0.85,-1.0,-0.95,-1.0,-0.3);
+    ctx.bezierCurveTo(-1.0,0.2,-0.38,0.52,0,0.9);
+    ctx.bezierCurveTo(0.38,0.52,1.0,0.2,1.0,-0.3);
+    ctx.bezierCurveTo(1.0,-0.95,0.15,-0.85,0,-0.42);
+    ctx.closePath();
+  } else if(style==='heartGeo'){
+    const P=[[0,-0.42],[0.32,-0.86],[0.78,-0.8],[1,-0.36],[0.8,0.12],[0,0.92],[-0.8,0.12],[-1,-0.36],[-0.78,-0.8],[-0.32,-0.86]];
+    P.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y)); ctx.closePath();
+  } else if(style==='pin'){
+    ctx.moveTo(0,0);
+    ctx.bezierCurveTo(-0.22,-0.45,-0.7,-0.85,-0.7,-1.3);
+    ctx.arc(0,-1.3,0.7,Math.PI,0);
+    ctx.bezierCurveTo(0.7,-0.85,0.22,-0.45,0,0);
+    ctx.closePath();
+  }
+}
+function drawMarker(ctx, x, y, size, o){
+  const r=size/2, col=o.color, fill=o.fill;
+  ctx.save(); ctx.translate(x,y); ctx.scale(r,r); ctx.globalAlpha=o.opacity;
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  const st_=o.style;
+  if(st_==='dot'){
+    ctx.fillStyle=col; ctx.strokeStyle=col;
+    ctx.beginPath(); ctx.arc(0,0,0.26,0,7); fill?ctx.fill():(ctx.lineWidth=0.08,ctx.stroke());
+    ctx.lineWidth=0.06; ctx.beginPath(); ctx.arc(0,0,0.68,0,7); ctx.stroke();
+    ctx.globalAlpha*=0.45; ctx.lineWidth=0.035; ctx.beginPath(); ctx.arc(0,0,1.0,0,7); ctx.stroke();
+  } else if(st_==='ring'){
+    ctx.strokeStyle=col; ctx.fillStyle=col;
+    ctx.lineWidth=fill?0.16:0.09; ctx.beginPath(); ctx.arc(0,0,0.72,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,0,0.09,0,7); ctx.fill();
+  } else {
+    markerPath(ctx,st_);
+    if(fill){ ctx.fillStyle=col; ctx.fill(); }
+    else { ctx.strokeStyle=col; ctx.lineWidth=0.1; ctx.stroke(); }
+    if(st_==='heartGeo'){ // facettes
+      const F=[[[0,-0.42],[0,0.92]],[[0,-0.42],[-0.5,-0.32]],[[-0.32,-0.86],[-0.5,-0.32]],[[-0.78,-0.8],[-0.5,-0.32]],[[-1,-0.36],[-0.5,-0.32]],[[-0.8,0.12],[-0.5,-0.32]],[[-0.5,-0.32],[0,0.92]],
+               [[0,-0.42],[0.5,-0.32]],[[0.32,-0.86],[0.5,-0.32]],[[0.78,-0.8],[0.5,-0.32]],[[1,-0.36],[0.5,-0.32]],[[0.8,0.12],[0.5,-0.32]],[[0.5,-0.32],[0,0.92]]];
+      ctx.strokeStyle = fill ? (o.facet||'#ffffff') : col; ctx.globalAlpha = o.opacity*(fill?0.55:0.8); ctx.lineWidth=fill?0.035:0.045;
+      ctx.beginPath(); F.forEach(([a,b])=>{ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1])}); ctx.stroke();
+    }
+    if(st_==='pin' && fill){ ctx.globalAlpha=o.opacity; ctx.fillStyle=o.facet||'#fff'; ctx.beginPath(); ctx.arc(0,-1.3,0.26,0,7); ctx.fill(); }
+  }
+  ctx.restore();
+}
+function markerOpts(){return {style:st.markerStyle, color:st.colors.marker, fill:st.markerFill, opacity:st.markerOpacity, facet:st.colors.paper}}
+
+// ---------- Rendu de l'affiche (aperçu ET export) ----------
+/** pass: 'under' (papier) | 'over' (tout ce qui est au-dessus de la carte) | 'all' */
+function drawPoster(ctx, W, H, pass, mapFn){
+  const c=st.colors, g=geom(st,W,H), m=g.m, r=g.map, t=st.texts;
+  if(pass!=='over'){ ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H); }
+  if(pass==='all' && mapFn){ ctx.save(); clipMap(ctx,r); ctx.fillStyle=c.land; ctx.fillRect(r.x,r.y,r.w,r.h); mapFn(ctx,r); ctx.restore(); }
+  if(pass==='under') return g;
+
+  // Fondu
+  if(st.layout==='fade'){
+    const pc=hexA(c.paper);
+    let gr=ctx.createLinearGradient(0,r.h*0.62,0,r.h); gr.addColorStop(0,pc(0)); gr.addColorStop(1,pc(1));
+    ctx.fillStyle=gr; ctx.fillRect(0,r.h*0.62,W,r.h*0.38+1);
+    const sw=m*1.6;
+    gr=ctx.createLinearGradient(0,0,sw,0); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(0,0,sw,r.h);
+    gr=ctx.createLinearGradient(W,0,W-sw,0); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(W-sw,0,sw,r.h);
+    gr=ctx.createLinearGradient(0,0,0,sw); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(0,0,W,sw);
+  }
+  // Repère
+  ctx.save(); clipMap(ctx,r);
+  const p=project(st.marker.lat,st.marker.lon,r,st);
+  drawMarker(ctx,p.x,p.y,W*MARKER_BASE*st.markerSize/100,markerOpts());
+  ctx.restore();
+
+  // Filets & textes
+  if(st.layout==='souvenir'){
+    const yH=m+0.061*W, inner=W-2*m;
+    const left=[t.title,t.date].filter(Boolean).join(' - ');
+    drawText(ctx,left,m,yH,{size:0.031*W,align:'left',color:c.text,maxW:inner*0.58});
+    drawText(ctx,coordText(),W-m,yH,{size:0.026*W,align:'right',color:c.text,maxW:inner*0.4});
+    const yF=H-m-0.0195*W;
+    const dw=drawText(ctx,t.dedication,m,yF,{size:0.062*W,align:'left',color:c.text,maxW:inner*(t.names?0.72:1)});
+    if(t.names){
+      const bx=m+dw+0.032*W;
+      ctx.strokeStyle=c.frame; ctx.lineWidth=0.0018*W; ctx.beginPath(); ctx.moveTo(bx,yF-0.04*W); ctx.lineTo(bx,yF+0.004*W); ctx.stroke();
+      drawText(ctx,t.names,bx+0.03*W,yF-0.008*W,{size:0.026*W,italic:true,align:'left',color:c.text,maxW:Math.max(10,W-m-(bx+0.03*W))});
+    }
+  } else if(st.layout==='classic'){
+    ctx.strokeStyle=c.frame;
+    ctx.lineWidth=0.0025*W; const o1=0.014*W; ctx.strokeRect(r.x-o1,r.y-o1,r.w+2*o1,r.h+2*o1);
+    ctx.lineWidth=0.0009*W; const o2=0.006*W; ctx.strokeRect(r.x-o2,r.y-o2,r.w+2*o2,r.h+2*o2);
+    drawCartouche(ctx,W,r.y+r.h+0.014*W,m);
+  } else if(st.layout==='medallion'){
+    if(st.ring){
+      ctx.strokeStyle=c.frame; ctx.lineWidth=0.0022*W; ctx.beginPath(); ctx.arc(r.x+r.w/2,r.y+r.h/2,r.w/2+0.014*W,0,7); ctx.stroke();
+      ctx.lineWidth=0.0008*W; ctx.beginPath(); ctx.arc(r.x+r.w/2,r.y+r.h/2,r.w/2+0.006*W,0,7); ctx.stroke();
+    }
+    drawCartouche(ctx,W,r.y+r.h+0.02*W,m);
+  } else if(st.layout==='fade'){
+    drawCartouche(ctx,W,H-m-0.345*W,m);
+  }
+  // Attribution OSM (ODbL)
+  if(st.attribution){
+    ctx.globalAlpha=0.55;
+    drawText(ctx,'© contributeurs OpenStreetMap'+(st.engine==='maplibre'?' · OpenFreeMap © OpenMapTiles':''),W-m,H-m*0.38,{size:0.0085*W,align:'right',color:c.text});
+    ctx.globalAlpha=1;
+  }
+  return g;
+}
+function hexA(hex){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g=n>>8&255,b=n&255;return a=>`rgba(${r},${g},${b},${a})`}
+
+// ---------- Moteur 2 : Overpass + Canvas ----------
+function buildQuery(b){
+  const bb=`(${b.s.toFixed(5)},${b.w.toFixed(5)},${b.n.toFixed(5)},${b.e.toFixed(5)})`;
+  return `[out:json][timeout:25];(
+way["natural"="water"]${bb};relation["natural"="water"]${bb};
+way["waterway"="riverbank"]${bb};relation["waterway"="riverbank"]${bb};
+way["waterway"~"^(river|canal|stream)$"]${bb};
+way["leisure"~"^(park|garden)$"]${bb};relation["leisure"="park"]${bb};
+way["landuse"~"^(grass|forest|meadow|recreation_ground)$"]${bb};way["natural"="wood"]${bb};
+way["highway"~"^(motorway|trunk|primary|secondary|tertiary)(_link)?$"]${bb};
+way["highway"~"^(unclassified|residential|living_street|pedestrian|service|footway|path|cycleway|steps|track)$"]${bb};
+${st.layers.rail?`way["railway"="rail"]${bb};`:''}
+${st.layers.buildings && st.zoom>=12.5?`way["building"]${bb};`:''}
+);out geom qt;`;
+}
+function toPts(geo){const a=new Array(geo.length);for(let i=0;i<geo.length;i++)a[i]=[geo[i].lon,merc(geo[i].lat)];return a}
+function bboxOf(rings){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const r of rings)for(const p of r){if(p[0]<x0)x0=p[0];if(p[0]>x1)x1=p[0];if(p[1]<y0)y0=p[1];if(p[1]>y1)y1=p[1]}return [x0,y0,x1,y1]}
+/** Assemble des segments de ways (membres de relation) en anneaux fermés */
+function stitch(segs){
+  const key=p=>p.lon+','+p.lat, rings=[], open=[];
+  for(const s of segs){ if(s.length<2) continue; (key(s[0])===key(s[s.length-1])?rings:open).push(s.slice()); }
+  while(open.length){
+    let cur=open.pop(), guard=0;
+    while(key(cur[0])!==key(cur[cur.length-1]) && guard++<10000){
+      const end=key(cur[cur.length-1]); let i=open.findIndex(s=>key(s[0])===end), rev=false;
+      if(i<0){ i=open.findIndex(s=>key(s[s.length-1])===end); rev=true; }
+      if(i<0) break;
+      const s=open.splice(i,1)[0]; if(rev) s.reverse(); cur=cur.concat(s.slice(1));
+    }
+    rings.push(cur);
+  }
+  return rings;
+}
+/** Complète la géométrie quand les données viennent en « out body; >; out skel » ou d'un fichier .osm */
+function normalizeElements(els){
+  const nodes=new Map(), ways=new Map();
+  for(const e of els){ if(e.type==='node') nodes.set(e.id,{lat:e.lat,lon:e.lon}); }
+  for(const e of els){
+    if(e.type!=='way') continue;
+    if(!e.geometry && e.nodes){ const g=e.nodes.map(id=>nodes.get(id)).filter(Boolean); if(g.length>1) e.geometry=g; }
+    if(e.geometry) ways.set(e.id,e.geometry);
+  }
+  for(const e of els){
+    if(e.type!=='relation'||!e.members) continue;
+    for(const m of e.members){ if(m.type==='way' && !m.geometry && ways.has(m.ref)) m.geometry=ways.get(m.ref); }
+  }
+  return els;
+}
+function parseOverpass(json){
+  normalizeElements(json.elements||[]);
+  const d={water:[],waterLines:[],parks:[],buildings:[],rails:[],roads:{}};
+  ROADS.forEach(([k])=>d.roads[k]=[]);
+  const add=(arr,rings,extra)=>{const pr=rings.map(toPts);arr.push({rings:pr,bb:bboxOf(pr),...extra})};
+  for(const el of json.elements||[]){
+    const t=el.tags||{};
+    if(el.type==='way' && el.geometry){
+      const g=[el.geometry];
+      if(t.building) add(d.buildings,g);
+      else if(t.natural==='water'||t.waterway==='riverbank') add(d.water,g);
+      else if(WATERWAY_W[t.waterway]) add(d.waterLines,g,{cls:t.waterway});
+      else if(t.leisure==='park'||t.leisure==='garden'||t.natural==='wood'||['grass','forest','meadow','recreation_ground'].includes(t.landuse)) add(d.parks,g);
+      else if(t.railway==='rail') add(d.rails,g,{tunnel:t.tunnel&&t.tunnel!=='no'});
+      else if(HW_CLASS[t.highway] && t.area!=='yes') add(d.roads[HW_CLASS[t.highway]],g,{tunnel:t.tunnel&&t.tunnel!=='no'});
+    } else if(el.type==='relation' && el.members){
+      const segs=el.members.filter(m=>m.type==='way'&&m.geometry&&m.geometry.length&&m.geometry[0]).map(m=>m.geometry);
+      if(!segs.length) continue;
+      const rings=stitch(segs);
+      if(t.natural==='water'||t.waterway==='riverbank') add(d.water,rings);
+      else if(t.leisure==='park') add(d.parks,rings);
+    }
+  }
+  d.count=[d.water,d.waterLines,d.parks,d.buildings,d.rails,...Object.values(d.roads)].reduce((a,x)=>a+x.length,0);
+  d.extent=dataExtent(d);
+  return d;
+}
+function dataExtent(d){
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const arr of [d.water,d.waterLines,d.parks,d.buildings,d.rails,...Object.values(d.roads)]) for(const f of arr){
+    if(f.bb[0]<x0)x0=f.bb[0]; if(f.bb[1]<y0)y0=f.bb[1]; if(f.bb[2]>x1)x1=f.bb[2]; if(f.bb[3]>y1)y1=f.bb[3]; }
+  return x0>x1?null:{w:x0,e:x1,s:imerc(y0),n:imerc(y1)};
+}
+function drawVectors(ctx, r, data){
+  const c=st.colors, S=worldSize(r.w,st.zoom), cx=r.x+r.w/2, cy=r.y+r.h/2, lon0=st.center.lon, m0=merc(st.center.lat);
+  const kx=S/360, ky=S/(2*Math.PI);
+  const k=r.w/REF_W*st.stroke*zoomFactor(st.zoom);
+  // fenêtre visible en coordonnées (lon, merc) pour l'élagage
+  const vx0=lon0-(r.w/2)/kx, vx1=lon0+(r.w/2)/kx, vy0=m0-(r.h/2)/ky, vy1=m0+(r.h/2)/ky;
+  const vis=f=>!(f.bb[2]<vx0||f.bb[0]>vx1||f.bb[3]<vy0||f.bb[1]>vy1);
+  const trace=(ring,close)=>{for(let i=0;i<ring.length;i++){const p=ring[i],x=cx+(p[0]-lon0)*kx,y=cy-(p[1]-m0)*ky;i?ctx.lineTo(x,y):ctx.moveTo(x,y)} if(close)ctx.closePath()};
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  if(st.layers.parks){ ctx.fillStyle=c.park; for(const f of data.parks){ if(!vis(f))continue; ctx.beginPath(); f.rings.forEach(rg=>trace(rg,true)); ctx.fill('evenodd'); } }
+  ctx.strokeStyle=c.water;
+  for(const f of data.waterLines){ if(!vis(f))continue; ctx.lineWidth=WATERWAY_W[f.cls]*k/st.stroke*st.waterMult; ctx.beginPath(); trace(f.rings[0],false); ctx.stroke(); }
+  ctx.fillStyle=c.water;
+  for(const f of data.water){ if(!vis(f))continue; ctx.beginPath(); f.rings.forEach(rg=>trace(rg,true)); ctx.fill('evenodd'); }
+  if(st.layers.buildings && data.buildings.length){ ctx.fillStyle=c.building; ctx.beginPath(); for(const f of data.buildings){ if(vis(f)) trace(f.rings[0],true); } ctx.fill(); }
+  if(st.layers.rail && data.rails.length){
+    ctx.strokeStyle=c.rail; ctx.lineWidth=0.8*k; ctx.setLineDash([3*k,2*k]); ctx.lineCap='butt';
+    ctx.beginPath(); for(const f of data.rails){ if(vis(f)) trace(f.rings[0],false); } ctx.stroke(); ctx.setLineDash([]); ctx.lineCap='round';
+  }
+  for(const [cls,w,col] of ROADS){
+    const arr=data.roads[cls]; if(!arr.length) continue;
+    ctx.strokeStyle=c[col]; ctx.lineWidth=w*k;
+    for(const tun of [true,false]){
+      ctx.globalAlpha = tun?0.4:1; ctx.beginPath(); let any=false;
+      for(const f of arr){ if(!!f.tunnel===tun && vis(f)){ trace(f.rings[0],false); any=true; } }
+      if(any) ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+}
+async function fetchOverpass(){
+  if(opLoading) return;
+  const g=geom(st,EXPORT_W,EXPORT_H), aspect=g.map.h/g.map.w;
+  if(st.zoom<11.5){ toast('Zone trop vaste pour Overpass : zoomez au-delà de 11,5 ou utilisez le moteur Vectoriel GPU.',true); return; }
+  const b=viewBounds(st,aspect,0.4);
+  const q=buildQuery(b);
+  opLoading=true; setStatus('Requête Overpass en cours…','busy'); showBanner(false);
+  const mirrors=opAvailable();
+  if(!mirrors.length){
+    const next=Math.min(...OVERPASS.map(u=>opBlockInfo(u)?.until||Infinity));
+    setStatus('Tous les serveurs Overpass sont suspendus (406/429) jusqu\'à '+hhmm(next),'err');
+    showBanner(true,'Overpass suspendu','Fichier',()=>setEngine('file'));
+    toast('Tous les serveurs Overpass ont refusé l\'accès (406/429). Par respect de leur politique d\'usage, aucun nouvel essai avant '+hhmm(next)+'. Utilisez le moteur Vectoriel GPU ou « Fichier ».',true);
+    return;
+  }
+  let lastErr='';
+  for(const url of mirrors){
+    const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),30000);
+    try{
+      const res=await fetch(url,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ctl.signal});
+      clearTimeout(timer);
+      if(res.status===406||res.status===429){
+        opSuspend(url,res.status,res.headers.get('Retry-After'));
+        lastErr=`HTTP ${res.status} (${new URL(url).host}, serveur suspendu)`; console.warn('Overpass',url,res.status,'→ suspendu'); continue;
+      }
+      if(!res.ok){ lastErr=`HTTP ${res.status}${res.status===406?' refusé (requête non acceptée par ce serveur)':''} (${new URL(url).host})`; continue; }
+      const json=await res.json();
+      opData=parseOverpass(json); opData.bounds=b; opData.layers=JSON.stringify(st.layers); opData.source='overpass';
+      opLoading=false; setStatus(`Vecteurs chargés · ${json.elements.length.toLocaleString('fr-FR')} objets · ${new URL(url).host}`);
+      renderMap(); return;
+    }catch(e){ clearTimeout(timer); lastErr=e.name==='AbortError'?`délai dépassé (${new URL(url).host})`:netMsg(e); }
+  }
+  opLoading=false; setStatus('Overpass indisponible : '+lastErr,'err');
+  showBanner(true,'Overpass injoignable','Diagnostiquer',runDiagnostics);
+  toast(ENV.blocked ? 'Cette page est ouverte dans un aperçu qui bloque le réseau. Ouvrez-la dans Chrome, ou utilisez le moteur « Fichier ».' : 'Aucun miroir Overpass n\'a répondu. Lancez le diagnostic ou utilisez le moteur « Fichier ».',true);
+}
+function checkOpCoverage(){
+  if(st.engine!=='overpass'||opLoading){ if(st.engine==='file') showBanner(!opData,'Aucun fichier importé','Importer',()=>$('fileIn').click()); return; }
+  if(!opData){ showBanner(true,'Aucune donnée chargée'); return; }
+  const g=geom(st,EXPORT_W,EXPORT_H), v=viewBounds(st,g.map.h/g.map.w,0), b=opData.bounds;
+  const out = v.w<b.w||v.e>b.e||v.s<b.s||v.n>b.n || opData.layers!==JSON.stringify(st.layers);
+  showBanner(out,'Zone modifiée');
+}
+function netMsg(e){
+  const m=(e&&e.message)||String(e);
+  return /Failed to fetch|NetworkError|Load failed|blocked/i.test(m) ? 'accès réseau bloqué ou serveur injoignable' : m;
+}
+
+// ---------- Moteur 1 : MapLibre + OpenFreeMap ----------
+function buildStyle(k){
+  const c=st.colors, L=[];
+  const lineGeom=['in',['geometry-type'],['literal',['LineString','MultiLineString']]];
+  L.push({id:'bg',type:'background',paint:{'background-color':c.land}});
+  if(st.layers.parks){
+    L.push({id:'landcover',type:'fill',source:'omt','source-layer':'landcover',filter:['in',['get','class'],['literal',['grass','wood']]],paint:{'fill-color':c.park,'fill-antialias':false}});
+    L.push({id:'park',type:'fill',source:'omt','source-layer':'park',paint:{'fill-color':c.park,'fill-antialias':false}});
+  }
+  L.push({id:'waterway',type:'line',source:'omt','source-layer':'waterway',filter:['in',['get','class'],['literal',['river','canal','stream']]],
+    layout:{'line-cap':'round','line-join':'round'},
+    paint:{'line-color':c.water,'line-width':['match',['get','class'],'river',3*k/st.stroke*st.waterMult,'canal',2*k/st.stroke*st.waterMult,0.8*k/st.stroke*st.waterMult]}});
+  L.push({id:'water',type:'fill',source:'omt','source-layer':'water',filter:['!=',['coalesce',['get','intermittent'],0],1],paint:{'fill-color':c.water}});
+  if(st.layers.buildings) L.push({id:'building',type:'fill',source:'omt','source-layer':'building',paint:{'fill-color':c.building,'fill-antialias':false}});
+  if(st.layers.rail) L.push({id:'rail',type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,['==',['get','class'],'rail']],
+    paint:{'line-color':c.rail,'line-width':0.8*k,'line-dasharray':[3,2]}});
+  for(const [cls,w,col] of ROADS){
+    const f = cls==='path' ? ['in',['get','class'],['literal',['path','track']]] : ['==',['get','class'],cls];
+    L.push({id:'road-'+cls,type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,f],
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':c[col],'line-width':w*k,'line-opacity':['case',['==',['get','brunnel'],'tunnel'],0.4,1]}});
+  }
+  return {version:8,sources:{omt:{type:'vector',url:OFM_URL}},layers:L};
+}
+function loadScript(src,ms){
+  return new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src=src; sc.async=true;
+    const t=setTimeout(()=>{sc.remove();rej(new Error('délai dépassé'))},ms);
+    sc.onload=()=>{clearTimeout(t);res()}; sc.onerror=()=>{clearTimeout(t);sc.remove();rej(new Error('bloqué'))};
+    document.head.appendChild(sc); });
+}
+async function loadMaplibre(){
+  if(window.maplibregl){ mlLib='ok'; return true; }
+  mlLib='loading';
+  for(const base of ML_CDNS){
+    try{
+      await loadScript(base+'maplibre-gl.js',12000);
+      if(window.maplibregl){
+        const l=document.createElement('link'); l.rel='stylesheet'; l.href=base+'maplibre-gl.css'; document.head.appendChild(l);
+        mlLib='ok'; mlCdn=/^https?:/.test(base)?new URL(base).host:'copie locale (lib/)'; return true;
+      }
+    }catch(e){ console.warn('MapLibre CDN',base,e.message); }
+  }
+  mlLib='fail'; return false;
+}
+function mlFail(msg){
+  if(mlFailMsg) return; mlFailMsg=msg;
+  setStatus(msg,'err');
+  if(st.engine==='maplibre') showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
+}
+const mlK = cssW => cssW/REF_W*st.stroke*zoomFactor(st.zoom);
+const mlZoom = cssW => st.zoom + Math.log2(cssW/REF_W);
+let mlSync=false;
+function initMaplibre(){
+  if(mlMap || mlLib!=='ok') return !!mlMap;
+  const w=ui.slotCss.w||300;
+  try{
+    mlMap=new maplibregl.Map({container:'mlMap',style:buildStyle(mlK(w)),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
+      attributionControl:false,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,fadeDuration:0,renderWorldCopies:false});
+  }catch(e){ console.error(e); mlMap=null; return false; }
+  mlMap.touchZoomRotate.disableRotation(); mlMap.keyboard.disableRotation();
+  mlMap.on('move',()=>{ if(mlSync) return; const cc=mlMap.getCenter(); st.center={lat:cc.lat,lon:cc.lng}; st.zoom=mlMap.getZoom()-Math.log2(ui.slotCss.w/REF_W); scheduleOver(); syncZoomUI(); });
+  mlMap.on('moveend',()=>{ mlMap.setStyle(buildStyle(mlK(ui.slotCss.w))); saveState(); });
+  mlMap.on('click',e=>{ if(ui.placing){ setMarker(e.lngLat.lat,e.lngLat.lng); } });
+  mlMap.on('dataloading',()=>setStatus('Chargement des tuiles…','busy'));
+  mlMap.on('idle',()=>setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'));
+  let gotTiles=false;
+  mlMap.on('data',e=>{ if(e.dataType==='source' && e.sourceId==='omt' && e.isSourceLoaded){ gotTiles=true; if(mlFailMsg){ mlFailMsg=''; showBanner(false); } } });
+  mlMap.on('error',e=>{ const m=(e&&e.error&&e.error.message)||''; console.warn('MapLibre',m);
+    if(!gotTiles && /fetch|network|AJAX|status|blocked|Load failed|CORS/i.test(m)) mlFail('Tuiles OpenFreeMap inaccessibles ('+netMsg(e.error)+')'); });
+  setTimeout(()=>{ if(!gotTiles && mlMap && st.engine==='maplibre') mlFail('Les tuiles OpenFreeMap ne se chargent pas (15 s).'); },15000);
+  return true;
+}
+function mlUpdateView(){
+  if(!mlMap) return;
+  mlSync=true; mlMap.resize(); mlMap.jumpTo({center:[st.center.lon,st.center.lat],zoom:mlZoom(ui.slotCss.w)}); mlSync=false;
+}
+function mlRestyle(){ if(mlMap) mlMap.setStyle(buildStyle(mlK(ui.slotCss.w))); }
+/** Rendu MapLibre hors écran à pleine résolution pour l'export */
+function renderMaplibreOffscreen(wPx,hPx){
+  return new Promise((resolve,reject)=>{
+    const cssW=REF_W, cssH=Math.round(REF_W*hPx/wPx), pr=wPx/REF_W;
+    const div=document.createElement('div');
+    div.style.cssText=`position:fixed;left:-20000px;top:0;width:${cssW}px;height:${cssH}px;pointer-events:none`;
+    document.body.appendChild(div);
+    let map, done=false;
+    const finish=(warn)=>{ if(done) return; done=true;
+      try{ const out=document.createElement('canvas'); out.width=wPx; out.height=hPx; out.getContext('2d').drawImage(map.getCanvas(),0,0,wPx,hPx); map.remove(); div.remove(); resolve({canvas:out,warn}); }
+      catch(e){ try{map.remove()}catch(_){} div.remove(); reject(e); } };
+    try{
+      map=new maplibregl.Map({container:div,style:buildStyle(st.stroke*zoomFactor(st.zoom)),center:[st.center.lon,st.center.lat],zoom:st.zoom,
+        pixelRatio:pr,interactive:false,preserveDrawingBuffer:true,fadeDuration:0,attributionControl:false,renderWorldCopies:false,maxCanvasSize:[8192,8192]});
+    }catch(e){ div.remove(); reject(e); return; }
+    map.once('idle',()=>finish(false));
+    setTimeout(()=>finish(true),45000);
+  });
+}
+
+// ---------- Aperçu ----------
+const $=id=>document.getElementById(id);
+const cvU=$('cvUnder'), cvO=$('cvOver'), opC=$('opCanvas'), slot=$('slot'), poster=$('poster'), stage=$('stage');
+function layoutPreview(){
+  const pad = innerWidth<600 ? 14 : 36;
+  const aw=stage.clientWidth-pad*2-(innerWidth<900?52:0), ah=stage.clientHeight-pad*2;
+  const w=Math.max(120,Math.min(aw,ah/RATIO)), h=w*RATIO;
+  ui.posterCss={w,h}; ui.dpr=Math.min(window.devicePixelRatio||1,3);
+  poster.style.width=w+'px'; poster.style.height=h+'px';
+  for(const cv of [cvU,cvO]){ cv.width=Math.round(w*ui.dpr); cv.height=Math.round(h*ui.dpr); }
+  const g=geom(st,w,h).map; ui.slotCss=g;
+  Object.assign(slot.style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px'});
+  slot.classList.toggle('circle',!!g.circle);
+  opC.width=Math.round(g.w*ui.dpr); opC.height=Math.round(g.h*ui.dpr);
+  drawUnder(); renderMap(true);
+}
+function drawUnder(){ const ctx=cvU.getContext('2d'); drawPoster(ctx,cvU.width,cvU.height,'under'); }
+function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); drawPoster(ctx,cvO.width,cvO.height,'over'); }
+let rafO=0, rafM=0;
+function scheduleOver(){ if(!rafO) rafO=requestAnimationFrame(()=>{rafO=0;drawOver()}); }
+function renderMap(viewChanged){
+  const isML = st.engine==='maplibre';
+  $('mlMap').style.display = isML?'block':'none';
+  opC.style.display = isML?'none':'block';
+  if(isML){ if(!mlMap) initMaplibre(); if(viewChanged) mlUpdateView(); if(mlLib==='loading') setStatus('Chargement de la librairie MapLibre…','busy'); }
+  else scheduleOp();
+  scheduleOver();
+}
+function scheduleOp(){ if(!rafM) rafM=requestAnimationFrame(()=>{rafM=0;drawOp()}); }
+function drawOp(){
+  const ctx=opC.getContext('2d'), r={x:0,y:0,w:opC.width,h:opC.height};
+  ctx.fillStyle=st.colors.land; ctx.fillRect(0,0,r.w,r.h);
+  if(opData) drawVectors(ctx,r,opData);
+  checkOpCoverage();
+}
+function redrawAll(restyle){ drawUnder(); if(restyle) mlRestyle(); renderMap(false); saveState(); }
+
+// Gestes Overpass (glisser, pincer, molette, toucher)
+(function(){
+  const pts=new Map(); let moved=false, startD=0, startZ=0, last=null, start=null;
+  opC.addEventListener('pointerdown',e=>{ opC.setPointerCapture(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(pts.size===1){moved=false; start={x:e.clientX,y:e.clientY};} last={x:e.clientX,y:e.clientY};
+    if(pts.size===2){ const [a,b]=[...pts.values()]; startD=Math.hypot(a.x-b.x,a.y-b.y); startZ=st.zoom; } });
+  opC.addEventListener('pointermove',e=>{
+    if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===2){ const [a,b]=[...pts.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); if(startD>0){ st.zoom=clamp(startZ+Math.log2(d/startD),10,18); moved=true; syncZoomUI(); renderMap(); } return; }
+    const dx=e.clientX-last.x, dy=e.clientY-last.y; if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>4) moved=true;
+    last={x:e.clientX,y:e.clientY};
+    const S=worldSize(ui.slotCss.w,st.zoom);
+    st.center={lon:st.center.lon-dx/S*360, lat:imerc(merc(st.center.lat)+dy*2*Math.PI/S)};
+    renderMap();
+  });
+  const up=e=>{ const wasTap=!moved && pts.size===1; pts.delete(e.pointerId); if(pts.size<2) startD=0; if(pts.size===1){ const q=[...pts.values()][0]; last={x:q.x,y:q.y}; moved=true; }
+    if(wasTap && ui.placing){ const rc=opC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); setMarker(ll.lat,ll.lon); }
+    if(pts.size===0) saveState(); };
+  opC.addEventListener('pointerup',up); opC.addEventListener('pointercancel',up);
+  opC.addEventListener('wheel',e=>{ e.preventDefault(); st.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18); syncZoomUI(); renderMap(); saveState(); },{passive:false});
+})();
+
+// ---------- Interface ----------
+function setStatus(t,kind){ $('stTxt').textContent=t; $('stDot').className='dot'+(kind?' '+kind:''); }
+let toastT=0;
+function toast(msg,err){ const t=$('toast'); t.textContent=msg; t.className='show'+(err?' err':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='',err?6000:3200); }
+function showBanner(show,txt,label,action){
+  $('banner').classList.toggle('show',!!show); if(txt) $('bannerTxt').textContent=txt;
+  const b=$('bRefresh'); b.textContent=label||'Actualiser les vecteurs'; b.onclick=action||(()=>fetchOverpass());
+}
+function setPlacing(on){ ui.placing=on; $('bPlace').classList.toggle('on',on); $('bPlace2').classList.toggle('on',on); $('placeHint').classList.toggle('show',on); slot.classList.toggle('placing',on); }
+/** Lit des coordonnées saisies : décimal (point ou virgule), DMS / DM avec N S E W O, ou URL de carte. Renvoie {lat,lon} ou lève une erreur. */
+function parseCoords(input){
+  let t=String(input||'').trim(); if(!t) throw new Error('Saisissez des coordonnées.');
+  const url=t.match(/@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/) || t.match(/[?&#](?:mlat|lat|q|query|ll)=(-?\d+(?:\.\d+)?)(?:,|&mlon=|&lon=|%2C)(-?\d+(?:\.\d+)?)/i) || t.match(/#map=[\d.]+\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)/);
+  let lat, lon;
+  if(url){ lat=+url[1]; lon=+url[2]; }
+  else{
+    const toks=[...t.matchAll(/(-?\d+(?:[.,]\d+)?)|([NSEWO])(?![a-z])/gi)].map(m=>m[1]!=null?{n:m[1]}:{h:m[2].toUpperCase()});
+    const nums=toks.filter(x=>x.n!=null);
+    if(!nums.length) throw new Error('Format non reconnu : saisissez « latitude, longitude ».');
+    const val=g=>{ if(!g.length||g.length>3) throw new Error('Format non reconnu.');
+      const v=g.map(x=>parseFloat(x.replace(',','.'))); const neg=g[0].startsWith('-');
+      if(v.slice(1).some(x=>x<0||x>=60)) throw new Error('Minutes et secondes doivent être comprises entre 0 et 60.');
+      const a=Math.abs(v[0])+(v[1]||0)/60+(v[2]||0)/3600; return neg?-a:a; };
+    if(toks.some(x=>x.h)){
+      const groups=[]; const prefix=!!toks[0].h; let cur={nums:[],h:null};
+      for(const x of toks){
+        if(x.h){ if(prefix){ if(cur.h||cur.nums.length) groups.push(cur); cur={nums:[],h:x.h}; } else { cur.h=x.h; groups.push(cur); cur={nums:[],h:null}; } }
+        else cur.nums.push(x.n);
+      }
+      if(cur.h||cur.nums.length) groups.push(cur);
+      if(groups.length!==2||groups.some(g=>!g.h)) throw new Error('Indiquez une latitude (N/S) et une longitude (E/O).');
+      for(const g of groups){ let v=val(g.nums); if('SWO'.includes(g.h)) v=-Math.abs(v); if('NS'.includes(g.h)) lat=v; else lon=v; }
+      if(lat==null||lon==null) throw new Error('Indiquez une latitude (N/S) et une longitude (E/O).');
+    } else {
+      if(nums.length%2||nums.length>6||!nums.length) throw new Error('Format non reconnu : saisissez « latitude, longitude ».');
+      const k=nums.length/2; lat=val(nums.slice(0,k).map(x=>x.n)); lon=val(nums.slice(k).map(x=>x.n));
+    }
+  }
+  if(!isFinite(lat)||!isFinite(lon)||Math.abs(lat)>85||Math.abs(lon)>180) throw new Error('Coordonnées hors limites (latitude ±85°, longitude ±180°).');
+  return {lat,lon};
+}
+function placeMarkerFromInput(){
+  let c; try{ c=parseCoords($('markerIn').value); }catch(e){ toast(e.message,true); return; }
+  setMarker(c.lat,c.lon);
+  const g=geom(st,EXPORT_W,EXPORT_H), v=viewBounds(st,g.map.h/g.map.w,0);
+  const out=c.lat<v.s||c.lat>v.n||c.lon<v.w||c.lon>v.e;
+  if(out) goTo(c.lat,c.lon);
+  $('markerIn').value=''; $('markerIn').blur();
+  toast('Repère placé'+(out?' · carte recentrée':'')+(st.engine==='overpass'&&out?' : actualisez les vecteurs':''));
+}
+function setMarker(lat,lon){ st.marker={lat,lon}; setPlacing(false); updateMarkerTxt(); scheduleOver(); saveState(); }
+function updateMarkerTxt(){ $('markerTxt').textContent=`${dms(st.marker.lat,'N','S')}  ·  ${dms(st.marker.lon,'E','W')}`; $('coordsManual').placeholder=coordText(); }
+function syncZoomUI(){ $('zoom').value=st.zoom.toFixed(1); $('oZoom').textContent=st.zoom.toFixed(1); }
+function setZoom(z){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
+function goTo(lat,lon,zoom){
+  st.center={lat,lon}; if(zoom!=null) st.zoom=zoom; syncZoomUI();
+  if(mlMap&&st.engine==='maplibre'){ mlMap.jumpTo({center:[lon,lat],zoom:mlZoom(ui.slotCss.w)}); mlRestyle(); }
+  renderMap(true); saveState();
+}
+function setSeg(id,v){ document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle('on',b.dataset.v===String(v))); }
+
+function buildUI(){
+  // onglets
+  document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+b.dataset.tab));
+  });
+  // presets
+  const pr=$('presets');
+  PRESETS.forEach(([lbl,lat,lon,z,title,sub])=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=lbl;
+    b.onclick=()=>{ st.marker={lat,lon}; st.texts.title=title; st.texts.subtitle=sub; syncInputs(); updateMarkerTxt(); opData=null; goTo(lat,lon,z); redrawAll(); };
+    pr.appendChild(b); });
+  // gabarits
+  const lay=$('layouts');
+  LAYOUTS.forEach(([k,n])=>{ const d=document.createElement('div'); d.className='card'; d.dataset.v=k; d.innerHTML=`<canvas width="70" height="99"></canvas>${n}`;
+    d.onclick=()=>{ st.layout=k; refreshCards(); layoutPreview(); saveState(); }; lay.appendChild(d); });
+  // thèmes
+  const th=$('themes');
+  Object.entries(THEMES).forEach(([k,t])=>{ const d=document.createElement('div'); d.className='theme'; d.dataset.v=k;
+    d.innerHTML=`<div class="sw"><i style="background:${t.c.paper}"></i><i style="background:${t.c.land}"></i><i style="background:${t.c.water}"></i><i style="background:${t.c.roadMajor}"></i><i style="background:${t.c.marker}"></i></div><div class="n"></div>`;
+    d.querySelector('.n').textContent=t.name;
+    d.onclick=()=>{ st.theme=k; st.colors={...t.c}; refreshColors(); refreshCards(); redrawAll(true); }; th.appendChild(d); });
+  // couleurs
+  const co=$('colors');
+  Object.entries(COLOR_LABELS).forEach(([k,n])=>{ const l=document.createElement('label'); l.innerHTML=`<input type="color" data-c="${k}"><span></span>`; l.querySelector('span').textContent=n;
+    l.querySelector('input').oninput=e=>{ st.colors[k]=e.target.value.toUpperCase(); redrawAll(true); if(k==='marker'||k==='paper') refreshCards(); }; co.appendChild(l); });
+  document.querySelectorAll('[data-gold]').forEach(b=>b.onclick=()=>{ st.colors[b.dataset.gold]=GOLD; refreshColors(); redrawAll(true); refreshCards(); toast('Touche d\'or appliquée'); });
+  // repères
+  const mk=$('marks');
+  MARKERS.forEach(([k,n])=>{ const d=document.createElement('div'); d.className='card'; d.dataset.v=k; d.innerHTML=`<canvas width="96" height="96"></canvas>${n}`;
+    d.onclick=()=>{ st.markerStyle=k; refreshCards(); scheduleOver(); saveState(); }; mk.appendChild(d); });
+  const mc=$('mColors');
+  MARKER_COLORS.forEach(([n,v])=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=n; b.onclick=()=>{ st.colors.marker=v; refreshColors(); refreshCards(); scheduleOver(); saveState(); }; mc.appendChild(b); });
+  $('mColor').oninput=e=>{ st.colors.marker=e.target.value.toUpperCase(); refreshColors(); refreshCards(); scheduleOver(); saveState(); };
+  // segments
+  document.querySelectorAll('#engineSeg button').forEach(b=>b.onclick=()=>setEngine(b.dataset.v));
+  document.querySelectorAll('#fillSeg button').forEach(b=>b.onclick=()=>{ st.markerFill=b.dataset.v==='1'; setSeg('fillSeg',b.dataset.v); refreshCards(); scheduleOver(); saveState(); });
+  document.querySelectorAll('#fontSeg button').forEach(b=>b.onclick=async()=>{ st.font=b.dataset.v; setSeg('fontSeg',st.font); await loadFonts(); scheduleOver(); saveState(); });
+  document.querySelectorAll('#coordSeg button').forEach(b=>b.onclick=()=>{ st.coordFormat=b.dataset.v; setSeg('coordSeg',st.coordFormat); updateMarkerTxt(); scheduleOver(); saveState(); });
+  // champs liés data-k
+  document.querySelectorAll('[data-k]').forEach(el=>{
+    const k=el.dataset.k;
+    el.addEventListener('input',()=>{
+      const v = el.type==='checkbox' ? el.checked : el.type==='range' ? parseFloat(el.value) : el.value;
+      setPath(st,k,v); syncOutputs();
+      if(k.startsWith('layers.')){ redrawAll(true); }
+      else if(k==='margin'){ layoutPreview(); saveState(); }
+      else if(k==='stroke'||k==='waterMult'){ redrawAll(true); }
+      else { scheduleOver(); saveState(); }
+    });
+  });
+  $('zoom').oninput=e=>setZoom(parseFloat(e.target.value));
+  $('bZoomIn').onclick=()=>setZoom(st.zoom+0.5); $('bZoomOut').onclick=()=>setZoom(st.zoom-0.5);
+  $('bPlace').onclick=$('bPlace2').onclick=()=>setPlacing(!ui.placing);
+  $('markerForm').onsubmit=e=>{ e.preventDefault(); placeMarkerFromInput(); };
+  $('bMarkerCenter').onclick=()=>setMarker(st.center.lat,st.center.lon);
+  $('bToMarker').onclick=()=>goTo(st.marker.lat,st.marker.lon);
+  $('bRefresh2').onclick=()=>fetchOverpass();
+  $('bDiag').onclick=runDiagnostics;
+  $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
+  $('lnkApi').onclick=e=>{ e.currentTarget.href=overpassGetUrl(); };
+  $('lnkTurbo').onclick=e=>{ e.currentTarget.href='https://overpass-turbo.eu/?R&Q='+encodeURIComponent(currentQuery()); };
+  $('searchForm').onsubmit=e=>{ e.preventDefault(); search($('q').value); };
+  $('bExport').onclick=exportPoster;
+  $('resClose').onclick=()=>{ $('result').classList.remove('show'); };
+}
+function syncInputs(){
+  document.querySelectorAll('[data-k]').forEach(el=>{ const v=getPath(st,el.dataset.k); if(el.type==='checkbox') el.checked=!!v; else el.value=v??''; });
+  setSeg('engineSeg',st.engine); setSeg('fillSeg',st.markerFill?'1':'0'); setSeg('fontSeg',st.font); setSeg('coordSeg',st.coordFormat);
+  syncZoomUI(); syncOutputs(); refreshColors(); refreshCards(); updateMarkerTxt(); updateEngineUI();
+}
+function syncOutputs(){
+  $('oMargin').textContent=st.margin+' %'; $('oStroke').textContent='× '+st.stroke.toFixed(2); $('oWater').textContent='× '+st.waterMult.toFixed(1);
+  $('oMSize').textContent=st.markerSize+' %'; $('oMOp').textContent=Math.round(st.markerOpacity*100)+' %';
+  $('ringTog').style.display=st.layout==='medallion'?'flex':'none';
+}
+function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker; }
+function refreshCards(){
+  document.querySelectorAll('#layouts .card').forEach(d=>{
+    d.classList.toggle('on',d.dataset.v===st.layout);
+    const cv=d.querySelector('canvas'), ctx=cv.getContext('2d'), saved=st.layout; st.layout=d.dataset.v;
+    drawPoster(ctx,cv.width,cv.height,'all',(c,r)=>{ c.strokeStyle=st.colors.roadMinor; c.globalAlpha=.35; c.lineWidth=.5; for(let i=0;i<14;i++){c.beginPath();c.moveTo(r.x+i*7,r.y);c.lineTo(r.x+i*7-20,r.y+r.h);c.stroke();c.beginPath();c.moveTo(r.x,r.y+i*8);c.lineTo(r.x+r.w,r.y+i*8+6);c.stroke()} c.globalAlpha=1; c.fillStyle=st.colors.water; c.fillRect(r.x,r.y+r.h*0.45,r.w,r.h*0.08); });
+    drawPoster(ctx,cv.width,cv.height,'over'); st.layout=saved;
+  });
+  document.querySelectorAll('#themes .theme').forEach(d=>d.classList.toggle('on',d.dataset.v===st.theme));
+  document.querySelectorAll('#marks .card').forEach(d=>{
+    d.classList.toggle('on',d.dataset.v===st.markerStyle);
+    const cv=d.querySelector('canvas'), ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,96,96);
+    const col = st.colors.marker.toUpperCase()==='#FFFFFF' ? '#999' : st.colors.marker;
+    drawMarker(ctx,48,d.dataset.v==='pin'?72:50,d.dataset.v==='pin'?42:58,{style:d.dataset.v,color:col,fill:st.markerFill,opacity:1,facet:'#fff'});
+  });
+  syncOutputs();
+}
+function updateEngineUI(){
+  document.querySelector('#engineSeg [data-v=maplibre]').disabled = mlLib==='fail';
+  $('opBlock').style.display=st.engine==='overpass'?'block':'none';
+  $('fileBlock').style.display=st.engine==='file'?'block':'none';
+  $('engineHint').textContent = {
+    maplibre: mlLib==='fail' ? 'Librairie MapLibre impossible à charger (aucun CDN joignable).' : 'Tuiles vectorielles OpenFreeMap : instantané, mers et côtes correctes, idéal sur mobile.',
+    overpass:'Géométrie OSM brute, détail maximal, chargée à la demande. Ne trace pas le littoral marin.',
+    file:'Aucun accès réseau requis : importez un fichier de données OSM. Le rendu et l\'export sont identiques au moteur Overpass.'
+  }[st.engine];
+}
+function setEngine(v){
+  if(v==='maplibre' && mlLib==='fail'){ toast('MapLibre n\'a pas pu être chargé : aucun CDN joignable depuis cette page.',true); return; }
+  st.engine=v; setSeg('engineSeg',v); updateEngineUI(); setPlacing(false); showBanner(false);
+  if(v==='overpass'){ renderMap(true); if(!opData||opData.source!=='overpass') fetchOverpass(); else checkOpCoverage(); }
+  else if(v==='file'){ renderMap(true); if(!opData) toast('Importez un fichier de données (onglet Lieu).'); }
+  else { mlFailMsg=''; renderMap(true); mlRestyle(); }
+  saveState();
+}
+
+// ---------- Géocodage Nominatim ----------
+async function search(q){
+  q=(q||'').trim(); if(!q) return;
+  const box=$('results'); box.textContent='Recherche…';
+  try{
+    const res=await fetch(NOMINATIM+'?format=jsonv2&limit=5&accept-language=fr&q='+encodeURIComponent(q));
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const list=await res.json(); box.textContent='';
+    if(!list.length){ box.textContent='Aucun résultat.'; return; }
+    for(const it of list){
+      const lat=parseFloat(it.lat), lon=parseFloat(it.lon);
+      const d=document.createElement('div'); d.className='res';
+      const t=document.createElement('div'); t.className='t'; t.textContent=it.display_name; d.appendChild(t);
+      const row=document.createElement('div'); row.className='row';
+      const b1=document.createElement('button'); b1.className='btn sm'; b1.textContent='Carte + repère';
+      b1.onclick=()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); box.textContent=''; };
+      const b2=document.createElement('button'); b2.className='btn sm'; b2.textContent='Repère seul';
+      b2.onclick=()=>{ setMarker(lat,lon); box.textContent=''; toast('Repère placé'); };
+      row.append(b1,b2); d.appendChild(row); box.appendChild(d);
+    }
+  }catch(e){ box.textContent='Recherche indisponible ('+netMsg(e)+'). Vous pouvez placer le repère en touchant la carte.'; }
+}
+
+// ---------- Polices ----------
+async function loadFonts(){
+  try{ await Promise.all(FONTS[st.font].load.map(f=>document.fonts.load(f))); }catch(e){}
+}
+
+// ---------- Export PNG 300 DPI ----------
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+/** Insère un chunk pHYs (300 DPI = 11811 px/m) après IHDR */
+async function withDpi(blob,dpi){
+  const src=new Uint8Array(await blob.arrayBuffer()), ppm=Math.round(dpi/0.0254);
+  const chunk=new Uint8Array(21), dv=new DataView(chunk.buffer);
+  dv.setUint32(0,9); chunk.set([0x70,0x48,0x59,0x73],4); dv.setUint32(8,ppm); dv.setUint32(12,ppm); chunk[16]=1;
+  dv.setUint32(17,crc32(chunk.subarray(4,17)));
+  const out=new Uint8Array(src.length+21); out.set(src.subarray(0,33),0); out.set(chunk,33); out.set(src.subarray(33),54);
+  return new Blob([out],{type:'image/png'});
+}
+const slug=s=>(s||'ville').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'ville';
+let lastUrl=null;
+async function exportPoster(){
+  if(st.engine!=='maplibre' && !opData){ toast(st.engine==='file'?'Importez d\'abord un fichier de données.':'Chargez d\'abord les vecteurs Overpass.',true); return; }
+  $('busy').classList.add('show'); $('busyTxt').textContent='Chargement des polices…';
+  try{
+    await loadFonts();
+    const cv=document.createElement('canvas'); cv.width=EXPORT_W; cv.height=EXPORT_H;
+    const ctx=cv.getContext('2d');
+    const g=geom(st,EXPORT_W,EXPORT_H); let warn=false;
+    let mapFn;
+    if(st.engine==='maplibre'){
+      $('busyTxt').textContent='Rendu vectoriel haute définition…';
+      const r=await renderMaplibreOffscreen(Math.round(g.map.w),Math.round(g.map.h)); warn=r.warn;
+      mapFn=(c,rect)=>c.drawImage(r.canvas,rect.x,rect.y,rect.w,rect.h);
+    } else {
+      $('busyTxt').textContent='Re-projection des vecteurs Overpass…';
+      mapFn=(c,rect)=>drawVectors(c,rect,opData);
+    }
+    drawPoster(ctx,EXPORT_W,EXPORT_H,'all',mapFn);
+    $('busyTxt').textContent='Encodage PNG 300 DPI…';
+    const blob0=await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('toBlob a échoué')),'image/png'));
+    const blob=await withDpi(blob0,300);
+    const name=`affiche-carte-${slug(st.texts.title)}-300dpi.png`;
+    if(lastUrl) URL.revokeObjectURL(lastUrl);
+    lastUrl=URL.createObjectURL(blob);
+    $('resImg').src=lastUrl; $('resDl').href=lastUrl; $('resDl').download=name;
+    $('resInfo').textContent=`${name} · ${EXPORT_W} × ${EXPORT_H} px · 300 DPI · ${(blob.size/1048576).toFixed(1)} Mo`+(warn?' · ⚠ certaines tuiles ont pu manquer (délai dépassé)':'');
+    const file=new File([blob],name,{type:'image/png'});
+    const canShare=navigator.canShare && navigator.canShare({files:[file]});
+    $('resShare').style.display=canShare?'flex':'none';
+    $('resShare').onclick=()=>navigator.share({files:[file],title:name}).catch(()=>{});
+    $('result').classList.add('show');
+    try{ const a=document.createElement('a'); a.href=lastUrl; a.download=name; document.body.appendChild(a); a.click(); a.remove(); }catch(e){}
+  }catch(e){
+    console.error(e); toast('Échec de l\'export : '+(e.message||e),true);
+  }finally{ $('busy').classList.remove('show'); }
+}
+
+// ---------- Contexte d'exécution ----------
+const ENV = (()=>{
+  let framed=false; try{ framed = window.self!==window.top; }catch(e){ framed=true; }
+  const proto=location.protocol;
+  return {framed, proto, http:/^https?:$/.test(proto), blocked:false};
+})();
+function showEnvWarning(){
+  const w=$('envWarn'); let msg='';
+  if(ENV.framed) msg='<b>Page ouverte dans un aperçu intégré.</b> Ces aperçus (messageries, assistants, visionneuses) bloquent le réseau et les téléchargements : les cartes ne peuvent pas se charger. Ouvrez le fichier directement dans Chrome, ou utilisez le moteur « Fichier ».';
+  else if(!ENV.http && ENV.proto!=='file:') msg='<b>Page ouverte depuis une visionneuse ('+ENV.proto.replace(':','')+').</b> Si les cartes ne se chargent pas, ouvrez le fichier dans Chrome ou utilisez le moteur « Fichier ».';
+  if(navigator.onLine===false) msg='<b>Appareil hors ligne.</b> Utilisez le moteur « Fichier » avec des données déjà téléchargées.';
+  w.hidden=!msg; w.innerHTML=msg;
+}
+
+// ---------- Diagnostic réseau ----------
+async function probe(fn,ms=10000){
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),ms), t0=performance.now();
+  try{ const r=await fn(ctl.signal); clearTimeout(t); return {ok:r.ok, status:r.status, info:r.info||('HTTP '+r.status), ms:Math.round(performance.now()-t0)}; }
+  catch(e){ clearTimeout(t); return {ok:false, info:e.name==='AbortError'?'délai dépassé':netMsg(e)}; }
+}
+async function runDiagnostics(){
+  document.querySelector('#tabs [data-tab=lieu]').click();
+  const box=$('diag'); box.innerHTML=''; $('bDiag').disabled=true;
+  const line=(label)=>{ const d=document.createElement('div'); d.innerHTML='<span class="wt">…</span><span></span><small></small>'; d.children[1].textContent=label; box.appendChild(d); return d; };
+  const set=(d,r)=>{ d.children[0].className=r.ok?'ok':'ko'; d.children[0].textContent=r.ok?'✓':'✗'; d.children[2].textContent=r.info+(r.ms?` · ${r.ms} ms`:''); };
+  const env=line('Contexte'); set(env,{ok:!ENV.framed&&navigator.onLine!==false, info:(ENV.framed?'aperçu intégré (sandbox) · ':'')+ENV.proto+(navigator.onLine===false?' · hors ligne':'')});
+  const lib=line('Librairie MapLibre'); set(lib,{ok:mlLib==='ok', info: mlLib==='ok'?('chargée'+(mlCdn?' via '+mlCdn:'')):mlLib==='loading'?'chargement en cours':'aucun CDN joignable'});
+  const tests=[
+    ['Tuiles OpenFreeMap', s=>fetch(OFM_URL,{signal:s}).then(async r=>({ok:r.ok&&!!(await r.json()).tiles,status:r.status}))],
+    ...OVERPASS.map(u=>['Overpass · '+new URL(u).host, async s=>{
+      const b=opBlockInfo(u); if(b) return {ok:false,status:b.status,info:opBlockMsg(b)};   // pas de nouvel essai
+      const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent('[out:json][timeout:5];node(1);out;'),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:s});
+      if(r.status===406||r.status===429){ opSuspend(u,r.status,r.headers.get('Retry-After')); return {ok:false,status:r.status,info:'HTTP '+r.status+' · '+opBlockMsg(opBlockInfo(u))}; }
+      return {ok:r.ok,status:r.status}; }]),
+    ['Géocodage Nominatim', s=>fetch(NOMINATIM+'?format=json&limit=1&q=Blois',{signal:s}).then(r=>({ok:r.ok,status:r.status}))]
+  ];
+  const results=await Promise.all(tests.map(async([label,fn])=>{ const d=line(label); const r=await probe(fn); set(d,r); return r; }));
+  const anyOk=results.some(r=>r.ok);
+  ENV.blocked=!anyOk;
+  const c=document.createElement('div'); c.style.marginTop='6px';
+  c.textContent = !anyOk ? '→ Aucun service n\'est joignable depuis cette page. Ouvrez le fichier dans Chrome (pas dans un aperçu), vérifiez la connexion, ou utilisez le moteur « Fichier ».'
+    : results[0].ok && mlLib==='ok' ? '→ Le moteur Vectoriel GPU devrait fonctionner.'
+    : results.slice(1,1+OVERPASS.length).some(r=>r.ok) ? '→ Utilisez le moteur Overpass.' : '→ Utilisez le moteur « Fichier ».';
+  box.appendChild(c); $('bDiag').disabled=false;
+}
+
+// ---------- Moteur 3 : import de fichier (hors ligne) ----------
+function currentQuery(){
+  const g=geom(st,EXPORT_W,EXPORT_H); return buildQuery(viewBounds(st,g.map.h/g.map.w,0.15));
+}
+function overpassGetUrl(){ return (opAvailable()[0]||OVERPASS[0])+'?data='+encodeURIComponent(currentQuery()); }
+function osmXmlToElements(txt){
+  const doc=new DOMParser().parseFromString(txt,'application/xml');
+  if(doc.querySelector('parsererror')) throw new Error('XML illisible');
+  const tags=n=>{ const o={}; n.querySelectorAll(':scope > tag').forEach(t=>o[t.getAttribute('k')]=t.getAttribute('v')); return o; };
+  const els=[];
+  doc.querySelectorAll('osm > node').forEach(n=>els.push({type:'node',id:+n.getAttribute('id'),lat:+n.getAttribute('lat'),lon:+n.getAttribute('lon')}));
+  doc.querySelectorAll('osm > way').forEach(w=>els.push({type:'way',id:+w.getAttribute('id'),tags:tags(w),nodes:[...w.querySelectorAll(':scope > nd')].map(n=>+n.getAttribute('ref'))}));
+  doc.querySelectorAll('osm > relation').forEach(r=>els.push({type:'relation',id:+r.getAttribute('id'),tags:tags(r),
+    members:[...r.querySelectorAll(':scope > member')].map(m=>({type:m.getAttribute('type'),ref:+m.getAttribute('ref'),role:m.getAttribute('role')||''}))}));
+  return els;
+}
+function geojsonToElements(gj){
+  const els=[]; let id=1;
+  const ring=c=>c.map(([lon,lat])=>({lat,lon}));
+  const feats = gj.type==='FeatureCollection' ? gj.features : gj.type==='Feature' ? [gj] : [];
+  for(const f of feats){
+    const g=f.geometry; if(!g) continue;
+    const p=f.properties||{}; const tags=(p.tags&&typeof p.tags==='object')?p.tags:p;
+    if(g.type==='LineString') els.push({type:'way',id:id++,tags,geometry:ring(g.coordinates)});
+    else if(g.type==='MultiLineString') g.coordinates.forEach(c=>els.push({type:'way',id:id++,tags,geometry:ring(c)}));
+    else if(g.type==='Polygon'||g.type==='MultiPolygon'){
+      const polys=g.type==='Polygon'?[g.coordinates]:g.coordinates;
+      if(polys.length===1 && polys[0].length===1) els.push({type:'way',id:id++,tags,geometry:ring(polys[0][0])});
+      else els.push({type:'relation',id:id++,tags,members:polys.flatMap(pl=>pl.map((r,i)=>({type:'way',role:i?'inner':'outer',geometry:ring(r)})))});
+    }
+  }
+  return els;
+}
+function importText(txt,name=''){
+  let els; const t=txt.trimStart();
+  if(t.startsWith('<')) els=osmXmlToElements(t);
+  else { const j=JSON.parse(t); els = Array.isArray(j.elements) ? j.elements : (j.type ? geojsonToElements(j) : null); }
+  if(!els) throw new Error('format non reconnu');
+  const d=parseOverpass({elements:els});
+  if(!d.count || !d.extent) throw new Error('aucun objet cartographique exploitable');
+  d.source='file'; d.bounds=d.extent; d.layers=JSON.stringify(st.layers);
+  opData=d;
+  // recadrage si la vue courante ne recoupe pas les données
+  const e=d.extent, inside=(st.center.lat>e.s&&st.center.lat<e.n&&st.center.lon>e.w&&st.center.lon<e.e);
+  if(!inside){
+    const sx=REF_W*360/Math.max(1e-6,e.e-e.w), z=Math.log2(sx/512);
+    const lat=(e.s+e.n)/2, lon=(e.w+e.e)/2; st.center={lat,lon}; st.zoom=clamp(z,10,18); syncZoomUI();
+    const mk=st.marker; if(!(mk.lat>e.s&&mk.lat<e.n&&mk.lon>e.w&&mk.lon<e.e)){ st.marker={lat,lon}; updateMarkerTxt(); }
+  }
+  if(st.engine!=='file'){ st.engine='file'; setSeg('engineSeg','file'); updateEngineUI(); }
+  showBanner(false); renderMap(true); saveState();
+  setStatus(`Fichier ${name} importé · ${d.count.toLocaleString('fr-FR')} objets`);
+  return d.count;
+}
+async function importFile(f){
+  try{ setStatus('Lecture du fichier…','busy'); const n=importText(await f.text(),f.name); toast(`${n.toLocaleString('fr-FR')} objets importés`); }
+  catch(e){ setStatus('Import impossible : '+e.message,'err'); toast('Import impossible : '+e.message,true); }
+}
+
+// ---------- Démarrage ----------
+async function boot(){
+  buildUI();
+  showEnvWarning();
+  if(st.engine==='file') st.engine='maplibre';   // un fichier importé n'est pas conservé entre deux sessions
+  syncInputs();
+  new ResizeObserver(()=>layoutPreview()).observe(stage);
+  layoutPreview();
+  loadFonts().then(()=>{ scheduleOver(); refreshCards(); });
+  document.fonts && document.fonts.ready.then(()=>{ scheduleOver(); refreshCards(); });
+  if(st.engine==='overpass' && !opData) fetchOverpass();
+  const ok=await loadMaplibre();
+  updateEngineUI();
+  if(ok){ if(st.engine==='maplibre') renderMap(true); }
+  else if(st.engine==='maplibre'){
+    toast('Librairie cartographique injoignable : passez au moteur « Fichier » ou lancez le diagnostic.',true);
+    setStatus('MapLibre injoignable (aucun CDN accessible)','err');
+    showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
+  }
+  window.__cms={st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords};
+}
+boot();
+</script>
+</body>
+</html>
