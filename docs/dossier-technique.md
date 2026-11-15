@@ -217,6 +217,7 @@ Le repère (point de rencontre) est indépendant du centre de la carte. Il se pl
 
 Champs : **Titre** (« Blois ») · **Sous-titre** (« Val de Loire • France ») · **Coordonnées** (automatiques ou saisies) · **Dédicace** (« Là où tout a commencé ») · **Noms** (« Prénom & Prénom ») · **Date** (« Le 14 juillet 2023 »).
 Familles : **Serif** (Playfair Display, par défaut) · **Sans** (Montserrat) · **Mono** (Space Mono).
+Chaque ligne est **optionnelle** : une case à cocher devant chaque champ l'affiche ou la masque, sans effacer le texte saisi (état `show`, persisté). Dans les gabarits à cartouche (Cadre, Fondu, Médaillon), les lignes masquées ou vides sont retirées et les suivantes remontent ; le gabarit Fondu garde le bloc calé en bas. Dans le gabarit Souvenir, une ligne d'en-tête seule occupe toute la largeur, et les noms sans dédicace s'affichent seuls, sans filet.
 Les textes trop longs sont réduits automatiquement pour tenir dans leur zone.
 
 ---
@@ -306,7 +307,8 @@ city-map-studio/
     ├── layouts.py          # captures des gabarits Cadre / Fondu / Médaillon
     ├── maplibre.py         # MapLibre local + OpenFreeMap simulé (tuiles MVT générées), export hors écran
     ├── overpass_policy.py  # suspension des miroirs après 406 / 429
-    └── coords.py           # saisie des coordonnées du repère
+    ├── coords.py           # saisie des coordonnées du repère
+    └── texts.py            # lignes de texte optionnelles, dans les 4 gabarits
 ```
 
 ### 9.2. Sections de `index.html`
@@ -342,6 +344,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | WYSIWYG | Cadrage et position du repère identiques entre l'aperçu (mobile et ordinateur) et l'export. |
 | Export | PNG 2480 × 3508, métadonnée 300 DPI, polices correctes, aucun flou. |
 | DMS | 47,5861 → 47° 35′ 10.0″ N ; 1,99999 → 2° 00′ 00.0″ E (retenue). |
+| Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
 | Saisie du repère | Formats du § 4.4 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
 | Résilience | MapLibre indisponible → bascule possible vers Overpass ou Fichier ; miroir Overpass en erreur 5xx ou hors délai → miroir suivant ; miroir en 406 / 429 → suspendu, jamais rappelé pendant la suspension. |
 | Licence | Aucune dépendance propriétaire ; attribution OSM présente par défaut. |
@@ -364,6 +367,7 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 | MapLibre embarqué, style (filtres 4.7.1), aperçu, export hors écran | ✅ | `tests/maplibre.py` (tuiles OpenMapTiles simulées). |
 | Suspension des miroirs Overpass après 406 / 429 | ✅ | `tests/overpass_policy.py` |
 | Saisie des coordonnées du repère | ✅ | `tests/coords.py` |
+| Lignes de texte optionnelles | ✅ | `tests/texts.py` |
 | MapLibre avec les vraies tuiles OpenFreeMap | ⏳ à valider | Sur l'URL GitHub Pages, dans un vrai navigateur. |
 | Overpass réel depuis `github.io` (miroirs, temps de réponse, taille de la relation « Loire ») | ⏳ à valider | Idem. |
 | Nominatim réel | ⏳ à valider | Idem. |

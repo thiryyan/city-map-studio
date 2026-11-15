@@ -25,12 +25,13 @@ python tests/layouts.py          # captures des gabarits
 python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap simulé, export hors écran
 python tests/overpass_policy.py  # 406/429 : suspension des miroirs, aucun nouvel essai
 python tests/coords.py           # saisie des coordonnées du repère
+python tests/texts.py            # lignes de texte optionnelles
 python -m http.server 8000       # aperçu local : http://localhost:8000
 ```
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.
 
 ## Avant chaque commit
-- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py` et `coords.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
+- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `coords.py` et `texts.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
 - Vérifier visuellement l'export par rapport au modèle (dossier, § 2).
 - Mettre à jour le dossier technique quand un comportement change.
 

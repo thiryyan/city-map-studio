@@ -50,6 +50,9 @@ input[type=text],input[type=search],input[type=number]{width:100%;background:var
 input[type=text]:focus,input[type=search]:focus{border-color:var(--acc)}
 @media (max-width:899px){input[type=text],input[type=search],input[type=number]{font-size:16px}} /* iOS : pas de zoom à la saisie */
 label.f{display:block;margin:10px 0 4px;color:var(--mut);font-size:12px}
+label.f.show{display:flex;align-items:center;gap:8px;cursor:pointer}
+label.f.show input{width:18px;height:18px;margin:0;accent-color:var(--acc)}
+label.f.show:has(input:not(:checked))+input{opacity:.45}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer;font-size:13px}
 .chip.on{border-color:var(--acc);color:var(--acc2)}
@@ -241,15 +244,16 @@ label.f{display:block;margin:10px 0 4px;color:var(--mut);font-size:12px}
           <button data-v="sans" style="font-family:Montserrat,sans-serif">Sans</button>
           <button data-v="mono" style="font-family:'Space Mono',monospace">Mono</button>
         </div>
-        <label class="f">Titre (ville)</label><input type="text" data-k="texts.title">
-        <label class="f">Sous-titre / région</label><input type="text" data-k="texts.subtitle">
-        <label class="f">Dédicace</label><input type="text" data-k="texts.dedication">
-        <label class="f">Noms</label><input type="text" data-k="texts.names">
-        <label class="f">Date</label><input type="text" data-k="texts.date">
+        <p class="hint">Cochez les lignes à afficher sur l'affiche ; un texte décoché est conservé.</p>
+        <label class="f show"><input type="checkbox" data-k="show.title" aria-label="Afficher le titre">Titre (ville)</label><input type="text" data-k="texts.title" aria-label="Titre">
+        <label class="f show"><input type="checkbox" data-k="show.subtitle" aria-label="Afficher le sous-titre">Sous-titre / région</label><input type="text" data-k="texts.subtitle" aria-label="Sous-titre">
+        <label class="f show"><input type="checkbox" data-k="show.dedication" aria-label="Afficher la dédicace">Dédicace</label><input type="text" data-k="texts.dedication" aria-label="Dédicace">
+        <label class="f show"><input type="checkbox" data-k="show.names" aria-label="Afficher les noms">Noms</label><input type="text" data-k="texts.names" aria-label="Noms">
+        <label class="f show"><input type="checkbox" data-k="show.date" aria-label="Afficher la date">Date</label><input type="text" data-k="texts.date" aria-label="Date">
         <h3>Coordonnées</h3>
         <div class="seg" id="coordSeg"><button data-v="dec">Décimal</button><button data-v="dms">Degrés ° ′ ″</button></div>
-        <label class="f">Texte affiché (vide = automatique depuis le repère)</label>
-        <input type="text" data-k="coordsManual" id="coordsManual">
+        <label class="f show"><input type="checkbox" data-k="show.coords" aria-label="Afficher les coordonnées">Texte affiché (vide = automatique depuis le repère)</label>
+        <input type="text" data-k="coordsManual" id="coordsManual" aria-label="Coordonnées affichées">
         <p class="hint">Le sous-titre s'affiche dans les gabarits Cadre, Fondu et Médaillon ; le gabarit Souvenir reprend la mise en page du modèle.</p>
       </div>
     </div>
@@ -339,6 +343,7 @@ const DEFAULT_STATE = {
   markerStyle:'heart', markerFill:true, markerSize:100, markerOpacity:1,
   coordFormat:'dec', coordsManual:'',
   texts:{title:'Blois',subtitle:'Val de Loire • France',dedication:'Là où tout a commencé',names:'Camille & Julien',date:'Le 14 juillet 2023'},
+  show:{title:true,subtitle:true,coords:true,dedication:true,names:true,date:true},   // lignes de texte affichées
   font:'serif', margin:6.5, stroke:1, waterMult:1, ring:true, attribution:true,
   layers:{parks:true,buildings:true,rail:true}
 };
@@ -374,6 +379,7 @@ function loadState(){
       return {...structuredClone(DEFAULT_STATE),...s,
         colors:{...DEFAULT_STATE.colors,...(s.colors||{})},
         texts:{...DEFAULT_STATE.texts,...(s.texts||{})},
+        show:{...DEFAULT_STATE.show,...(s.show||{})},
         layers:{...DEFAULT_STATE.layers,...(s.layers||{})}};
     }
   }catch(e){}
@@ -413,6 +419,8 @@ function dms(v,pos,neg){
   if(s>=60){s=0;m++} if(m>=60){m=0;d++}
   return `${d}° ${String(m).padStart(2,'0')}′ ${s.toFixed(1).padStart(4,'0')}″ ${v>=0?pos:neg}`;
 }
+/** Texte d'une ligne de l'affiche, ou '' si la ligne est masquée */
+function textLine(k){ if(!st.show[k]) return ''; return k==='coords' ? coordText() : (st.texts[k]||'').trim(); }
 function coordText(){
   if(st.coordsManual.trim()) return st.coordsManual.trim();
   const {lat,lon}=st.marker;
@@ -454,18 +462,28 @@ function drawText(ctx, t, x, y, o){
 }
 function hline(ctx,x1,x2,y,lw,color){ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke()}
 
-function drawCartouche(ctx, W, y0, m){
-  const c=st.colors, t=st.texts, cx=W/2, maxW=W-2*m-0.04*W;
-  drawText(ctx,(t.title||'').toUpperCase(),cx,y0+0.115*W,{size:0.075*W,spacing:0.2,align:'center',color:c.text,maxW});
-  if(t.subtitle){
-    const sw=drawText(ctx,t.subtitle.toUpperCase(),cx,y0+0.165*W,{size:0.021*W,spacing:0.32,align:'center',color:c.text,maxW:maxW*0.7});
-    const gap=0.025*W, len=0.07*W, yy=y0+0.165*W-0.007*W;
-    hline(ctx,cx-sw/2-gap-len,cx-sw/2-gap,yy,0.0016*W,c.frame); hline(ctx,cx+sw/2+gap,cx+sw/2+gap+len,yy,0.0016*W,c.frame);
+/** Cartouche centré : les lignes masquées ou vides sont retirées et les suivantes remontent.
+ *  bottom = true : le bloc reste calé en bas (gabarit Fondu). */
+function drawCartouche(ctx, W, y0, m, bottom){
+  const c=st.colors, cx=W/2, maxW=W-2*m-0.04*W;
+  // [clé, écart avant la ligne (× W), options de texte]
+  const rows=[
+    ['title',0.115,{size:0.075*W,spacing:0.2,upper:true,maxW}],
+    ['subtitle',0.050,{size:0.021*W,spacing:0.32,upper:true,maxW:maxW*0.7,rules:true}],
+    ['coords',0.042,{size:0.019*W,spacing:0.12,maxW}],
+    ['dedication',0.055,{size:0.034*W,italic:true,maxW}],
+    ['names',0.038,{size:0.024*W,italic:true,maxW}],
+    ['date',0.038,{size:0.017*W,spacing:0.3,upper:true,maxW}]
+  ].map(([k,d,o])=>[textLine(k),d,o]).filter(([txt])=>txt);
+  if(!rows.length) return;
+  rows[0][1]=Math.max(rows[0][1],rows[0][2].size/W*1.1);   // première ligne : juste sous le haut du bloc
+  let y=y0 + (bottom ? (0.338-rows.reduce((a,r)=>a+r[1],0))*W : 0);
+  for(const [txt,d,o] of rows){
+    y+=d*W;
+    const w=drawText(ctx,o.upper?txt.toUpperCase():txt,cx,y,{...o,align:'center',color:c.text});
+    if(o.rules){ const gap=0.025*W, len=0.07*W, yy=y-0.007*W;
+      hline(ctx,cx-w/2-gap-len,cx-w/2-gap,yy,0.0016*W,c.frame); hline(ctx,cx+w/2+gap,cx+w/2+gap+len,yy,0.0016*W,c.frame); }
   }
-  drawText(ctx,coordText(),cx,y0+0.207*W,{size:0.019*W,spacing:0.12,align:'center',color:c.text,maxW});
-  drawText(ctx,t.dedication,cx,y0+0.262*W,{size:0.034*W,italic:true,align:'center',color:c.text,maxW});
-  drawText(ctx,t.names,cx,y0+0.300*W,{size:0.024*W,italic:true,align:'center',color:c.text,maxW});
-  drawText(ctx,(t.date||'').toUpperCase(),cx,y0+0.338*W,{size:0.017*W,spacing:0.3,align:'center',color:c.text,maxW});
 }
 
 // ---------- Repères vectoriels (unité : rayon r) ----------
@@ -546,15 +564,17 @@ function drawPoster(ctx, W, H, pass, mapFn){
   // Filets & textes
   if(st.layout==='souvenir'){
     const yH=m+0.061*W, inner=W-2*m;
-    const left=[t.title,t.date].filter(Boolean).join(' - ');
-    drawText(ctx,left,m,yH,{size:0.031*W,align:'left',color:c.text,maxW:inner*0.58});
-    drawText(ctx,coordText(),W-m,yH,{size:0.026*W,align:'right',color:c.text,maxW:inner*0.4});
-    const yF=H-m-0.0195*W;
-    const dw=drawText(ctx,t.dedication,m,yF,{size:0.062*W,align:'left',color:c.text,maxW:inner*(t.names?0.72:1)});
-    if(t.names){
+    const left=[textLine('title'),textLine('date')].filter(Boolean).join(' - '), coords=textLine('coords');
+    drawText(ctx,left,m,yH,{size:0.031*W,align:'left',color:c.text,maxW:inner*(coords?0.58:1)});
+    drawText(ctx,coords,W-m,yH,{size:0.026*W,align:'right',color:c.text,maxW:inner*(left?0.4:1)});
+    const yF=H-m-0.0195*W, ded=textLine('dedication'), names=textLine('names');
+    const dw=drawText(ctx,ded,m,yF,{size:0.062*W,align:'left',color:c.text,maxW:inner*(names?0.72:1)});
+    if(names && ded){
       const bx=m+dw+0.032*W;
       ctx.strokeStyle=c.frame; ctx.lineWidth=0.0018*W; ctx.beginPath(); ctx.moveTo(bx,yF-0.04*W); ctx.lineTo(bx,yF+0.004*W); ctx.stroke();
-      drawText(ctx,t.names,bx+0.03*W,yF-0.008*W,{size:0.026*W,italic:true,align:'left',color:c.text,maxW:Math.max(10,W-m-(bx+0.03*W))});
+      drawText(ctx,names,bx+0.03*W,yF-0.008*W,{size:0.026*W,italic:true,align:'left',color:c.text,maxW:Math.max(10,W-m-(bx+0.03*W))});
+    } else if(names){
+      drawText(ctx,names,m,yF-0.008*W,{size:0.026*W,italic:true,align:'left',color:c.text,maxW:inner});
     }
   } else if(st.layout==='classic'){
     ctx.strokeStyle=c.frame;
@@ -568,7 +588,7 @@ function drawPoster(ctx, W, H, pass, mapFn){
     }
     drawCartouche(ctx,W,r.y+r.h+0.02*W,m);
   } else if(st.layout==='fade'){
-    drawCartouche(ctx,W,H-m-0.345*W,m);
+    drawCartouche(ctx,W,H-m-0.345*W,m,true);
   }
   // Attribution OSM (ODbL)
   if(st.attribution){
