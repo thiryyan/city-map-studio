@@ -1,6 +1,6 @@
 # Contribuer à City Map Studio
 
-Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.md). L'état de validation et la feuille de route figurent aux § 10 et 11.
+Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.md). L'état de validation et la feuille de route figurent aux § 9 et 10.
 
 ## Règles non négociables
 - **100 % open source** : aucune clé API, aucun service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps).
@@ -12,7 +12,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - **Overpass et Nominatim** : requêtes uniquement à la demande, une seule à la fois ; un serveur qui répond 406 ou 429 n'est plus rappelé pendant sa suspension (risque de bannissement d'IP).
 
 ## Organisation
-- `index.html` : sections balisées `// ---------- Titre ----------` (dossier, § 9.2). `window.__cms` expose l'état et les fonctions pour la console et les tests.
+- `index.html` : sections balisées `// ---------- Titre ----------` (dossier, § 8.2). `window.__cms` expose l'état et les fonctions pour la console et les tests.
 - `lib/` : MapLibre GL JS 4.7.1 et sa licence BSD-3. Pour changer de version, remplacer les fichiers et mettre à jour `ML_VERSION`.
 - `lib/fonts/` : polices woff2 (paquets npm `@fontsource/*`, sous-ensembles latin et latin-ext), déclarées dans `lib/fonts/fonts.css`. Pour ajouter une famille : copier ses fichiers woff2 et sa licence `OFL.txt`, ajouter ses `@font-face` (avec `unicode-range`), puis l'entrée correspondante dans `FONTS`.
 - `tests/` : tests de bout en bout Playwright (Python) avec un réseau simulé.
@@ -35,7 +35,7 @@ Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chr
 
 ## Avant chaque commit
 - Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `coords.py`, `texts.py` et `fonts.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
-- Vérifier visuellement l'export par rapport au modèle (dossier, § 2).
+- Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
 - Mettre à jour le dossier technique quand un comportement change.
 
 ## Branches
