@@ -4,7 +4,7 @@ Atelier web de création d'affiches cartographiques souvenir : tracé minimalist
 
 - **100 % open source** : MapLibre GL JS, tuiles OpenFreeMap, Overpass API, Nominatim, polices SIL OFL. Aucune clé API.
 - **Trois moteurs** : Vectoriel GPU (par défaut), Overpass (tracé artistique) et Fichier (hors ligne : JSON Overpass, `.osm`, GeoJSON).
-- **Quatre gabarits** (Souvenir, Cadre classique, Fondu moderne, Médaillon), sept thèmes, cinq styles de repère.
+- **Quatre gabarits** (Souvenir, Cadre classique, Fondu moderne, Médaillon), sept thèmes, cinq styles de repère, cinq familles de polices.
 - **Un seul fichier** `index.html`, sans build, pensé d'abord pour le mobile.
 
 ## Utilisation

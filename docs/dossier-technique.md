@@ -53,7 +53,7 @@ L'affiche « Là où tout a commencé » sert de modèle au gabarit et au thème
 | Tuiles vectorielles | OpenFreeMap (`https://tiles.openfreemap.org/planet`, schéma OpenMapTiles, sans clé) | Données ODbL, schéma CC-BY |
 | Données brutes | Overpass API ; ordre d'essai : `overpass.private.coffee` → `overpass.kumi.systems` → `maps.mail.ru` → `overpass-api.de` (en dernier, cf. § 3.4) | AGPL / ODbL |
 | Géocodage | Nominatim (`nominatim.openstreetmap.org`) | GPL / ODbL |
-| Polices | Playfair Display, Montserrat, Space Mono (Google Fonts) | SIL OFL 1.1 |
+| Polices | Playfair Display, Montserrat, Space Mono, Cormorant Garamond, Josefin Sans (Google Fonts) | SIL OFL 1.1 |
 | Rendu de l'affiche | Canvas 2D natif | — |
 
 ### 3.2. Moteurs cartographiques
@@ -213,10 +213,20 @@ Le repère (point de rencontre) est indépendant du centre de la carte. Il se pl
 * au centre de la carte (« Au centre ») ;
 * par **saisie de ses coordonnées** dans l'onglet Lieu (§ 4.4).
 
-### 5.4. Typographie (6 champs, 3 familles)
+### 5.4. Typographie (6 champs, 5 familles)
 
 Champs : **Titre** (« Blois ») · **Sous-titre** (« Val de Loire • France ») · **Coordonnées** (automatiques ou saisies) · **Dédicace** (« Là où tout a commencé ») · **Noms** (« Prénom & Prénom ») · **Date** (« Le 14 juillet 2023 »).
-Familles : **Serif** (Playfair Display, par défaut) · **Sans** (Montserrat) · **Mono** (Space Mono).
+Familles :
+
+| Famille | Police | Esprit | Réglages |
+| :--- | :--- | :--- | :--- |
+| **Serif** (défaut) | Playfair Display | Didone à fort contraste, fidèle au modèle | — |
+| **Sans** | Montserrat | Linéale géométrique, contemporaine | — |
+| **Mono** | Space Mono | Machine à écrire, technique | — |
+| **Garamond** | Cormorant Garamond | Garalde classique, italique calligraphique, chiffres elzéviriens ; s'accorde avec les thèmes Crème & Encre et Sépia vintage | Graisse 500 et corps × 1,12, pour compenser le petit œil et le trait fin à l'impression |
+| **Art déco** | Josefin Sans | Géométrique des années 1920, capitales élancées, esprit affiche de voyage ; s'accorde avec Prestige Onyx & Or et Nuit boréale | Corps × 1,04 |
+
+Le coefficient de corps (`scale`) et la graisse par défaut (`weight`) sont définis par famille dans `FONTS`.
 Chaque ligne est **optionnelle** : une case à cocher devant chaque champ l'affiche ou la masque, sans effacer le texte saisi (état `show`, persisté). Dans les gabarits à cartouche (Cadre, Fondu, Médaillon), les lignes masquées ou vides sont retirées et les suivantes remontent ; le gabarit Fondu garde le bloc calé en bas. Dans le gabarit Souvenir, une ligne d'en-tête seule occupe toute la largeur, et les noms sans dédicace s'affichent seuls, sans filet.
 Les textes trop longs sont réduits automatiquement pour tenir dans leur zone.
 
@@ -344,6 +354,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | WYSIWYG | Cadrage et position du repère identiques entre l'aperçu (mobile et ordinateur) et l'export. |
 | Export | PNG 2480 × 3508, métadonnée 300 DPI, polices correctes, aucun flou. |
 | DMS | 47,5861 → 47° 35′ 10.0″ N ; 1,99999 → 2° 00′ 00.0″ E (retenue). |
+| Polices | Les 5 familles s'appliquent à l'aperçu et à l'export, et le choix est conservé. |
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
 | Saisie du repère | Formats du § 4.4 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
 | Résilience | MapLibre indisponible → bascule possible vers Overpass ou Fichier ; miroir Overpass en erreur 5xx ou hors délai → miroir suivant ; miroir en 406 / 429 → suspendu, jamais rappelé pendant la suspension. |
@@ -371,7 +382,7 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 | MapLibre avec les vraies tuiles OpenFreeMap | ⏳ à valider | Sur l'URL GitHub Pages, dans un vrai navigateur. |
 | Overpass réel depuis `github.io` (miroirs, temps de réponse, taille de la relation « Loire ») | ⏳ à valider | Idem. |
 | Nominatim réel | ⏳ à valider | Idem. |
-| Chargement de Playfair Display dans l'export | ⏳ à valider | Les tests utilisent une police de secours (Google Fonts coupé). |
+| Chargement des polices Google Fonts dans l'export | ⏳ à valider | Les tests utilisent une police de secours (Google Fonts coupé). |
 | Téléchargement sur iOS Safari et Chrome Android | ⏳ à valider | Appareils réels. |
 
 ---

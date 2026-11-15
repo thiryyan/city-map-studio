@@ -58,6 +58,14 @@ async def main():
         if (w, h) != (2480, 3508): fails.append('export')
         await page.click('#resClose'); await page.click('#tabs [data-tab=textes]')
         for k in KEYS: await page.click(f'input[data-k="show.{k}"]')
+        # Polices : chaque famille modifie le rendu et le choix est persisté
+        snaps = set()
+        for f in ['serif', 'sans', 'mono', 'garamond', 'deco']:
+            await page.click(f'#fontSeg [data-v={f}]'); await page.wait_for_timeout(300); snaps.add(await page.evaluate(SNAP))
+        await page.reload(); await page.wait_for_timeout(1200)
+        font = await page.evaluate('__cms.st.font'); print('polices : rendus distincts', len(snaps), '| après rechargement', font)
+        if len(snaps) != 5 or font != 'deco': fails.append('polices')
+        await page.evaluate("__cms.st.font='serif'")
         print('échecs', fails, '| errors', errs)
         await b.close()
         assert not fails and not errs

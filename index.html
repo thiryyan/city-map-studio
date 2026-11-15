@@ -7,7 +7,7 @@
 <title>City Map Studio — Atelier d'affiches cartographiques</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:ital,wght@0,300;0,400;0,600;1,400&family=Space+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:ital,wght@0,300;0,400;0,600;1,400&family=Space+Mono:ital,wght@0,400;1,400&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Josefin+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#16161a; --panel:#1e1e23; --panel2:#26262c; --line:#34343c; --txt:#ececf1; --mut:#9a9aa6;
@@ -59,6 +59,7 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
 .seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:none;padding:8px 6px;border-radius:8px;cursor:pointer;color:var(--mut);font-size:13px}
 .seg button.on{background:var(--acc);color:#141414;font-weight:600}
+#fontSeg{flex-wrap:wrap}#fontSeg button{flex:1 0 30%}
 .slider{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;margin:10px 0}
 .slider span{color:var(--mut);font-size:12px}.slider output{font-size:12px;color:var(--txt);font-variant-numeric:tabular-nums}
 .slider input{grid-column:1/3;width:100%;accent-color:var(--acc);height:28px}
@@ -243,6 +244,8 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
           <button data-v="serif" style="font-family:'Playfair Display',serif">Serif</button>
           <button data-v="sans" style="font-family:Montserrat,sans-serif">Sans</button>
           <button data-v="mono" style="font-family:'Space Mono',monospace">Mono</button>
+          <button data-v="garamond" style="font-family:'Cormorant Garamond',serif;font-size:15px">Garamond</button>
+          <button data-v="deco" style="font-family:'Josefin Sans',sans-serif">Art déco</button>
         </div>
         <p class="hint">Cochez les lignes à afficher sur l'affiche ; un texte décoché est conservé.</p>
         <label class="f show"><input type="checkbox" data-k="show.title" aria-label="Afficher le titre">Titre (ville)</label><input type="text" data-k="texts.title" aria-label="Titre">
@@ -297,6 +300,10 @@ const STORE_KEY = 'cityMapStudio.v2';
 
 const FONTS = {
   serif:{fam:'"Playfair Display", Georgia, "Times New Roman", serif', load:['400 20px "Playfair Display"','italic 400 20px "Playfair Display"']},
+  // Garalde : élégance classique, italique calligraphique (petit œil : agrandie de 12 %, graisse 500 pour l'impression)
+  garamond:{fam:'"Cormorant Garamond", Garamond, Georgia, serif', scale:1.12, weight:500, load:['500 20px "Cormorant Garamond"','italic 500 20px "Cormorant Garamond"']},
+  // Géométrique Art déco : capitales élancées, esprit affiche de voyage
+  deco:{fam:'"Josefin Sans", "Futura", "Century Gothic", sans-serif', scale:1.04, load:['400 20px "Josefin Sans"','italic 400 20px "Josefin Sans"']},
   sans:{fam:'Montserrat, "Helvetica Neue", Arial, sans-serif', load:['400 20px Montserrat','300 20px Montserrat','italic 400 20px Montserrat']},
   mono:{fam:'"Space Mono", "Courier New", monospace', load:['400 20px "Space Mono"','italic 400 20px "Space Mono"']}
 };
@@ -444,7 +451,7 @@ function clipMap(ctx, r){
 }
 
 // ---------- Typographie ----------
-function fontStr(size, o={}){return `${o.italic?'italic ':''}${o.weight||400} ${size}px ${FONTS[st.font].fam}`}
+function fontStr(size, o={}){const f=FONTS[st.font]||FONTS.serif; return `${o.italic?'italic ':''}${o.weight||f.weight||400} ${size*(f.scale||1)}px ${f.fam}`}
 function textW(ctx, t, sp, size){return ctx.measureText(t).width + (t.length>1 ? sp*size*(t.length-1) : 0)}
 /** Dessine un texte avec interlettrage et réduction automatique ; renvoie la largeur dessinée */
 function drawText(ctx, t, x, y, o){
@@ -1111,7 +1118,7 @@ async function search(q){
 
 // ---------- Polices ----------
 async function loadFonts(){
-  try{ await Promise.all(FONTS[st.font].load.map(f=>document.fonts.load(f))); }catch(e){}
+  try{ await Promise.all((FONTS[st.font]||FONTS.serif).load.map(f=>document.fonts.load(f))); }catch(e){}
 }
 
 // ---------- Export PNG 300 DPI ----------
