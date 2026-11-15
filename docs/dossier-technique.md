@@ -21,7 +21,7 @@
 | E11 | Écrans | Mobile en priorité, ordinateur en second. Interface en français. |
 | E12 | Hébergement | **GitHub Pages** (dépôt public, `index.html` à la racine, branche `main`). Les plateformes de déploiement d'applications générées automatiquement sont exclues : la politique d'usage d'Overpass demande de ne pas les utiliser. |
 | E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU. Active par défaut, désactivable sous la responsabilité de l'utilisateur. |
-| E14 | Vie privée | Aucune ressource de présentation (librairie, polices, styles) n'est chargée depuis un tiers : l'adresse IP du visiteur n'est transmise qu'aux services de données cartographiques nécessaires au fonctionnement (§ 2.4). Les polices sont auto-hébergées, conformément à la jurisprudence RGPD sur Google Fonts (LG München, 20/01/2022, 3 O 17493/20). |
+| E14 | Vie privée | Aucune ressource de présentation (librairie, polices, styles) n'est chargée depuis un tiers : l'adresse IP du visiteur n'est transmise qu'aux services de données cartographiques nécessaires au fonctionnement, et **seulement après son accord explicite** (§ 2.4). Les polices sont auto-hébergées, conformément à la jurisprudence RGPD sur Google Fonts (LG München, 20/01/2022, 3 O 17493/20). |
 
 ---
 
@@ -61,6 +61,11 @@ Une fonction unique, `drawPoster(ctx, W, H, pass, mapFn)`, dessine l'affiche à 
 
 ### 2.4. Réseau et politiques d'usage
 
+* **Accord préalable (RGPD)** : au premier lancement, **aucune requête n'est émise vers un service tiers**. Un panneau « Afficher la carte ? » explique que l'affichage des tuiles transmet l'adresse IP à OpenFreeMap, et que Nominatim et Overpass la reçoivent aussi, seulement à la demande. Il propose deux choix :
+  * **Afficher la carte** : l'accord est mémorisé dans `localStorage` (clé `cityMapStudio.consent`), la carte s'affiche, et l'action qui a déclenché la demande (recherche, Overpass, diagnostic, export) s'exécute ;
+  * **Travailler hors ligne** : passage au moteur Fichier, sans aucune requête.
+
+  Tant que l'accord n'est pas donné, chaque point d'accès au réseau (`initMaplibre`, `fetchOverpass`, `search`, `runDiagnostics`, `exportPoster` avec le moteur Vectoriel GPU, CDN de secours de MapLibre) affiche la demande au lieu d'appeler le service. L'onglet Lieu indique l'état de l'accord et permet de le retirer, ce qui recharge la page dans l'état initial.
 * **Overpass**
   * Requêtes uniquement à la demande, **une seule à la fois**. Après un déplacement hors de la zone chargée, un bandeau propose « Actualiser les vecteurs ». La zone demandée est élargie de 40 % pour absorber les petits déplacements.
   * `[timeout:25]` côté serveur ; `AbortController` à **30 s** côté client, puis passage au miroir suivant. Une erreur HTTP 5xx ou un délai dépassé fait aussi passer au miroir suivant.
@@ -235,7 +240,7 @@ Les textes trop longs sont réduits automatiquement pour tenir dans leur zone.
 * **Mobile (< 900 px)** : aperçu de l'affiche en haut (environ 55 % de la hauteur), panneau à onglets défilant en bas (**Lieu · Style · Repère · Textes**), barre fixe avec le bouton « Exporter ». Les champs de saisie sont en 16 px pour éviter le zoom automatique d'iOS.
 * **Ordinateur (≥ 900 px)** : panneau de 400 px à gauche, table lumineuse à droite avec l'affiche ombrée.
 * **Gestes sur l'aperçu** : glisser pour cadrer, pincer ou molette pour zoomer. En mode « Placer le repère », un toucher place le repère.
-* **États visibles** : moteur actif, chargement, bandeau « Zone modifiée → Actualiser les vecteurs », erreurs réseau en clair.
+* **États visibles** : demande d'accord aux services tiers, moteur actif, chargement, bandeau « Zone modifiée → Actualiser les vecteurs », erreurs réseau en clair.
 
 ---
 
@@ -304,7 +309,8 @@ city-map-studio/
     ├── overpass_policy.py  # suspension des miroirs après 406 / 429
     ├── coords.py           # saisie des coordonnées du repère
     ├── texts.py            # lignes de texte optionnelles, dans les 4 gabarits
-    └── fonts.py            # polices auto-hébergées, file:// et HTTP, aucun appel tiers
+    ├── fonts.py            # polices auto-hébergées, file:// et HTTP, aucun appel tiers
+    └── consent.py          # accord préalable : aucune requête tierce sans accord
 ```
 
 ### 8.2. Sections de `index.html`
@@ -315,6 +321,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | :--- | :--- | :--- |
 | Constantes | `THEMES`, `ROADS`, `HW_CLASS`, `OVERPASS`, `ML_CDNS`, `PRESETS` | Paramétrage. |
 | État | `DEFAULT_STATE`, `loadState`, `saveState` | État unique `st`, persisté dans `localStorage`. |
+| Accord préalable | `needConsent`, `giveConsent`, `declineConsent`, `withdrawConsent` | Aucun appel tiers avant l'accord de l'utilisateur. |
 | Politique Overpass | `opSuspend`, `opBlockInfo`, `opAvailable` | Suspension des miroirs après 406 / 429. |
 | Mathématiques | `merc`, `project`, `unproject`, `viewBounds`, `dms` | Web Mercator 512 px, zoom de référence pour un cadre de 800 px. |
 | Gabarits | `geom` | Rectangle ou cercle de la carte selon le gabarit. |
@@ -340,6 +347,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | WYSIWYG | Cadrage et position du repère identiques entre l'aperçu (mobile et ordinateur) et l'export. |
 | Export | PNG 2480 × 3508, métadonnée 300 DPI, polices correctes, aucun flou. |
 | DMS | 47,5861 → 47° 35′ 10.0″ N ; 1,99999 → 2° 00′ 00.0″ E (retenue). |
+| Accord préalable | Au premier lancement, aucune requête tierce ; recherche, Overpass et diagnostic bloqués sans accord ; après accord, l'action en attente s'exécute et le choix est mémorisé ; retrait possible ; « Travailler hors ligne » passe au moteur Fichier sans requête. |
 | Polices | Les 5 familles (normale et italique) se chargent depuis `lib/fonts/`, y compris hors ligne et en `file://` ; elles s'appliquent à l'aperçu et à l'export ; le choix est conservé ; aucune requête vers Google. |
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
 | Saisie du repère | Formats du § 3.4 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
@@ -369,6 +377,7 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 | Overpass réel depuis `github.io` (miroirs, temps de réponse, taille de la relation « Loire ») | ⏳ à valider | Idem. |
 | Nominatim réel | ⏳ à valider | Idem. |
 | Polices auto-hébergées dans l'aperçu et l'export, contrôle `document.fonts.check` | ✅ | `tests/fonts.py` |
+| Accord préalable aux services tiers | ✅ | `tests/consent.py` |
 | Téléchargement sur iOS Safari et Chrome Android | ⏳ à valider | Appareils réels. |
 
 ---
@@ -385,7 +394,7 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 5. Moteurs Overpass et Fichier : traiter le trait de côte (`natural=coastline`) pour Venise et New York, ou rediriger automatiquement vers le moteur Vectoriel GPU.
 6. Performances du canvas : mettre en cache les `Path2D` par classe pour fluidifier le déplacement quand les bâtiments sont nombreux.
 7. Conserver le dernier fichier importé dans IndexedDB, pour que le moteur Fichier survive à un rechargement.
-8. Vie privée : le moteur par défaut appelle OpenFreeMap dès l'ouverture (adresse IP transmise), Overpass et Nominatim seulement à la demande. Ajouter une mention d'information (services appelés, finalité), et étudier un démarrage sans appel tiers (consentement avant la première carte, ou tuiles PMTiles autohébergées).
+8. Vie privée : proposer des tuiles PMTiles autohébergées (zone limitée, par exemple les villes préréglées) pour un moteur Vectoriel GPU sans aucun service tiers.
 
 **Priorité 2 — Confort**
 9. Formats supplémentaires (A3, 50 × 70 cm), PDF via jsPDF (licence MIT) si besoin.

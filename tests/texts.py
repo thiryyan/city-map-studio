@@ -18,6 +18,7 @@ async def main():
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
         ctx = await b.new_context(viewport={'width': 1400, 'height': 900}, accept_downloads=True)
         page = await ctx.new_page(); errs = []
+        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):
             u = r.request.url

@@ -9,6 +9,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - `drawPoster(ctx, W, H, pass, mapFn)` est la **seule** fonction de rendu de l'affiche : l'aperçu et l'export doivent rester identiques.
 - Attribution « © contributeurs OpenStreetMap » active par défaut (licence ODbL).
 - **Aucune ressource tierce pour la présentation** (CDN de polices, de styles ou de scripts) : tout est servi depuis le dépôt (RGPD, cf. dossier E14). Les CDN de MapLibre ne servent qu'en secours.
+- **Accord préalable** : tout nouvel appel à un service tiers passe par `needConsent()` ; aucune requête externe avant l'accord de l'utilisateur (`tests/consent.py`).
 - **Overpass et Nominatim** : requêtes uniquement à la demande, une seule à la fois ; un serveur qui répond 406 ou 429 n'est plus rappelé pendant sa suspension (risque de bannissement d'IP).
 
 ## Organisation
@@ -29,12 +30,13 @@ python tests/overpass_policy.py  # 406/429 : suspension des miroirs, aucun nouve
 python tests/coords.py           # saisie des coordonnées du repère
 python tests/texts.py            # lignes de texte optionnelles
 python tests/fonts.py            # polices auto-hébergées, aucun appel tiers
+python tests/consent.py          # accord préalable : aucune requête tierce sans accord
 python -m http.server 8000       # aperçu local : http://localhost:8000
 ```
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.
 
 ## Avant chaque commit
-- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `coords.py`, `texts.py` et `fonts.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
+- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `coords.py`, `texts.py`, `fonts.py` et `consent.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
 - Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
 - Mettre à jour le dossier technique quand un comportement change.
 

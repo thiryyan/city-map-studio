@@ -102,6 +102,11 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
 .banner.show{display:flex}
 .placehint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:10;background:var(--acc);color:#141414;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;display:none}
 .placehint.show{display:block}
+.consent{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:12;width:min(360px,calc(100% - 32px));background:#1e1e23f5;border:1px solid var(--acc);border-radius:14px;padding:16px;box-shadow:0 12px 40px #000a;display:none;font-size:13px;line-height:1.45}
+.consent.show{display:block}
+.consent h2{margin:0 0 8px;font-size:15px}
+.consent p{margin:0 0 10px;color:var(--txt)}
+.consent .row .btn{flex:1 1 140px}
 #toast{position:fixed;left:50%;bottom:calc(90px + var(--sab));transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:#2b2b31;border:1px solid var(--line);padding:10px 14px;border-radius:10px;z-index:100;max-width:90vw;font-size:13px;pointer-events:none}
 #toast.show{opacity:1;transform:translateX(-50%)}
 #toast.err{border-color:var(--danger)}
@@ -138,6 +143,12 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
       <button id="bToMarker" title="Centrer sur le repère" aria-label="Centrer sur le repère"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="1.8" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg></button>
     </div>
     <div class="placehint" id="placeHint">Touchez la carte pour placer le repère</div>
+    <div class="consent" id="consent" role="dialog" aria-modal="false" aria-labelledby="consentTitle">
+      <h2 id="consentTitle">Afficher la carte ?</h2>
+      <p>Les fonds de carte proviennent d'<b>OpenFreeMap</b>. Les afficher transmet votre adresse IP à ce service. La recherche d'adresse (<b>Nominatim</b>) et le moteur <b>Overpass</b>, utilisés seulement à votre demande, la reçoivent aussi.</p>
+      <p>Rien d'autre n'est envoyé : pas de cookie, pas de mesure d'audience. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p>
+      <div class="row"><button class="btn pri" id="bConsentYes">Afficher la carte</button><button class="btn" id="bConsentFile">Travailler hors ligne</button></div>
+    </div>
     <div class="banner" id="banner"><span id="bannerTxt">Zone modifiée</span><button class="btn sm on" id="bRefresh">Actualiser les vecteurs</button></div>
   </section>
 
@@ -192,6 +203,7 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
           <label class="btn" style="width:100%">Importer un fichier de données<input type="file" id="fileIn" accept=".json,.geojson,.osm,.xml,application/json,application/geo+json,text/xml" hidden></label>
         </div>
         <button class="btn" id="bDiag" style="width:100%;margin-top:10px">Diagnostiquer la connexion</button>
+        <p class="hint" id="consentInfo"></p>
         <div class="diag" id="diag"></div>
         <h3>Calques</h3>
         <label class="tog">Parcs et espaces verts<input type="checkbox" data-k="layers.parks"></label>
@@ -357,6 +369,47 @@ let st = loadState();
 const ui = {placing:false, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
 let mlMap = null, opData = null, opLoading = false;
 let mlLib = 'loading', mlCdn = '', mlFailMsg = '';   // état de la librairie MapLibre
+
+// ---------- Accord préalable aux services tiers (RGPD) ----------
+// Aucune requête vers un service tiers (tuiles, Overpass, Nominatim, CDN) avant l'accord explicite de l'utilisateur.
+const CONSENT_KEY = 'cityMapStudio.consent';
+let consent = (()=>{ try{ return localStorage.getItem(CONSENT_KEY)==='1'; }catch(e){ return false; } })();
+let consentNext = null;
+/** true si l'accord est donné ; sinon affiche la demande et exécute `next` après acceptation */
+function needConsent(next){
+  if(consent) return true;
+  consentNext = next || null;
+  document.getElementById('consent').classList.add('show');
+  return false;
+}
+function giveConsent(){
+  consent=true; try{ localStorage.setItem(CONSENT_KEY,'1'); }catch(e){}
+  document.getElementById('consent').classList.remove('show');
+  updateConsentInfo();
+  const next=consentNext; consentNext=null;
+  (async()=>{
+    if(mlLib==='fail'||mlLib==='local-fail'){ await loadMaplibre(); updateEngineUI(); }
+    if(next) next();
+    if(st.engine==='maplibre') renderMap(true);                              // la carte s'affiche dans tous les cas
+    else if(st.engine==='overpass' && !opData && !next) fetchOverpass();    // une seule requête Overpass à la fois
+  })();
+}
+function declineConsent(){
+  consentNext=null; document.getElementById('consent').classList.remove('show');
+  setEngine('file');
+}
+function withdrawConsent(){
+  try{ localStorage.removeItem(CONSENT_KEY); }catch(e){}
+  location.reload();
+}
+function updateConsentInfo(){
+  const el=document.getElementById('consentInfo'); el.textContent='';
+  el.append(consent ? 'Services cartographiques autorisés (OpenFreeMap, Overpass, Nominatim). ' : 'Aucun service tiers n\'est contacté sans votre accord. ');
+  const b=document.createElement('button'); b.className='btn sm'; b.type='button';
+  b.textContent = consent ? 'Retirer l\'accord' : 'Autoriser la carte';
+  b.onclick = consent ? withdrawConsent : ()=>needConsent();
+  el.append(b);
+}
 
 // ---------- Politique Overpass : suspension après 406 / 429 ----------
 // Un serveur qui répond 406 (client refusé) ou 429 (quota) n'est plus jamais réessayé
@@ -719,6 +772,7 @@ function drawVectors(ctx, r, data){
 }
 async function fetchOverpass(){
   if(opLoading) return;
+  if(!needConsent(()=>fetchOverpass())) return;
   const g=geom(st,EXPORT_W,EXPORT_H), aspect=g.map.h/g.map.w;
   if(st.zoom<11.5){ toast('Zone trop vaste pour Overpass : zoomez au-delà de 11,5 ou utilisez le moteur Vectoriel GPU.',true); return; }
   const b=viewBounds(st,aspect,0.4);
@@ -799,6 +853,7 @@ async function loadMaplibre(){
   if(window.maplibregl){ mlLib='ok'; return true; }
   mlLib='loading';
   for(const base of ML_CDNS){
+    if(!consent && /^https?:/.test(base)){ mlLib='local-fail'; return false; }   // CDN tiers : seulement après accord
     try{
       await loadScript(base+'maplibre-gl.js',12000);
       if(window.maplibregl){
@@ -819,6 +874,7 @@ const mlZoom = cssW => st.zoom + Math.log2(cssW/REF_W);
 let mlSync=false;
 function initMaplibre(){
   if(mlMap || mlLib!=='ok') return !!mlMap;
+  if(!needConsent()){ setStatus('Carte en attente de votre accord'); return false; }
   const w=ui.slotCss.w||300;
   try{
     mlMap=new maplibregl.Map({container:'mlMap',style:buildStyle(mlK(w)),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
@@ -1095,6 +1151,7 @@ function setEngine(v){
 // ---------- Géocodage Nominatim ----------
 async function search(q){
   q=(q||'').trim(); if(!q) return;
+  if(!needConsent(()=>search(q))) return;
   const box=$('results'); box.textContent='Recherche…';
   try{
     const res=await fetch(NOMINATIM+'?format=jsonv2&limit=5&accept-language=fr&q='+encodeURIComponent(q));
@@ -1137,6 +1194,7 @@ async function withDpi(blob,dpi){
 const slug=s=>(s||'ville').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'ville';
 let lastUrl=null;
 async function exportPoster(){
+  if(st.engine==='maplibre' && !needConsent(()=>exportPoster())) return;
   if(st.engine!=='maplibre' && !opData){ toast(st.engine==='file'?'Importez d\'abord un fichier de données.':'Chargez d\'abord les vecteurs Overpass.',true); return; }
   $('busy').classList.add('show'); $('busyTxt').textContent='Chargement des polices…';
   try{
@@ -1195,6 +1253,7 @@ async function probe(fn,ms=10000){
   catch(e){ clearTimeout(t); return {ok:false, info:e.name==='AbortError'?'délai dépassé':netMsg(e)}; }
 }
 async function runDiagnostics(){
+  if(!needConsent(()=>runDiagnostics())) return;
   document.querySelector('#tabs [data-tab=lieu]').click();
   const box=$('diag'); box.innerHTML=''; $('bDiag').disabled=true;
   const line=(label)=>{ const d=document.createElement('div'); d.innerHTML='<span class="wt">…</span><span></span><small></small>'; d.children[1].textContent=label; box.appendChild(d); return d; };
@@ -1282,6 +1341,7 @@ async function importFile(f){
 // ---------- Démarrage ----------
 async function boot(){
   buildUI();
+  $('bConsentYes').onclick=giveConsent; $('bConsentFile').onclick=declineConsent; updateConsentInfo();
   showEnvWarning();
   if(st.engine==='file') st.engine='maplibre';   // un fichier importé n'est pas conservé entre deux sessions
   syncInputs();
@@ -1293,12 +1353,13 @@ async function boot(){
   const ok=await loadMaplibre();
   updateEngineUI();
   if(ok){ if(st.engine==='maplibre') renderMap(true); }
+  else if(mlLib==='local-fail'){ if(st.engine==='maplibre') needConsent(); }
   else if(st.engine==='maplibre'){
     toast('Librairie cartographique injoignable : passez au moteur « Fichier » ou lancez le diagnostic.',true);
     setStatus('MapLibre injoignable (aucun CDN accessible)','err');
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
-  window.__cms={st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords};
+  window.__cms={st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent}};
 }
 boot();
 </script>

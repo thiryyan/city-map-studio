@@ -11,6 +11,7 @@ async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(executable_path=CHROME,args=['--no-sandbox'])
         page=await b.new_page(viewport={'width':1400,'height':900})
+        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
         async def route(r):
             u=r.request.url
             if 'interpreter' in u: await r.fulfill(status=200,content_type='application/json',body=FIX)

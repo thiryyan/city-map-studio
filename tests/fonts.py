@@ -21,6 +21,7 @@ class Q(SimpleHTTPRequestHandler):
 async def check(b, url, label):
     ctx = await b.new_context(viewport={'width': 1400, 'height': 900}, accept_downloads=True)
     page = await ctx.new_page(); errs = []; ext = []; fails = []
+    await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
     page.on('pageerror', lambda e: errs.append(str(e)))
     async def route(r):
         u = r.request.url
