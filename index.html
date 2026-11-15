@@ -256,7 +256,7 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
         <div class="seg" id="coordSeg"><button data-v="dec">Décimal</button><button data-v="dms">Degrés ° ′ ″</button></div>
         <label class="f show"><input type="checkbox" data-k="show.coords" aria-label="Afficher les coordonnées">Texte affiché (vide = automatique depuis le repère)</label>
         <input type="text" data-k="coordsManual" id="coordsManual" aria-label="Coordonnées affichées">
-        <p class="hint">Le sous-titre s'affiche dans les gabarits Cadre, Fondu et Médaillon ; le gabarit Souvenir reprend la mise en page du modèle.</p>
+        <p class="hint">Le sous-titre s'affiche dans les gabarits Cadre, Fondu et Médaillon ; le gabarit Souvenir ne l'affiche pas (en-tête sur une ligne, dédicace et noms en pied).</p>
       </div>
     </div>
     <div class="foot">
@@ -309,7 +309,7 @@ const FONTS = {
 
 const COLOR_LABELS = {paper:'Papier',land:'Terre',water:'Eau',park:'Parcs',building:'Bâtiments',roadMajor:'Rues principales',roadMinor:'Rues secondaires',path:'Chemins',rail:'Voies ferrées',text:'Texte',frame:'Filets',marker:'Repère'};
 const THEMES = {
-  souvenir:{name:'Souvenir (modèle)',c:{paper:'#FFFFFF',land:'#F2F2F2',water:'#C9D9DE',park:'#E2E2E2',building:'#D8D8D8',roadMajor:'#111111',roadMinor:'#4A4A4A',path:'#8E8E8E',rail:'#9A9A9A',text:'#111111',frame:'#111111',marker:'#D0312D'}},
+  souvenir:{name:'Souvenir',c:{paper:'#FFFFFF',land:'#F2F2F2',water:'#C9D9DE',park:'#E2E2E2',building:'#D8D8D8',roadMajor:'#111111',roadMinor:'#4A4A4A',path:'#8E8E8E',rail:'#9A9A9A',text:'#111111',frame:'#111111',marker:'#D0312D'}},
   galerie:{name:'Galerie Or & Noir',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#E9DDBF',park:'#F1F1F1',building:'#ECECEC',roadMajor:'#18181B',roadMinor:'#3F3F46',path:'#8A8A93',rail:'#A1A1AA',text:'#18181B',frame:'#C5A059',marker:'#C5A059'}},
   onyx:{name:'Prestige Onyx & Or',c:{paper:'#0F1115',land:'#0F1115',water:'#2A2415',park:'#16171C',building:'#1A1B21',roadMajor:'#D4AF37',roadMinor:'#8C7A3E',path:'#5E5432',rail:'#6B5E33',text:'#F3E5AB',frame:'#D4AF37',marker:'#F3E5AB'}},
   blanc:{name:'Blanc minimaliste',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#E5E7EB',park:'#F3F4F6',building:'#EEEEEE',roadMajor:'#111111',roadMinor:'#3A3A3A',path:'#9CA3AF',rail:'#9CA3AF',text:'#111111',frame:'#111111',marker:'#111111'}},
