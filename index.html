@@ -5,9 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#16161a">
 <title>City Map Studio — Atelier d'affiches cartographiques</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:ital,wght@0,300;0,400;0,600;1,400&family=Space+Mono:ital,wght@0,400;1,400&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Josefin+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<!-- Polices auto-hébergées (SIL OFL 1.1) : aucun appel à un service tiers, fonctionne hors ligne -->
+<link rel="stylesheet" href="lib/fonts/fonts.css">
 <style>
 :root{
   --bg:#16161a; --panel:#1e1e23; --panel2:#26262c; --line:#34343c; --txt:#ececf1; --mut:#9a9aa6;
@@ -304,7 +303,7 @@ const FONTS = {
   garamond:{fam:'"Cormorant Garamond", Garamond, Georgia, serif', scale:1.12, weight:500, load:['500 20px "Cormorant Garamond"','italic 500 20px "Cormorant Garamond"']},
   // Géométrique Art déco : capitales élancées, esprit affiche de voyage
   deco:{fam:'"Josefin Sans", "Futura", "Century Gothic", sans-serif', scale:1.04, load:['400 20px "Josefin Sans"','italic 400 20px "Josefin Sans"']},
-  sans:{fam:'Montserrat, "Helvetica Neue", Arial, sans-serif', load:['400 20px Montserrat','300 20px Montserrat','italic 400 20px Montserrat']},
+  sans:{fam:'Montserrat, "Helvetica Neue", Arial, sans-serif', load:['400 20px Montserrat','italic 400 20px Montserrat']},
   mono:{fam:'"Space Mono", "Courier New", monospace', load:['400 20px "Space Mono"','italic 400 20px "Space Mono"']}
 };
 
@@ -1120,6 +1119,8 @@ async function search(q){
 async function loadFonts(){
   try{ await Promise.all((FONTS[st.font]||FONTS.serif).load.map(f=>document.fonts.load(f))); }catch(e){}
 }
+/** true si toutes les variantes de la famille active sont chargées (sinon l'export utiliserait une police de secours) */
+function fontsReady(){ try{ return (FONTS[st.font]||FONTS.serif).load.every(f=>document.fonts.check(f)); }catch(e){ return true; } }
 
 // ---------- Export PNG 300 DPI ----------
 const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
@@ -1140,6 +1141,7 @@ async function exportPoster(){
   $('busy').classList.add('show'); $('busyTxt').textContent='Chargement des polices…';
   try{
     await loadFonts();
+    const fontWarn=!fontsReady();
     const cv=document.createElement('canvas'); cv.width=EXPORT_W; cv.height=EXPORT_H;
     const ctx=cv.getContext('2d');
     const g=geom(st,EXPORT_W,EXPORT_H); let warn=false;
@@ -1160,7 +1162,7 @@ async function exportPoster(){
     if(lastUrl) URL.revokeObjectURL(lastUrl);
     lastUrl=URL.createObjectURL(blob);
     $('resImg').src=lastUrl; $('resDl').href=lastUrl; $('resDl').download=name;
-    $('resInfo').textContent=`${name} · ${EXPORT_W} × ${EXPORT_H} px · 300 DPI · ${(blob.size/1048576).toFixed(1)} Mo`+(warn?' · ⚠ certaines tuiles ont pu manquer (délai dépassé)':'');
+    $('resInfo').textContent=`${name} · ${EXPORT_W} × ${EXPORT_H} px · 300 DPI · ${(blob.size/1048576).toFixed(1)} Mo`+(warn?' · ⚠ certaines tuiles ont pu manquer (délai dépassé)':'')+(fontWarn?' · ⚠ police non chargée : une police de secours a été utilisée':'');
     const file=new File([blob],name,{type:'image/png'});
     const canShare=navigator.canShare && navigator.canShare({files:[file]});
     $('resShare').style.display=canShare?'flex':'none';

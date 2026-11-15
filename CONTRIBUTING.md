@@ -4,15 +4,17 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 
 ## Règles non négociables
 - **100 % open source** : aucune clé API, aucun service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps).
-- **Un seul `index.html`** (HTML + CSS + JavaScript natifs), **sans étape de build**, servi par GitHub Pages depuis `main`. Seule exception : la librairie MapLibre, fournie dans `lib/` avec sa licence.
+- **Un seul `index.html`** (HTML + CSS + JavaScript natifs), **sans étape de build**, servi par GitHub Pages depuis `main`. Seule exception : les dépendances embarquées dans `lib/` (MapLibre, polices), chacune avec sa licence.
 - **Mobile en priorité**, puis ordinateur. Interface en français.
 - `drawPoster(ctx, W, H, pass, mapFn)` est la **seule** fonction de rendu de l'affiche : l'aperçu et l'export doivent rester identiques.
 - Attribution « © contributeurs OpenStreetMap » active par défaut (licence ODbL).
+- **Aucune ressource tierce pour la présentation** (CDN de polices, de styles ou de scripts) : tout est servi depuis le dépôt (RGPD, cf. dossier E14). Les CDN de MapLibre ne servent qu'en secours.
 - **Overpass et Nominatim** : requêtes uniquement à la demande, une seule à la fois ; un serveur qui répond 406 ou 429 n'est plus rappelé pendant sa suspension (risque de bannissement d'IP).
 
 ## Organisation
 - `index.html` : sections balisées `// ---------- Titre ----------` (dossier, § 9.2). `window.__cms` expose l'état et les fonctions pour la console et les tests.
 - `lib/` : MapLibre GL JS 4.7.1 et sa licence BSD-3. Pour changer de version, remplacer les fichiers et mettre à jour `ML_VERSION`.
+- `lib/fonts/` : polices woff2 (paquets npm `@fontsource/*`, sous-ensembles latin et latin-ext), déclarées dans `lib/fonts/fonts.css`. Pour ajouter une famille : copier ses fichiers woff2 et sa licence `OFL.txt`, ajouter ses `@font-face` (avec `unicode-range`), puis l'entrée correspondante dans `FONTS`.
 - `tests/` : tests de bout en bout Playwright (Python) avec un réseau simulé.
 
 ## Commandes
@@ -26,12 +28,13 @@ python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap sim
 python tests/overpass_policy.py  # 406/429 : suspension des miroirs, aucun nouvel essai
 python tests/coords.py           # saisie des coordonnées du repère
 python tests/texts.py            # lignes de texte optionnelles
+python tests/fonts.py            # polices auto-hébergées, aucun appel tiers
 python -m http.server 8000       # aperçu local : http://localhost:8000
 ```
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.
 
 ## Avant chaque commit
-- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `coords.py` et `texts.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
+- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `coords.py`, `texts.py` et `fonts.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
 - Vérifier visuellement l'export par rapport au modèle (dossier, § 2).
 - Mettre à jour le dossier technique quand un comportement change.
 

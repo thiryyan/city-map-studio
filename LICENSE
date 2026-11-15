@@ -27,5 +27,5 @@ their own licenses:
   lib/LICENSE-maplibre-gl.txt
 - Map data: © OpenStreetMap contributors, ODbL 1.0
 - Vector tile schema: © OpenMapTiles, CC-BY 4.0 (tiles served by OpenFreeMap)
-- Fonts (Playfair Display, Montserrat, Space Mono, Cormorant Garamond,
-  Josefin Sans): SIL Open Font License 1.1
+- lib/fonts/ (Playfair Display, Montserrat, Space Mono, Cormorant Garamond,
+  Josefin Sans): SIL Open Font License 1.1, see lib/fonts/*/OFL.txt

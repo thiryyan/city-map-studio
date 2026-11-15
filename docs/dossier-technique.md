@@ -8,7 +8,7 @@
 
 | # | Sujet | Exigence |
 | :--- | :--- | :--- |
-| E1 | Licence | **100 % open source** : code sous licence **MIT** (© Thiryyan) ; librairies, polices, données et services ouverts, sans clé API ni service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps). |
+| E1 | Licence | **100 % open source** : code sous licence **MIT** (© Thiryyan) ; librairies, polices, données et services ouverts, sans clé API ni service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps, ni Google Fonts). |
 | E2 | Navigateurs | Chromium ≥ 110, Safari ≥ 16, Firefox ≥ 115. |
 | E3 | Rendu | L'export reproduit le modèle visuel de référence (§ 2). |
 | E4 | Moteurs cartographiques | **Vectoriel GPU** (MapLibre GL + OpenFreeMap, par défaut), **Overpass** (Canvas 2D, mode artistique) et **Fichier** (import hors ligne). |
@@ -17,10 +17,11 @@
 | E7 | Libellés | Aucun libellé sur la carte : le tracé est purement graphique. |
 | E8 | Ville au lancement | Blois et la Loire. |
 | E9 | Export | PNG A4 300 DPI (2480 × 3508 px). |
-| E10 | Livraison | Un seul fichier `index.html` (HTML, CSS et JavaScript natifs), **sans étape de build**. MapLibre est fourni dans `lib/` ; les polices viennent de Google Fonts. |
+| E10 | Livraison | Un seul fichier `index.html` (HTML, CSS et JavaScript natifs), **sans étape de build**. MapLibre et les polices sont fournis dans `lib/`. |
 | E11 | Écrans | Mobile en priorité, ordinateur en second. Interface en français. |
 | E12 | Hébergement | **GitHub Pages** (dépôt public, `index.html` à la racine, branche `main`). Les plateformes de déploiement d'applications générées automatiquement sont exclues : la politique d'usage d'Overpass demande de ne pas les utiliser. |
 | E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU. Active par défaut, désactivable sous la responsabilité de l'utilisateur. |
+| E14 | Vie privée | Aucune ressource de présentation (librairie, polices, styles) n'est chargée depuis un tiers : l'adresse IP du visiteur n'est transmise qu'aux services de données cartographiques nécessaires au fonctionnement (§ 3.4). Les polices sont auto-hébergées, conformément à la jurisprudence RGPD sur Google Fonts (LG München, 20/01/2022, 3 O 17493/20). |
 
 ---
 
@@ -53,7 +54,7 @@ L'affiche « Là où tout a commencé » sert de modèle au gabarit et au thème
 | Tuiles vectorielles | OpenFreeMap (`https://tiles.openfreemap.org/planet`, schéma OpenMapTiles, sans clé) | Données ODbL, schéma CC-BY |
 | Données brutes | Overpass API ; ordre d'essai : `overpass.private.coffee` → `overpass.kumi.systems` → `maps.mail.ru` → `overpass-api.de` (en dernier, cf. § 3.4) | AGPL / ODbL |
 | Géocodage | Nominatim (`nominatim.openstreetmap.org`) | GPL / ODbL |
-| Polices | Playfair Display, Montserrat, Space Mono, Cormorant Garamond, Josefin Sans (Google Fonts) | SIL OFL 1.1 |
+| Polices | Playfair Display, Montserrat, Space Mono, Cormorant Garamond, Josefin Sans, **auto-hébergées** dans `lib/fonts/` (woff2, sous-ensembles latin et latin-ext, `OFL.txt` par famille) | SIL OFL 1.1 |
 | Rendu de l'affiche | Canvas 2D natif | — |
 
 ### 3.2. Moteurs cartographiques
@@ -236,7 +237,7 @@ Les textes trop longs sont réduits automatiquement pour tenir dans leur zone.
 
 * **Format** : 2480 × 3508 px (A4 à 300 DPI ; 212 DPI en A3 par mise à l'échelle chez l'imprimeur). L'export est un **recalcul intégral** à pleine résolution, jamais un agrandissement de l'aperçu.
 * **Étapes** :
-  1. Attente du chargement des polices (`document.fonts.load`).
+  1. Attente du chargement des polices (`document.fonts.load`), puis contrôle par `document.fonts.check` : si une variante manque, l'export se fait avec une police de secours et le signale dans la fenêtre de résultat.
   2. Création d'un canvas 2480 × 3508 et dessin de la couche basse.
   3. Carte :
      * **MapLibre** : instance hors écran de 800 px CSS de large, `pixelRatio` = largeur du cadre / 800 (environ 2,7), `preserveDrawingBuffer`, `maxCanvasSize` 8192, attente de l'événement `idle` (45 s au plus), puis `drawImage` dans le cadre ;
@@ -302,7 +303,9 @@ Les trois services distants (tuiles OpenFreeMap, Overpass, Nominatim) et, en sec
 ```
 city-map-studio/
 ├── index.html              # application complète (HTML + CSS + JS, sans build)
-├── lib/                    # MapLibre GL JS 4.7.1 (js, css, licence BSD-3)
+├── lib/                    # dépendances embarquées
+│   ├── maplibre-gl.js/.css # MapLibre GL JS 4.7.1 (licence BSD-3)
+│   └── fonts/              # polices woff2 + fonts.css + OFL.txt par famille
 ├── .nojekyll               # GitHub Pages : fichiers servis tels quels
 ├── LICENSE                 # MIT (code de l'application) + rappel des licences tierces
 ├── README.md
@@ -318,7 +321,8 @@ city-map-studio/
     ├── maplibre.py         # MapLibre local + OpenFreeMap simulé (tuiles MVT générées), export hors écran
     ├── overpass_policy.py  # suspension des miroirs après 406 / 429
     ├── coords.py           # saisie des coordonnées du repère
-    └── texts.py            # lignes de texte optionnelles, dans les 4 gabarits
+    ├── texts.py            # lignes de texte optionnelles, dans les 4 gabarits
+    └── fonts.py            # polices auto-hébergées, file:// et HTTP, aucun appel tiers
 ```
 
 ### 9.2. Sections de `index.html`
@@ -354,7 +358,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | WYSIWYG | Cadrage et position du repère identiques entre l'aperçu (mobile et ordinateur) et l'export. |
 | Export | PNG 2480 × 3508, métadonnée 300 DPI, polices correctes, aucun flou. |
 | DMS | 47,5861 → 47° 35′ 10.0″ N ; 1,99999 → 2° 00′ 00.0″ E (retenue). |
-| Polices | Les 5 familles s'appliquent à l'aperçu et à l'export, et le choix est conservé. |
+| Polices | Les 5 familles (normale et italique) se chargent depuis `lib/fonts/`, y compris hors ligne et en `file://` ; elles s'appliquent à l'aperçu et à l'export ; le choix est conservé ; aucune requête vers Google. |
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
 | Saisie du repère | Formats du § 4.4 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
 | Résilience | MapLibre indisponible → bascule possible vers Overpass ou Fichier ; miroir Overpass en erreur 5xx ou hors délai → miroir suivant ; miroir en 406 / 429 → suspendu, jamais rappelé pendant la suspension. |
@@ -382,7 +386,7 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 | MapLibre avec les vraies tuiles OpenFreeMap | ⏳ à valider | Sur l'URL GitHub Pages, dans un vrai navigateur. |
 | Overpass réel depuis `github.io` (miroirs, temps de réponse, taille de la relation « Loire ») | ⏳ à valider | Idem. |
 | Nominatim réel | ⏳ à valider | Idem. |
-| Chargement des polices Google Fonts dans l'export | ⏳ à valider | Les tests utilisent une police de secours (Google Fonts coupé). |
+| Polices auto-hébergées dans l'aperçu et l'export, contrôle `document.fonts.check` | ✅ | `tests/fonts.py` |
 | Téléchargement sur iOS Safari et Chrome Android | ⏳ à valider | Appareils réels. |
 
 ---
@@ -395,11 +399,11 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 3. Valider Overpass depuis l'origine `github.io`.
 
 **Priorité 1 — Fiabilité et qualité**
-4. Polices dans l'export : vérifier avec `document.fonts.check()` et afficher un avertissement si une police manque.
-5. Téléchargement sur iOS et Android, avec l'appui long en secours.
-6. Moteurs Overpass et Fichier : traiter le trait de côte (`natural=coastline`) pour Venise et New York, ou rediriger automatiquement vers le moteur Vectoriel GPU.
-7. Performances du canvas : mettre en cache les `Path2D` par classe pour fluidifier le déplacement quand les bâtiments sont nombreux.
-8. Conserver le dernier fichier importé dans IndexedDB, pour que le moteur Fichier survive à un rechargement.
+4. Téléchargement sur iOS et Android, avec l'appui long en secours.
+5. Moteurs Overpass et Fichier : traiter le trait de côte (`natural=coastline`) pour Venise et New York, ou rediriger automatiquement vers le moteur Vectoriel GPU.
+6. Performances du canvas : mettre en cache les `Path2D` par classe pour fluidifier le déplacement quand les bâtiments sont nombreux.
+7. Conserver le dernier fichier importé dans IndexedDB, pour que le moteur Fichier survive à un rechargement.
+8. Vie privée : le moteur par défaut appelle OpenFreeMap dès l'ouverture (adresse IP transmise), Overpass et Nominatim seulement à la demande. Ajouter une mention d'information (services appelés, finalité), et étudier un démarrage sans appel tiers (consentement avant la première carte, ou tuiles PMTiles autohébergées).
 
 **Priorité 2 — Confort**
 9. Formats supplémentaires (A3, 50 × 70 cm), PDF via jsPDF (licence MIT) si besoin.
