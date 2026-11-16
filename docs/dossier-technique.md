@@ -68,7 +68,8 @@ Une fonction unique, `drawPoster(ctx, W, H, pass, mapFn)`, dessine l'affiche à 
   Tant que l'accord n'est pas donné, chaque point d'accès au réseau (`initMaplibre`, `fetchOverpass`, `search`, `runDiagnostics`, `exportPoster` avec le moteur Vectoriel GPU, CDN de secours de MapLibre) affiche la demande au lieu d'appeler le service. L'onglet Lieu indique l'état de l'accord et permet de le retirer, ce qui recharge la page dans l'état initial.
 * **Overpass**
   * Requêtes uniquement à la demande, **une seule à la fois**. Après un déplacement hors de la zone chargée, un bandeau propose « Actualiser les vecteurs ». La zone demandée est élargie de 40 % pour absorber les petits déplacements.
-  * `[timeout:25]` côté serveur ; `AbortController` à **30 s** côté client, puis passage au miroir suivant. Une erreur HTTP 5xx ou un délai dépassé fait aussi passer au miroir suivant.
+  * `[timeout:25]` côté serveur ; `AbortController` à **30 s** côté client, puis passage au miroir suivant. Une erreur HTTP 5xx ou un délai dépassé fait aussi passer au miroir suivant. Les délais sont regroupés dans `OP_TIMEOUT` (`fetch` : 30 s ; `diag` : 20 s pour la sonde du diagnostic).
+  * **Message d'échec** : quand aucun miroir ne répond, chaque échec est enregistré (HTTP, délai dépassé, ou absence de réponse lisible). Une passerelle en 502/504 répond souvent sans en-tête CORS : le navigateur ne voit alors qu'un `TypeError` (« Failed to fetch »), indiscernable d'une coupure réseau. Si au moins un miroir a répondu en HTTP ou a dépassé le délai, la connexion fonctionne : la barre d'état et la notification indiquent « serveurs en panne ou surchargés » et non « accès réseau bloqué ». Le détail par miroir figure dans l'infobulle de la barre d'état et dans la notification. Ces échecs (5xx, délai) ne suspendent pas le miroir.
   * **Suspension après 406 ou 429** : overpass-api.de renvoie HTTP 406 aux clients qu'il ne juge pas légitimes (User-Agent, Referer, en-tête Accept). Une page ouverte en `file://` n'envoie pas de Referer, d'où le refus. Les clients qui insistent après une erreur 406 ou 429 sont bannis plus vite. Un miroir qui répond 406 est donc suspendu **24 h**, et un miroir qui répond 429 **1 h**. Pour un 429, l'application retient la durée de `Retry-After` si elle est plus longue, mais elle ne peut lire cet en-tête que si le serveur l'autorise par CORS. La suspension est conservée dans `localStorage` (clé `cityMapStudio.opBlocked`), y compris après un rechargement, et le diagnostic la respecte. Si tous les miroirs sont suspendus, aucune requête n'est émise : l'application indique l'heure de reprise et oriente vers le moteur Fichier.
   * overpass-api.de est essayé en dernier. Le lien « requête Overpass » du moteur Fichier vise le premier miroir disponible.
   * Un navigateur ne peut pas modifier son User-Agent : seul un hébergement HTTPS (GitHub Pages) fournit un Referer et une Origin valides.
@@ -286,7 +287,7 @@ Les trois services distants (tuiles OpenFreeMap, Overpass, Nominatim) et, en sec
 1. **Détection du contexte** au démarrage (iframe, protocole, `navigator.onLine`), avec un avertissement explicite dans l'onglet Lieu.
 2. **MapLibre embarqué** dans `lib/`, avec repli sur 3 CDN (12 s par source).
 3. **Surveillance des tuiles** : un échec réseau, ou l'absence de tuile au bout de 15 s, affiche « Carte indisponible → Diagnostiquer ».
-4. **Diagnostic réseau en un clic** : teste la librairie, OpenFreeMap, chaque miroir Overpass (sauf ceux qui sont suspendus) et Nominatim, puis recommande un moteur.
+4. **Diagnostic réseau en un clic** : teste la librairie, OpenFreeMap, chaque miroir Overpass (sauf ceux qui sont suspendus) et Nominatim, puis recommande un moteur. Si tous les miroirs Overpass échouent alors que d'autres services répondent, une seconde conclusion indique que la panne vient des serveurs Overpass (ou de leur suspension).
 5. **Moteur Fichier**, qui fonctionne sans aucun accès réseau.
 6. **Enregistrement de secours** de l'export par appui long sur l'image.
 
@@ -334,6 +335,7 @@ city-map-studio/
     ├── layouts.py          # captures des gabarits Cadre / Fondu / Médaillon
     ├── maplibre.py         # MapLibre local + OpenFreeMap simulé (tuiles MVT générées), export hors écran
     ├── overpass_policy.py  # suspension des miroirs après 406 / 429
+    ├── overpass_outage.py  # panne des miroirs (délai, 504, 502 sans CORS) : message et diagnostic
     ├── coords.py           # saisie des coordonnées du repère
     ├── texts.py            # lignes de texte optionnelles, dans les 4 gabarits
     ├── fonts.py            # polices auto-hébergées, file:// et HTTP, aucun appel tiers
@@ -403,6 +405,7 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 | Détection d'iframe, diagnostic tout en échec | ✅ | `tests/offline.py` |
 | MapLibre embarqué, style (filtres 4.7.1), aperçu, export hors écran | ✅ | `tests/maplibre.py` (tuiles OpenMapTiles simulées). |
 | Suspension des miroirs Overpass après 406 / 429 | ✅ | `tests/overpass_policy.py` |
+| Panne de tous les miroirs Overpass (délai, 5xx, réponse sans CORS) : message « serveurs en panne », conclusion du diagnostic, pas de suspension | ✅ | `tests/overpass_outage.py` |
 | Saisie des coordonnées du repère | ✅ | `tests/coords.py` |
 | Lignes de texte optionnelles | ✅ | `tests/texts.py` |
 | Taille des textes de l'affiche | ✅ | `tests/textsize.py` |

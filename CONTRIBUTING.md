@@ -27,6 +27,7 @@ python tests/offline.py          # réseau coupé : diagnostic, import json/osm/
 python tests/layouts.py          # captures des gabarits
 python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap simulé, export hors écran
 python tests/overpass_policy.py  # 406/429 : suspension des miroirs, aucun nouvel essai
+python tests/overpass_outage.py  # panne des miroirs : message « serveurs en panne », diagnostic
 python tests/coords.py           # saisie des coordonnées du repère
 python tests/texts.py            # lignes de texte optionnelles
 python tests/textsize.py         # taille des textes de l'affiche (par ligne et globale)
@@ -40,7 +41,7 @@ python -m http.server 8000       # aperçu local : http://localhost:8000
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.
 
 ## Avant chaque commit
-- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `coords.py`, `texts.py`, `textsize.py`, `mobile.py`, `ux.py`, `fonts.py`, `consent.py` et `reset.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
+- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `overpass_outage.py`, `coords.py`, `texts.py`, `textsize.py`, `mobile.py`, `ux.py`, `fonts.py`, `consent.py` et `reset.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
 - Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
 - Mettre à jour le dossier technique quand un comportement change.
 
