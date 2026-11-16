@@ -14,80 +14,100 @@
   --sab:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
+/* Tailles en rem : l'interface suit le réglage « taille du texte » du système et le réglage A− / A+ de l'application */
+html{font-size:100%}
+@supports (font:-apple-system-body){html{font:-apple-system-body}}   /* iOS : Dynamic Type */
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);overscroll-behavior:none}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:.9375rem;line-height:1.4}
 button,input,select{font:inherit;color:inherit}
-#app{display:grid;height:100dvh;grid-template-rows:56dvh 1fr;grid-template-columns:100%}
+/* Mobile portrait : affiche en haut, panneau coulissant en bas (hauteur --sheetH, 3 crans : réduit, mi-hauteur, déplié) */
+#app{display:grid;height:100dvh;grid-template-rows:minmax(0,1fr) var(--sheetH,55dvh);grid-template-columns:100%}
 #stage{grid-row:1;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,#2b2b31 0%,#151518 75%);display:flex;align-items:center;justify-content:center;touch-action:none}
-#panel{grid-row:2;display:flex;flex-direction:column;min-height:0;background:var(--panel);border-top:1px solid var(--line)}
-@media (min-width:900px){
-  #app{grid-template-rows:100dvh;grid-template-columns:400px 1fr}
-  #panel{grid-row:1;grid-column:1;border-top:0;border-right:1px solid var(--line)}
+#panel{grid-row:2;display:flex;flex-direction:column;min-height:0;background:var(--panel);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -8px 24px #0006;position:relative;z-index:20}
+.grab{flex:none;display:flex;justify-content:center;align-items:center;width:100%;height:28px;padding:0;border:0;background:none;cursor:grab;touch-action:none}
+.grab i{display:block;width:44px;height:5px;border-radius:3px;background:#5a5a66}
+.grab:focus-visible i{background:var(--acc)}
+#app[data-sheet=peek] .tabbody{display:none}
+#app.dragging .tabbody{overflow:hidden}
+#app.sheetmode .status{font-size:.75rem;margin-bottom:5px}
+#app.sheetmode .btn.pri{min-height:46px}
+/* Ordinateur, tablette paysage et téléphone en paysage : deux colonnes */
+@media (min-width:900px), (orientation:landscape) and (min-width:560px){
+  #app{grid-template-rows:100dvh;grid-template-columns:min(400px,46vw) 1fr}
+  #panel{grid-row:1;grid-column:1;border-top:0;border-right:1px solid var(--line);border-radius:0;box-shadow:none}
   #stage{grid-row:1;grid-column:2}
+  .grab{display:none}
+  #app[data-sheet=peek] .tabbody{display:block}
 }
 .brand{display:none;padding:16px 18px 6px;font-weight:600;letter-spacing:.04em}
-.brand small{display:block;color:var(--mut);font-weight:400;letter-spacing:0;font-size:12px}
+.brand small{display:block;color:var(--mut);font-weight:400;letter-spacing:0;font-size:.8125rem}
 @media (min-width:900px){.brand{display:block}}
-.tabs{display:flex;gap:4px;padding:8px 10px 0;border-bottom:1px solid var(--line);flex:none}
-.tabs button{flex:1;background:none;border:0;padding:10px 4px 11px;color:var(--mut);font-weight:500;border-bottom:2px solid transparent;cursor:pointer}
+.tabs{display:flex;gap:4px;padding:0 10px;border-bottom:1px solid var(--line);flex:none}
+@media (min-width:900px), (orientation:landscape) and (min-width:560px){.tabs{padding-top:8px}}
+.tabs button{flex:1;background:none;border:0;padding:12px 4px 12px;min-height:44px;color:var(--mut);font-weight:500;border-bottom:2px solid transparent;cursor:pointer}
 .tabs button.on{color:var(--txt);border-bottom-color:var(--acc)}
-.tabbody{flex:1;overflow-y:auto;padding:14px 14px 24px;-webkit-overflow-scrolling:touch}
+.tabbody{flex:1;overflow-y:auto;padding:14px 14px 24px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .tab{display:none}.tab.on{display:block}
-.foot{flex:none;padding:10px 12px calc(10px + var(--sab));border-top:1px solid var(--line);background:var(--panel)}
-.status{font-size:12px;color:var(--mut);margin-bottom:8px;display:flex;gap:6px;align-items:center;min-height:16px}
-#stTxt{flex:1;min-width:0}
-.lnk{flex:none;background:none;border:0;padding:4px 0;color:var(--mut);font-size:12px;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.foot{flex:none;padding:8px 12px calc(8px + var(--sab));border-top:1px solid var(--line);background:var(--panel)}
+.status{font-size:.8125rem;color:var(--mut);margin-bottom:6px;display:flex;gap:6px;align-items:center;min-height:16px}
+#stTxt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lnk{flex:none;background:none;border:0;padding:4px 0;color:var(--mut);font-size:.8125rem;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .lnk.confirm{color:var(--acc);font-weight:600}
-.dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex:none}.dot.busy{background:#facc15}.dot.err{background:var(--danger)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;min-height:40px}
+.uisz{flex:none;display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.uisz button{background:none;border:0;min-width:36px;min-height:30px;padding:0 6px;color:var(--mut);cursor:pointer;line-height:1}
+.uisz button+button{border-left:1px solid var(--line)}
+.uisz button[disabled]{opacity:.35}
+.dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex:none}.dot.busy{background:#facc15}.dot.wait{background:#f59e0b}.dot.err{background:var(--danger)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;min-height:44px}
 .btn:active{transform:scale(.98)}
-.btn.pri{background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600;width:100%;min-height:48px;font-size:15px}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600;width:100%;min-height:48px;font-size:1rem}
 .btn.on{border-color:var(--acc);color:var(--acc2)}
-.btn.sm{min-height:34px;padding:6px 10px;font-size:13px}
+.btn.sm{min-height:36px;padding:6px 10px;font-size:.875rem}
 .btn[disabled]{opacity:.45;pointer-events:none}
-h3{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px;font-weight:600}
+h3{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px;font-weight:600}
 h3:first-child{margin-top:2px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .row>.grow{flex:1;min-width:0}
-input[type=text],input[type=search],input[type=number]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;min-height:42px}
+input[type=text],input[type=search],input[type=number]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;min-height:44px}
 input[type=text]:focus,input[type=search]:focus{border-color:var(--acc)}
-@media (max-width:899px){input[type=text],input[type=search],input[type=number]{font-size:16px}} /* iOS : pas de zoom à la saisie */
-label.f{display:block;margin:10px 0 4px;color:var(--mut);font-size:12px}
+@media (max-width:899px){input[type=text],input[type=search],input[type=number]{font-size:max(16px,1rem)}} /* iOS : pas de zoom à la saisie */
+label.f{display:block;margin:10px 0 4px;color:var(--mut);font-size:.8125rem}
 label.f.show{display:flex;align-items:center;gap:8px;cursor:pointer}
 label.f.show input{width:18px;height:18px;margin:0;accent-color:var(--acc)}
-label.f.show:has(input:not(:checked))+input{opacity:.45}
+label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked))+input+.tsz{opacity:.45}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer;font-size:13px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer;font-size:.875rem}
 .chip.on{border-color:var(--acc);color:var(--acc2)}
 .seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
-.seg button{flex:1;border:0;background:none;padding:8px 6px;border-radius:8px;cursor:pointer;color:var(--mut);font-size:13px}
+.seg button{flex:1;border:0;background:none;padding:8px 6px;border-radius:8px;cursor:pointer;color:var(--mut);font-size:.875rem}
 .seg button.on{background:var(--acc);color:#141414;font-weight:600}
-#fontSeg{flex-wrap:wrap}#fontSeg button{flex:1 0 30%}
+
 .slider{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;margin:10px 0}
-.slider span{color:var(--mut);font-size:12px}.slider output{font-size:12px;color:var(--txt);font-variant-numeric:tabular-nums}
+.slider span{color:var(--mut);font-size:.8125rem}.slider output{font-size:.8125rem;color:var(--txt);font-variant-numeric:tabular-nums}
 .slider input{grid-column:1/3;width:100%;accent-color:var(--acc);height:28px}
 .tog{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
 .tog input{width:20px;height:20px;accent-color:var(--acc)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;text-align:center;font-size:11px;color:var(--mut)}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;text-align:center;font-size:.75rem;color:var(--mut)}
 .card canvas{display:block;width:100%;height:auto;border-radius:3px;margin-bottom:4px;box-shadow:0 1px 3px #0006}
 .card.on{border-color:var(--acc);color:var(--txt)}
 .themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
-.theme{border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel2);font-size:11px}
+.theme{border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel2);font-size:.75rem}
 .theme .sw{display:flex;height:34px}.theme .sw i{flex:1}
 .theme div.n{padding:5px 7px;color:var(--mut)}
 .theme.on{border-color:var(--acc)}.theme.on div.n{color:var(--txt)}
 .colors{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
-.colors label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut)}
+.colors label{display:flex;align-items:center;gap:8px;font-size:.8125rem;color:var(--mut)}
 .colors input{width:34px;height:28px;border:1px solid var(--line);border-radius:6px;background:none;padding:0;flex:none}
 .marks{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .marks .card canvas{box-shadow:none;background:#fff}
 .results{margin-top:8px;display:flex;flex-direction:column;gap:6px}
-.res{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px}
-.res .t{margin-bottom:6px;color:var(--txt)}
+.res{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.8125rem}
+.res .t{margin-bottom:6px;color:var(--txt)}.res .t b{display:block;font-size:.9375rem}.res .t small{display:block;color:var(--mut)}
 .res .row .btn{flex:1}
-.hint{font-size:12px;color:var(--mut);margin:6px 0}
-.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.hint{font-size:.8125rem;color:var(--mut);margin:6px 0}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:.8125rem}
 /* poster */
 #poster{position:relative;box-shadow:0 18px 50px #000a,0 2px 6px #0008;background:#fff;flex:none}
 #poster canvas{position:absolute;left:0;top:0;width:100%;height:100%}
@@ -99,18 +119,40 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
 #opCanvas{touch-action:none;cursor:grab}
 #slot.placing #opCanvas,#slot.placing .maplibregl-canvas-container{cursor:crosshair!important}
 .fab{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:10}
-.fab button{width:40px;height:40px;border-radius:10px;border:1px solid #ffffff22;background:#1e1e23e6;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.fab button{width:44px;height:44px;border-radius:10px;border:1px solid #ffffff22;background:#1e1e23e6;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
 .fab button.on{background:var(--acc);color:#141414}
-.banner{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:10;background:#1e1e23f0;border:1px solid var(--acc);border-radius:999px;padding:6px 6px 6px 14px;display:none;align-items:center;gap:10px;font-size:13px;white-space:nowrap;box-shadow:0 6px 20px #0008}
-.banner.show{display:flex}
-.placehint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:10;background:var(--acc);color:#141414;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;display:none}
+#stage[data-fab=bottom] .fab{top:auto;right:auto;left:50%;bottom:10px;transform:translateX(-50%);flex-direction:row}
+#stage[data-fab=none] .fab{display:none}
+#bFrame{display:none}
+#app.sheetmode #bFrame{display:flex}
+/* Verrou de la carte (mobile) : un toucher sur la carte ouvre le mode Cadrer au lieu de la déplacer par erreur */
+.shield{position:absolute;z-index:4;border:0;padding:0;margin:0;background:none;cursor:pointer;display:flex;align-items:flex-end;justify-content:center}
+.shield[hidden]{display:none}
+.shield.mini span{display:none}
+.shield span{white-space:nowrap;margin-bottom:8px;background:#1e1e23d9;color:var(--txt);border:1px solid #ffffff22;border-radius:999px;padding:5px 11px;font-size:.8125rem;display:flex;gap:6px;align-items:center;backdrop-filter:blur(6px);pointer-events:none}
+.stagebar{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:11;display:flex;flex-direction:column;align-items:center;gap:6px;width:max-content;max-width:calc(100% - 20px)}
+.placehint{background:var(--acc);color:#141414;border-radius:999px;padding:6px 14px;font-size:.875rem;font-weight:600;display:none;text-align:center}
 .placehint.show{display:block}
-.consent{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:12;width:min(360px,calc(100% - 32px));background:#1e1e23f5;border:1px solid var(--acc);border-radius:14px;padding:16px;box-shadow:0 12px 40px #000a;display:none;font-size:13px;line-height:1.45}
-.consent.show{display:block}
-.consent h2{margin:0 0 8px;font-size:15px}
+.framebar{display:none;align-items:center;gap:10px;white-space:nowrap;background:#1e1e23f2;border:1px solid var(--acc);border-radius:999px;padding:5px 5px 5px 14px;font-size:.875rem;box-shadow:0 6px 20px #0008}
+.framebar.show{display:flex}
+.framebar .btn{min-height:36px;border-radius:999px;background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600}
+/* Bandeau d'action (zone modifiée, carte indisponible) : en tête du panneau, il ne masque plus l'affiche */
+.banner{flex:none;display:none;align-items:center;gap:10px;background:#2a2418;border-bottom:1px solid #8a6a2a;padding:6px 10px 6px 14px;font-size:.875rem}
+.banner.show{display:flex}
+.banner span{flex:1;min-width:0}
+/* Accord préalable : panneau en bas d'écran sur fond assombri */
+.consent{position:fixed;inset:0;z-index:95;background:#000a;display:none;align-items:flex-end;justify-content:center}
+.consent.show{display:flex}
+.consent .box{width:min(480px,100%);max-height:100%;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:18px 18px 0 0;padding:18px 18px calc(16px + var(--sab));box-shadow:0 -12px 40px #000a;font-size:.9375rem;line-height:1.45}
+@media (min-width:600px){.consent{align-items:center}.consent .box{border-radius:16px;border-bottom:1px solid var(--line)}}
+.consent h2{margin:0 0 8px;font-size:1.0625rem}
 .consent p{margin:0 0 10px;color:var(--txt)}
+.consent details{margin:0 0 12px;color:var(--mut);font-size:.875rem}
+.consent summary{cursor:pointer;color:var(--acc2);padding:6px 0;min-height:32px}
+.consent details p{color:var(--mut);margin:4px 0 0}
 .consent .row .btn{flex:1 1 140px}
-#toast{position:fixed;left:50%;bottom:calc(90px + var(--sab));transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:#2b2b31;border:1px solid var(--line);padding:10px 14px;border-radius:10px;z-index:100;max-width:90vw;font-size:13px;pointer-events:none}
+#toast{position:fixed;left:50%;bottom:calc(var(--sheetH,0px) + 14px);transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:#2b2b31;border:1px solid var(--line);padding:10px 14px;border-radius:10px;z-index:100;max-width:90vw;font-size:.875rem;pointer-events:none;box-shadow:0 6px 20px #0008}
+@media (min-width:900px), (orientation:landscape) and (min-width:560px){#toast{bottom:24px;left:calc(50% + min(200px,23vw))}}
 #toast.show{opacity:1;transform:translateX(-50%)}
 #toast.err{border-color:var(--danger)}
 #busy,#result{position:fixed;inset:0;background:#000b;z-index:90;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px}
@@ -121,14 +163,70 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
 #result img{width:100%;max-height:52dvh;object-fit:contain;background:#111;border-radius:8px}
 #result .row .btn{flex:1}
 .xl{display:none}@media (min-width:900px){.xl{display:inline}}
-.warn{background:#3a2a12;border:1px solid #8a6a2a;color:#f5deb0;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:10px}
+.warn{background:#3a2a12;border:1px solid #8a6a2a;color:#f5deb0;border-radius:10px;padding:10px 12px;font-size:.875rem;margin-bottom:10px}
 .warn b{color:#fff}
-.diag{margin-top:8px;font-size:12px;display:flex;flex-direction:column;gap:4px}
+.diag{margin-top:8px;font-size:.8125rem;display:flex;flex-direction:column;gap:4px}
 .diag div{display:flex;gap:8px;align-items:baseline}.diag .ok{color:#4ade80}.diag .ko{color:var(--danger)}.diag .wt{color:#facc15}
 .diag small{color:var(--mut)}
-#fileBlock ol{margin:6px 0 10px;padding-left:18px;color:var(--mut);font-size:12px}#fileBlock li{margin:3px 0}#fileBlock a{color:var(--acc2)}
-.credit{font-size:11px;color:var(--mut);margin-top:6px}
+#fileBlock ol{margin:6px 0 10px;padding-left:18px;color:var(--mut);font-size:.8125rem}#fileBlock li{margin:3px 0}#fileBlock a{color:var(--acc2)}
+.credit{font-size:.75rem;color:var(--mut);margin-top:6px}
 .credit a{color:var(--mut)}
+/* Accessibilité : focus clavier visible, cibles tactiles d'au moins 44 px, transitions courtes */
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+.tabs button:focus-visible{outline-offset:-3px;border-radius:6px}
+input[type=text]:focus-visible,input[type=search]:focus-visible{outline:none}
+.chip{min-height:44px;display:inline-flex;align-items:center;padding:8px 14px}
+.seg button{min-height:40px}
+.tog{min-height:48px;cursor:pointer;gap:12px}
+.tog input{width:22px;height:22px;flex:none}
+label.f.show{min-height:44px;margin:6px 0 2px}
+.btn.sm{min-height:44px}
+.banner{padding-top:4px;padding-bottom:4px}
+.datebtn{min-width:48px}
+label.f.show input{width:22px;height:22px}
+.colors label{min-height:44px;cursor:pointer}
+.colors input{width:44px;height:36px}
+.lnk{min-height:36px;padding:4px 2px}
+.uisz button{min-height:36px;min-width:38px}
+.btn,.chip,.seg button,.card,.theme,.fonts button,.tabs button{transition:background-color .15s,border-color .15s,color .15s}
+/* Sections repliables (Avancé, couleurs) */
+details.adv{margin:18px 0 0;border:1px solid var(--line);border-radius:12px;background:#1a1a1f}
+details.adv>summary{list-style:none;cursor:pointer;min-height:48px;padding:10px 14px;display:flex;align-items:center;gap:10px}
+details.adv>summary::-webkit-details-marker{display:none}
+details.adv>summary span{font-weight:600}
+details.adv>summary small{color:var(--mut);font-size:.8125rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+details.adv>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--mut);border-bottom:2px solid var(--mut);transform:rotate(45deg);margin:-4px 4px 0 0;transition:transform .15s;flex:none}
+details.adv[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+details.adv[open]{padding:0 14px 14px}
+details.adv[open]>summary{margin:0 -14px}
+details.adv>h3:first-of-type{margin-top:6px}
+/* Parcours guidé */
+.btn.next{width:100%;margin-top:22px;justify-content:space-between;padding:12px 16px;color:var(--acc2);border-color:#5a4a2a;background:#241f17}
+.btn.next.pri2{background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600}
+/* Polices : cartes avec aperçu du titre, défilement horizontal */
+.fonts{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 8px;margin:0 -2px;scrollbar-width:thin}
+.fonts button{flex:0 0 auto;min-width:104px;max-width:160px;scroll-snap-align:start;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--txt)}
+.fonts button .smp{font-size:1.25rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.fonts button small{color:var(--mut);font-size:.75rem}
+.fonts button.on{border-color:var(--acc);background:#2a2418}
+.fonts button.on small{color:var(--acc2)}
+/* Date : bouton calendrier (le champ date natif, transparent, couvre le bouton : fonctionne aussi sur iOS) */
+.datebtn{position:relative;overflow:hidden;flex:none}
+.datebtn input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:16px}
+.xl2{display:none}@media (min-width:400px){.xl2{display:inline}}
+/* Annuler / rétablir */
+.hist{flex:none;display:flex;gap:2px}
+.hist button{background:none;border:1px solid var(--line);border-radius:8px;min-width:38px;min-height:36px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.hist button[disabled]{opacity:.3;cursor:default}
+/* Taille des lignes de texte de l'affiche */
+.tsz{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:2px 0 0}
+.tsz span{color:var(--mut);font-size:.8125rem}
+.tsz input{width:100%;accent-color:var(--acc);height:32px;margin:0}
+.tsz output,.slider output{font-size:.8125rem;color:var(--txt);font-variant-numeric:tabular-nums;min-width:3.2em;text-align:right}
+.tsz output.shrunk,.slider output.shrunk{color:#f59e0b}
+.fitnote{font-size:.8125rem;color:#f5c88a;margin:2px 0 0;min-height:0}
+.fitnote:empty{display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -138,41 +236,42 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
       <canvas id="cvUnder"></canvas>
       <div id="slot"><div id="mlMap"></div><canvas id="opCanvas"></canvas></div>
       <canvas id="cvOver"></canvas>
+      <button class="shield" id="shield" type="button" aria-label="Cadrer la carte" hidden><span><svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16M2 10h16M10 2l-3 3M10 2l3 3M10 18l-3-3M10 18l3-3M2 10l3-3M2 10l3 3M18 10l-3-3M18 10l-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Toucher pour cadrer</span></button>
     </div>
     <div class="fab">
+      <button id="bFrame" title="Cadrer la carte" aria-label="Cadrer la carte" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16M2 10h16M10 2l-3 3M10 2l3 3M10 18l-3-3M10 18l3-3M2 10l3-3M2 10l3 3M18 10l-3-3M18 10l-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button id="bZoomIn" title="Zoom avant" aria-label="Zoom avant"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button id="bZoomOut" title="Zoom arrière" aria-label="Zoom arrière"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button id="bPlace" title="Placer le repère" aria-label="Placer le repère"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 17.5S3.5 12.6 3.5 7.6A3.6 3.6 0 0 1 10 5.4a3.6 3.6 0 0 1 6.5 2.2c0 5-6.5 9.9-6.5 9.9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
       <button id="bToMarker" title="Centrer sur le repère" aria-label="Centrer sur le repère"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="1.8" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg></button>
     </div>
-    <div class="placehint" id="placeHint">Touchez la carte pour placer le repère</div>
-    <div class="consent" id="consent" role="dialog" aria-modal="false" aria-labelledby="consentTitle">
-      <h2 id="consentTitle">Afficher la carte ?</h2>
-      <p>Les fonds de carte proviennent d'<b>OpenFreeMap</b>. Les afficher transmet votre adresse IP à ce service. La recherche d'adresse (<b>Nominatim</b>) et le moteur <b>Overpass</b>, utilisés seulement à votre demande, la reçoivent aussi.</p>
-      <p>Rien d'autre n'est envoyé : pas de cookie, pas de mesure d'audience. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p>
-      <div class="row"><button class="btn pri" id="bConsentYes">Afficher la carte</button><button class="btn" id="bConsentFile">Travailler hors ligne</button></div>
+    <div class="stagebar">
+      <div class="placehint" id="placeHint">Touchez la carte pour placer le repère</div>
+      <div class="framebar" id="frameBar" role="status"><span>Glissez · pincez pour zoomer</span><button class="btn sm" id="bFrameDone" type="button">Terminer</button></div>
     </div>
-    <div class="banner" id="banner"><span id="bannerTxt">Zone modifiée</span><button class="btn sm on" id="bRefresh">Actualiser les vecteurs</button></div>
   </section>
 
   <aside id="panel">
+    <button class="grab" id="grab" type="button" aria-label="Agrandir le panneau des réglages"><i></i></button>
     <div class="brand">City Map Studio<small>Atelier d'affiches cartographiques</small></div>
-    <nav class="tabs" id="tabs">
-      <button data-tab="lieu" class="on">Lieu</button>
-      <button data-tab="style">Style</button>
-      <button data-tab="repere">Repère</button>
-      <button data-tab="textes">Textes</button>
+    <div class="banner" id="banner" role="status"><span id="bannerTxt">Zone modifiée</span><button class="btn sm on" id="bRefresh">Actualiser les vecteurs</button></div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Étapes de création">
+      <button data-tab="lieu" class="on" role="tab" id="tb-lieu" aria-controls="tab-lieu" aria-selected="true">Lieu</button>
+      <button data-tab="repere" role="tab" id="tb-repere" aria-controls="tab-repere" aria-selected="false" tabindex="-1">Repère</button>
+      <button data-tab="textes" role="tab" id="tb-textes" aria-controls="tab-textes" aria-selected="false" tabindex="-1">Textes</button>
+      <button data-tab="style" role="tab" id="tb-style" aria-controls="tab-style" aria-selected="false" tabindex="-1">Style</button>
     </nav>
     <div class="tabbody">
       <!-- LIEU -->
-      <div class="tab on" id="tab-lieu">
+      <div class="tab on" id="tab-lieu" role="tabpanel" aria-labelledby="tb-lieu">
         <div class="warn" id="envWarn" hidden></div>
         <h3>Rechercher une adresse ou une ville</h3>
         <form class="row" id="searchForm" autocomplete="off">
           <input class="grow" type="search" id="q" placeholder="Ex. : Château de Blois" enterkeyhint="search">
           <button class="btn" type="submit">Chercher</button>
         </form>
-        <div class="results" id="results"></div>
+        <button class="btn" id="bGeo" type="button" style="width:100%;margin-top:8px" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="2.2" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg>Ma position actuelle</button>
+        <div class="results" id="results" aria-live="polite"></div>
         <h3>Villes</h3>
         <div class="chips" id="presets"></div>
         <h3>Lieu de rencontre</h3>
@@ -188,34 +287,34 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
         <p class="hint">Décimal (47.5861, 1.3359 · 47,5861 ; 1,3359), DMS (47° 35′ 10″ N, 1° 20′ 09″ E) ou lien Google Maps / OpenStreetMap. La carte se recentre si le point sort du cadre.</p>
         <h3>Cadrage</h3>
         <div class="slider"><span>Zoom</span><output id="oZoom"></output><input type="range" id="zoom" min="10" max="18" step="0.1"></div>
-        <h3>Moteur cartographique</h3>
-        <div class="seg" id="engineSeg">
-          <button data-v="maplibre">Vectoriel GPU</button>
-          <button data-v="overpass">Overpass</button>
-          <button data-v="file">Fichier (hors ligne)</button>
-        </div>
-        <p class="hint" id="engineHint"></p>
-        <div id="opBlock" style="display:none">
-          <button class="btn" id="bRefresh2" style="width:100%">Actualiser les vecteurs Overpass</button>
-        </div>
-        <div id="fileBlock" style="display:none">
-          <ol>
-            <li>Cadrez la zone voulue, puis ouvrez <a id="lnkApi" target="_blank" rel="noopener">la requête Overpass</a> (le navigateur affiche ou télécharge un fichier JSON). Alternative : <a id="lnkTurbo" target="_blank" rel="noopener">overpass-turbo</a> → Exporter → « données brutes », ou <a href="https://www.openstreetmap.org/export" target="_blank" rel="noopener">openstreetmap.org/export</a> (fichier .osm).</li>
-            <li>Enregistrez le fichier, puis importez-le ici. Formats acceptés : JSON Overpass, .osm (XML) ou GeoJSON.</li>
-          </ol>
-          <label class="btn" style="width:100%">Importer un fichier de données<input type="file" id="fileIn" accept=".json,.geojson,.osm,.xml,application/json,application/geo+json,text/xml" hidden></label>
-        </div>
-        <button class="btn" id="bDiag" style="width:100%;margin-top:10px">Diagnostiquer la connexion</button>
-        <p class="hint" id="consentInfo"></p>
-        <div class="diag" id="diag"></div>
-        <h3>Calques</h3>
-        <label class="tog">Parcs et espaces verts<input type="checkbox" data-k="layers.parks"></label>
-        <label class="tog">Bâtiments<input type="checkbox" data-k="layers.buildings"></label>
-        <label class="tog">Voies ferrées<input type="checkbox" data-k="layers.rail"></label>
+        <details class="adv" id="adv">
+          <summary><span>Avancé</span><small>moteur, connexion, hors ligne</small></summary>
+          <h3>Moteur cartographique</h3>
+          <div class="seg" id="engineSeg">
+            <button data-v="maplibre">Vectoriel GPU</button>
+            <button data-v="overpass">Overpass</button>
+            <button data-v="file">Fichier (hors ligne)</button>
+          </div>
+          <p class="hint" id="engineHint"></p>
+          <div id="opBlock" style="display:none">
+            <button class="btn" id="bRefresh2" style="width:100%">Actualiser les vecteurs Overpass</button>
+          </div>
+          <div id="fileBlock" style="display:none">
+            <ol>
+              <li>Cadrez la zone voulue, puis ouvrez <a id="lnkApi" target="_blank" rel="noopener">la requête Overpass</a> (le navigateur affiche ou télécharge un fichier JSON). Alternative : <a id="lnkTurbo" target="_blank" rel="noopener">overpass-turbo</a> → Exporter → « données brutes », ou <a href="https://www.openstreetmap.org/export" target="_blank" rel="noopener">openstreetmap.org/export</a> (fichier .osm).</li>
+              <li>Enregistrez le fichier, puis importez-le ici. Formats acceptés : JSON Overpass, .osm (XML) ou GeoJSON.</li>
+            </ol>
+            <label class="btn" style="width:100%">Importer un fichier de données<input type="file" id="fileIn" accept=".json,.geojson,.osm,.xml,application/json,application/geo+json,text/xml" hidden></label>
+          </div>
+          <button class="btn" id="bDiag" type="button" style="width:100%;margin-top:10px">Diagnostiquer la connexion</button>
+          <p class="hint" id="consentInfo"></p>
+          <div class="diag" id="diag"></div>
+        </details>
+        <button class="btn next" type="button" data-next="repere">Étape suivante : le repère<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <p class="credit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL) · Tuiles <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · Rendu MapLibre GL · Géocodage Nominatim</p>
       </div>
       <!-- STYLE -->
-      <div class="tab" id="tab-style">
+      <div class="tab" id="tab-style" role="tabpanel" aria-labelledby="tb-style">
         <h3>Gabarit</h3>
         <div class="cards" id="layouts"></div>
         <div class="slider"><span>Marge (passe-partout)</span><output id="oMargin"></output><input type="range" data-k="margin" min="3" max="12" step="0.5"></div>
@@ -232,12 +331,19 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
         <h3>Tracé</h3>
         <div class="slider"><span>Épaisseur des rues</span><output id="oStroke"></output><input type="range" data-k="stroke" min="0.5" max="2.5" step="0.05"></div>
         <div class="slider"><span>Mise en valeur des cours d'eau</span><output id="oWater"></output><input type="range" data-k="waterMult" min="0.5" max="3" step="0.1"></div>
-        <h3>Couleurs</h3>
-        <div class="colors" id="colors"></div>
+        <h3>Calques</h3>
+        <label class="tog">Parcs et espaces verts<input type="checkbox" data-k="layers.parks"></label>
+        <label class="tog">Bâtiments<input type="checkbox" data-k="layers.buildings"></label>
+        <label class="tog">Voies ferrées<input type="checkbox" data-k="layers.rail"></label>
+        <details class="adv" id="colorsBox">
+          <summary><span>Personnaliser les couleurs</span><small>12 teintes</small></summary>
+          <div class="colors" id="colors"></div>
+        </details>
         <label class="tog" style="margin-top:8px">Mention © OpenStreetMap sur l'affiche<input type="checkbox" data-k="attribution"></label>
+        <button class="btn next pri2" type="button" id="bNextExport">Tout est prêt : exporter l'affiche<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v9M4 7l4 4 4-4M3 14h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- REPERE -->
-      <div class="tab" id="tab-repere">
+      <div class="tab" id="tab-repere" role="tabpanel" aria-labelledby="tb-repere">
         <h3>Style du repère</h3>
         <div class="marks cards" id="marks"></div>
         <div class="seg" id="fillSeg" style="margin-top:10px">
@@ -248,39 +354,59 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
         <h3>Couleur</h3>
         <div class="row">
           <div class="chips grow" id="mColors"></div>
-          <input type="color" id="mColor" style="width:44px;height:36px;border:1px solid var(--line);border-radius:8px;background:none;padding:0">
+          <input type="color" id="mColor" aria-label="Couleur personnalisée du repère" style="width:48px;height:44px;border:1px solid var(--line);border-radius:8px;background:none;padding:0">
         </div>
+        <button class="btn next" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- TEXTES -->
-      <div class="tab" id="tab-textes">
+      <div class="tab" id="tab-textes" role="tabpanel" aria-labelledby="tb-textes">
         <h3>Police</h3>
-        <div class="seg" id="fontSeg">
-          <button data-v="serif" style="font-family:'Playfair Display',serif">Serif</button>
-          <button data-v="sans" style="font-family:Montserrat,sans-serif">Sans</button>
-          <button data-v="mono" style="font-family:'Space Mono',monospace">Mono</button>
-          <button data-v="garamond" style="font-family:'Cormorant Garamond',serif;font-size:15px">Garamond</button>
-          <button data-v="deco" style="font-family:'Josefin Sans',sans-serif">Art déco</button>
+        <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police">
+          <button type="button" data-v="serif" role="radio" aria-checked="false"><span class="smp" style="font-family:'Playfair Display',serif;">Blois</span><small>Serif</small></button>
+          <button type="button" data-v="sans" role="radio" aria-checked="false"><span class="smp" style="font-family:Montserrat,sans-serif;">Blois</span><small>Sans</small></button>
+          <button type="button" data-v="mono" role="radio" aria-checked="false"><span class="smp" style="font-family:'Space Mono',monospace;">Blois</span><small>Mono</small></button>
+          <button type="button" data-v="garamond" role="radio" aria-checked="false"><span class="smp" style="font-family:'Cormorant Garamond',serif;font-size:1.12em;font-weight:500">Blois</span><small>Garamond</small></button>
+          <button type="button" data-v="deco" role="radio" aria-checked="false"><span class="smp" style="font-family:'Josefin Sans',sans-serif;">Blois</span><small>Art déco</small></button>
         </div>
-        <p class="hint">Cochez les lignes à afficher sur l'affiche ; un texte décoché est conservé.</p>
+        <h3>Taille des textes</h3>
+        <div class="slider"><span>Tous les textes</span><output id="oTsAll"></output><input type="range" data-k="textScaleAll" min="70" max="140" step="5" aria-label="Taille de tous les textes"></div>
+        <div class="row" style="justify-content:flex-end;margin-top:-6px"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>
+        <p class="fitnote" id="fitNote" aria-live="polite"></p>
+        <h3>Lignes</h3>
+        <p class="hint">Cochez les lignes à afficher sur l'affiche ; un texte décoché est conservé. Chaque ligne a sa propre taille ; un texte trop long est réduit pour tenir dans la largeur.</p>
         <label class="f show"><input type="checkbox" data-k="show.title" aria-label="Afficher le titre">Titre (ville)</label><input type="text" data-k="texts.title" aria-label="Titre">
+        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.title" min="60" max="150" step="5" aria-label="Taille du titre"><output id="oTs-title"></output></div>
         <label class="f show"><input type="checkbox" data-k="show.subtitle" aria-label="Afficher le sous-titre">Sous-titre / région</label><input type="text" data-k="texts.subtitle" aria-label="Sous-titre">
+        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.subtitle" min="60" max="150" step="5" aria-label="Taille du sous-titre"><output id="oTs-subtitle"></output></div>
         <label class="f show"><input type="checkbox" data-k="show.dedication" aria-label="Afficher la dédicace">Dédicace</label><input type="text" data-k="texts.dedication" aria-label="Dédicace">
+        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.dedication" min="60" max="150" step="5" aria-label="Taille de la dédicace"><output id="oTs-dedication"></output></div>
         <label class="f show"><input type="checkbox" data-k="show.names" aria-label="Afficher les noms">Noms</label><input type="text" data-k="texts.names" aria-label="Noms">
-        <label class="f show"><input type="checkbox" data-k="show.date" aria-label="Afficher la date">Date</label><input type="text" data-k="texts.date" aria-label="Date">
+        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.names" min="60" max="150" step="5" aria-label="Taille des noms"><output id="oTs-names"></output></div>
+        <label class="f show"><input type="checkbox" data-k="show.date" aria-label="Afficher la date">Date</label>
+        <div class="row"><input class="grow" type="text" data-k="texts.date" aria-label="Date"><label class="btn datebtn" title="Choisir dans le calendrier"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 8.5h14M7 2.5v4M13 2.5v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span class="xl2">Calendrier</span><input type="date" id="dateIn" aria-label="Choisir la date dans le calendrier"></label></div>
+        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.date" min="60" max="150" step="5" aria-label="Taille de la date"><output id="oTs-date"></output></div>
         <h3>Coordonnées</h3>
         <div class="seg" id="coordSeg"><button data-v="dec">Décimal</button><button data-v="dms">Degrés ° ′ ″</button></div>
         <label class="f show"><input type="checkbox" data-k="show.coords" aria-label="Afficher les coordonnées">Texte affiché (vide = automatique depuis le repère)</label>
         <input type="text" data-k="coordsManual" id="coordsManual" aria-label="Coordonnées affichées">
+        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.coords" min="60" max="150" step="5" aria-label="Taille des coordonnées"><output id="oTs-coords"></output></div>
         <p class="hint">Le sous-titre s'affiche dans les gabarits Cadre, Fondu et Médaillon ; le gabarit Souvenir ne l'affiche pas (en-tête sur une ligne, dédicace et noms en pied).</p>
+        <button class="btn next" type="button" data-next="style">Étape suivante : le style<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
     </div>
     <div class="foot">
-      <div class="status"><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span><button class="lnk" id="bReset" type="button" title="Revenir aux réglages par défaut">Réinitialiser</button></div>
+      <div class="status"><span class="hist" role="group" aria-label="Historique"><button type="button" id="bUndo" aria-label="Annuler" title="Annuler (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 8l4 4M3 8h9a5 5 0 0 1 0 10H8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" id="bRedo" aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="m13 4 4 4-4 4M17 8H8a5 5 0 0 0 0 10h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span><button class="lnk" id="bReset" type="button" title="Revenir aux réglages par défaut">Réinitialiser</button><span class="uisz" role="group" aria-label="Taille du texte de l'interface"><button type="button" id="bUiSmaller" aria-label="Réduire le texte de l'interface">A−</button><button type="button" id="bUiLarger" aria-label="Agrandir le texte de l'interface" style="font-size:1.15em">A+</button></span></div>
       <button class="btn pri" id="bExport">Exporter l'affiche HD<span class="xl">&nbsp;· 2480 × 3508 px</span>&nbsp;· 300 DPI</button>
     </div>
   </aside>
 </div>
-<div id="toast"></div>
+<div class="consent" id="consent" role="dialog" aria-modal="true" aria-labelledby="consentTitle"><div class="box">
+  <h2 id="consentTitle">Afficher la carte ?</h2>
+  <p>Le fond de carte vient d'<b>OpenFreeMap</b> : l'afficher lui transmet votre adresse IP. Rien d'autre n'est envoyé, ni cookie ni mesure d'audience.</p>
+  <details><summary>En savoir plus</summary><p>La recherche d'adresse (<b>Nominatim</b>) et le moteur <b>Overpass</b>, utilisés seulement à votre demande, reçoivent aussi votre adresse IP. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p></details>
+  <div class="row"><button class="btn pri" id="bConsentYes">Afficher la carte</button><button class="btn" id="bConsentFile">Travailler hors ligne</button></div>
+</div></div>
+<div id="toast" role="status" aria-live="polite"></div>
 <div id="busy"><div class="spin"></div><div id="busyTxt">Génération de l'affiche…</div></div>
 <div id="result"><div class="box">
   <img id="resImg" alt="Aperçu de l'affiche exportée">
@@ -365,11 +491,13 @@ const DEFAULT_STATE = {
   coordFormat:'dec', coordsManual:'',
   texts:{title:'Blois',subtitle:'Val de Loire • France',dedication:'Là où tout a commencé',names:'Camille & Julien',date:'Le 14 juillet 2023'},
   show:{title:true,subtitle:true,coords:true,dedication:true,names:true,date:true},   // lignes de texte affichées
+  textScale:{title:100,subtitle:100,coords:100,dedication:100,names:100,date:100},   // taille de chaque ligne (%)
+  textScaleAll:100,                                                                  // taille de tous les textes (%)
   font:'serif', margin:6.5, stroke:1, waterMult:1, ring:true, attribution:true,
   layers:{parks:true,buildings:true,rail:true}
 };
 let st = loadState();
-const ui = {placing:false, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
+const ui = {placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
 let mlMap = null, opData = null, opLoading = false;
 let mlLib = 'loading', mlCdn = '', mlFailMsg = '';   // état de la librairie MapLibre
 
@@ -399,7 +527,8 @@ function giveConsent(){
 }
 function declineConsent(){
   consentNext=null; document.getElementById('consent').classList.remove('show');
-  setEngine('file');
+  setEngine('file'); openAdvanced(true);
+  if(!opData) setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
 }
 function withdrawConsent(){
   try{ localStorage.removeItem(CONSENT_KEY); }catch(e){}
@@ -442,13 +571,14 @@ function loadState(){
         colors:{...DEFAULT_STATE.colors,...(s.colors||{})},
         texts:{...DEFAULT_STATE.texts,...(s.texts||{})},
         show:{...DEFAULT_STATE.show,...(s.show||{})},
+        textScale:{...DEFAULT_STATE.textScale,...(s.textScale||{})},
         layers:{...DEFAULT_STATE.layers,...(s.layers||{})}};
     }
   }catch(e){}
   return structuredClone(DEFAULT_STATE);
 }
 let saveT=0;
-function saveState(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){}},300)}
+function saveState(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} if(typeof recordHistory==='function') recordHistory();},300)}
 function getPath(o,p){return p.split('.').reduce((a,k)=>a?.[k],o)}
 function setPath(o,p,v){const ks=p.split('.');const last=ks.pop();ks.reduce((a,k)=>a[k],o)[last]=v}
 
@@ -508,13 +638,19 @@ function clipMap(ctx, r){
 // ---------- Typographie ----------
 function fontStr(size, o={}){const f=FONTS[st.font]||FONTS.serif; return `${o.italic?'italic ':''}${o.weight||f.weight||400} ${size*(f.scale||1)}px ${f.fam}`}
 function textW(ctx, t, sp, size){return ctx.measureText(t).width + (t.length>1 ? sp*size*(t.length-1) : 0)}
+/** Facteur de taille d'une ligne de texte : réglage de la ligne × réglage global */
+function tScale(k){ return (st.textScale?.[k]??100)/100 * (st.textScaleAll??100)/100; }
+/** Réductions automatiques relevées pendant le rendu de l'aperçu (clé de ligne → facteur appliqué < 1) */
+let fitSink=null;
+const FIT_WARN=0.9;   // en deçà de 10 % de réduction, pas d'avertissement
+function noteFit(k,f){ if(fitSink && k && f<FIT_WARN) fitSink[k]=Math.min(fitSink[k]??1,f); }
 /** Dessine un texte avec interlettrage et réduction automatique ; renvoie la largeur dessinée */
 function drawText(ctx, t, x, y, o){
   if(!t) return 0;
   let size=o.size; const sp=o.spacing||0;
   ctx.font=fontStr(size,o);
   let w=textW(ctx,t,sp,size);
-  if(o.maxW && w>o.maxW){ size*=o.maxW/w; ctx.font=fontStr(size,o); w=textW(ctx,t,sp,size); }
+  if(o.maxW && w>o.maxW){ noteFit(o.key,o.maxW/w); size*=o.maxW/w; ctx.font=fontStr(size,o); w=textW(ctx,t,sp,size); }
   ctx.fillStyle=o.color; ctx.textBaseline='alphabetic';
   let sx = o.align==='center' ? x-w/2 : o.align==='right' ? x-w : x;
   if(!sp){ ctx.textAlign='left'; ctx.fillText(t,sx,y); return w; }
@@ -522,11 +658,24 @@ function drawText(ctx, t, x, y, o){
   for(const ch of t){ ctx.fillText(ch,sx,y); sx += ctx.measureText(ch).width + sp*size; }
   return w;
 }
+/** Dessine bout à bout plusieurs segments de tailles différentes, alignés sur la même ligne de base,
+ *  avec une réduction commune s'ils dépassent maxW. parts : [{t, size, key, italic}] ; renvoie la largeur. */
+function drawRun(ctx, parts, x, y, o){
+  parts=parts.filter(p=>p.t); if(!parts.length) return 0;
+  const ws=parts.map(p=>{ ctx.font=fontStr(p.size,p); return ctx.measureText(p.t).width; });
+  let tot=ws.reduce((a,b)=>a+b,0), f=1;
+  if(o.maxW && tot>o.maxW){ f=o.maxW/tot; parts.forEach(p=>(p.keys||[p.key]).forEach(k=>noteFit(k,f))); }
+  let sx = o.align==='right' ? x-tot*f : o.align==='center' ? x-tot*f/2 : x;
+  ctx.fillStyle=o.color; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+  parts.forEach((p,i)=>{ ctx.font=fontStr(p.size*f,p); ctx.fillText(p.t,sx,y); sx+=ws[i]*f; });
+  return tot*f;
+}
 function hline(ctx,x1,x2,y,lw,color){ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke()}
 
 /** Cartouche centré : les lignes masquées ou vides sont retirées et les suivantes remontent.
- *  bottom = true : le bloc reste calé en bas (gabarit Fondu). */
-function drawCartouche(ctx, W, y0, m, bottom){
+ *  bottom = true : le bloc reste calé en bas (gabarit Fondu), et grandit vers le haut.
+ *  avail : hauteur disponible (px) ; si les tailles choisies la dépassent, tout le bloc est réduit pour tenir. */
+function drawCartouche(ctx, W, y0, m, bottom, avail){
   const c=st.colors, cx=W/2, maxW=W-2*m-0.04*W;
   // [clé, écart avant la ligne (× W), options de texte]
   const rows=[
@@ -536,10 +685,15 @@ function drawCartouche(ctx, W, y0, m, bottom){
     ['dedication',0.055,{size:0.034*W,italic:true,maxW}],
     ['names',0.038,{size:0.024*W,italic:true,maxW}],
     ['date',0.038,{size:0.017*W,spacing:0.3,upper:true,maxW}]
-  ].map(([k,d,o])=>[textLine(k),d,o]).filter(([txt])=>txt);
+  ].map(([k,d,o])=>[textLine(k),d,{...o,key:k},k]).filter(([txt])=>txt);
   if(!rows.length) return;
+  // Taille choisie : la ligne grandit (ou rétrécit) et les interlignes suivent (≈ 0,8 × l'écart de corps de la ligne, 0,25 × celui de la précédente)
+  let prevGrow=0;
+  for(const r of rows){ const base=r[2].size, grow=base*(tScale(r[3])-1); r[2].size=base+grow; r[1]=Math.max(0.2*r[2].size/W, r[1]+(0.8*grow+0.25*prevGrow)/W); prevGrow=grow; }
   rows[0][1]=Math.max(rows[0][1],rows[0][2].size/W*1.1);   // première ligne : juste sous le haut du bloc
-  let y=y0 + (bottom ? (0.338-rows.reduce((a,r)=>a+r[1],0))*W : 0);
+  let total=rows.reduce((a,r)=>a+r[1],0)*W;
+  if(avail && total>avail){ const f=avail/total; for(const r of rows){ r[1]*=f; r[2].size*=f; noteFit(r[3],f); } total=avail; }
+  let y=y0 + (bottom ? 0.338*W-total : 0);
   for(const [txt,d,o] of rows){
     y+=d*W;
     const w=drawText(ctx,o.upper?txt.toUpperCase():txt,cx,y,{...o,align:'center',color:c.text});
@@ -626,31 +780,41 @@ function drawPoster(ctx, W, H, pass, mapFn){
   // Filets & textes
   if(st.layout==='souvenir'){
     const yH=m+0.061*W, inner=W-2*m;
-    const left=[textLine('title'),textLine('date')].filter(Boolean).join(' - '), coords=textLine('coords');
-    drawText(ctx,left,m,yH,{size:0.031*W,align:'left',color:c.text,maxW:inner*(coords?0.58:1)});
-    drawText(ctx,coords,W-m,yH,{size:0.026*W,align:'right',color:c.text,maxW:inner*(left?0.4:1)});
-    const yF=H-m-0.0195*W, ded=textLine('dedication'), names=textLine('names');
-    const dw=drawText(ctx,ded,m,yF,{size:0.062*W,align:'left',color:c.text,maxW:inner*(names?0.72:1)});
+    const title=textLine('title'), date=textLine('date'), coords=textLine('coords'), hs=0.031*W;
+    // En-tête : « Titre - Date », chaque partie à sa taille, sur une même ligne de base
+    const left = title&&date&&tScale('title')===tScale('date') ? [{t:title+' - '+date,size:hs*tScale('title'),keys:['title','date']}]
+               : title&&date ? [{t:title,size:hs*tScale('title'),key:'title'},{t:' - ',size:hs*Math.min(tScale('title'),tScale('date'))},{t:date,size:hs*tScale('date'),key:'date'}]
+               : [{t:title||date,size:hs*tScale(title?'title':'date'),key:title?'title':'date'}];
+    drawRun(ctx,left,m,yH,{align:'left',color:c.text,maxW:inner*(coords?0.58:1)});
+    drawText(ctx,coords,W-m,yH,{size:0.026*W*tScale('coords'),key:'coords',align:'right',color:c.text,maxW:inner*(title||date?0.4:1)});
+    const yF=H-m-0.0195*W, ded=textLine('dedication'), names=textLine('names'), ns=tScale('names'), ds=0.062*W*tScale('dedication');
     if(names && ded){
-      const bx=m+dw+0.032*W;
+      // Dédicace | Noms : s'ils dépassent la largeur, les deux sont réduits du même facteur (les tailles choisies gardent leur rapport)
+      const gap=0.062*W, nsz=0.026*W*ns;
+      ctx.font=fontStr(ds); const wd=ctx.measureText(ded).width; ctx.font=fontStr(nsz,{italic:true}); const wn=ctx.measureText(names).width;
+      const f=Math.min(1,(inner-gap)/(wd+wn)); noteFit('dedication',f); noteFit('names',f);
+      drawText(ctx,ded,m,yF,{size:ds*f,align:'left',color:c.text});
+      const bx=m+wd*f+0.032*W;
       ctx.strokeStyle=c.frame; ctx.lineWidth=0.0018*W; ctx.beginPath(); ctx.moveTo(bx,yF-0.04*W); ctx.lineTo(bx,yF+0.004*W); ctx.stroke();
-      drawText(ctx,names,bx+0.03*W,yF-0.008*W,{size:0.026*W,italic:true,align:'left',color:c.text,maxW:Math.max(10,W-m-(bx+0.03*W))});
+      drawText(ctx,names,bx+0.03*W,yF-0.008*W,{size:nsz*f,italic:true,align:'left',color:c.text});
+    } else if(ded){
+      drawText(ctx,ded,m,yF,{size:ds,key:'dedication',align:'left',color:c.text,maxW:inner});
     } else if(names){
-      drawText(ctx,names,m,yF-0.008*W,{size:0.026*W,italic:true,align:'left',color:c.text,maxW:inner});
+      drawText(ctx,names,m,yF-0.008*W,{size:0.026*W*ns,key:'names',italic:true,align:'left',color:c.text,maxW:inner});
     }
   } else if(st.layout==='classic'){
     ctx.strokeStyle=c.frame;
     ctx.lineWidth=0.0025*W; const o1=0.014*W; ctx.strokeRect(r.x-o1,r.y-o1,r.w+2*o1,r.h+2*o1);
     ctx.lineWidth=0.0009*W; const o2=0.006*W; ctx.strokeRect(r.x-o2,r.y-o2,r.w+2*o2,r.h+2*o2);
-    drawCartouche(ctx,W,r.y+r.h+0.014*W,m);
+    { const y0=r.y+r.h+0.014*W; drawCartouche(ctx,W,y0,m,false,H-y0-0.6*m-0.01*W); }
   } else if(st.layout==='medallion'){
     if(st.ring){
       ctx.strokeStyle=c.frame; ctx.lineWidth=0.0022*W; ctx.beginPath(); ctx.arc(r.x+r.w/2,r.y+r.h/2,r.w/2+0.014*W,0,7); ctx.stroke();
       ctx.lineWidth=0.0008*W; ctx.beginPath(); ctx.arc(r.x+r.w/2,r.y+r.h/2,r.w/2+0.006*W,0,7); ctx.stroke();
     }
-    drawCartouche(ctx,W,r.y+r.h+0.02*W,m);
+    { const y0=r.y+r.h+0.02*W; drawCartouche(ctx,W,y0,m,false,H-y0-0.6*m-0.01*W); }
   } else if(st.layout==='fade'){
-    drawCartouche(ctx,W,H-m-0.345*W,m,true);
+    drawCartouche(ctx,W,H-m-0.345*W,m,true,0.56*W);
   }
   // Attribution OSM (ODbL)
   if(st.attribution){
@@ -877,7 +1041,7 @@ const mlZoom = cssW => st.zoom + Math.log2(cssW/REF_W);
 let mlSync=false;
 function initMaplibre(){
   if(mlMap || mlLib!=='ok') return !!mlMap;
-  if(!needConsent()){ setStatus('Carte en attente de votre accord'); return false; }
+  if(!needConsent()){ setStatus('Carte en attente de votre accord','wait'); return false; }
   const w=ui.slotCss.w||300;
   try{
     mlMap=new maplibregl.Map({container:'mlMap',style:buildStyle(mlK(w)),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
@@ -925,20 +1089,42 @@ function renderMaplibreOffscreen(wPx,hPx){
 const $=id=>document.getElementById(id);
 const cvU=$('cvUnder'), cvO=$('cvOver'), opC=$('opCanvas'), slot=$('slot'), poster=$('poster'), stage=$('stage');
 function layoutPreview(){
-  const pad = innerWidth<600 ? 14 : 36;
-  const aw=stage.clientWidth-pad*2-(innerWidth<900?52:0), ah=stage.clientHeight-pad*2;
-  const w=Math.max(120,Math.min(aw,ah/RATIO)), h=w*RATIO;
+  const SW=stage.clientWidth, SH=stage.clientHeight, small=innerWidth<900;
+  const pad = small ? (SH<260 ? 8 : 14) : 36, FAB=54;
+  const fit=(aw,ah)=>Math.min(aw,ah/RATIO);
+  // Boutons flottants : à droite ou en bas, selon ce qui laisse l'affiche la plus grande ; masqués si l'aperçu est une vignette
+  let mode='side', w;
+  if(!small) w=fit(SW-pad*2,SH-pad*2);
+  else if(SH<250){ mode='none'; w=fit(SW-pad*2,SH-pad*2); }
+  else{ const side=SH>=264?fit(SW-pad*2-FAB,SH-pad*2):0, bot=fit(SW-pad*2,SH-pad*2-FAB); if(bot>side+1){ mode='bottom'; w=bot; } else w=side; }
+  stage.dataset.fab=mode;
+  w=Math.max(60,w); const h=w*RATIO;
+  if(mode==='bottom') poster.style.marginBottom=FAB+'px'; else poster.style.marginBottom='';
+  if(mode==='side') poster.style.marginRight=FAB+'px'; else poster.style.marginRight='';
   ui.posterCss={w,h}; ui.dpr=Math.min(window.devicePixelRatio||1,3);
   poster.style.width=w+'px'; poster.style.height=h+'px';
   for(const cv of [cvU,cvO]){ cv.width=Math.round(w*ui.dpr); cv.height=Math.round(h*ui.dpr); }
   const g=geom(st,w,h).map; ui.slotCss=g;
   Object.assign(slot.style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px'});
+  Object.assign($('shield').style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px',borderRadius:g.circle?'50%':''});
+  $('shield').classList.toggle('mini',g.w<170);
   slot.classList.toggle('circle',!!g.circle);
   opC.width=Math.round(g.w*ui.dpr); opC.height=Math.round(g.h*ui.dpr);
   drawUnder(); renderMap(true);
 }
 function drawUnder(){ const ctx=cvU.getContext('2d'); drawPoster(ctx,cvU.width,cvU.height,'under'); }
-function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); drawPoster(ctx,cvO.width,cvO.height,'over'); }
+function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); }
+/** Signale dans l'onglet Textes les lignes réduites automatiquement pour tenir dans l'affiche */
+const FIT_NAMES={title:'titre',subtitle:'sous-titre',coords:'coordonnées',dedication:'dédicace',names:'noms',date:'date'};
+let fitPrev='';
+function showFit(fit){
+  const key=JSON.stringify(fit); if(key===fitPrev) return; fitPrev=key;
+  for(const k of Object.keys(FIT_NAMES)){ const o=$('oTs-'+k); if(!o) continue; const f=fit[k];
+    o.classList.toggle('shrunk',!!f); o.title = f ? `Réduit à ${Math.round(f*100)} % pour tenir dans l'affiche` : ''; }
+  syncOutputs();
+  const ks=Object.keys(fit);
+  $('fitNote').textContent = ks.length ? '↘ Réduit pour tenir dans l\'affiche : '+ks.map(k=>`${FIT_NAMES[k]} (${Math.round(fit[k]*100)} %)`).join(', ')+'. Raccourcissez le texte ou baissez une autre taille.' : '';
+}
 let rafO=0, rafM=0;
 function scheduleOver(){ if(!rafO) rafO=requestAnimationFrame(()=>{rafO=0;drawOver()}); }
 function renderMap(viewChanged){
@@ -980,14 +1166,92 @@ function redrawAll(restyle){ drawUnder(); if(restyle) mlRestyle(); renderMap(fal
 })();
 
 // ---------- Interface ----------
-function setStatus(t,kind){ $('stTxt').textContent=t; $('stDot').className='dot'+(kind?' '+kind:''); }
+function setStatus(t,kind){ $('stTxt').textContent=t; $('stTxt').title=t; $('stDot').className='dot'+(kind?' '+kind:''); }
 let toastT=0;
 function toast(msg,err){ const t=$('toast'); t.textContent=msg; t.className='show'+(err?' err':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='',err?6000:3200); }
 function showBanner(show,txt,label,action){
   $('banner').classList.toggle('show',!!show); if(txt) $('bannerTxt').textContent=txt;
+  if(ui.sheet==='peek') applySheet();
   const b=$('bRefresh'); b.textContent=label||'Actualiser les vecteurs'; b.onclick=action||(()=>fetchOverpass());
 }
-function setPlacing(on){ ui.placing=on; $('bPlace').classList.toggle('on',on); $('bPlace2').classList.toggle('on',on); $('placeHint').classList.toggle('show',on); slot.classList.toggle('placing',on); }
+function setPlacing(on){ ui.placing=on; $('bPlace').classList.toggle('on',on); $('bPlace2').classList.toggle('on',on); $('placeHint').classList.toggle('show',on); slot.classList.toggle('placing',on); stageMode(); }
+
+// ---------- Panneau coulissant et mode Cadrer (mobile portrait) ----------
+// Trois crans : « peek » (onglets + export, affiche presque plein écran), « half » (défaut), « full » (réglages, affiche en vignette).
+// Sur mobile, la carte est verrouillée : un toucher ouvre le mode Cadrer (glisser, pincer), « Terminer » le referme.
+const TWO_COL = matchMedia('(min-width:900px), (orientation:landscape) and (min-width:560px)');
+const isSheet = () => !TWO_COL.matches;
+const app = document.getElementById('app');
+function sheetHeights(){
+  const vh=app.clientHeight||innerHeight, pn=$('panel');
+  const peek=Math.ceil($('grab').offsetHeight+$('tabs').offsetHeight+document.querySelector('.foot').offsetHeight+($('banner').classList.contains('show')?$('banner').offsetHeight:0))+1;
+  return {peek, half:Math.max(peek+120,Math.round(vh*0.55)), full:Math.max(peek+120,Math.round(vh*0.84)), max:Math.round(vh*0.92)};
+}
+/** Applique la hauteur du panneau : cran nommé, ou hauteur libre en px pendant un glissement */
+function applySheet(px){
+  const root=document.documentElement;
+  app.classList.toggle('sheetmode',isSheet());
+  if(!isSheet()){ root.style.removeProperty('--sheetH'); return; }
+  const H=sheetHeights(), h=px!=null ? Math.max(H.peek,Math.min(H.max,px)) : H[ui.sheet];
+  root.style.setProperty('--sheetH',h+'px');
+  $('grab').setAttribute('aria-label', ui.sheet==='full' ? 'Réduire le panneau des réglages' : 'Agrandir le panneau des réglages');
+}
+function setSheet(s){ ui.sheet=s; app.dataset.sheet=s; applySheet(); }
+/** Placement du repère ou cadrage : le panneau se réduit pour libérer la carte, puis reprend sa position */
+function stageMode(){
+  const active=ui.framing||ui.placing;
+  if(active && isSheet() && ui.sheetBefore==null){ ui.sheetBefore=ui.sheet; setSheet('peek'); }
+  else if(!active && ui.sheetBefore!=null){ const s=ui.sheetBefore; ui.sheetBefore=null; setSheet(s); }
+  $('frameBar').classList.toggle('show',ui.framing && !ui.placing);
+  $('bFrame').classList.toggle('on',ui.framing); $('bFrame').setAttribute('aria-pressed',String(ui.framing));
+  $('shield').hidden = !(isSheet() && !ui.framing && !ui.placing);
+}
+function setFraming(on){ ui.framing=!!on; stageMode(); }
+function initSheet(){
+  const g=$('grab'); let drag=null, dragged=false;
+  g.addEventListener('pointerdown',e=>{ if(!isSheet()) return; g.setPointerCapture(e.pointerId);
+    drag={y:e.clientY, h:$('panel').getBoundingClientRect().height, moved:false}; });
+  g.addEventListener('pointermove',e=>{ if(!drag) return; const dy=e.clientY-drag.y;
+    if(Math.abs(dy)>6 && !drag.moved){ drag.moved=true; app.classList.add('dragging'); app.dataset.sheet='half'; }
+    if(drag.moved) applySheet(drag.h-dy); });
+  const end=e=>{ if(!drag) return; const d=drag; drag=null; app.classList.remove('dragging');
+    // Un simple toucher est traité au « click » : changer le panneau dès pointerup ferait tomber le clic sur la carte, désormais sous le doigt
+    if(!d.moved) return;
+    dragged=true; setTimeout(()=>dragged=false,400);
+    // cran le plus proche, avec une préférence pour le sens du geste
+    const H=sheetHeights(), h=$('panel').getBoundingClientRect().height, dir=Math.sign(d.h-h);
+    let best='half', bd=1e9;
+    for(const k of ['peek','half','full']){ const dist=Math.abs(H[k]-h)-(Math.sign(d.h-H[k])===dir&&dir?40:0); if(dist<bd){ bd=dist; best=k; } }
+    ui.sheetBefore=null; setSheet(best); };
+  g.addEventListener('pointerup',end); g.addEventListener('pointercancel',end);
+  g.addEventListener('click',()=>{ if(dragged || !isSheet()){ dragged=false; return; } ui.sheetBefore=null; setSheet(ui.sheet==='peek'?'half':ui.sheet==='half'?'full':'half'); });
+  g.addEventListener('keydown',e=>{ if(e.key==='ArrowUp'){ e.preventDefault(); setSheet(ui.sheet==='peek'?'half':'full'); } if(e.key==='ArrowDown'){ e.preventDefault(); setSheet(ui.sheet==='full'?'half':'peek'); } });
+  // Saisie d'un texte : le panneau se déplie (clavier + champ visibles), puis reprend sa place
+  let restoreT=0, before=null;
+  $('panel').addEventListener('focusin',e=>{ if(!isSheet() || !e.target.matches('input[type=text],input[type=search]')) return;
+    clearTimeout(restoreT); if(before==null && ui.sheet!=='full'){ before=ui.sheet; setSheet('full'); }
+    setTimeout(()=>e.target.scrollIntoView({block:'nearest'}),50); });
+  $('panel').addEventListener('focusout',()=>{ clearTimeout(restoreT); restoreT=setTimeout(()=>{
+    if(before!=null && !document.activeElement?.matches?.('input[type=text],input[type=search]')){ setSheet(before); before=null; } },200); });
+  $('shield').onclick=()=>setFraming(true);
+  $('bFrame').onclick=()=>setFraming(!ui.framing);
+  $('bFrameDone').onclick=()=>setFraming(false);
+  TWO_COL.addEventListener('change',()=>{ setFraming(false); setPlacing(false); ui.sheetBefore=null; setSheet(ui.sheet); stageMode(); });
+  setSheet('half'); stageMode();
+}
+
+// ---------- Taille du texte de l'interface (A− / A+) ----------
+// Préférence d'affichage propre à l'appareil : hors de l'état de l'affiche, non concernée par « Réinitialiser ».
+const UI_SCALE_KEY='cityMapStudio.uiScale', UI_SCALES=[0.875,1,1.125,1.25,1.375];
+let uiScale=(()=>{ try{ const v=parseFloat(localStorage.getItem(UI_SCALE_KEY)); return UI_SCALES.includes(v)?v:1; }catch(e){ return 1; } })();
+function applyUiScale(){
+  const r=document.documentElement.style;
+  if(uiScale===1) r.removeProperty('font-size'); else r.fontSize=(uiScale*100)+'%';   // 100 % : réglage du système (Dynamic Type sur iOS)
+  $('bUiSmaller').disabled=uiScale===UI_SCALES[0]; $('bUiLarger').disabled=uiScale===UI_SCALES[UI_SCALES.length-1];
+  try{ uiScale===1 ? localStorage.removeItem(UI_SCALE_KEY) : localStorage.setItem(UI_SCALE_KEY,String(uiScale)); }catch(e){}
+  requestAnimationFrame(()=>applySheet());
+}
+function stepUiScale(d){ const i=UI_SCALES.indexOf(uiScale); uiScale=UI_SCALES[Math.max(0,Math.min(UI_SCALES.length-1,i+d))]; applyUiScale(); toast(`Texte de l'interface : ${Math.round(uiScale*100)} %`); }
 /** Lit des coordonnées saisies : décimal (point ou virgule), DMS / DM avec N S E W O, ou URL de carte. Renvoie {lat,lon} ou lève une erreur. */
 function parseCoords(input){
   let t=String(input||'').trim(); if(!t) throw new Error('Saisissez des coordonnées.');
@@ -1038,13 +1302,97 @@ function goTo(lat,lon,zoom){
   if(mlMap&&st.engine==='maplibre'){ mlMap.jumpTo({center:[lon,lat],zoom:mlZoom(ui.slotCss.w)}); mlRestyle(); }
   renderMap(true); saveState();
 }
-function setSeg(id,v){ document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle('on',b.dataset.v===String(v))); }
+function setSeg(id,v){ document.querySelectorAll(`#${id} button`).forEach(b=>{ const on=b.dataset.v===String(v); b.classList.toggle('on',on);
+  if(b.getAttribute('role')==='radio') b.setAttribute('aria-checked',String(on)); else b.setAttribute('aria-pressed',String(on)); }); }
+/** Affiche un onglet (état ARIA, focus clavier). Le panneau coulissant n'est pas modifié. */
+function showTab(name, focus){
+  document.querySelectorAll('#tabs button').forEach(x=>{ const on=x.dataset.tab===name; x.classList.toggle('on',on); x.setAttribute('aria-selected',String(on)); x.tabIndex=on?0:-1; if(on&&focus) x.focus(); });
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));
+  ui.tab=name;
+}
+/** Section « Avancé » de l'onglet Lieu : ouverte à la demande, mémorisée ; ouverte d'office quand elle devient utile */
+const ADV_KEY='cityMapStudio.advOpen';
+function openAdvanced(scroll){ const d=$('adv'); if(!d.open) d.open=true; if(scroll){ showTab('lieu'); setTimeout(()=>d.scrollIntoView({block:'start',behavior:'smooth'}),60); } }
+/** Aperçu des polices : chaque carte montre le titre saisi */
+function updateFontSamples(){ const t=(st.texts.title||'').trim()||'Blois'; document.querySelectorAll('#fontSeg .smp').forEach(e=>e.textContent=t); }
+/** Date au format de l'affiche : « Le 1er juillet 2023 » */
+function frDate(iso){
+  const [y,m,d]=iso.split('-').map(Number); if(!y||!m||!d) return '';
+  const mois=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][m-1];
+  return `Le ${d===1?'1er':d} ${mois} ${y}`;
+}
+/** Lecture inverse (pour ouvrir le calendrier sur la date déjà saisie) ; '' si le texte n'est pas une date */
+function isoFromFr(t){
+  const M=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const r=String(t||'').toLowerCase().match(/(\d{1,2})(?:er)?\s+([a-zéû]+)\s+(\d{4})/); if(!r) return '';
+  const m=M.indexOf(r[2]); if(m<0) return '';
+  return `${r[3]}-${String(m+1).padStart(2,'0')}-${String(+r[1]).padStart(2,'0')}`;
+}
+
+// ---------- Historique : annuler / rétablir ----------
+// Un instantané de l'état par modification (regroupées comme l'enregistrement, après 300 ms de calme).
+// Le moteur cartographique est exclu : le rétablir relancerait des requêtes réseau.
+const HIST_MAX=50, hist={past:[],future:[],cur:null,quietUntil:0};
+function histSnap(){ const {engine,...rest}=st; return JSON.stringify(rest); }
+function recordHistory(){
+  const s=histSnap(); if(s===hist.cur) return;
+  if(Date.now()<hist.quietUntil || hist.cur==null){ hist.cur=s; return; }   // effets de bord d'un retour arrière (recentrage de la carte)
+  hist.past.push(hist.cur); if(hist.past.length>HIST_MAX) hist.past.shift();
+  hist.cur=s; hist.future=[]; updateHistUI();
+}
+function updateHistUI(){ $('bUndo').disabled=!hist.past.length; $('bRedo').disabled=!hist.future.length; }
+function applySnap(s){
+  hist.quietUntil=Date.now()+900;
+  const o=JSON.parse(s), eng=st.engine, view=JSON.stringify([st.center,st.zoom]);
+  for(const k of Object.keys(st)) delete st[k];
+  Object.assign(st,o,{engine:eng});
+  setPlacing(false); syncInputs(); layoutPreview();
+  loadFonts().then(()=>scheduleOver());
+  if(JSON.stringify([st.center,st.zoom])!==view) goTo(st.center.lat,st.center.lon,st.zoom); else redrawAll(true);
+  hist.cur=s; saveState(); updateHistUI();
+}
+/** Fige tout de suite l'étape en cours (action ponctuelle : réinitialisation, changement de moteur), puis ignore
+ *  pendant un instant les petits recentrages de la carte qui suivent, pour ne pas créer de fausses étapes. */
+function commitHistory(quietMs=1500){ clearTimeout(saveT); try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} hist.quietUntil=0; recordHistory(); hist.quietUntil=Date.now()+quietMs; }
+function undo(){ if(!hist.past.length) return; clearTimeout(saveT); recordHistory(); if(!hist.past.length) return; hist.future.push(hist.cur); applySnap(hist.past.pop()); toast('Modification annulée'); }
+function redo(){ if(!hist.future.length) return; hist.past.push(hist.cur); applySnap(hist.future.pop()); toast('Modification rétablie'); }
 
 function buildUI(){
   // onglets
   document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
-    document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));
-    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+b.dataset.tab));
+    if(isSheet()){
+      if(ui.framing) setFraming(false);
+      if(ui.sheet==='peek') setSheet('half');
+      else if(b.classList.contains('on')) setSheet(ui.sheet==='full'?'half':'full');
+    }
+    showTab(b.dataset.tab);
+  });
+  // clavier : flèches, Début, Fin (motif ARIA des onglets)
+  $('tabs').addEventListener('keydown',e=>{
+    const bs=[...document.querySelectorAll('#tabs button')], i=bs.findIndex(x=>x.classList.contains('on'));
+    const j={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:bs.length-1}[e.key]; if(j==null) return;
+    e.preventDefault(); showTab(bs[(j+bs.length)%bs.length].dataset.tab,true);
+  });
+  // parcours guidé : Lieu → Repère → Textes → Style → Exporter
+  document.querySelectorAll('[data-next]').forEach(b=>b.onclick=()=>{ showTab(b.dataset.next); document.querySelector('.tabbody').scrollTop=0; if(isSheet()&&ui.sheet==='peek') setSheet('half'); });
+  $('bNextExport').onclick=()=>$('bExport').click();
+  // section Avancé
+  try{ if(localStorage.getItem(ADV_KEY)==='1') $('adv').open=true; }catch(e){}
+  $('adv').addEventListener('toggle',()=>{ try{ $('adv').open ? localStorage.setItem(ADV_KEY,'1') : localStorage.removeItem(ADV_KEY); }catch(e){} });
+  // date : calendrier natif
+  $('dateIn').addEventListener('focus',()=>{ const v=isoFromFr(st.texts.date); if(v) $('dateIn').value=v; });
+  $('dateIn').addEventListener('pointerdown',()=>{ const v=isoFromFr(st.texts.date); if(v) $('dateIn').value=v; });
+  $('dateIn').addEventListener('change',e=>{ const t=frDate(e.target.value); if(!t) return; st.texts.date=t; st.show.date=true; syncInputs(); scheduleOver(); saveState(); toast('Date : '+t); });
+  // ma position (géolocalisation de l'appareil, demandée par le navigateur)
+  if('geolocation' in navigator){ $('bGeo').hidden=false; $('bGeo').onclick=locateMe; }
+  // annuler / rétablir
+  $('bUndo').onclick=undo; $('bRedo').onclick=redo;
+  addEventListener('keydown',e=>{
+    if(!(e.ctrlKey||e.metaKey) || e.altKey) return;
+    if(e.target.matches?.('input[type=text],input[type=search],textarea')) return;   // laisser l'annulation native des champs
+    const k=e.key.toLowerCase();
+    if(k==='z' && !e.shiftKey){ e.preventDefault(); undo(); }
+    else if((k==='z' && e.shiftKey) || k==='y'){ e.preventDefault(); redo(); }
   });
   // presets
   const pr=$('presets');
@@ -1084,6 +1432,7 @@ function buildUI(){
     el.addEventListener('input',()=>{
       const v = el.type==='checkbox' ? el.checked : el.type==='range' ? parseFloat(el.value) : el.value;
       setPath(st,k,v); syncOutputs();
+      if(k==='texts.title') updateFontSamples();
       if(k.startsWith('layers.')){ redrawAll(true); }
       else if(k==='margin'){ layoutPreview(); saveState(); }
       else if(k==='stroke'||k==='waterMult'){ redrawAll(true); }
@@ -1099,6 +1448,8 @@ function buildUI(){
   $('bRefresh2').onclick=()=>fetchOverpass();
   $('bDiag').onclick=runDiagnostics;
   $('bReset').onclick=askReset;
+  $('bUiSmaller').onclick=()=>stepUiScale(-1); $('bUiLarger').onclick=()=>stepUiScale(1);
+  $('bTsReset').onclick=()=>{ st.textScale={...DEFAULT_STATE.textScale}; st.textScaleAll=DEFAULT_STATE.textScaleAll; syncInputs(); scheduleOver(); saveState(); toast('Tailles des textes rétablies'); };
   $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
   $('lnkApi').onclick=e=>{ e.currentTarget.href=overpassGetUrl(); };
   $('lnkTurbo').onclick=e=>{ e.currentTarget.href='https://overpass-turbo.eu/?R&Q='+encodeURIComponent(currentQuery()); };
@@ -1121,6 +1472,7 @@ function askReset(){
 /** Rétablit tous les réglages par défaut (lieu, cadrage, gabarit, thème, couleurs, repère, textes, calques).
  *  Sont conservés : l'accord aux services tiers, les suspensions Overpass et les données déjà chargées. */
 function resetAll(){
+  clearTimeout(saveT); recordHistory();   // modification en attente : étape distincte
   const fresh=structuredClone(DEFAULT_STATE);
   for(const k of Object.keys(st)) delete st[k];
   Object.assign(st,fresh);
@@ -1128,16 +1480,18 @@ function resetAll(){
   syncInputs(); layoutPreview();
   loadFonts().then(()=>scheduleOver());
   setEngine(st.engine); goTo(st.center.lat,st.center.lon,st.zoom);
-  saveState(); toast('Réglages par défaut rétablis');
+  commitHistory(); toast('Réglages par défaut rétablis · « Annuler » pour revenir en arrière');
 }
 function syncInputs(){
   document.querySelectorAll('[data-k]').forEach(el=>{ const v=getPath(st,el.dataset.k); if(el.type==='checkbox') el.checked=!!v; else el.value=v??''; });
   setSeg('engineSeg',st.engine); setSeg('fillSeg',st.markerFill?'1':'0'); setSeg('fontSeg',st.font); setSeg('coordSeg',st.coordFormat);
-  syncZoomUI(); syncOutputs(); refreshColors(); refreshCards(); updateMarkerTxt(); updateEngineUI();
+  syncZoomUI(); syncOutputs(); refreshColors(); refreshCards(); updateMarkerTxt(); updateEngineUI(); updateFontSamples();
 }
 function syncOutputs(){
   $('oMargin').textContent=st.margin+' %'; $('oStroke').textContent='× '+st.stroke.toFixed(2); $('oWater').textContent='× '+st.waterMult.toFixed(1);
   $('oMSize').textContent=st.markerSize+' %'; $('oMOp').textContent=Math.round(st.markerOpacity*100)+' %';
+  $('oTsAll').textContent=st.textScaleAll+' %';
+  for(const k of Object.keys(FIT_NAMES)){ const o=$('oTs-'+k); if(o) o.textContent=st.textScale[k]+' %'+(o.classList.contains('shrunk')?' ↘':''); }
   $('ringTog').style.display=st.layout==='medallion'?'flex':'none';
 }
 function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker; }
@@ -1170,17 +1524,37 @@ function updateEngineUI(){
 function setEngine(v){
   if(v==='maplibre' && mlLib==='fail'){ toast('MapLibre n\'a pas pu être chargé : aucun CDN joignable depuis cette page.',true); return; }
   st.engine=v; setSeg('engineSeg',v); updateEngineUI(); setPlacing(false); showBanner(false);
+  if(v!=='maplibre') openAdvanced();
+  hist.quietUntil=Date.now()+1500;   // le moteur n'entre pas dans l'historique ; ses recentrages non plus   // import de fichier ou actualisation Overpass : réglages à portée de main
   if(v==='overpass'){ renderMap(true); if(!opData||opData.source!=='overpass') fetchOverpass(); else checkOpCoverage(); }
   else if(v==='file'){ renderMap(true); if(!opData) toast('Importez un fichier de données (onglet Lieu).'); }
   else { mlFailMsg=''; renderMap(true); mlRestyle(); }
   saveState();
 }
 
+// ---------- Ma position (géolocalisation de l'appareil) ----------
+function locateMe(){
+  if(window.isSecureContext===false){ toast('La position n\'est disponible que sur une page sécurisée (https).',true); return; }
+  const b=$('bGeo'); b.disabled=true; setStatus('Recherche de votre position…','busy');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    b.disabled=false; const {latitude:lat,longitude:lon,accuracy}=pos.coords;
+    setMarker(lat,lon); goTo(lat,lon,Math.max(st.zoom,15));
+    setStatus('Prêt'); toast(`Repère placé sur votre position (précision ${Math.round(accuracy)} m)`);
+  },err=>{
+    b.disabled=false; setStatus('Position indisponible','err');
+    toast(err.code===1 ? 'Accès à la position refusé : autorisez-le dans les réglages du navigateur.' : err.code===3 ? 'La position n\'a pas pu être obtenue à temps.' : 'Position indisponible sur cet appareil.',true);
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+}
+
 // ---------- Géocodage Nominatim ----------
+// Recherche uniquement à la validation (pas d'autocomplétion : interdite par la politique d'usage de Nominatim), une seule à la fois.
+let searching=false;
 async function search(q){
-  q=(q||'').trim(); if(!q) return;
+  q=(q||'').trim(); if(!q){ $('q').focus(); return; }
+  if(searching) return;
   if(!needConsent(()=>search(q))) return;
-  const box=$('results'); box.textContent='Recherche…';
+  const box=$('results'), sb=document.querySelector('#searchForm [type=submit]');
+  searching=true; sb.disabled=true; box.textContent='Recherche…';
   try{
     const res=await fetch(NOMINATIM+'?format=jsonv2&limit=5&accept-language=fr&q='+encodeURIComponent(q));
     if(!res.ok) throw new Error('HTTP '+res.status);
@@ -1189,7 +1563,11 @@ async function search(q){
     for(const it of list){
       const lat=parseFloat(it.lat), lon=parseFloat(it.lon);
       const d=document.createElement('div'); d.className='res';
-      const t=document.createElement('div'); t.className='t'; t.textContent=it.display_name; d.appendChild(t);
+      const t=document.createElement('div'); t.className='t';
+      const nm=(it.name||'').trim(), rest=nm && it.display_name.startsWith(nm) ? it.display_name.slice(nm.length).replace(/^,\s*/,'') : it.display_name;
+      if(nm && rest!==it.display_name){ const bb=document.createElement('b'); bb.textContent=nm; const sm=document.createElement('small'); sm.textContent=rest; t.append(bb,sm); }
+      else t.textContent=it.display_name;
+      d.appendChild(t);
       const row=document.createElement('div'); row.className='row';
       const b1=document.createElement('button'); b1.className='btn sm'; b1.textContent='Carte + repère';
       b1.onclick=()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); box.textContent=''; };
@@ -1198,6 +1576,7 @@ async function search(q){
       row.append(b1,b2); d.appendChild(row); box.appendChild(d);
     }
   }catch(e){ box.textContent='Recherche indisponible ('+netMsg(e)+'). Vous pouvez placer le repère en touchant la carte.'; }
+  finally{ searching=false; sb.disabled=false; }
 }
 
 // ---------- Polices ----------
@@ -1282,7 +1661,7 @@ async function probe(fn,ms=10000){
 }
 async function runDiagnostics(){
   if(!needConsent(()=>runDiagnostics())) return;
-  document.querySelector('#tabs [data-tab=lieu]').click();
+  openAdvanced(true);
   const box=$('diag'); box.innerHTML=''; $('bDiag').disabled=true;
   const line=(label)=>{ const d=document.createElement('div'); d.innerHTML='<span class="wt">…</span><span></span><small></small>'; d.children[1].textContent=label; box.appendChild(d); return d; };
   const set=(d,r)=>{ d.children[0].className=r.ok?'ok':'ko'; d.children[0].textContent=r.ok?'✓':'✗'; d.children[2].textContent=r.info+(r.ms?` · ${r.ms} ms`:''); };
@@ -1368,12 +1747,14 @@ async function importFile(f){
 
 // ---------- Démarrage ----------
 async function boot(){
-  buildUI();
+  buildUI(); initSheet(); applyUiScale();
   $('bConsentYes').onclick=giveConsent; $('bConsentFile').onclick=declineConsent; updateConsentInfo();
   showEnvWarning();
   if(st.engine==='file') st.engine='maplibre';   // un fichier importé n'est pas conservé entre deux sessions
   syncInputs();
-  new ResizeObserver(()=>layoutPreview()).observe(stage);
+  hist.cur=histSnap(); hist.quietUntil=Date.now()+2500; updateHistUI();   // l'état chargé est le point de départ de l'historique
+  let rafL=0; new ResizeObserver(()=>{ if(!rafL) rafL=requestAnimationFrame(()=>{ rafL=0; layoutPreview(); }); }).observe(stage);
+  addEventListener('resize',()=>applySheet());
   layoutPreview();
   loadFonts().then(()=>{ scheduleOver(); refreshCards(); });
   document.fonts && document.fonts.ready.then(()=>{ scheduleOver(); refreshCards(); });
@@ -1387,7 +1768,7 @@ async function boot(){
     setStatus('MapLibre injoignable (aucun CDN accessible)','err');
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
-  window.__cms={st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
+  window.__cms={get ui(){return ui},undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
 }
 boot();
 </script>

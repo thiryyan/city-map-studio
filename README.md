@@ -15,7 +15,8 @@ python3 -m http.server 8000   # puis http://localhost:8000
 Ouvrir directement `index.html` en `file://` fonctionne aussi, mais certains serveurs Overpass refusent alors les requêtes.
 
 ## Documentation
-- [Dossier technique](docs/dossier-technique.md) : exigences, architecture, rendu, export, tests et feuille de route.
+- [Dossier technique](docs/dossier-technique.md) : exigences, architecture, rendu, export et tests.
+- [Issues](https://github.com/thiryyan/city-map-studio/issues) : évolutions prévues et validations à mener.
 - [Contribuer](CONTRIBUTING.md) : règles de développement et commandes de test.
 
 ## Licences
