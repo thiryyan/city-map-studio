@@ -432,6 +432,8 @@ const GOLD = '#C5A059';
 const OFM_URL = 'https://tiles.openfreemap.org/planet';
 // overpass-api.de en dernier : depuis juin 2026 il renvoie 406 aux clients sans Referer (fichier local, aperçus)
 const OVERPASS = ['https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass-api.de/api/interpreter'];
+// Délais côté client (ms) : requête de données et sonde du diagnostic. Objet modifiable par les tests (__cms.OP_TIMEOUT).
+const OP_TIMEOUT = {fetch: 30000, diag: 20000};
 const ML_VERSION = '4.7.1';
 // lib/ : copie embarquée dans le dépôt (BSD-3, cf. lib/LICENSE-maplibre-gl.txt) ; les CDN restent en secours
 const ML_CDNS = ['lib/',`https://unpkg.com/maplibre-gl@${ML_VERSION}/dist/`,`https://cdn.jsdelivr.net/npm/maplibre-gl@${ML_VERSION}/dist/`,`https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/${ML_VERSION}/`];
@@ -562,6 +564,15 @@ function opSuspend(url,status,retryAfter){
 const opAvailable = () => OVERPASS.filter(u=>!opBlockInfo(u));
 const hhmm = t => new Date(t).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'});
 const opBlockMsg = b => `suspendu après HTTP ${b.status} · nouvel essai possible ${hhmm(b.until)}`;
+// Échec d'un miroir : {host, status?, kind:'http'|'timeout'|'nores'}.
+// Un « TypeError: Failed to fetch » ne dit pas si le réseau est coupé ou si le serveur a répondu
+// une page d'erreur sans en-tête CORS (cas fréquent des 502/504 de passerelle). Si un autre miroir
+// a répondu en HTTP ou a dépassé le délai, le réseau fonctionne : la panne vient des serveurs.
+function opFailText(f,serverSide){
+  return f.kind==='http' ? 'HTTP '+f.status : f.kind==='timeout' ? 'délai dépassé'
+    : serverSide ? 'réponse illisible (erreur serveur sans CORS)' : 'pas de réponse (connexion ou serveur)';
+}
+const opServerSide = fails => fails.some(f=>f.kind!=='nores');
 
 function loadState(){
   try{
@@ -953,26 +964,32 @@ async function fetchOverpass(){
     toast('Tous les serveurs Overpass ont refusé l\'accès (406/429). Par respect de leur politique d\'usage, aucun nouvel essai avant '+hhmm(next)+'. Utilisez le moteur Vectoriel GPU ou « Fichier ».',true);
     return;
   }
-  let lastErr='';
+  const fails=[];
   for(const url of mirrors){
-    const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),30000);
+    const host=new URL(url).host;
+    const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),OP_TIMEOUT.fetch);
     try{
       const res=await fetch(url,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ctl.signal});
       clearTimeout(timer);
       if(res.status===406||res.status===429){
         opSuspend(url,res.status,res.headers.get('Retry-After'));
-        lastErr=`HTTP ${res.status} (${new URL(url).host}, serveur suspendu)`; console.warn('Overpass',url,res.status,'→ suspendu'); continue;
+        fails.push({host,status:res.status,kind:'http'}); console.warn('Overpass',url,res.status,'→ suspendu'); continue;
       }
-      if(!res.ok){ lastErr=`HTTP ${res.status}${res.status===406?' refusé (requête non acceptée par ce serveur)':''} (${new URL(url).host})`; continue; }
+      if(!res.ok){ fails.push({host,status:res.status,kind:'http'}); console.warn('Overpass',url,res.status); continue; }
       const json=await res.json();
       opData=parseOverpass(json); opData.bounds=b; opData.layers=JSON.stringify(st.layers); opData.source='overpass';
       opLoading=false; setStatus(`Vecteurs chargés · ${json.elements.length.toLocaleString('fr-FR')} objets · ${new URL(url).host}`);
       renderMap(); return;
-    }catch(e){ clearTimeout(timer); lastErr=e.name==='AbortError'?`délai dépassé (${new URL(url).host})`:netMsg(e); }
+    }catch(e){ clearTimeout(timer); fails.push({host,kind:e.name==='AbortError'?'timeout':'nores'}); console.warn('Overpass',url,e.name==='AbortError'?'délai dépassé':e); }
   }
-  opLoading=false; setStatus('Overpass indisponible : '+lastErr,'err');
-  showBanner(true,'Overpass injoignable','Diagnostiquer',runDiagnostics);
-  toast(ENV.blocked ? 'Cette page est ouverte dans un aperçu qui bloque le réseau. Ouvrez-la dans Chrome, ou utilisez le moteur « Fichier ».' : 'Aucun miroir Overpass n\'a répondu. Lancez le diagnostic ou utilisez le moteur « Fichier ».',true);
+  opLoading=false;
+  const server=opServerSide(fails);
+  const detail=fails.map(f=>f.host+' : '+opFailText(f,server)).join(' · ');
+  setStatus(server ? `Overpass : serveurs en panne ou surchargés (${fails.length}/${mirrors.length} en échec)` : 'Overpass injoignable : pas de réponse des serveurs','err',detail);
+  showBanner(true,server?'Serveurs Overpass en panne':'Overpass injoignable','Diagnostiquer',runDiagnostics);
+  toast(ENV.blocked ? 'Cette page est ouverte dans un aperçu qui bloque le réseau. Ouvrez-la dans Chrome, ou utilisez le moteur « Fichier ».'
+    : server ? 'Les serveurs Overpass publics sont en panne ou surchargés ('+detail+'). Votre connexion n\'est pas en cause : réessayez plus tard, ou utilisez le moteur Vectoriel GPU ou « Fichier ».'
+    : 'Aucun serveur Overpass n\'a répondu. Lancez le diagnostic ou utilisez le moteur « Fichier ».',true);
 }
 function checkOpCoverage(){
   if(st.engine!=='overpass'||opLoading){ if(st.engine==='file') showBanner(!opData,'Aucun fichier importé','Importer',()=>$('fileIn').click()); return; }
@@ -1166,7 +1183,7 @@ function redrawAll(restyle){ drawUnder(); if(restyle) mlRestyle(); renderMap(fal
 })();
 
 // ---------- Interface ----------
-function setStatus(t,kind){ $('stTxt').textContent=t; $('stTxt').title=t; $('stDot').className='dot'+(kind?' '+kind:''); }
+function setStatus(t,kind,detail){ $('stTxt').textContent=t; $('stTxt').title=detail?t+' — '+detail:t; $('stDot').className='dot'+(kind?' '+kind:''); }
 let toastT=0;
 function toast(msg,err){ const t=$('toast'); t.textContent=msg; t.className='show'+(err?' err':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='',err?6000:3200); }
 function showBanner(show,txt,label,action){
@@ -1656,7 +1673,7 @@ function showEnvWarning(){
 // ---------- Diagnostic réseau ----------
 async function probe(fn,ms=10000){
   const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),ms), t0=performance.now();
-  try{ const r=await fn(ctl.signal); clearTimeout(t); return {ok:r.ok, status:r.status, info:r.info||('HTTP '+r.status), ms:Math.round(performance.now()-t0)}; }
+  try{ const r=await fn(ctl.signal); clearTimeout(t); return {ok:r.ok, status:r.status, op:r.op, info:r.info||('HTTP '+r.status), ms:Math.round(performance.now()-t0)}; }
   catch(e){ clearTimeout(t); return {ok:false, info:e.name==='AbortError'?'délai dépassé':netMsg(e)}; }
 }
 async function runDiagnostics(){
@@ -1670,20 +1687,32 @@ async function runDiagnostics(){
   const tests=[
     ['Tuiles OpenFreeMap', s=>fetch(OFM_URL,{signal:s}).then(async r=>({ok:r.ok&&!!(await r.json()).tiles,status:r.status}))],
     ...OVERPASS.map(u=>['Overpass · '+new URL(u).host, async s=>{
-      const b=opBlockInfo(u); if(b) return {ok:false,status:b.status,info:opBlockMsg(b)};   // pas de nouvel essai
-      const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent('[out:json][timeout:5];node(1);out;'),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:s});
-      if(r.status===406||r.status===429){ opSuspend(u,r.status,r.headers.get('Retry-After')); return {ok:false,status:r.status,info:'HTTP '+r.status+' · '+opBlockMsg(opBlockInfo(u))}; }
-      return {ok:r.ok,status:r.status}; }]),
+      const b=opBlockInfo(u); if(b) return {ok:false,status:b.status,info:opBlockMsg(b),op:'suspended'};   // pas de nouvel essai
+      let r;
+      try{ r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent('[out:json][timeout:5];node(1);out;'),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:s}); }
+      catch(e){ if(e.name==='AbortError') throw e; return {ok:false,status:0,info:'pas de réponse (connexion, ou erreur serveur sans CORS)',op:'nores'}; }
+      if(r.status===406||r.status===429){ opSuspend(u,r.status,r.headers.get('Retry-After')); return {ok:false,status:r.status,info:'HTTP '+r.status+' · '+opBlockMsg(opBlockInfo(u)),op:'suspended'}; }
+      return {ok:r.ok,status:r.status,op:r.ok?'ok':'http'}; }, OP_TIMEOUT.diag]),
     ['Géocodage Nominatim', s=>fetch(NOMINATIM+'?format=json&limit=1&q=Blois',{signal:s}).then(r=>({ok:r.ok,status:r.status}))]
   ];
-  const results=await Promise.all(tests.map(async([label,fn])=>{ const d=line(label); const r=await probe(fn); set(d,r); return r; }));
+  const results=await Promise.all(tests.map(async([label,fn,ms])=>{ const d=line(label); const r=await probe(fn,ms); set(d,r); return r; }));
   const anyOk=results.some(r=>r.ok);
   ENV.blocked=!anyOk;
   const c=document.createElement('div'); c.style.marginTop='6px';
   c.textContent = !anyOk ? '→ Aucun service n\'est joignable depuis cette page. Ouvrez le fichier dans Chrome (pas dans un aperçu), vérifiez la connexion, ou utilisez le moteur « Fichier ».'
     : results[0].ok && mlLib==='ok' ? '→ Le moteur Vectoriel GPU devrait fonctionner.'
     : results.slice(1,1+OVERPASS.length).some(r=>r.ok) ? '→ Utilisez le moteur Overpass.' : '→ Utilisez le moteur « Fichier ».';
-  box.appendChild(c); $('bDiag').disabled=false;
+  box.appendChild(c);
+  // Overpass : tous les miroirs en échec alors que d'autres services répondent → panne côté serveurs
+  const op=results.slice(1,1+OVERPASS.length);
+  if(anyOk && !op.some(r=>r.ok)){
+    const o=document.createElement('div'); o.className='diagOp'; o.style.marginTop='4px';
+    o.textContent = op.every(r=>r.op==='suspended')
+      ? '→ Overpass : tous les serveurs sont suspendus après un refus (406/429). Utilisez le moteur Vectoriel GPU ou « Fichier » en attendant la reprise.'
+      : '→ Overpass : aucun serveur public ne répond correctement (erreurs 5xx ou délai dépassé), alors que votre connexion fonctionne. La panne vient des serveurs Overpass : réessayez plus tard, ou utilisez le moteur Vectoriel GPU ou « Fichier ».';
+    box.appendChild(o);
+  }
+  $('bDiag').disabled=false;
 }
 
 // ---------- Moteur 3 : import de fichier (hors ligne) ----------
@@ -1768,7 +1797,7 @@ async function boot(){
     setStatus('MapLibre injoignable (aucun CDN accessible)','err');
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
-  window.__cms={get ui(){return ui},undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
+  window.__cms={get ui(){return ui},undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,OP_TIMEOUT,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
 }
 boot();
 </script>
