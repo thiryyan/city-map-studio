@@ -34,6 +34,9 @@ button,input,select{font:inherit;color:inherit}
 .tab{display:none}.tab.on{display:block}
 .foot{flex:none;padding:10px 12px calc(10px + var(--sab));border-top:1px solid var(--line);background:var(--panel)}
 .status{font-size:12px;color:var(--mut);margin-bottom:8px;display:flex;gap:6px;align-items:center;min-height:16px}
+#stTxt{flex:1;min-width:0}
+.lnk{flex:none;background:none;border:0;padding:4px 0;color:var(--mut);font-size:12px;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.lnk.confirm{color:var(--acc);font-weight:600}
 .dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex:none}.dot.busy{background:#facc15}.dot.err{background:var(--danger)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;min-height:40px}
 .btn:active{transform:scale(.98)}
@@ -272,7 +275,7 @@ label.f.show:has(input:not(:checked))+input{opacity:.45}
       </div>
     </div>
     <div class="foot">
-      <div class="status"><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span></div>
+      <div class="status"><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span><button class="lnk" id="bReset" type="button" title="Revenir aux réglages par défaut">Réinitialiser</button></div>
       <button class="btn pri" id="bExport">Exporter l'affiche HD<span class="xl">&nbsp;· 2480 × 3508 px</span>&nbsp;· 300 DPI</button>
     </div>
   </aside>
@@ -1095,12 +1098,37 @@ function buildUI(){
   $('bToMarker').onclick=()=>goTo(st.marker.lat,st.marker.lon);
   $('bRefresh2').onclick=()=>fetchOverpass();
   $('bDiag').onclick=runDiagnostics;
+  $('bReset').onclick=askReset;
   $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
   $('lnkApi').onclick=e=>{ e.currentTarget.href=overpassGetUrl(); };
   $('lnkTurbo').onclick=e=>{ e.currentTarget.href='https://overpass-turbo.eu/?R&Q='+encodeURIComponent(currentQuery()); };
   $('searchForm').onsubmit=e=>{ e.preventDefault(); search($('q').value); };
   $('bExport').onclick=exportPoster;
   $('resClose').onclick=()=>{ $('result').classList.remove('show'); };
+}
+/** Réinitialisation : un premier appui demande confirmation (pas de confirm(), bloqué dans les aperçus intégrés) */
+let resetT=0;
+function askReset(){
+  const b=$('bReset');
+  if(!b.classList.contains('confirm')){
+    b.classList.add('confirm'); b.textContent='Confirmer ?';
+    clearTimeout(resetT); resetT=setTimeout(()=>{ b.classList.remove('confirm'); b.textContent='Réinitialiser'; },4000);
+    return;
+  }
+  clearTimeout(resetT); b.classList.remove('confirm'); b.textContent='Réinitialiser';
+  resetAll();
+}
+/** Rétablit tous les réglages par défaut (lieu, cadrage, gabarit, thème, couleurs, repère, textes, calques).
+ *  Sont conservés : l'accord aux services tiers, les suspensions Overpass et les données déjà chargées. */
+function resetAll(){
+  const fresh=structuredClone(DEFAULT_STATE);
+  for(const k of Object.keys(st)) delete st[k];
+  Object.assign(st,fresh);
+  setPlacing(false); $('markerIn').value='';
+  syncInputs(); layoutPreview();
+  loadFonts().then(()=>scheduleOver());
+  setEngine(st.engine); goTo(st.center.lat,st.center.lon,st.zoom);
+  saveState(); toast('Réglages par défaut rétablis');
 }
 function syncInputs(){
   document.querySelectorAll('[data-k]').forEach(el=>{ const v=getPath(st,el.dataset.k); if(el.type==='checkbox') el.checked=!!v; else el.value=v??''; });
@@ -1359,7 +1387,7 @@ async function boot(){
     setStatus('MapLibre injoignable (aucun CDN accessible)','err');
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
-  window.__cms={st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent}};
+  window.__cms={st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
 }
 boot();
 </script>
