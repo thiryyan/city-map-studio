@@ -408,32 +408,10 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 | Taille des textes de l'affiche | ✅ | `tests/textsize.py` |
 | Parcours guidé, accessibilité, historique, date, géolocalisation, recherche | ✅ | `tests/ux.py` (émulation) ; ⏳ géolocalisation et calendrier natif à valider sur iOS et Android. |
 | Panneau coulissant, mode Cadrer, paysage, A− / A+ | ✅ | `tests/mobile.py` (émulation) ; ⏳ gestes à valider sur iOS Safari et Chrome Android. |
-| MapLibre avec les vraies tuiles OpenFreeMap | ⏳ à valider | Sur l'URL GitHub Pages, dans un vrai navigateur. |
-| Overpass réel depuis `github.io` (miroirs, temps de réponse, taille de la relation « Loire ») | ⏳ à valider | Idem. |
-| Nominatim réel | ⏳ à valider | Idem. |
+| MapLibre avec les vraies tuiles OpenFreeMap | ⏳ à valider | Sur l'URL GitHub Pages, dans un vrai navigateur ([#5](https://github.com/thiryyan/city-map-studio/issues/5)). |
+| Overpass réel depuis `github.io` (miroirs, temps de réponse, taille de la relation « Loire ») | ⏳ à valider | Idem ([#6](https://github.com/thiryyan/city-map-studio/issues/6)). |
+| Nominatim réel | ⏳ à valider | Idem, avec le diagnostic ([#4](https://github.com/thiryyan/city-map-studio/issues/4)). |
 | Polices auto-hébergées dans l'aperçu et l'export, contrôle `document.fonts.check` | ✅ | `tests/fonts.py` |
 | Accord préalable aux services tiers | ✅ | `tests/consent.py` |
 | Réinitialisation des réglages | ✅ | `tests/reset.py` |
-| Téléchargement sur iOS Safari et Chrome Android | ⏳ à valider | Appareils réels. |
-
----
-
-## 10. Feuille de route
-
-**Priorité 0 — Fonctionnement en conditions réelles**
-1. Publier `main` sur GitHub Pages et lancer « Diagnostiquer la connexion » dans un vrai navigateur, sur ordinateur et sur mobile.
-2. Valider le moteur Vectoriel GPU avec les vraies tuiles (aperçu, déplacement, zoom, export) et le rendu du thème Souvenir (gris, eau, épaisseurs).
-3. Valider Overpass depuis l'origine `github.io`.
-
-**Priorité 1 — Fiabilité et qualité**
-4. Téléchargement sur iOS et Android, avec l'appui long en secours.
-5. Moteurs Overpass et Fichier : traiter le trait de côte (`natural=coastline`) pour Venise et New York, ou rediriger automatiquement vers le moteur Vectoriel GPU.
-6. Performances du canvas : mettre en cache les `Path2D` par classe pour fluidifier le déplacement quand les bâtiments sont nombreux.
-7. Conserver le dernier fichier importé dans IndexedDB, pour que le moteur Fichier survive à un rechargement.
-8. Vie privée : proposer des tuiles PMTiles autohébergées (zone limitée, par exemple les villes préréglées) pour un moteur Vectoriel GPU sans aucun service tiers.
-
-**Priorité 2 — Confort**
-9. Formats supplémentaires (A3, 50 × 70 cm), PDF via jsPDF (licence MIT) si besoin.
-10. Accessibilité : libellés ARIA, focus clavier, contrastes de l'interface.
-    Revue UX mobile, suites possibles : retour à la ligne des textes longs (dédicace sur deux lignes), comparaison avant / après d'un thème, historique conservé après rechargement.
-11. Découper `index.html` en modules ES, sans build, seulement si sa taille le justifie.
+| Téléchargement sur iOS Safari et Chrome Android | ⏳ à valider | Appareils réels ([#7](https://github.com/thiryyan/city-map-studio/issues/7)). |

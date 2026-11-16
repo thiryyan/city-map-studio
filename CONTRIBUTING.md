@@ -1,6 +1,6 @@
 # Contribuer à City Map Studio
 
-Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.md). L'état de validation et la feuille de route figurent aux § 9 et 10.
+Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.md). L'état de validation figure au § 9 ; les évolutions prévues sont suivies dans les [issues](https://github.com/thiryyan/city-map-studio/issues).
 
 ## Règles non négociables
 - **100 % open source** : aucune clé API, aucun service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps).
