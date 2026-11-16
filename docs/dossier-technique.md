@@ -218,6 +218,11 @@ Le coefficient de corps (`scale`) et la graisse par défaut (`weight`) sont déf
 Chaque ligne est **optionnelle** : une case à cocher devant chaque champ l'affiche ou la masque, sans effacer le texte saisi (état `show`, persisté). Dans les gabarits à cartouche (Cadre, Fondu, Médaillon), les lignes masquées ou vides sont retirées et les suivantes remontent ; le gabarit Fondu garde le bloc calé en bas. Dans le gabarit Souvenir, une ligne d'en-tête seule occupe toute la largeur, et les noms sans dédicace s'affichent seuls, sans filet.
 Les textes trop longs sont réduits automatiquement pour tenir dans leur zone.
 
+### 4.5. Réinitialisation
+
+Le lien **« Réinitialiser »**, dans la barre du bas (visible depuis tous les onglets), rétablit tous les réglages par défaut : lieu et cadrage (Blois), gabarit, thème et couleurs, repère, police, textes et lignes affichées, marge, épaisseurs et calques. Un premier appui affiche « Confirmer ? » pendant 4 s ; un second appui réinitialise (`resetAll`). La confirmation est intégrée à la page, car `confirm()` est bloqué dans les aperçus intégrés.
+Sont conservés : l'accord aux services tiers, les suspensions de miroirs Overpass et les données déjà chargées ou importées.
+
 ---
 
 ## 5. Export haute définition
@@ -240,6 +245,7 @@ Les textes trop longs sont réduits automatiquement pour tenir dans leur zone.
 * **Mobile (< 900 px)** : aperçu de l'affiche en haut (environ 55 % de la hauteur), panneau à onglets défilant en bas (**Lieu · Style · Repère · Textes**), barre fixe avec le bouton « Exporter ». Les champs de saisie sont en 16 px pour éviter le zoom automatique d'iOS.
 * **Ordinateur (≥ 900 px)** : panneau de 400 px à gauche, table lumineuse à droite avec l'affiche ombrée.
 * **Gestes sur l'aperçu** : glisser pour cadrer, pincer ou molette pour zoomer. En mode « Placer le repère », un toucher place le repère.
+* **Barre du bas** : état courant, lien « Réinitialiser » (§ 4.5) et bouton « Exporter ».
 * **États visibles** : demande d'accord aux services tiers, moteur actif, chargement, bandeau « Zone modifiée → Actualiser les vecteurs », erreurs réseau en clair.
 
 ---
@@ -310,7 +316,8 @@ city-map-studio/
     ├── coords.py           # saisie des coordonnées du repère
     ├── texts.py            # lignes de texte optionnelles, dans les 4 gabarits
     ├── fonts.py            # polices auto-hébergées, file:// et HTTP, aucun appel tiers
-    └── consent.py          # accord préalable : aucune requête tierce sans accord
+    ├── consent.py          # accord préalable : aucune requête tierce sans accord
+    └── reset.py            # réinitialisation des réglages par défaut
 ```
 
 ### 8.2. Sections de `index.html`
@@ -328,7 +335,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Rendu de l'affiche | `drawPoster`, `drawCartouche`, `drawMarker`, `drawText` | **Fonction unique pour l'aperçu et l'export** (passes `under` / `over` / `all`). |
 | Moteur 2 | `buildQuery`, `normalizeElements`, `stitch`, `parseOverpass`, `drawVectors`, `fetchOverpass` | Données OSM → Canvas 2D. |
 | Moteur 1 | `loadMaplibre`, `buildStyle`, `initMaplibre`, `renderMaplibreOffscreen`, `mlFail` | MapLibre + OpenFreeMap ; export hors écran. |
-| Interface | `parseCoords`, `placeMarkerFromInput`, `setMarker`, `goTo`, `setEngine` | Commandes de l'atelier. |
+| Interface | `parseCoords`, `placeMarkerFromInput`, `setMarker`, `goTo`, `setEngine`, `askReset`, `resetAll` | Commandes de l'atelier. |
 | Contexte et diagnostic | `ENV`, `showEnvWarning`, `runDiagnostics`, `netMsg` | Détection d'iframe ou de blocage réseau, tests des services. |
 | Moteur 3 | `osmXmlToElements`, `geojsonToElements`, `importText`, `importFile` | Import de fichier, avec recadrage automatique. |
 | Export | `exportPoster`, `withDpi`, `crc32` | PNG 2480 × 3508 px à 300 DPI. |
@@ -347,6 +354,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | WYSIWYG | Cadrage et position du repère identiques entre l'aperçu (mobile et ordinateur) et l'export. |
 | Export | PNG 2480 × 3508, métadonnée 300 DPI, polices correctes, aucun flou. |
 | DMS | 47,5861 → 47° 35′ 10.0″ N ; 1,99999 → 2° 00′ 00.0″ E (retenue). |
+| Réinitialisation | Un appui demande confirmation sans rien modifier ; deux appuis rétablissent l'état et l'affiche par défaut, accord conservé, résultat persisté. |
 | Accord préalable | Au premier lancement, aucune requête tierce ; recherche, Overpass et diagnostic bloqués sans accord ; après accord, l'action en attente s'exécute et le choix est mémorisé ; retrait possible ; « Travailler hors ligne » passe au moteur Fichier sans requête. |
 | Polices | Les 5 familles (normale et italique) se chargent depuis `lib/fonts/`, y compris hors ligne et en `file://` ; elles s'appliquent à l'aperçu et à l'export ; le choix est conservé ; aucune requête vers Google. |
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
@@ -378,6 +386,7 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 | Nominatim réel | ⏳ à valider | Idem. |
 | Polices auto-hébergées dans l'aperçu et l'export, contrôle `document.fonts.check` | ✅ | `tests/fonts.py` |
 | Accord préalable aux services tiers | ✅ | `tests/consent.py` |
+| Réinitialisation des réglages | ✅ | `tests/reset.py` |
 | Téléchargement sur iOS Safari et Chrome Android | ⏳ à valider | Appareils réels. |
 
 ---
