@@ -218,6 +218,11 @@ Le coefficient de corps (`scale`) et la graisse par défaut (`weight`) sont déf
 Chaque ligne est **optionnelle** : une case à cocher devant chaque champ l'affiche ou la masque, sans effacer le texte saisi (état `show`, persisté). Dans les gabarits à cartouche (Cadre, Fondu, Médaillon), les lignes masquées ou vides sont retirées et les suivantes remontent ; le gabarit Fondu garde le bloc calé en bas. Dans le gabarit Souvenir, une ligne d'en-tête seule occupe toute la largeur, et les noms sans dédicace s'affichent seuls, sans filet.
 Les textes trop longs sont réduits automatiquement pour tenir dans leur zone.
 
+**Taille des textes.** Chaque ligne a son curseur de taille (60 à 150 %, état `textScale`), complété d'un curseur global « Tous les textes » (70 à 140 %, `textScaleAll`) ; les deux se multiplient (`tScale(k)`). Le lien « Tailles par défaut » les remet à 100 %, comme « Réinitialiser ». À 100 %, le rendu est identique à celui d'avant les curseurs.
+* **Gabarits à cartouche** : quand une ligne grandit, les interlignes suivent (0,8 × l'écart de corps de la ligne, 0,25 × celui de la précédente). Si le bloc dépasse la hauteur disponible, il est réduit en entier pour tenir. Le gabarit Fondu garde le bloc calé en bas et le fait grandir vers le haut, sur la zone en fondu.
+* **Gabarit Souvenir** : le titre et la date de l'en-tête gardent chacun leur taille, sur la même ligne de base (`drawRun`). En pied de page, si la dédicace et les noms dépassent la largeur, ils sont réduits du même facteur, ce qui garde le rapport entre les tailles choisies. Avant, la dédicace était plafonnée à 72 % de la largeur et les noms prenaient le reste.
+* **Réduction signalée** : pendant le rendu de l'aperçu, `drawText`, `drawRun` et `drawCartouche` relèvent les réductions automatiques (`noteFit`). Au-delà de 10 %, l'onglet Textes l'indique (« ↘ Réduit pour tenir dans l'affiche : dédicace (67 %) ») et le curseur de la ligne passe en orange.
+
 ### 4.5. Réinitialisation
 
 Le lien **« Réinitialiser »**, dans la barre du bas (visible depuis tous les onglets), rétablit tous les réglages par défaut : lieu et cadrage (Blois), gabarit, thème et couleurs, repère, police, textes et lignes affichées, marge, épaisseurs et calques. Un premier appui affiche « Confirmer ? » pendant 4 s ; un second appui réinitialise (`resetAll`). La confirmation est intégrée à la page, car `confirm()` est bloqué dans les aperçus intégrés.
@@ -242,11 +247,19 @@ Sont conservés : l'accord aux services tiers, les suspensions de miroirs Overpa
 
 ## 6. Interface (mobile en priorité)
 
-* **Mobile (< 900 px)** : aperçu de l'affiche en haut (environ 55 % de la hauteur), panneau à onglets défilant en bas (**Lieu · Style · Repère · Textes**), barre fixe avec le bouton « Exporter ». Les champs de saisie sont en 16 px pour éviter le zoom automatique d'iOS.
-* **Ordinateur (≥ 900 px)** : panneau de 400 px à gauche, table lumineuse à droite avec l'affiche ombrée.
-* **Gestes sur l'aperçu** : glisser pour cadrer, pincer ou molette pour zoomer. En mode « Placer le repère », un toucher place le repère.
-* **Barre du bas** : état courant, lien « Réinitialiser » (§ 4.5) et bouton « Exporter ».
-* **États visibles** : demande d'accord aux services tiers, moteur actif, chargement, bandeau « Zone modifiée → Actualiser les vecteurs », erreurs réseau en clair.
+* **Mobile portrait** : aperçu de l'affiche en haut, **panneau coulissant** en bas avec les onglets (**Lieu · Style · Repère · Textes**) et la barre d'export. Trois crans :
+  * **réduit** : onglets et export seuls, l'affiche occupe presque tout l'écran (cadrage, placement du repère) ;
+  * **mi-hauteur** (55 %, par défaut) ;
+  * **déplié** (84 %) : réglages en grand, l'affiche réduite à une vignette.
+
+  On glisse la poignée (aimantation au cran le plus proche, dans le sens du geste), ou on la touche pour passer d'un cran à l'autre (flèches haut et bas au clavier). Toucher un onglet depuis le cran réduit ouvre la mi-hauteur ; toucher l'onglet actif bascule entre mi-hauteur et déplié. Le panneau se déplie pendant la saisie d'un texte, puis reprend sa place.
+* **Carte verrouillée et mode « Cadrer » (mobile portrait)** : un glissement sur l'affiche ne la décadre pas. Un toucher sur la carte, ou le bouton Cadrer, ouvre le mode Cadrer : panneau réduit, carte déverrouillée (glisser, pincer), barre « Terminer ». « Placer le repère » réduit aussi le panneau et le rétablit une fois le repère posé.
+* **Boutons flottants** (cadrer, zoom, repère, centrer) : à droite ou en bas de l'aperçu, selon ce qui laisse l'affiche la plus grande ; masqués quand l'aperçu n'est qu'une vignette.
+* **Deux colonnes** (ordinateur ≥ 900 px, tablette ou téléphone en paysage ≥ 560 px) : panneau à gauche (400 px au plus, 46 % de la largeur), table lumineuse à droite. Pas de poignée ni de verrou : la carte se manipule directement (glisser, pincer, molette).
+* **Barre du bas** : état courant, lien « Réinitialiser » (§ 4.5), réglage **A− / A+** et bouton « Exporter ».
+* **Taille du texte de l'interface** : les tailles sont en `rem`. L'interface suit le réglage du système (taille de police d'Android ; Dynamic Type d'iOS via `font: -apple-system-body`). A− / A+ propose 87,5 à 137,5 %. Ce réglage est mémorisé dans l'appareil (`cityMapStudio.uiScale`), hors de l'état de l'affiche, et « Réinitialiser » ne le modifie pas. Les champs de saisie font au moins 16 px pour éviter le zoom automatique d'iOS.
+* **Superpositions** : la demande d'accord aux services tiers est un panneau modal en bas d'écran, avec un texte court et un repli « En savoir plus ». Le bandeau d'action (« Zone modifiée → Actualiser les vecteurs », « Carte indisponible ») s'affiche en tête du panneau, plus sur l'affiche. Les bulles d'information apparaissent au-dessus du panneau, sans masquer les réglages.
+* **États visibles** : moteur actif, chargement, attente d'accord et mode hors ligne (pastille orange), erreurs réseau en clair.
 
 ---
 
@@ -355,9 +368,11 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Export | PNG 2480 × 3508, métadonnée 300 DPI, polices correctes, aucun flou. |
 | DMS | 47,5861 → 47° 35′ 10.0″ N ; 1,99999 → 2° 00′ 00.0″ E (retenue). |
 | Réinitialisation | Un appui demande confirmation sans rien modifier ; deux appuis rétablissent l'état et l'affiche par défaut, accord conservé, résultat persisté. |
-| Accord préalable | Au premier lancement, aucune requête tierce ; recherche, Overpass et diagnostic bloqués sans accord ; après accord, l'action en attente s'exécute et le choix est mémorisé ; retrait possible ; « Travailler hors ligne » passe au moteur Fichier sans requête. |
+| Accord préalable | Au premier lancement, aucune requête tierce ; demande modale ; « Travailler hors ligne » passe au moteur Fichier (pastille orange) ; recherche, Overpass et diagnostic redemandent l'accord, sans requête ; après accord, l'action en attente s'exécute et le choix est mémorisé ; retrait possible ; « Travailler hors ligne » passe au moteur Fichier sans requête. |
 | Polices | Les 5 familles (normale et italique) se chargent depuis `lib/fonts/`, y compris hors ligne et en `file://` ; elles s'appliquent à l'aperçu et à l'export ; le choix est conservé ; aucune requête vers Google. |
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
+| Taille des textes | Chaque curseur (par ligne et global) modifie l'affiche dans les 4 gabarits ; retour à 100 % = rendu d'origine ; réduction automatique signalée ; tailles persistées et remises à 100 % par « Réinitialiser » ; export 2480 × 3508. |
+| Mobile | iPhone 13 (390 × 664) : au moins 180 px de réglages à mi-hauteur ; poignée (toucher, glisser) ; dépliage à la saisie ; carte verrouillée hors du mode Cadrer ; placement du repère ; bulle au-dessus du panneau ; A− / A+ persistant, sans défilement horizontal ; paysage en deux colonnes ; ordinateur inchangé. |
 | Saisie du repère | Formats du § 3.4 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
 | Résilience | MapLibre indisponible → bascule possible vers Overpass ou Fichier ; miroir Overpass en erreur 5xx ou hors délai → miroir suivant ; miroir en 406 / 429 → suspendu, jamais rappelé pendant la suspension. |
 | Licence | Aucune dépendance propriétaire ; attribution OSM présente par défaut. |
@@ -381,6 +396,8 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 | Suspension des miroirs Overpass après 406 / 429 | ✅ | `tests/overpass_policy.py` |
 | Saisie des coordonnées du repère | ✅ | `tests/coords.py` |
 | Lignes de texte optionnelles | ✅ | `tests/texts.py` |
+| Taille des textes de l'affiche | ✅ | `tests/textsize.py` |
+| Panneau coulissant, mode Cadrer, paysage, A− / A+ | ✅ | `tests/mobile.py` (émulation) ; ⏳ gestes à valider sur iOS Safari et Chrome Android. |
 | MapLibre avec les vraies tuiles OpenFreeMap | ⏳ à valider | Sur l'URL GitHub Pages, dans un vrai navigateur. |
 | Overpass réel depuis `github.io` (miroirs, temps de réponse, taille de la relation « Loire ») | ⏳ à valider | Idem. |
 | Nominatim réel | ⏳ à valider | Idem. |
@@ -408,4 +425,5 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 **Priorité 2 — Confort**
 9. Formats supplémentaires (A3, 50 × 70 cm), PDF via jsPDF (licence MIT) si besoin.
 10. Accessibilité : libellés ARIA, focus clavier, contrastes de l'interface.
+    Revue UX mobile, lots restants : cibles tactiles de 44 px partout (pastilles, sélecteurs de couleur), onglet Lieu allégé (moteur, diagnostic, calques et accord dans une section « Avancé »), parcours guidé Lieu → Repère → Textes → Style → Exporter, annulation, sélecteur de date, recherche au fil de la saisie, aperçus de police, retour à la ligne des textes longs.
 11. Découper `index.html` en modules ES, sans build, seulement si sa taille le justifie.
