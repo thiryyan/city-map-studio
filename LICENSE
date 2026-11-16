@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Thiryyan
+Copyright (c) 2026 Contributeurs de City Map Studio
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,4 +27,5 @@ their own licenses:
   lib/LICENSE-maplibre-gl.txt
 - Map data: © OpenStreetMap contributors, ODbL 1.0
 - Vector tile schema: © OpenMapTiles, CC-BY 4.0 (tiles served by OpenFreeMap)
-- Fonts (Playfair Display, Montserrat, Space Mono): SIL Open Font License 1.1
+- lib/fonts/ (Playfair Display, Montserrat, Space Mono, Cormorant Garamond,
+  Josefin Sans): SIL Open Font License 1.1, see lib/fonts/*/OFL.txt

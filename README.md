@@ -2,9 +2,9 @@
 
 Atelier web de création d'affiches cartographiques souvenir : tracé minimaliste des rues et des cours d'eau, repère discret sur le lieu d'une rencontre, export PNG A4 à 300 DPI (2480 × 3508 px).
 
-- **100 % open source** : MapLibre GL JS, tuiles OpenFreeMap, Overpass API, Nominatim, polices SIL OFL. Aucune clé API.
+- **100 % open source** : MapLibre GL JS, tuiles OpenFreeMap, Overpass API, Nominatim, polices SIL OFL auto-hébergées. Aucune clé API, aucun appel à Google.
 - **Trois moteurs** : Vectoriel GPU (par défaut), Overpass (tracé artistique) et Fichier (hors ligne : JSON Overpass, `.osm`, GeoJSON).
-- **Quatre gabarits** (Souvenir, Cadre classique, Fondu moderne, Médaillon), sept thèmes, cinq styles de repère.
+- **Quatre gabarits** (Souvenir, Cadre classique, Fondu moderne, Médaillon), sept thèmes, cinq styles de repère, cinq familles de polices.
 - **Un seul fichier** `index.html`, sans build, pensé d'abord pour le mobile.
 
 ## Utilisation
@@ -19,10 +19,10 @@ Ouvrir directement `index.html` en `file://` fonctionne aussi, mais certains ser
 - [Contribuer](CONTRIBUTING.md) : règles de développement et commandes de test.
 
 ## Licences
-- Code de l'application : [MIT](LICENSE) © Thiryyan.
+- Code de l'application : [MIT](LICENSE) © Contributeurs de City Map Studio.
 - MapLibre GL JS (`lib/`) : BSD-3-Clause (`lib/LICENSE-maplibre-gl.txt`).
 - Données : © contributeurs OpenStreetMap, licence ODbL.
 - Schéma des tuiles vectorielles : © OpenMapTiles, CC-BY 4.0 (tuiles servies par OpenFreeMap).
-- Polices : SIL Open Font License 1.1.
+- Polices (`lib/fonts/`) : SIL Open Font License 1.1, auto-hébergées (`OFL.txt` dans chaque dossier). Aucun appel à Google Fonts.
 
 Les affiches produites doivent porter l'attribution « © contributeurs OpenStreetMap », complétée de « OpenFreeMap © OpenMapTiles » avec le moteur Vectoriel GPU. L'application l'ajoute par défaut.
