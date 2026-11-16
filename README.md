@@ -19,7 +19,7 @@ Ouvrir directement `index.html` en `file://` fonctionne aussi, mais certains ser
 - [Contribuer](CONTRIBUTING.md) : règles de développement et commandes de test.
 
 ## Licences
-- Code de l'application : [MIT](LICENSE) © Thiryyan.
+- Code de l'application : [MIT](LICENSE) © Contributeurs de City Map Studio.
 - MapLibre GL JS (`lib/`) : BSD-3-Clause (`lib/LICENSE-maplibre-gl.txt`).
 - Données : © contributeurs OpenStreetMap, licence ODbL.
 - Schéma des tuiles vectorielles : © OpenMapTiles, CC-BY 4.0 (tuiles servies par OpenFreeMap).

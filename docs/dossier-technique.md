@@ -8,7 +8,7 @@
 
 | # | Sujet | Exigence |
 | :--- | :--- | :--- |
-| E1 | Licence | **100 % open source** : code sous licence **MIT** (© Thiryyan) ; librairies, polices, données et services ouverts, sans clé API ni service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps, ni Google Fonts). |
+| E1 | Licence | **100 % open source** : code sous licence **MIT** (© Contributeurs de City Map Studio) ; librairies, polices, données et services ouverts, sans clé API ni service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps, ni Google Fonts). |
 | E2 | Navigateurs | Chromium ≥ 110, Safari ≥ 16, Firefox ≥ 115. |
 | E3 | Rendu | L'export est identique à l'aperçu ; le gabarit et le thème **Souvenir** (par défaut) définissent le rendu de référence (§ 4.1 et 4.2). |
 | E4 | Moteurs cartographiques | **Vectoriel GPU** (MapLibre GL + OpenFreeMap, par défaut), **Overpass** (Canvas 2D, mode artistique) et **Fichier** (import hors ligne). |
