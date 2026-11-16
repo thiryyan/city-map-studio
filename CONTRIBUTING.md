@@ -31,6 +31,7 @@ python tests/coords.py           # saisie des coordonnées du repère
 python tests/texts.py            # lignes de texte optionnelles
 python tests/textsize.py         # taille des textes de l'affiche (par ligne et globale)
 python tests/mobile.py           # panneau coulissant, mode Cadrer, paysage, A− / A+
+python tests/ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
 python tests/fonts.py            # polices auto-hébergées, aucun appel tiers
 python tests/consent.py          # accord préalable : aucune requête tierce sans accord
 python tests/reset.py            # réinitialisation des réglages par défaut
@@ -39,7 +40,7 @@ python -m http.server 8000       # aperçu local : http://localhost:8000
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.
 
 ## Avant chaque commit
-- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `coords.py`, `texts.py`, `textsize.py`, `mobile.py`, `fonts.py`, `consent.py` et `reset.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
+- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `coords.py`, `texts.py`, `textsize.py`, `mobile.py`, `ux.py`, `fonts.py`, `consent.py` et `reset.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
 - Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
 - Mettre à jour le dossier technique quand un comportement change.
 

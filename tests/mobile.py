@@ -23,7 +23,7 @@ async def main():
         async def open_page(vp, mobile=True):
             ctx = await b.new_context(viewport=vp, is_mobile=mobile, has_touch=mobile)
             page = await ctx.new_page(); errs = []
-            await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1')}catch(e){}")
+            await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1')}catch(e){}")
             page.on('pageerror', lambda e: errs.append(str(e)))
             async def route(r):
                 u = r.request.url
@@ -126,10 +126,16 @@ async def main():
         check(f1 >= f0 * 1.2, f'A+ : texte de l\'interface agrandi ({f0} → {f1} px)')
         check(await page.evaluate("document.documentElement.scrollWidth <= innerWidth"), 'A+ : aucun défilement horizontal')
         await page.screenshot(path=str(T / 'mobile-uiscale.png'))
-        await page.wait_for_timeout(1500)   # Chromium enregistre localStorage par lots : laisser le temps avant de recharger
-        await page.reload(); await page.wait_for_timeout(1200)
-        f2 = await page.evaluate("parseFloat(getComputedStyle(document.querySelector('.tabs button')).fontSize)")
-        check(f2 == f1, f'taille de l\'interface conservée après rechargement ({f1} → {f2} px, stocké : {await page.evaluate("localStorage.getItem(\'cityMapStudio.uiScale\')")})')
+        check(await page.evaluate("localStorage.getItem('cityMapStudio.uiScale')") == '1.25', 'A+ : préférence enregistrée (125 %)')
+        # Relecture au démarrage : nouvelle page avec la préférence déjà enregistrée (un rechargement immédiat
+        # peut précéder l'écriture différée de localStorage par Chromium)
+        p2 = await ctx.new_page()
+        await p2.add_init_script("try{localStorage.setItem('cityMapStudio.uiScale','1.25')}catch(e){}")
+        await p2.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
+        await p2.goto(APP); await p2.wait_for_timeout(1000)
+        f2 = await p2.evaluate("parseFloat(getComputedStyle(document.querySelector('.tabs button')).fontSize)")
+        check(f2 == f1, f'taille de l\'interface reprise au démarrage suivant ({f1} → {f2} px)')
+        await p2.close()
         await page.tap('#bUiSmaller'); await page.tap('#bUiSmaller'); await page.wait_for_timeout(200)
         check(await page.evaluate("!localStorage.getItem('cityMapStudio.uiScale')"), 'retour à 100 % : préférence effacée (taille du système)')
         check(not errs, f'portrait : aucune erreur de page {errs}')

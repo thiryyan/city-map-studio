@@ -24,7 +24,7 @@ button,input,select{font:inherit;color:inherit}
 #app{display:grid;height:100dvh;grid-template-rows:minmax(0,1fr) var(--sheetH,55dvh);grid-template-columns:100%}
 #stage{grid-row:1;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,#2b2b31 0%,#151518 75%);display:flex;align-items:center;justify-content:center;touch-action:none}
 #panel{grid-row:2;display:flex;flex-direction:column;min-height:0;background:var(--panel);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -8px 24px #0006;position:relative;z-index:20}
-.grab{flex:none;display:flex;justify-content:center;align-items:center;width:100%;height:22px;padding:0;border:0;background:none;cursor:grab;touch-action:none}
+.grab{flex:none;display:flex;justify-content:center;align-items:center;width:100%;height:28px;padding:0;border:0;background:none;cursor:grab;touch-action:none}
 .grab i{display:block;width:44px;height:5px;border-radius:3px;background:#5a5a66}
 .grab:focus-visible i{background:var(--acc)}
 #app[data-sheet=peek] .tabbody{display:none}
@@ -81,7 +81,7 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
 .seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:none;padding:8px 6px;border-radius:8px;cursor:pointer;color:var(--mut);font-size:.875rem}
 .seg button.on{background:var(--acc);color:#141414;font-weight:600}
-#fontSeg{flex-wrap:wrap}#fontSeg button{flex:1 0 30%}
+
 .slider{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;margin:10px 0}
 .slider span{color:var(--mut);font-size:.8125rem}.slider output{font-size:.8125rem;color:var(--txt);font-variant-numeric:tabular-nums}
 .slider input{grid-column:1/3;width:100%;accent-color:var(--acc);height:28px}
@@ -104,7 +104,7 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
 .marks .card canvas{box-shadow:none;background:#fff}
 .results{margin-top:8px;display:flex;flex-direction:column;gap:6px}
 .res{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.8125rem}
-.res .t{margin-bottom:6px;color:var(--txt)}
+.res .t{margin-bottom:6px;color:var(--txt)}.res .t b{display:block;font-size:.9375rem}.res .t small{display:block;color:var(--mut)}
 .res .row .btn{flex:1}
 .hint{font-size:.8125rem;color:var(--mut);margin:6px 0}
 .mono{font-family:ui-monospace,Menlo,monospace;font-size:.8125rem}
@@ -171,6 +171,53 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
 #fileBlock ol{margin:6px 0 10px;padding-left:18px;color:var(--mut);font-size:.8125rem}#fileBlock li{margin:3px 0}#fileBlock a{color:var(--acc2)}
 .credit{font-size:.75rem;color:var(--mut);margin-top:6px}
 .credit a{color:var(--mut)}
+/* Accessibilité : focus clavier visible, cibles tactiles d'au moins 44 px, transitions courtes */
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+.tabs button:focus-visible{outline-offset:-3px;border-radius:6px}
+input[type=text]:focus-visible,input[type=search]:focus-visible{outline:none}
+.chip{min-height:44px;display:inline-flex;align-items:center;padding:8px 14px}
+.seg button{min-height:40px}
+.tog{min-height:48px;cursor:pointer;gap:12px}
+.tog input{width:22px;height:22px;flex:none}
+label.f.show{min-height:44px;margin:6px 0 2px}
+.btn.sm{min-height:44px}
+.banner{padding-top:4px;padding-bottom:4px}
+.datebtn{min-width:48px}
+label.f.show input{width:22px;height:22px}
+.colors label{min-height:44px;cursor:pointer}
+.colors input{width:44px;height:36px}
+.lnk{min-height:36px;padding:4px 2px}
+.uisz button{min-height:36px;min-width:38px}
+.btn,.chip,.seg button,.card,.theme,.fonts button,.tabs button{transition:background-color .15s,border-color .15s,color .15s}
+/* Sections repliables (Avancé, couleurs) */
+details.adv{margin:18px 0 0;border:1px solid var(--line);border-radius:12px;background:#1a1a1f}
+details.adv>summary{list-style:none;cursor:pointer;min-height:48px;padding:10px 14px;display:flex;align-items:center;gap:10px}
+details.adv>summary::-webkit-details-marker{display:none}
+details.adv>summary span{font-weight:600}
+details.adv>summary small{color:var(--mut);font-size:.8125rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+details.adv>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--mut);border-bottom:2px solid var(--mut);transform:rotate(45deg);margin:-4px 4px 0 0;transition:transform .15s;flex:none}
+details.adv[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+details.adv[open]{padding:0 14px 14px}
+details.adv[open]>summary{margin:0 -14px}
+details.adv>h3:first-of-type{margin-top:6px}
+/* Parcours guidé */
+.btn.next{width:100%;margin-top:22px;justify-content:space-between;padding:12px 16px;color:var(--acc2);border-color:#5a4a2a;background:#241f17}
+.btn.next.pri2{background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600}
+/* Polices : cartes avec aperçu du titre, défilement horizontal */
+.fonts{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 8px;margin:0 -2px;scrollbar-width:thin}
+.fonts button{flex:0 0 auto;min-width:104px;max-width:160px;scroll-snap-align:start;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--txt)}
+.fonts button .smp{font-size:1.25rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.fonts button small{color:var(--mut);font-size:.75rem}
+.fonts button.on{border-color:var(--acc);background:#2a2418}
+.fonts button.on small{color:var(--acc2)}
+/* Date : bouton calendrier (le champ date natif, transparent, couvre le bouton : fonctionne aussi sur iOS) */
+.datebtn{position:relative;overflow:hidden;flex:none}
+.datebtn input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:16px}
+.xl2{display:none}@media (min-width:400px){.xl2{display:inline}}
+/* Annuler / rétablir */
+.hist{flex:none;display:flex;gap:2px}
+.hist button{background:none;border:1px solid var(--line);border-radius:8px;min-width:38px;min-height:36px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.hist button[disabled]{opacity:.3;cursor:default}
 /* Taille des lignes de texte de l'affiche */
 .tsz{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:2px 0 0}
 .tsz span{color:var(--mut);font-size:.8125rem}
@@ -208,22 +255,23 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
     <button class="grab" id="grab" type="button" aria-label="Agrandir le panneau des réglages"><i></i></button>
     <div class="brand">City Map Studio<small>Atelier d'affiches cartographiques</small></div>
     <div class="banner" id="banner" role="status"><span id="bannerTxt">Zone modifiée</span><button class="btn sm on" id="bRefresh">Actualiser les vecteurs</button></div>
-    <nav class="tabs" id="tabs">
-      <button data-tab="lieu" class="on">Lieu</button>
-      <button data-tab="style">Style</button>
-      <button data-tab="repere">Repère</button>
-      <button data-tab="textes">Textes</button>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Étapes de création">
+      <button data-tab="lieu" class="on" role="tab" id="tb-lieu" aria-controls="tab-lieu" aria-selected="true">Lieu</button>
+      <button data-tab="repere" role="tab" id="tb-repere" aria-controls="tab-repere" aria-selected="false" tabindex="-1">Repère</button>
+      <button data-tab="textes" role="tab" id="tb-textes" aria-controls="tab-textes" aria-selected="false" tabindex="-1">Textes</button>
+      <button data-tab="style" role="tab" id="tb-style" aria-controls="tab-style" aria-selected="false" tabindex="-1">Style</button>
     </nav>
     <div class="tabbody">
       <!-- LIEU -->
-      <div class="tab on" id="tab-lieu">
+      <div class="tab on" id="tab-lieu" role="tabpanel" aria-labelledby="tb-lieu">
         <div class="warn" id="envWarn" hidden></div>
         <h3>Rechercher une adresse ou une ville</h3>
         <form class="row" id="searchForm" autocomplete="off">
           <input class="grow" type="search" id="q" placeholder="Ex. : Château de Blois" enterkeyhint="search">
           <button class="btn" type="submit">Chercher</button>
         </form>
-        <div class="results" id="results"></div>
+        <button class="btn" id="bGeo" type="button" style="width:100%;margin-top:8px" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="2.2" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg>Ma position actuelle</button>
+        <div class="results" id="results" aria-live="polite"></div>
         <h3>Villes</h3>
         <div class="chips" id="presets"></div>
         <h3>Lieu de rencontre</h3>
@@ -239,34 +287,34 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
         <p class="hint">Décimal (47.5861, 1.3359 · 47,5861 ; 1,3359), DMS (47° 35′ 10″ N, 1° 20′ 09″ E) ou lien Google Maps / OpenStreetMap. La carte se recentre si le point sort du cadre.</p>
         <h3>Cadrage</h3>
         <div class="slider"><span>Zoom</span><output id="oZoom"></output><input type="range" id="zoom" min="10" max="18" step="0.1"></div>
-        <h3>Moteur cartographique</h3>
-        <div class="seg" id="engineSeg">
-          <button data-v="maplibre">Vectoriel GPU</button>
-          <button data-v="overpass">Overpass</button>
-          <button data-v="file">Fichier (hors ligne)</button>
-        </div>
-        <p class="hint" id="engineHint"></p>
-        <div id="opBlock" style="display:none">
-          <button class="btn" id="bRefresh2" style="width:100%">Actualiser les vecteurs Overpass</button>
-        </div>
-        <div id="fileBlock" style="display:none">
-          <ol>
-            <li>Cadrez la zone voulue, puis ouvrez <a id="lnkApi" target="_blank" rel="noopener">la requête Overpass</a> (le navigateur affiche ou télécharge un fichier JSON). Alternative : <a id="lnkTurbo" target="_blank" rel="noopener">overpass-turbo</a> → Exporter → « données brutes », ou <a href="https://www.openstreetmap.org/export" target="_blank" rel="noopener">openstreetmap.org/export</a> (fichier .osm).</li>
-            <li>Enregistrez le fichier, puis importez-le ici. Formats acceptés : JSON Overpass, .osm (XML) ou GeoJSON.</li>
-          </ol>
-          <label class="btn" style="width:100%">Importer un fichier de données<input type="file" id="fileIn" accept=".json,.geojson,.osm,.xml,application/json,application/geo+json,text/xml" hidden></label>
-        </div>
-        <button class="btn" id="bDiag" style="width:100%;margin-top:10px">Diagnostiquer la connexion</button>
-        <p class="hint" id="consentInfo"></p>
-        <div class="diag" id="diag"></div>
-        <h3>Calques</h3>
-        <label class="tog">Parcs et espaces verts<input type="checkbox" data-k="layers.parks"></label>
-        <label class="tog">Bâtiments<input type="checkbox" data-k="layers.buildings"></label>
-        <label class="tog">Voies ferrées<input type="checkbox" data-k="layers.rail"></label>
+        <details class="adv" id="adv">
+          <summary><span>Avancé</span><small>moteur, connexion, hors ligne</small></summary>
+          <h3>Moteur cartographique</h3>
+          <div class="seg" id="engineSeg">
+            <button data-v="maplibre">Vectoriel GPU</button>
+            <button data-v="overpass">Overpass</button>
+            <button data-v="file">Fichier (hors ligne)</button>
+          </div>
+          <p class="hint" id="engineHint"></p>
+          <div id="opBlock" style="display:none">
+            <button class="btn" id="bRefresh2" style="width:100%">Actualiser les vecteurs Overpass</button>
+          </div>
+          <div id="fileBlock" style="display:none">
+            <ol>
+              <li>Cadrez la zone voulue, puis ouvrez <a id="lnkApi" target="_blank" rel="noopener">la requête Overpass</a> (le navigateur affiche ou télécharge un fichier JSON). Alternative : <a id="lnkTurbo" target="_blank" rel="noopener">overpass-turbo</a> → Exporter → « données brutes », ou <a href="https://www.openstreetmap.org/export" target="_blank" rel="noopener">openstreetmap.org/export</a> (fichier .osm).</li>
+              <li>Enregistrez le fichier, puis importez-le ici. Formats acceptés : JSON Overpass, .osm (XML) ou GeoJSON.</li>
+            </ol>
+            <label class="btn" style="width:100%">Importer un fichier de données<input type="file" id="fileIn" accept=".json,.geojson,.osm,.xml,application/json,application/geo+json,text/xml" hidden></label>
+          </div>
+          <button class="btn" id="bDiag" type="button" style="width:100%;margin-top:10px">Diagnostiquer la connexion</button>
+          <p class="hint" id="consentInfo"></p>
+          <div class="diag" id="diag"></div>
+        </details>
+        <button class="btn next" type="button" data-next="repere">Étape suivante : le repère<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <p class="credit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL) · Tuiles <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · Rendu MapLibre GL · Géocodage Nominatim</p>
       </div>
       <!-- STYLE -->
-      <div class="tab" id="tab-style">
+      <div class="tab" id="tab-style" role="tabpanel" aria-labelledby="tb-style">
         <h3>Gabarit</h3>
         <div class="cards" id="layouts"></div>
         <div class="slider"><span>Marge (passe-partout)</span><output id="oMargin"></output><input type="range" data-k="margin" min="3" max="12" step="0.5"></div>
@@ -283,12 +331,19 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
         <h3>Tracé</h3>
         <div class="slider"><span>Épaisseur des rues</span><output id="oStroke"></output><input type="range" data-k="stroke" min="0.5" max="2.5" step="0.05"></div>
         <div class="slider"><span>Mise en valeur des cours d'eau</span><output id="oWater"></output><input type="range" data-k="waterMult" min="0.5" max="3" step="0.1"></div>
-        <h3>Couleurs</h3>
-        <div class="colors" id="colors"></div>
+        <h3>Calques</h3>
+        <label class="tog">Parcs et espaces verts<input type="checkbox" data-k="layers.parks"></label>
+        <label class="tog">Bâtiments<input type="checkbox" data-k="layers.buildings"></label>
+        <label class="tog">Voies ferrées<input type="checkbox" data-k="layers.rail"></label>
+        <details class="adv" id="colorsBox">
+          <summary><span>Personnaliser les couleurs</span><small>12 teintes</small></summary>
+          <div class="colors" id="colors"></div>
+        </details>
         <label class="tog" style="margin-top:8px">Mention © OpenStreetMap sur l'affiche<input type="checkbox" data-k="attribution"></label>
+        <button class="btn next pri2" type="button" id="bNextExport">Tout est prêt : exporter l'affiche<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v9M4 7l4 4 4-4M3 14h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- REPERE -->
-      <div class="tab" id="tab-repere">
+      <div class="tab" id="tab-repere" role="tabpanel" aria-labelledby="tb-repere">
         <h3>Style du repère</h3>
         <div class="marks cards" id="marks"></div>
         <div class="seg" id="fillSeg" style="margin-top:10px">
@@ -299,18 +354,19 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
         <h3>Couleur</h3>
         <div class="row">
           <div class="chips grow" id="mColors"></div>
-          <input type="color" id="mColor" style="width:44px;height:36px;border:1px solid var(--line);border-radius:8px;background:none;padding:0">
+          <input type="color" id="mColor" aria-label="Couleur personnalisée du repère" style="width:48px;height:44px;border:1px solid var(--line);border-radius:8px;background:none;padding:0">
         </div>
+        <button class="btn next" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- TEXTES -->
-      <div class="tab" id="tab-textes">
+      <div class="tab" id="tab-textes" role="tabpanel" aria-labelledby="tb-textes">
         <h3>Police</h3>
-        <div class="seg" id="fontSeg">
-          <button data-v="serif" style="font-family:'Playfair Display',serif">Serif</button>
-          <button data-v="sans" style="font-family:Montserrat,sans-serif">Sans</button>
-          <button data-v="mono" style="font-family:'Space Mono',monospace">Mono</button>
-          <button data-v="garamond" style="font-family:'Cormorant Garamond',serif;font-size:1.07em">Garamond</button>
-          <button data-v="deco" style="font-family:'Josefin Sans',sans-serif">Art déco</button>
+        <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police">
+          <button type="button" data-v="serif" role="radio" aria-checked="false"><span class="smp" style="font-family:'Playfair Display',serif;">Blois</span><small>Serif</small></button>
+          <button type="button" data-v="sans" role="radio" aria-checked="false"><span class="smp" style="font-family:Montserrat,sans-serif;">Blois</span><small>Sans</small></button>
+          <button type="button" data-v="mono" role="radio" aria-checked="false"><span class="smp" style="font-family:'Space Mono',monospace;">Blois</span><small>Mono</small></button>
+          <button type="button" data-v="garamond" role="radio" aria-checked="false"><span class="smp" style="font-family:'Cormorant Garamond',serif;font-size:1.12em;font-weight:500">Blois</span><small>Garamond</small></button>
+          <button type="button" data-v="deco" role="radio" aria-checked="false"><span class="smp" style="font-family:'Josefin Sans',sans-serif;">Blois</span><small>Art déco</small></button>
         </div>
         <h3>Taille des textes</h3>
         <div class="slider"><span>Tous les textes</span><output id="oTsAll"></output><input type="range" data-k="textScaleAll" min="70" max="140" step="5" aria-label="Taille de tous les textes"></div>
@@ -326,7 +382,8 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
         <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.dedication" min="60" max="150" step="5" aria-label="Taille de la dédicace"><output id="oTs-dedication"></output></div>
         <label class="f show"><input type="checkbox" data-k="show.names" aria-label="Afficher les noms">Noms</label><input type="text" data-k="texts.names" aria-label="Noms">
         <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.names" min="60" max="150" step="5" aria-label="Taille des noms"><output id="oTs-names"></output></div>
-        <label class="f show"><input type="checkbox" data-k="show.date" aria-label="Afficher la date">Date</label><input type="text" data-k="texts.date" aria-label="Date">
+        <label class="f show"><input type="checkbox" data-k="show.date" aria-label="Afficher la date">Date</label>
+        <div class="row"><input class="grow" type="text" data-k="texts.date" aria-label="Date"><label class="btn datebtn" title="Choisir dans le calendrier"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 8.5h14M7 2.5v4M13 2.5v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span class="xl2">Calendrier</span><input type="date" id="dateIn" aria-label="Choisir la date dans le calendrier"></label></div>
         <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.date" min="60" max="150" step="5" aria-label="Taille de la date"><output id="oTs-date"></output></div>
         <h3>Coordonnées</h3>
         <div class="seg" id="coordSeg"><button data-v="dec">Décimal</button><button data-v="dms">Degrés ° ′ ″</button></div>
@@ -334,10 +391,11 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
         <input type="text" data-k="coordsManual" id="coordsManual" aria-label="Coordonnées affichées">
         <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.coords" min="60" max="150" step="5" aria-label="Taille des coordonnées"><output id="oTs-coords"></output></div>
         <p class="hint">Le sous-titre s'affiche dans les gabarits Cadre, Fondu et Médaillon ; le gabarit Souvenir ne l'affiche pas (en-tête sur une ligne, dédicace et noms en pied).</p>
+        <button class="btn next" type="button" data-next="style">Étape suivante : le style<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
     </div>
     <div class="foot">
-      <div class="status"><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span><button class="lnk" id="bReset" type="button" title="Revenir aux réglages par défaut">Réinitialiser</button><span class="uisz" role="group" aria-label="Taille du texte de l'interface"><button type="button" id="bUiSmaller" aria-label="Réduire le texte de l'interface">A−</button><button type="button" id="bUiLarger" aria-label="Agrandir le texte de l'interface" style="font-size:1.15em">A+</button></span></div>
+      <div class="status"><span class="hist" role="group" aria-label="Historique"><button type="button" id="bUndo" aria-label="Annuler" title="Annuler (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 8l4 4M3 8h9a5 5 0 0 1 0 10H8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" id="bRedo" aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="m13 4 4 4-4 4M17 8H8a5 5 0 0 0 0 10h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span><button class="lnk" id="bReset" type="button" title="Revenir aux réglages par défaut">Réinitialiser</button><span class="uisz" role="group" aria-label="Taille du texte de l'interface"><button type="button" id="bUiSmaller" aria-label="Réduire le texte de l'interface">A−</button><button type="button" id="bUiLarger" aria-label="Agrandir le texte de l'interface" style="font-size:1.15em">A+</button></span></div>
       <button class="btn pri" id="bExport">Exporter l'affiche HD<span class="xl">&nbsp;· 2480 × 3508 px</span>&nbsp;· 300 DPI</button>
     </div>
   </aside>
@@ -469,7 +527,7 @@ function giveConsent(){
 }
 function declineConsent(){
   consentNext=null; document.getElementById('consent').classList.remove('show');
-  setEngine('file');
+  setEngine('file'); openAdvanced(true);
   if(!opData) setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
 }
 function withdrawConsent(){
@@ -520,7 +578,7 @@ function loadState(){
   return structuredClone(DEFAULT_STATE);
 }
 let saveT=0;
-function saveState(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){}},300)}
+function saveState(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} if(typeof recordHistory==='function') recordHistory();},300)}
 function getPath(o,p){return p.split('.').reduce((a,k)=>a?.[k],o)}
 function setPath(o,p,v){const ks=p.split('.');const last=ks.pop();ks.reduce((a,k)=>a[k],o)[last]=v}
 
@@ -1108,7 +1166,7 @@ function redrawAll(restyle){ drawUnder(); if(restyle) mlRestyle(); renderMap(fal
 })();
 
 // ---------- Interface ----------
-function setStatus(t,kind){ $('stTxt').textContent=t; $('stDot').className='dot'+(kind?' '+kind:''); }
+function setStatus(t,kind){ $('stTxt').textContent=t; $('stTxt').title=t; $('stDot').className='dot'+(kind?' '+kind:''); }
 let toastT=0;
 function toast(msg,err){ const t=$('toast'); t.textContent=msg; t.className='show'+(err?' err':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='',err?6000:3200); }
 function showBanner(show,txt,label,action){
@@ -1244,7 +1302,60 @@ function goTo(lat,lon,zoom){
   if(mlMap&&st.engine==='maplibre'){ mlMap.jumpTo({center:[lon,lat],zoom:mlZoom(ui.slotCss.w)}); mlRestyle(); }
   renderMap(true); saveState();
 }
-function setSeg(id,v){ document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle('on',b.dataset.v===String(v))); }
+function setSeg(id,v){ document.querySelectorAll(`#${id} button`).forEach(b=>{ const on=b.dataset.v===String(v); b.classList.toggle('on',on);
+  if(b.getAttribute('role')==='radio') b.setAttribute('aria-checked',String(on)); else b.setAttribute('aria-pressed',String(on)); }); }
+/** Affiche un onglet (état ARIA, focus clavier). Le panneau coulissant n'est pas modifié. */
+function showTab(name, focus){
+  document.querySelectorAll('#tabs button').forEach(x=>{ const on=x.dataset.tab===name; x.classList.toggle('on',on); x.setAttribute('aria-selected',String(on)); x.tabIndex=on?0:-1; if(on&&focus) x.focus(); });
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));
+  ui.tab=name;
+}
+/** Section « Avancé » de l'onglet Lieu : ouverte à la demande, mémorisée ; ouverte d'office quand elle devient utile */
+const ADV_KEY='cityMapStudio.advOpen';
+function openAdvanced(scroll){ const d=$('adv'); if(!d.open) d.open=true; if(scroll){ showTab('lieu'); setTimeout(()=>d.scrollIntoView({block:'start',behavior:'smooth'}),60); } }
+/** Aperçu des polices : chaque carte montre le titre saisi */
+function updateFontSamples(){ const t=(st.texts.title||'').trim()||'Blois'; document.querySelectorAll('#fontSeg .smp').forEach(e=>e.textContent=t); }
+/** Date au format de l'affiche : « Le 1er juillet 2023 » */
+function frDate(iso){
+  const [y,m,d]=iso.split('-').map(Number); if(!y||!m||!d) return '';
+  const mois=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][m-1];
+  return `Le ${d===1?'1er':d} ${mois} ${y}`;
+}
+/** Lecture inverse (pour ouvrir le calendrier sur la date déjà saisie) ; '' si le texte n'est pas une date */
+function isoFromFr(t){
+  const M=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const r=String(t||'').toLowerCase().match(/(\d{1,2})(?:er)?\s+([a-zéû]+)\s+(\d{4})/); if(!r) return '';
+  const m=M.indexOf(r[2]); if(m<0) return '';
+  return `${r[3]}-${String(m+1).padStart(2,'0')}-${String(+r[1]).padStart(2,'0')}`;
+}
+
+// ---------- Historique : annuler / rétablir ----------
+// Un instantané de l'état par modification (regroupées comme l'enregistrement, après 300 ms de calme).
+// Le moteur cartographique est exclu : le rétablir relancerait des requêtes réseau.
+const HIST_MAX=50, hist={past:[],future:[],cur:null,quietUntil:0};
+function histSnap(){ const {engine,...rest}=st; return JSON.stringify(rest); }
+function recordHistory(){
+  const s=histSnap(); if(s===hist.cur) return;
+  if(Date.now()<hist.quietUntil || hist.cur==null){ hist.cur=s; return; }   // effets de bord d'un retour arrière (recentrage de la carte)
+  hist.past.push(hist.cur); if(hist.past.length>HIST_MAX) hist.past.shift();
+  hist.cur=s; hist.future=[]; updateHistUI();
+}
+function updateHistUI(){ $('bUndo').disabled=!hist.past.length; $('bRedo').disabled=!hist.future.length; }
+function applySnap(s){
+  hist.quietUntil=Date.now()+900;
+  const o=JSON.parse(s), eng=st.engine, view=JSON.stringify([st.center,st.zoom]);
+  for(const k of Object.keys(st)) delete st[k];
+  Object.assign(st,o,{engine:eng});
+  setPlacing(false); syncInputs(); layoutPreview();
+  loadFonts().then(()=>scheduleOver());
+  if(JSON.stringify([st.center,st.zoom])!==view) goTo(st.center.lat,st.center.lon,st.zoom); else redrawAll(true);
+  hist.cur=s; saveState(); updateHistUI();
+}
+/** Fige tout de suite l'étape en cours (action ponctuelle : réinitialisation, changement de moteur), puis ignore
+ *  pendant un instant les petits recentrages de la carte qui suivent, pour ne pas créer de fausses étapes. */
+function commitHistory(quietMs=1500){ clearTimeout(saveT); try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} hist.quietUntil=0; recordHistory(); hist.quietUntil=Date.now()+quietMs; }
+function undo(){ if(!hist.past.length) return; clearTimeout(saveT); recordHistory(); if(!hist.past.length) return; hist.future.push(hist.cur); applySnap(hist.past.pop()); toast('Modification annulée'); }
+function redo(){ if(!hist.future.length) return; hist.past.push(hist.cur); applySnap(hist.future.pop()); toast('Modification rétablie'); }
 
 function buildUI(){
   // onglets
@@ -1254,8 +1365,34 @@ function buildUI(){
       if(ui.sheet==='peek') setSheet('half');
       else if(b.classList.contains('on')) setSheet(ui.sheet==='full'?'half':'full');
     }
-    document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));
-    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+b.dataset.tab));
+    showTab(b.dataset.tab);
+  });
+  // clavier : flèches, Début, Fin (motif ARIA des onglets)
+  $('tabs').addEventListener('keydown',e=>{
+    const bs=[...document.querySelectorAll('#tabs button')], i=bs.findIndex(x=>x.classList.contains('on'));
+    const j={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:bs.length-1}[e.key]; if(j==null) return;
+    e.preventDefault(); showTab(bs[(j+bs.length)%bs.length].dataset.tab,true);
+  });
+  // parcours guidé : Lieu → Repère → Textes → Style → Exporter
+  document.querySelectorAll('[data-next]').forEach(b=>b.onclick=()=>{ showTab(b.dataset.next); document.querySelector('.tabbody').scrollTop=0; if(isSheet()&&ui.sheet==='peek') setSheet('half'); });
+  $('bNextExport').onclick=()=>$('bExport').click();
+  // section Avancé
+  try{ if(localStorage.getItem(ADV_KEY)==='1') $('adv').open=true; }catch(e){}
+  $('adv').addEventListener('toggle',()=>{ try{ $('adv').open ? localStorage.setItem(ADV_KEY,'1') : localStorage.removeItem(ADV_KEY); }catch(e){} });
+  // date : calendrier natif
+  $('dateIn').addEventListener('focus',()=>{ const v=isoFromFr(st.texts.date); if(v) $('dateIn').value=v; });
+  $('dateIn').addEventListener('pointerdown',()=>{ const v=isoFromFr(st.texts.date); if(v) $('dateIn').value=v; });
+  $('dateIn').addEventListener('change',e=>{ const t=frDate(e.target.value); if(!t) return; st.texts.date=t; st.show.date=true; syncInputs(); scheduleOver(); saveState(); toast('Date : '+t); });
+  // ma position (géolocalisation de l'appareil, demandée par le navigateur)
+  if('geolocation' in navigator){ $('bGeo').hidden=false; $('bGeo').onclick=locateMe; }
+  // annuler / rétablir
+  $('bUndo').onclick=undo; $('bRedo').onclick=redo;
+  addEventListener('keydown',e=>{
+    if(!(e.ctrlKey||e.metaKey) || e.altKey) return;
+    if(e.target.matches?.('input[type=text],input[type=search],textarea')) return;   // laisser l'annulation native des champs
+    const k=e.key.toLowerCase();
+    if(k==='z' && !e.shiftKey){ e.preventDefault(); undo(); }
+    else if((k==='z' && e.shiftKey) || k==='y'){ e.preventDefault(); redo(); }
   });
   // presets
   const pr=$('presets');
@@ -1295,6 +1432,7 @@ function buildUI(){
     el.addEventListener('input',()=>{
       const v = el.type==='checkbox' ? el.checked : el.type==='range' ? parseFloat(el.value) : el.value;
       setPath(st,k,v); syncOutputs();
+      if(k==='texts.title') updateFontSamples();
       if(k.startsWith('layers.')){ redrawAll(true); }
       else if(k==='margin'){ layoutPreview(); saveState(); }
       else if(k==='stroke'||k==='waterMult'){ redrawAll(true); }
@@ -1334,6 +1472,7 @@ function askReset(){
 /** Rétablit tous les réglages par défaut (lieu, cadrage, gabarit, thème, couleurs, repère, textes, calques).
  *  Sont conservés : l'accord aux services tiers, les suspensions Overpass et les données déjà chargées. */
 function resetAll(){
+  clearTimeout(saveT); recordHistory();   // modification en attente : étape distincte
   const fresh=structuredClone(DEFAULT_STATE);
   for(const k of Object.keys(st)) delete st[k];
   Object.assign(st,fresh);
@@ -1341,12 +1480,12 @@ function resetAll(){
   syncInputs(); layoutPreview();
   loadFonts().then(()=>scheduleOver());
   setEngine(st.engine); goTo(st.center.lat,st.center.lon,st.zoom);
-  saveState(); toast('Réglages par défaut rétablis');
+  commitHistory(); toast('Réglages par défaut rétablis · « Annuler » pour revenir en arrière');
 }
 function syncInputs(){
   document.querySelectorAll('[data-k]').forEach(el=>{ const v=getPath(st,el.dataset.k); if(el.type==='checkbox') el.checked=!!v; else el.value=v??''; });
   setSeg('engineSeg',st.engine); setSeg('fillSeg',st.markerFill?'1':'0'); setSeg('fontSeg',st.font); setSeg('coordSeg',st.coordFormat);
-  syncZoomUI(); syncOutputs(); refreshColors(); refreshCards(); updateMarkerTxt(); updateEngineUI();
+  syncZoomUI(); syncOutputs(); refreshColors(); refreshCards(); updateMarkerTxt(); updateEngineUI(); updateFontSamples();
 }
 function syncOutputs(){
   $('oMargin').textContent=st.margin+' %'; $('oStroke').textContent='× '+st.stroke.toFixed(2); $('oWater').textContent='× '+st.waterMult.toFixed(1);
@@ -1385,17 +1524,37 @@ function updateEngineUI(){
 function setEngine(v){
   if(v==='maplibre' && mlLib==='fail'){ toast('MapLibre n\'a pas pu être chargé : aucun CDN joignable depuis cette page.',true); return; }
   st.engine=v; setSeg('engineSeg',v); updateEngineUI(); setPlacing(false); showBanner(false);
+  if(v!=='maplibre') openAdvanced();
+  hist.quietUntil=Date.now()+1500;   // le moteur n'entre pas dans l'historique ; ses recentrages non plus   // import de fichier ou actualisation Overpass : réglages à portée de main
   if(v==='overpass'){ renderMap(true); if(!opData||opData.source!=='overpass') fetchOverpass(); else checkOpCoverage(); }
   else if(v==='file'){ renderMap(true); if(!opData) toast('Importez un fichier de données (onglet Lieu).'); }
   else { mlFailMsg=''; renderMap(true); mlRestyle(); }
   saveState();
 }
 
+// ---------- Ma position (géolocalisation de l'appareil) ----------
+function locateMe(){
+  if(window.isSecureContext===false){ toast('La position n\'est disponible que sur une page sécurisée (https).',true); return; }
+  const b=$('bGeo'); b.disabled=true; setStatus('Recherche de votre position…','busy');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    b.disabled=false; const {latitude:lat,longitude:lon,accuracy}=pos.coords;
+    setMarker(lat,lon); goTo(lat,lon,Math.max(st.zoom,15));
+    setStatus('Prêt'); toast(`Repère placé sur votre position (précision ${Math.round(accuracy)} m)`);
+  },err=>{
+    b.disabled=false; setStatus('Position indisponible','err');
+    toast(err.code===1 ? 'Accès à la position refusé : autorisez-le dans les réglages du navigateur.' : err.code===3 ? 'La position n\'a pas pu être obtenue à temps.' : 'Position indisponible sur cet appareil.',true);
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+}
+
 // ---------- Géocodage Nominatim ----------
+// Recherche uniquement à la validation (pas d'autocomplétion : interdite par la politique d'usage de Nominatim), une seule à la fois.
+let searching=false;
 async function search(q){
-  q=(q||'').trim(); if(!q) return;
+  q=(q||'').trim(); if(!q){ $('q').focus(); return; }
+  if(searching) return;
   if(!needConsent(()=>search(q))) return;
-  const box=$('results'); box.textContent='Recherche…';
+  const box=$('results'), sb=document.querySelector('#searchForm [type=submit]');
+  searching=true; sb.disabled=true; box.textContent='Recherche…';
   try{
     const res=await fetch(NOMINATIM+'?format=jsonv2&limit=5&accept-language=fr&q='+encodeURIComponent(q));
     if(!res.ok) throw new Error('HTTP '+res.status);
@@ -1404,7 +1563,11 @@ async function search(q){
     for(const it of list){
       const lat=parseFloat(it.lat), lon=parseFloat(it.lon);
       const d=document.createElement('div'); d.className='res';
-      const t=document.createElement('div'); t.className='t'; t.textContent=it.display_name; d.appendChild(t);
+      const t=document.createElement('div'); t.className='t';
+      const nm=(it.name||'').trim(), rest=nm && it.display_name.startsWith(nm) ? it.display_name.slice(nm.length).replace(/^,\s*/,'') : it.display_name;
+      if(nm && rest!==it.display_name){ const bb=document.createElement('b'); bb.textContent=nm; const sm=document.createElement('small'); sm.textContent=rest; t.append(bb,sm); }
+      else t.textContent=it.display_name;
+      d.appendChild(t);
       const row=document.createElement('div'); row.className='row';
       const b1=document.createElement('button'); b1.className='btn sm'; b1.textContent='Carte + repère';
       b1.onclick=()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); box.textContent=''; };
@@ -1413,6 +1576,7 @@ async function search(q){
       row.append(b1,b2); d.appendChild(row); box.appendChild(d);
     }
   }catch(e){ box.textContent='Recherche indisponible ('+netMsg(e)+'). Vous pouvez placer le repère en touchant la carte.'; }
+  finally{ searching=false; sb.disabled=false; }
 }
 
 // ---------- Polices ----------
@@ -1497,7 +1661,7 @@ async function probe(fn,ms=10000){
 }
 async function runDiagnostics(){
   if(!needConsent(()=>runDiagnostics())) return;
-  document.querySelector('#tabs [data-tab=lieu]').click();
+  openAdvanced(true);
   const box=$('diag'); box.innerHTML=''; $('bDiag').disabled=true;
   const line=(label)=>{ const d=document.createElement('div'); d.innerHTML='<span class="wt">…</span><span></span><small></small>'; d.children[1].textContent=label; box.appendChild(d); return d; };
   const set=(d,r)=>{ d.children[0].className=r.ok?'ok':'ko'; d.children[0].textContent=r.ok?'✓':'✗'; d.children[2].textContent=r.info+(r.ms?` · ${r.ms} ms`:''); };
@@ -1588,6 +1752,7 @@ async function boot(){
   showEnvWarning();
   if(st.engine==='file') st.engine='maplibre';   // un fichier importé n'est pas conservé entre deux sessions
   syncInputs();
+  hist.cur=histSnap(); hist.quietUntil=Date.now()+2500; updateHistUI();   // l'état chargé est le point de départ de l'historique
   let rafL=0; new ResizeObserver(()=>{ if(!rafL) rafL=requestAnimationFrame(()=>{ rafL=0; layoutPreview(); }); }).observe(stage);
   addEventListener('resize',()=>applySheet());
   layoutPreview();
@@ -1603,7 +1768,7 @@ async function boot(){
     setStatus('MapLibre injoignable (aucun CDN accessible)','err');
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
-  window.__cms={get ui(){return ui},setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
+  window.__cms={get ui(){return ui},undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
 }
 boot();
 </script>
