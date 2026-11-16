@@ -42,9 +42,19 @@ async def main():
         check(await visible(), 'demande d\'accord affichée au démarrage')
         await page.screenshot(path=str(T / 'consent.png'))
 
+        # La demande est modale : « Travailler hors ligne » la ferme ; chaque action réseau la fait réapparaître, sans requête
+        await page.click('#bConsentFile'); await page.wait_for_timeout(500)
+        check(not await visible() and await page.evaluate('__cms.st.engine') == 'file', 'refus : demande fermée, moteur Fichier')
+        dot = await page.evaluate("document.getElementById('stDot').className")
+        check('wait' in dot, f'état hors ligne signalé (pastille orange, pas verte) : {dot}')
+        reshown = []
         await page.fill('#q', 'Blois'); await page.press('#q', 'Enter'); await page.wait_for_timeout(800)
+        reshown.append(await visible()); await page.click('#bConsentFile'); await page.wait_for_timeout(300)
         await page.click('#engineSeg [data-v=overpass]'); await page.wait_for_timeout(800)
+        reshown.append(await visible()); await page.click('#bConsentFile'); await page.wait_for_timeout(300)
         await page.click('#bDiag'); await page.wait_for_timeout(800)
+        reshown.append(await visible())
+        check(all(reshown), f'recherche, Overpass et diagnostic redemandent l\'accord {reshown}')
         check(not ext, f'recherche, Overpass et diagnostic bloqués sans accord {sorted(set(ext))}')
 
         await page.click('#bConsentYes'); await page.wait_for_timeout(2500)
