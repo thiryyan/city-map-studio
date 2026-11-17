@@ -67,11 +67,16 @@ Une fonction unique, `drawPoster(ctx, W, H, pass, mapFn)`, dessine l'affiche à 
 
   Tant que l'accord n'est pas donné, chaque point d'accès au réseau (`initMaplibre`, `fetchOverpass`, `search`, `runDiagnostics`, `exportPoster` avec le moteur Vectoriel GPU, CDN de secours de MapLibre) affiche la demande au lieu d'appeler le service. L'onglet Lieu indique l'état de l'accord et permet de le retirer, ce qui recharge la page dans l'état initial.
 * **Overpass**
-  * Requêtes uniquement à la demande, **une seule à la fois**. Après un déplacement hors de la zone chargée, un bandeau propose « Actualiser les vecteurs ». La zone demandée est élargie de 40 % pour absorber les petits déplacements.
-  * `[timeout:25]` côté serveur ; `AbortController` à **30 s** côté client, puis passage au miroir suivant. Une erreur HTTP 5xx ou un délai dépassé fait aussi passer au miroir suivant. Les délais sont regroupés dans `OP_TIMEOUT` (`fetch` : 30 s ; `diag` : 20 s pour la sonde du diagnostic).
+  * Requêtes uniquement à la demande, **une seule à la fois**. Après un déplacement hors de la zone chargée, un bandeau propose « Actualiser les vecteurs ». La zone demandée est élargie de 20 % (`OP_PAD`) pour absorber les petits déplacements.
+  * **Délais** : `[timeout:90]` côté serveur (`OP_SERVER_TIMEOUT`) ; `AbortController` à **100 s** côté client, puis passage au miroir suivant. Mesure réelle pour l'affiche par défaut (Blois, zoom 14) : 24 à 32 s de calcul sur un miroir chargé, au-delà des anciens 25 s (serveur) et 30 s (client), qui coupaient donc systématiquement une réponse valide. Les délais sont regroupés dans `OP_TIMEOUT` (`fetch` : 100 s ; `diag` : 20 s pour le diagnostic ; `probe` : 5 s pour le sondage ; `retry` : 1,5 s avant un second essai).
+  * **Ordre des miroirs** : sur une page en http(s) (GitHub Pages), overpass-api.de, l'instance de référence, est essayé en premier ; en `file://`, il passe en dernier (406 sans Referer). Avant la requête, la page d'état de chaque miroir disponible est sondée en parallèle, en 5 s et en mode `no-cors` (seule l'existence d'une réponse compte). Les miroirs qui répondent passent devant, sans qu'aucun soit écarté : on ne perd plus jusqu'à 100 s par miroir muet avant d'atteindre celui qui fonctionne.
+  * **Second essai** : une erreur serveur (5xx) ou une absence de réponse obtenue en moins de 4 s (passerelle surchargée, qui alterne souvent 504 et réponse valide) donne lieu à un second essai, 1,5 s plus tard, une seule fois. Un délai dépassé ne donne jamais lieu à un second essai.
+  * **Calcul interrompu** : une réponse HTTP 200 dont la remarque (`remark`) signale un arrêt du calcul (délai, mémoire) compte comme un échec du miroir, au lieu d'afficher une carte vide ou partielle.
+  * **Progression** : pendant la requête, la barre d'état indique le miroir interrogé et le temps écoulé.
   * **Message d'échec** : quand aucun miroir ne répond, chaque échec est enregistré (HTTP, délai dépassé, ou absence de réponse lisible). Une passerelle en 502/504 répond souvent sans en-tête CORS : le navigateur ne voit alors qu'un `TypeError` (« Failed to fetch »), indiscernable d'une coupure réseau. Si au moins un miroir a répondu en HTTP ou a dépassé le délai, la connexion fonctionne : la barre d'état et la notification indiquent « serveurs en panne ou surchargés » et non « accès réseau bloqué ». Le détail par miroir figure dans l'infobulle de la barre d'état et dans la notification. Ces échecs (5xx, délai) ne suspendent pas le miroir.
   * **Suspension après 406 ou 429** : overpass-api.de renvoie HTTP 406 aux clients qu'il ne juge pas légitimes (User-Agent, Referer, en-tête Accept). Une page ouverte en `file://` n'envoie pas de Referer, d'où le refus. Les clients qui insistent après une erreur 406 ou 429 sont bannis plus vite. Un miroir qui répond 406 est donc suspendu **24 h**, et un miroir qui répond 429 **1 h**. Pour un 429, l'application retient la durée de `Retry-After` si elle est plus longue, mais elle ne peut lire cet en-tête que si le serveur l'autorise par CORS. La suspension est conservée dans `localStorage` (clé `cityMapStudio.opBlocked`), y compris après un rechargement, et le diagnostic la respecte. Si tous les miroirs sont suspendus, aucune requête n'est émise : l'application indique l'heure de reprise et oriente vers le moteur Fichier.
-  * overpass-api.de est essayé en dernier. Le lien « requête Overpass » du moteur Fichier vise le premier miroir disponible.
+  * Le lien « requête Overpass » du moteur Fichier vise le premier miroir disponible.
+  * Les messages d'état du moteur Vectoriel GPU (« Chargement des tuiles », « Prêt ») ne s'affichent que lorsque ce moteur est actif : ils écrasaient l'état d'Overpass.
   * Un navigateur ne peut pas modifier son User-Agent : seul un hébergement HTTPS (GitHub Pages) fournit un Referer et une Origin valides.
 * **Nominatim** : appel uniquement à la validation de la recherche (jamais à la frappe), 5 résultats, `accept-language=fr`. Les résultats sont insérés via `textContent` (aucune injection HTML).
 * **Persistance** : l'état de l'atelier est sauvegardé dans `localStorage` (clé `cityMapStudio.v2`, sous `try/catch`).
@@ -100,27 +105,35 @@ Côté MapLibre, le zoom effectif d'un conteneur de largeur CSS $w_{\text{css}}$
 
 ### 3.2. Requête Overpass QL
 
-La zone `(S,W,N,E)` est calculée par l'application. `out geom qt` inclut les coordonnées dans chaque `way` et chaque membre de `relation`, ce qui évite de reconstruire la géométrie à partir des nœuds.
+La zone `(S,W,N,E)` est calculée par l'application. `out geom` inclut les coordonnées dans chaque `way` et chaque membre de `relation`, ce qui évite de reconstruire la géométrie à partir des nœuds. La requête est découpée en trois sorties pour alléger le travail des serveurs publics :
 
 ```overpassql
-[out:json][timeout:25];
+[out:json][timeout:90];
 (
   way["natural"="water"](S,W,N,E);
-  relation["natural"="water"](S,W,N,E);
   way["waterway"="riverbank"](S,W,N,E);
-  relation["waterway"="riverbank"](S,W,N,E);
   way["waterway"~"^(river|canal|stream)$"](S,W,N,E);
   way["leisure"~"^(park|garden)$"](S,W,N,E);
-  relation["leisure"="park"](S,W,N,E);
   way["landuse"~"^(grass|forest|meadow|recreation_ground)$"](S,W,N,E);
   way["natural"="wood"](S,W,N,E);
   way["highway"~"^(motorway|trunk|primary|secondary|tertiary)(_link)?$"](S,W,N,E);
   way["highway"~"^(unclassified|residential|living_street|pedestrian|service|footway|path|cycleway|steps|track)$"](S,W,N,E);
   way["railway"="rail"](S,W,N,E);   // si le calque Voies ferrées est actif
-  way["building"](S,W,N,E);         // si le calque Bâtiments est actif
 );
-out geom qt;
+out tags geom qt;
+(
+  relation["natural"="water"](S,W,N,E);
+  relation["waterway"="riverbank"](S,W,N,E);
+  relation["leisure"="park"](S,W,N,E);
+);
+out tags geom(S,W,N,E) qt;          // géométrie découpée au cadre
+way["building"](S,W,N,E);           // si le calque Bâtiments est actif (zoom ≥ 12,5)
+out skel geom qt;                   // contour seul, sans étiquettes
 ```
+
+* **Relations découpées au cadre** : sans `geom(S,W,N,E)`, une relation comme la Loire est renvoyée sur toute sa longueur. Avec le découpage, les points hors du cadre arrivent comme `null` : les tracés sont coupés à ces points (`splitNull`) avant l'assemblage des anneaux.
+* **Bâtiments sans étiquettes** : ils représentaient 69 % du volume (9 Mo sur 15,6 Mo pour Blois au zoom 14), surtout à cause d'étiquettes inutiles (adresses…). Un chemin sans étiquette mais avec une géométrie fournie par le serveur est reconnu comme bâtiment, avant la reconstruction des géométries des fichiers importés, pour ne pas confondre ces derniers avec les membres non étiquetés d'une relation.
+* **Volume** (Blois, zoom 14, mesuré) : 12,7 Mo de JSON, transférés compressés en 2,2 Mo.
 
 `waterway=riverbank` est un étiquetage obsolète, conservé pour les données anciennes ; `natural=water` reste la source principale. Les anneaux des relations multipolygones sont **assemblés** par chaînage des segments à extrémités communes, puis remplis en `evenodd` (îles).
 
@@ -294,6 +307,17 @@ Gabarit **Ciel** : disque des étoiles visibles au-dessus du repère principal �
 * **Réglages** : date et heure locales du lieu (proposées depuis la date du texte, à 22 h), fuseau horaire (celui de l'appareil à cette date, ou de UTC−12 à UTC+14 par demi-heure), constellations, grille.
 * **Couleurs** : sur papier clair, disque à l'encre du texte et étoiles couleur papier ; sur papier sombre, disque couleur terre et étoiles couleur texte. L'attribution mentionne la source des données du ciel.
 
+### 4.9. Effets de tracé
+
+Trois effets cumulables (onglet Style), rendus de la même façon par les deux moteurs, à l'aperçu comme à l'export. Toutes les mesures sont exprimées pour un cadre de 800 px, puis mises à l'échelle du cadre.
+* **Eau hachurée** : hachures à 45°, au pas de 6 px, sur fond couleur terre ; les traits prennent la couleur de l'eau assombrie de 28 %, pour rester lisibles sur une eau pâle.
+  * Moteur Vectoriel GPU : motif `fill-pattern` fourni à la demande (événement `styleimagemissing`). Son identifiant contient le pas, la densité de pixels et les deux couleurs, ce qui permet de le recréer sans état.
+  * Vecteurs : motif de canvas (`createPattern`) à la même échelle.
+* **Bâtiments en contour** : un trait fin (0,35 × l'épaisseur de référence) dans la couleur des rues secondaires, à la place de l'aplat.
+* **Trait crayon** : chaque classe de rue est tracée deux fois, décalée de (1,2 ; −0,9) puis (−0,9 ; 1,0) × l'épaisseur de référence, à 72 % de sa largeur et 62 % d'opacité, comme une esquisse reprise au crayon. Côté GPU, deux couches par classe avec `line-translate`. Un tracé « tremblé » a été écarté : le moteur GPU ne peut pas le produire, et l'export ne correspondrait plus à l'aperçu.
+
+Les ambiances fixent leurs effets : Encre de Chine (eau hachurée), Plan d'architecte (bâtiments en contour), Carnet de voyage (trait crayon) ; les autres les désactivent.
+
 ## 5. Export haute définition
 
 * **Format** : 2480 × 3508 px en portrait, 3508 × 2480 px en paysage (A4 à 300 DPI ; 212 DPI en A3 par mise à l'échelle chez l'imprimeur). L'export est un **recalcul intégral** à pleine résolution, jamais un agrandissement de l'aperçu.
@@ -456,6 +480,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Polices | Les 5 familles (normale et italique) se chargent depuis `lib/fonts/`, y compris hors ligne et en `file://` ; elles s'appliquent à l'aperçu et à l'export ; le choix est conservé ; aucune requête vers Google. |
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
 | Taille des textes | Chaque curseur (par ligne et global) modifie l'affiche dans les 4 gabarits ; retour à 100 % = rendu d'origine ; réduction automatique signalée ; tailles persistées et remises à 100 % par « Réinitialiser » ; export 2480 × 3508. |
+| Effets de tracé | Eau hachurée, bâtiments en contour et trait crayon : rendus distincts, retour exact au rendu d'origine, export aux bonnes dimensions ; moteur GPU : motif fourni, couche en contour, deux passes décalées, hachures présentes à l'export ; effets fixés par les ambiances et annulables. |
 | Premier lancement | Accord d'abord, puis choix d'une ambiance ; ambiance appliquée et annulable ; proposition unique (après un choix ou « Commencer sans ambiance ») ; rien pour une affiche existante ni pour un lien partagé. |
 | Évolutions graphiques | 11 polices et duos, police manuscrite limitée à la dédicace et aux noms ; 15 thèmes, filtres, contraste ; gabarits distincts, cœur découpé dans l'aperçu ; ambiances et modèles annulables ; 10 repères distincts ; 3 lieux numérotés et reliés ; 4 textures ; aperçu au mur téléchargeable ; lien reconstituant l'affiche ; paysage 3508 × 2480 ; deux vues conservées ; GPX simplifié et cadré ; Polaire à la hauteur de la latitude ; exports aux bonnes dimensions. Gabarits d'origine identiques au pixel près. |
 | Lisibilité et confort | Onglets dans l'ordre du parcours, rôles ARIA et navigation au clavier ; « Étape suivante » ; « Avancé » et couleurs repliés, « Avancé » rouvert d'office et mémorisé ; cibles tactiles ; annuler / rétablir (boutons, clavier, après réinitialisation, moteur exclu) ; calendrier (« 1er », lecture inverse) ; aperçu des polices ; « Ma position » ; recherche unique, sans requête pendant la frappe. |
@@ -467,6 +492,8 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Aperçu intégré | Page dans une iframe : avertissement explicite dans l'onglet Lieu. |
 
 ### 9.2. Tests automatisés
+
+**Visibilité** : un test vérifie l'affichage réel d'un élément (`offsetParent`, `is_visible`), pas son attribut `hidden`. Une règle `display` de composant l'emportait sur `hidden` : les filtres de polices semblaient fonctionner en test, mais rien ne changeait à l'écran. La règle globale `[hidden]{display:none!important}` corrige ce piège.
 
 **Persistance et rechargement** : un script injecté par Playwright (`add_init_script`) qui accède à `localStorage` au démarrage de chaque document fait perdre, au rechargement suivant, les écritures récentes de la page. Mesuré sur une page minimale, sans l'application : 0 perte sur 25 rechargements sans script injecté, 3 à 4 sur 25 avec. C'était la cause des échecs intermittents de `overpass_policy.py`, et un risque pour tous les tests qui rechargent la page. Ces tests préparent désormais le stockage avec `tests/seed.py` (écriture par la page elle-même, puis rechargement), et attendent que l'état soit enregistré avant de recharger. Un utilisateur réel n'est pas concerné.
 

@@ -42,9 +42,10 @@ async def main():
             await r.abort()
         await page.route('**/*', route)
         await page.goto(APP); await page.wait_for_timeout(1200)
-        await page.evaluate("__cms.OP_TIMEOUT.fetch=600; __cms.OP_TIMEOUT.diag=600")
+        await page.evaluate("__cms.OP_TIMEOUT.fetch=600; __cms.OP_TIMEOUT.diag=600; __cms.OP_TIMEOUT.probe=300; __cms.OP_TIMEOUT.retry=100")
 
-        await page.click('#engineSeg [data-v=overpass]'); await page.wait_for_timeout(3500)
+        await page.click('#engineSeg [data-v=overpass]')
+        await page.wait_for_function("!document.getElementById('stTxt').textContent.includes('en cours')", timeout=30000); await page.wait_for_timeout(300)
         st = await page.inner_text('#stTxt'); tip = await page.get_attribute('#stTxt', 'title')
         toast = await page.inner_text('#toast'); banner = await page.inner_text('#bannerTxt')
         print('état :', st); print('infobulle :', tip); print('notification :', toast); print('bandeau :', banner)
@@ -54,7 +55,8 @@ async def main():
             assert frag in tip, frag
         assert 'Votre connexion n\'est pas en cause' in toast
         assert banner == 'Serveurs Overpass en panne'
-        assert all(hits[h] == 1 for h in ('overpass.private.coffee', 'overpass.kumi.systems', 'maps.mail.ru', 'overpass-api.de')), dict(hits)
+        # Délai dépassé : un seul essai. Erreur serveur ou échec immédiats (504, 502 sans CORS) : un second essai, pas plus.
+        assert [hits[h] for h in ('overpass.private.coffee', 'overpass.kumi.systems', 'maps.mail.ru', 'overpass-api.de')] == [1, 1, 2, 2], dict(hits)
 
         await page.click('#bDiag'); await page.wait_for_timeout(3000)
         diag = await page.inner_text('#diag'); print('diagnostic :\n' + diag)

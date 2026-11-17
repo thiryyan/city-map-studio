@@ -160,6 +160,22 @@ async def main():
             errs = [l for l in logs if 'PAGEERROR' in l or ('MapLibre' in l and 'warn' in l)]
             print('  erreurs :', errs[:10])
             assert w == 2480 and h == 3508 and water > 1000 and dark > 200 and not ml_ext and not [l for l in logs if 'PAGEERROR' in l]
+            if name == 'desktop':
+                # Effets de tracé avec le moteur Vectoriel GPU : style, motif de hachures fourni à la demande, export
+                await page.evaluate("['hatch','outline','pencil'].forEach(k=>{ const i=document.querySelector(`[data-k=\"fx.${k}\"]`); i.checked=true; i.dispatchEvent(new Event('input')); })")
+                await page.wait_for_function("__cms.mlMap.isStyleLoaded() && __cms.mlMap.areTilesLoaded()", timeout=30000); await page.wait_for_timeout(1500)
+                fx = await page.evaluate("""(()=>{ const m=__cms.mlMap, L=m.getStyle().layers, w=L.find(l=>l.id==='water'), b=L.find(l=>l.id==='building');
+                    const pat=w.paint['fill-pattern']; return {pat:!!pat, img:!!pat && m.hasImage(pat), building:b&&b.type,
+                    passes:L.filter(l=>/^road-minor-\\d$/.test(l.id)).map(l=>l.paint['line-translate'])}; })()""")
+                print('  effets (aperçu) :', fx)
+                assert fx['pat'] and fx['img'] and fx['building'] == 'line' and len(fx['passes']) == 2 and fx['passes'][0] != fx['passes'][1], fx
+                async with page.expect_download(timeout=90000) as dl:
+                    await page.click('#resClose'); await page.click('#bExport')
+                d = await dl.value; path = str(T / 'ml-export-fx.png'); await d.save_as(path)
+                w2, h2, water2, dark2 = png_stats(path)
+                print('  export avec effets', w2, h2, '| pixels eau', water2, f'(sans effet : {water})')
+                assert (w2, h2) == (2480, 3508) and water2 < water * 0.7, 'hachures absentes de l\'export'
+                assert not [l for l in logs if 'PAGEERROR' in l or 'could not be loaded' in l], logs[-5:]
             await ctx.close()
         await b.close()
     srv.shutdown(); print('OK')
