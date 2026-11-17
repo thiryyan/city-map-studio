@@ -265,6 +265,8 @@ Sont conservés : l'accord aux services tiers, les suspensions de miroirs Overpa
 
 ### 4.6. Ambiances et papier
 
+**Au premier lancement**, une fenêtre propose de choisir une ambiance (vignettes des 8 ambiances) ou de « Commencer sans ambiance » (aussi avec Échap). Elle s'affiche après la demande d'accord, jamais en même temps, et une seule fois (`cityMapStudio.welcomed`). Elle ne s'affiche pas si une affiche est déjà enregistrée, ni à l'ouverture d'un lien partagé. Après le choix, l'onglet Lieu invite à chercher son lieu ; l'ambiance est une étape d'historique annulable.
+
 **Ambiances** (en tête de l'onglet Style) : un toucher applique un ensemble assorti de thème, duo de polices, gabarit, repère et papier, en gardant le lieu et les textes. Vignettes rendues avec chaque ambiance ; l'ambiance active est signalée ; « Annuler » revient en arrière.
 
 | Ambiance | Thème | Polices (titre / texte) | Gabarit | Repère | Papier |
@@ -410,7 +412,9 @@ city-map-studio/
     ├── textsize.py         # taille des textes de l'affiche
     ├── mobile.py           # panneau coulissant, mode Cadrer, paysage, A− / A+
     ├── ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
-    └── design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel
+    ├── design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel
+    ├── welcome.py          # ambiance proposée au premier lancement
+    └── seed.py             # préparation du localStorage sans script injecté (tests qui rechargent la page)
 ```
 
 ### 8.2. Sections de `index.html`
@@ -452,6 +456,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Polices | Les 5 familles (normale et italique) se chargent depuis `lib/fonts/`, y compris hors ligne et en `file://` ; elles s'appliquent à l'aperçu et à l'export ; le choix est conservé ; aucune requête vers Google. |
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
 | Taille des textes | Chaque curseur (par ligne et global) modifie l'affiche dans les 4 gabarits ; retour à 100 % = rendu d'origine ; réduction automatique signalée ; tailles persistées et remises à 100 % par « Réinitialiser » ; export 2480 × 3508. |
+| Premier lancement | Accord d'abord, puis choix d'une ambiance ; ambiance appliquée et annulable ; proposition unique (après un choix ou « Commencer sans ambiance ») ; rien pour une affiche existante ni pour un lien partagé. |
 | Évolutions graphiques | 11 polices et duos, police manuscrite limitée à la dédicace et aux noms ; 15 thèmes, filtres, contraste ; gabarits distincts, cœur découpé dans l'aperçu ; ambiances et modèles annulables ; 10 repères distincts ; 3 lieux numérotés et reliés ; 4 textures ; aperçu au mur téléchargeable ; lien reconstituant l'affiche ; paysage 3508 × 2480 ; deux vues conservées ; GPX simplifié et cadré ; Polaire à la hauteur de la latitude ; exports aux bonnes dimensions. Gabarits d'origine identiques au pixel près. |
 | Lisibilité et confort | Onglets dans l'ordre du parcours, rôles ARIA et navigation au clavier ; « Étape suivante » ; « Avancé » et couleurs repliés, « Avancé » rouvert d'office et mémorisé ; cibles tactiles ; annuler / rétablir (boutons, clavier, après réinitialisation, moteur exclu) ; calendrier (« 1er », lecture inverse) ; aperçu des polices ; « Ma position » ; recherche unique, sans requête pendant la frappe. |
 | Mobile | iPhone 13 (390 × 664) : au moins 180 px de réglages à mi-hauteur ; poignée (toucher, glisser) ; dépliage à la saisie ; carte verrouillée hors du mode Cadrer ; placement du repère ; bulle au-dessus du panneau ; A− / A+ persistant, sans défilement horizontal ; paysage en deux colonnes ; ordinateur inchangé. |
@@ -462,6 +467,8 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Aperçu intégré | Page dans une iframe : avertissement explicite dans l'onglet Lieu. |
 
 ### 9.2. Tests automatisés
+
+**Persistance et rechargement** : un script injecté par Playwright (`add_init_script`) qui accède à `localStorage` au démarrage de chaque document fait perdre, au rechargement suivant, les écritures récentes de la page. Mesuré sur une page minimale, sans l'application : 0 perte sur 25 rechargements sans script injecté, 3 à 4 sur 25 avec. C'était la cause des échecs intermittents de `overpass_policy.py`, et un risque pour tous les tests qui rechargent la page. Ces tests préparent désormais le stockage avec `tests/seed.py` (écriture par la page elle-même, puis rechargement), et attendent que l'état soit enregistré avant de recharger. Un utilisateur réel n'est pas concerné.
 
 Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et OpenFreeMap sont simulés, tout autre accès externe est coupé. Les commandes figurent dans `CONTRIBUTING.md`.
 

@@ -227,6 +227,8 @@ details.adv>h3:first-of-type{margin-top:6px}
 .duos button{min-width:132px}.duos .t{font-size:1.2rem;line-height:1.2}.duos .d{font-size:1rem;color:var(--mut);line-height:1.3;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .ambs button{min-width:96px;padding:6px 6px 8px}.ambs canvas{display:block;width:84px;height:auto;border-radius:3px;box-shadow:0 1px 3px #0006}
 .ambs button.land canvas{width:110px}
+.wel{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;overflow:visible;margin:4px 0 10px;padding:0}
+.wel button{min-width:0;max-width:none;width:100%}.wel canvas{width:100%!important;max-width:96px}
 .prow{display:grid;grid-template-columns:28px 1fr auto auto;gap:6px;align-items:center;margin:6px 0}.prow b{width:26px;height:26px;border-radius:50%;background:var(--acc);color:#141414;display:flex;align-items:center;justify-content:center;font-size:.8125rem}
 .prow input{min-width:0}
 .dt,.sel{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;color:var(--txt);font-size:max(16px,1rem);color-scheme:dark}
@@ -477,6 +479,12 @@ details.adv>h3:first-of-type{margin-top:6px}
   <details><summary>En savoir plus</summary><p>La recherche d'adresse (<b>Nominatim</b>) et le moteur <b>Overpass</b>, utilisés seulement à votre demande, reçoivent aussi votre adresse IP. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p></details>
   <div class="row"><button class="btn pri" id="bConsentYes">Afficher la carte</button><button class="btn" id="bConsentFile">Travailler hors ligne</button></div>
 </div></div>
+<div class="consent" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welTitle"><div class="box">
+  <h2 id="welTitle">Choisissez une ambiance</h2>
+  <p>Un point de départ assorti : thème, polices, gabarit, repère et papier. Vous pourrez tout modifier ensuite, et changer d'ambiance dans l'onglet Style.</p>
+  <div class="fonts ambs wel" id="welAmb" role="list"></div>
+  <button class="btn" type="button" id="welSkip" style="width:100%;margin-top:4px">Commencer sans ambiance</button>
+</div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="busy"><div class="spin"></div><div id="busyTxt">Génération de l'affiche…</div></div>
 <div id="mockup" role="dialog" aria-modal="true" aria-label="Aperçu au mur"><div class="box">
@@ -663,13 +671,14 @@ function giveConsent(){
   (async()=>{
     if(mlLib==='fail'||mlLib==='local-fail'){ await loadMaplibre(); updateEngineUI(); }
     if(next) next();
+    maybeWelcome();
     if(st.engine==='maplibre') renderMap(true);                              // la carte s'affiche dans tous les cas
     else if(st.engine==='overpass' && !opData && !next) fetchOverpass();    // une seule requête Overpass à la fois
   })();
 }
 function declineConsent(){
   consentNext=null; document.getElementById('consent').classList.remove('show');
-  setEngine('file'); openAdvanced(true);
+  setEngine('file',true); openAdvanced(true); maybeWelcome();   // consigne d'import : ligne d'état et section Avancé (la bulle masquerait le choix d'ambiance)
   if(!opData) setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
 }
 function withdrawConsent(){
@@ -1799,19 +1808,46 @@ async function loadFromHash(){
   }catch(e){ toast('Lien d\'affiche illisible : '+e.message,true); }
 }
 
+// ---------- Ambiance au premier lancement ----------
+// Proposée une seule fois : première visite sans affiche enregistrée, ni lien partagé ; après la demande d'accord.
+const WELCOME_KEY='cityMapStudio.welcomed';
+const firstVisit=(()=>{ try{ return !localStorage.getItem(WELCOME_KEY) && !localStorage.getItem(STORE_KEY); }catch(e){ return false; } })();
+let welcomeDone=!firstVisit || /^#a=/.test(location.hash);
+function maybeWelcome(){
+  try{ if(localStorage.getItem(WELCOME_KEY)) welcomeDone=true; }catch(e){}   // choix fait dans un autre onglet ou depuis le démarrage
+  if(welcomeDone || $('welcome').classList.contains('show')) return;
+  if($('consent').classList.contains('show')) return;   // repris après le choix d'accord (giveConsent / declineConsent)
+  const box=$('welAmb'); box.textContent='';
+  AMBIANCES.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; b.setAttribute('role','listitem');
+    b.innerHTML='<canvas width="70" height="99"></canvas><small></small>'; b.querySelector('small').textContent=n;
+    b.onclick=()=>{ closeWelcome(); applyAmbiance(k); showTab('lieu'); toast(`Ambiance « ${n} » · cherchez maintenant votre lieu`); }; box.appendChild(b); });
+  const draw=()=>box.querySelectorAll('button').forEach(b=>{ const p=AMBIANCES.find(a=>a[0]===b.dataset.v)[2];
+    thumb(b.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
+  draw();
+  // polices des ambiances : chargées une fois (fichiers locaux), puis vignettes redessinées
+  Promise.all(AMBIANCES.flatMap(([,,p])=>[p.font,p.fontTitle].filter(Boolean)).flatMap(f=>FONTS[f].load).map(f=>document.fonts.load(f).catch(()=>0))).then(draw);
+  $('welcome').classList.add('show');
+  setTimeout(()=>box.querySelector('button')?.focus(),50);
+}
+function closeWelcome(){
+  welcomeDone=true; $('welcome').classList.remove('show');
+  try{ localStorage.setItem(WELCOME_KEY,'1'); }catch(e){}
+}
+
 // ---------- Ambiances et modèles de texte ----------
 function applyAmbiance(k){
   const a=AMBIANCES.find(x=>x[0]===k); if(!a) return; const p=a[2];
+  commitHistory(0);   // étape d'historique explicite : un choix fait juste après le démarrage reste annulable
   st.theme=p.theme; st.colors={...THEMES[p.theme].c}; st.font=p.font; st.fontTitle=p.fontTitle; st.markerStyle=p.markerStyle; st.texture=p.texture;
   setLayout(p.layout,true);
-  syncInputs(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); redrawAll(true); drawTexture();
+  syncInputs(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); redrawAll(true); drawTexture(); commitHistory();
   toast(`Ambiance « ${a[1]} » appliquée · tout reste personnalisable`);
 }
 function applyOccasion(k){
-  const o=OCCASIONS.find(x=>x[0]===k); if(!o) return;
+  const o=OCCASIONS.find(x=>x[0]===k); if(!o) return; commitHistory(0);
   st.texts.dedication=o[2]; st.show.dedication=true;
   if(!st.texts.names.trim() || OCCASIONS.some(x=>x[3]===st.texts.names)) st.texts.names=o[3];
-  syncInputs(); scheduleOver(); saveState(); toast(`Modèle « ${o[1]} » appliqué · « Annuler » pour revenir`);
+  syncInputs(); scheduleOver(); commitHistory(); toast(`Modèle « ${o[1]} » appliqué · « Annuler » pour revenir`);
 }
 /** Gabarit : met à jour l'état propre à certains gabarits (deux lieux, ciel), puis l'aperçu */
 function setLayout(k,quiet){
@@ -2110,15 +2146,15 @@ function buildUI(){
   const fam=k=>FONTS[k].fam.replace(/"/g,"'");
   DUOS.forEach(([k,n,ft,fx])=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; b.setAttribute('role','radio');
     b.innerHTML=`<span class="t" style="font-family:${fam(ft)}"></span><span class="d" style="font-family:${fam(fx)}"></span><small></small>`; b.querySelector('small').textContent=n;
-    b.onclick=async()=>{ st.fontTitle=ft===fx?'':ft; st.font=fx; syncFonts(); await loadFonts(); scheduleOver(); saveState(); }; $('duos').appendChild(b); });
+    b.onclick=async()=>{ st.fontTitle=ft===fx?'':ft; st.font=fx; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('duos').appendChild(b); });
   FONT_CATS.forEach(([k,n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'+(i?'':' on'); b.textContent=n;
     b.onclick=()=>{ document.querySelectorAll('#fontCats .chip').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll('#fontSeg button,#fontTitleSeg button').forEach(f=>f.hidden=!!k && f.dataset.cat && f.dataset.cat!==k); }; $('fontCats').appendChild(b); });
   const fbtn=(k,n,cat)=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; if(cat) b.dataset.cat=cat; b.setAttribute('role','radio');
     b.innerHTML=`<span class="smp"${k?` style="font-family:${fam(k)}${FONTS[k].scale?`;font-size:${(1.25*FONTS[k].scale).toFixed(2)}rem`:''}"`:''}></span><small></small>`; b.querySelector('small').textContent=n; return b; };
-  const same=fbtn('','Comme le texte'); same.onclick=async()=>{ st.fontTitle=''; syncFonts(); await loadFonts(); scheduleOver(); saveState(); }; $('fontTitleSeg').appendChild(same);
+  const same=fbtn('','Comme le texte'); same.onclick=async()=>{ st.fontTitle=''; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(same);
   FONT_LIST.forEach(([k,n,cat])=>{
-    const t=fbtn(k,n,cat); t.onclick=async()=>{ st.fontTitle=k===st.font?'':k; syncFonts(); await loadFonts(); scheduleOver(); saveState(); }; $('fontTitleSeg').appendChild(t);
-    const x=fbtn(k,n,cat); x.onclick=async()=>{ if(!st.fontTitle && FONTS[k].script) st.fontTitle=st.font; st.font=k; if(st.fontTitle===k) st.fontTitle=''; syncFonts(); await loadFonts(); scheduleOver(); saveState(); }; $('fontSeg').appendChild(x); });
+    const t=fbtn(k,n,cat); t.onclick=async()=>{ st.fontTitle=k===st.font?'':k; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(t);
+    const x=fbtn(k,n,cat); x.onclick=async()=>{ if(!st.fontTitle && FONTS[k].script) st.fontTitle=st.font; st.font=k; if(st.fontTitle===k) st.fontTitle=''; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontSeg').appendChild(x); });
   // plusieurs lieux, itinéraire, aperçu au mur, lien
   $('bAddPlace').onclick=addPlace;
   $('gpxIn').onchange=e=>{ const f=e.target.files[0]; if(f) importGpx(f); e.target.value=''; };
@@ -2133,6 +2169,8 @@ function buildUI(){
   FRAMES.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent='Cadre '+n.toLowerCase(); b.onclick=()=>{ mock.frame=i; drawMockup(); }; $('mockFrames').appendChild(b); });
   $('mockMat').onchange=e=>{ mock.mat=e.target.checked; drawMockup(); };
   $('bShare').onclick=shareLink;
+  $('welSkip').onclick=()=>{ closeWelcome(); toast('Vous pourrez choisir une ambiance plus tard, dans l\'onglet Style'); };
+  $('welcome').addEventListener('keydown',e=>{ if(e.key==='Escape') $('welSkip').click(); });
   // thèmes
   const th=$('themes');
   Object.entries(THEMES).forEach(([k,t])=>{ const d=document.createElement('div'); d.className='theme'; d.dataset.v=k; d.dataset.cat=t.cat;
@@ -2262,13 +2300,13 @@ function updateEngineUI(){
     file:'Aucun accès réseau requis : importez un fichier de données OSM. Le rendu et l\'export sont identiques au moteur Overpass.'
   }[st.engine];
 }
-function setEngine(v){
+function setEngine(v,quiet){
   if(v==='maplibre' && mlLib==='fail'){ toast('MapLibre n\'a pas pu être chargé : aucun CDN joignable depuis cette page.',true); return; }
   st.engine=v; setSeg('engineSeg',v); updateEngineUI(); setPlacing(false); showBanner(false);
   if(v!=='maplibre') openAdvanced();
   hist.quietUntil=Date.now()+1500;   // le moteur n'entre pas dans l'historique ; ses recentrages non plus   // import de fichier ou actualisation Overpass : réglages à portée de main
   if(v==='overpass'){ renderMap(true); if(!opData||opData.source!=='overpass') fetchOverpass(); else checkOpCoverage(); }
-  else if(v==='file'){ renderMap(true); if(!opData) toast('Importez un fichier de données (onglet Lieu).'); }
+  else if(v==='file'){ renderMap(true); if(!opData && !quiet) toast('Importez un fichier de données (onglet Lieu).'); }
   else { mlFailMsg=''; renderMap(true); mlRestyle(); }
   saveState();
 }
@@ -2498,6 +2536,7 @@ async function boot(){
   layoutPreview();
   loadFonts().then(()=>{ scheduleOver(); refreshCards(); });
   loadFromHash();
+  setTimeout(maybeWelcome,300);   // après l'éventuelle demande d'accord (affichée au démarrage)
   document.fonts && document.fonts.ready.then(()=>{ scheduleOver(); refreshCards(); });
   if(st.engine==='overpass' && !opData) fetchOverpass();
   const ok=await loadMaplibre();
@@ -2509,7 +2548,7 @@ async function boot(){
     setStatus('MapLibre injoignable (aucun CDN accessible)','err');
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
-  window.__cms={get ui(){return ui},setLayout,setOrient,applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,OP_TIMEOUT,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
+  window.__cms={get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,OP_TIMEOUT,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
 }
 boot();
 </script>

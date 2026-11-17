@@ -41,6 +41,8 @@ async def main():
         check(not ext, f'démarrage sans requête tierce {sorted(set(ext))}')
         check(await visible(), 'demande d\'accord affichée au démarrage')
         await page.screenshot(path=str(T / 'consent.png'))
+        # Choix d'ambiance du premier lancement déjà fait (testé par tests/welcome.py) : écrit par la page, sans script injecté
+        await page.evaluate("localStorage.setItem('cityMapStudio.welcomed','1')")
 
         # La demande est modale : « Travailler hors ligne » la ferme ; chaque action réseau la fait réapparaître, sans requête
         await page.click('#bConsentFile'); await page.wait_for_timeout(500)

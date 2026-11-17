@@ -14,7 +14,7 @@ async def main():
         for name,vp,mobile in [('mobile',{'width':390,'height':844},True),('desktop',{'width':1400,'height':900},False)]:
             ctx=await b.new_context(viewport=vp,device_scale_factor=2 if mobile else 1,is_mobile=mobile,has_touch=mobile,accept_downloads=True)
             page=await ctx.new_page()
-            await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
+            await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
             logs=[]
             page.on('console',lambda m: logs.append(f'{m.type}: {m.text}'))
             page.on('pageerror',lambda e: logs.append(f'PAGEERROR: {e}'))
