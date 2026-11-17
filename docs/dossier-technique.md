@@ -174,6 +174,12 @@ Les variantes `*_link` suivent la classe de leur axe.
 2. **Cadre classique** : carte encadrée d'un double filet, cartouche inférieur centré (titre espacé, sous-titre entre filets, coordonnées, dédicace, noms, date).
 3. **Fondu moderne** : carte pleine page fondue vers le papier en bas et sur les bords, typographie posée sur le fondu.
 4. **Médaillon** : carte découpée dans un cercle, anneau fin optionnel, cartouche centré dessous.
+5. **Cœur** et 6. **Arche** : carte découpée en forme de cœur ou de fenêtre en arche, contour fin optionnel (« Contour de la forme »). La forme découpe aussi la carte interactive de l'aperçu (`clip-path: path()`), à partir du même tracé que l'export (`shapeD`).
+7. **Voyage** : carte pleine largeur, ville en très grand alignée à gauche, informations en dessous ; pensé pour une police d'affiche condensée.
+8. **Polaroid** : carte carrée, large marge basse, dédicace en tête du texte et lieu en petit.
+9. **Deux lieux** (§ 4.7) et 10. **Ciel** (§ 4.8).
+
+**Orientation** : portrait (2480 × 3508) ou paysage (3508 × 2480) pour tous les gabarits. En paysage, la carte (ou le ciel) occupe la gauche et le texte une colonne à droite, centrée verticalement ; Deux lieux place les cartes côte à côte. Les tailles s'expriment en fraction du petit côté (`U`), si bien qu'un texte garde la même taille physique dans les deux orientations. En portrait, les gabarits d'origine sont rendus au pixel près comme avant cette évolution.
 
 ### 4.2. Couleurs (12 variables)
 
@@ -188,12 +194,22 @@ Papier · Terre · Eau · Parcs · Bâtiments · Rues principales · Rues second
 | **Crème & Encre** | `#F4EFE6` | `#F4EFE6` | `#D6E0E2` | `#2C2A29` / `#57534E` | `#C5A059` | Papier coton |
 | **Nuit boréale** | `#0B192C` | `#0B192C` | `#1E3E62` | `#E2E8F0` / `#94A3B8` | `#D4AF37` | Contemporain |
 | **Sépia vintage** | `#EFE6D5` | `#EFE6D5` | `#DFD2B8` | `#433422` / `#6B5A43` | `#8B2635` | Cartographie ancienne |
+| **Sauge** | `#EEF1EA` | `#EEF1EA` | `#C8D6CF` | `#34473B` / `#5E6F62` | `#B5654B` | Botanique, naissance, maison |
+| **Terracotta** | `#F4EADF` | `#F4EADF` | `#B9CFCB` | `#7A3B26` / `#9C6248` | `#C96A3D` | Méditerranée, été |
+| **Rose poudré** | `#F8EEEC` | `#F8EEEC` | `#E2D3D6` | `#5E4447` / `#846A6D` | `#C98A8E` | Mariage, filets dorés |
+| **Automne** | `#F2E6D0` | `#F2E6D0` | `#CFD8D3` | `#3B2F2A` / `#6A5A50` | `#C2861F` | Chaleureux, moutarde |
+| **Marine** | `#F1ECE2` | `#F1ECE2` | `#D5DCE4` | `#14284B` / `#3E5274` | `#C0392B` | Bord de mer, sobre |
+| **Encre de Chine** | `#FFFFFF` | `#FFFFFF` | `#111111` | `#000000` / `#1A1A1A` | `#D0312D` | Noir et blanc graphique, eau en aplat noir |
+| **Plan d'architecte** | `#1F3A5F` | `#1F3A5F` | `#2C4F7C` | `#E8F1FA` / `#A9C1DA` | `#FFD166` | Technique, avec la police Mono |
+| **Néon** | `#120B24` | `#120B24` | `#1E1440` | `#FF4FD8` / `#9B5DE5` | `#36E3FF` | Urbain, nocturne |
+
+Les thèmes se filtrent par catégorie (**Clairs**, **Sombres**, **Couleurs**). Un **contrôle de contraste à l'impression** avertit quand les rues principales ressortent mal sur la terre (contraste < 3), quand le texte manque de contraste avec le papier (< 4,5) ou quand le repère se distingue mal de la carte (< 1,8). Aucun thème fourni ne déclenche l'avertissement ; il sert pour les couleurs personnalisées.
 
 Chaque variable reste modifiable individuellement. Les actions rapides **« Touche d'or »** appliquent `#C5A059` à l'eau, aux rues principales, au repère ou aux filets.
 
-### 4.3. Repère (5 styles vectoriels)
+### 4.3. Repère (10 styles vectoriels), lieux multiples, itinéraire
 
-Cœur géométrique facetté · Point subtil à halo · Cœur lisse (plein ou contour) · Anneau cible · Épingle.
+Cœur géométrique facetté · Point subtil à halo · Cœur lisse (plein ou contour) · Anneau cible · Épingle · Étoile · Maison · Alliances · Ancre · Petits pieds.
 Réglages : taille de 10 à 300 % (100 % = 5,5 % de la largeur de l'affiche), couleur, opacité, plein ou contour.
 
 Le repère (point de rencontre) est indépendant du centre de la carte. Il se place :
@@ -202,7 +218,11 @@ Le repère (point de rencontre) est indépendant du centre de la carte. Il se pl
 * au centre de la carte (« Au centre ») ;
 * par **saisie de ses coordonnées** dans l'onglet Lieu (§ 3.4).
 
-### 4.4. Typographie (6 champs, 5 familles)
+**Plusieurs lieux** (onglet Repère) : jusqu'à deux lieux de plus que le repère principal, chacun avec un nom, placé d'un toucher sur la carte. Options : **numéroter** les lieux (pastilles 1, 2, 3 et légende « 1 Rencontre · 2 Mariage » dans le texte de l'affiche) et les **relier** par un trait en pointillés. Les lieux supplémentaires sont dessinés au même style, à 75 % de la taille.
+
+**Itinéraire** : import d'un fichier GPX (traces `trkpt`, routes `rtept` ou, à défaut, points `wpt`), simplifié par Douglas-Peucker à 1 500 points au plus, puis cadrage automatique de la carte (zoom borné à 10–18). Couleur (repère, rues ou filets), épaisseur et pointillés réglables. L'itinéraire est conservé dans le navigateur avec les autres réglages.
+
+### 4.4. Typographie (6 champs, 11 familles)
 
 Champs : **Titre** (« Blois ») · **Sous-titre** (« Val de Loire • France ») · **Coordonnées** (automatiques ou saisies) · **Dédicace** (« Là où tout a commencé ») · **Noms** (« Prénom & Prénom ») · **Date** (« Le 14 juillet 2023 »).
 Familles :
@@ -214,6 +234,18 @@ Familles :
 | **Mono** | Space Mono | Machine à écrire, technique | — |
 | **Garamond** | Cormorant Garamond | Garalde classique, italique calligraphique, chiffres elzéviriens ; s'accorde avec les thèmes Crème & Encre et Sépia vintage | Graisse 500 et corps × 1,12, pour compenser le petit œil et le trait fin à l'impression |
 | **Art déco** | Josefin Sans | Géométrique des années 1920, capitales élancées, esprit affiche de voyage ; s'accorde avec Prestige Onyx & Or et Nuit boréale | Corps × 1,04 |
+| **Bodoni** | Bodoni Moda | Didone très contrastée, titres « magazine » | — |
+| **Italiana** | Italiana | Capitales fines et élancées | Corps × 1,05 ; pas d'italique |
+| **Fraunces** | Fraunces | Serif douce et chaleureuse | — |
+| **Jost** | Jost | Géométrique façon Futura | — |
+| **Bebas** | Bebas Neue | Linéale condensée en capitales, affiche | Corps × 1,18 ; pas d'italique |
+| **Calligraphie** | Great Vibes | Calligraphie anglaise | Corps × 1,4 ; manuscrite (`script`) |
+
+**Police du titre et police du texte** : le titre peut avoir sa propre police (« Comme le texte » par défaut). Six **duos** préassortis : Origine (Playfair), Mariage (Italiana + Calligraphie), Voyage (Bebas + Jost), Classique (Bodoni + Garamond), Moderne (Jost), Chaleureux (Fraunces + Montserrat). Les cartes de police se filtrent par catégorie (Classiques, Modernes, Manuscrites, Affiche) et montrent le titre ou les noms saisis.
+
+**Règle de la police manuscrite** : elle n'est jamais mise en capitales, ni espacée, ni penchée. Elle ne sert qu'aux lignes d'émotion (dédicace, noms, légendes des deux lieux) ; le sous-titre, les coordonnées, la date et la légende prennent alors la police du titre (Playfair si le titre est lui aussi manuscrit).
+
+**Modèles de texte** : Rencontre, Mariage, Naissance, Maison, Voyage, Anniversaire. Un modèle remplace la dédicace ; il ne remplace les noms que s'ils sont encore ceux d'un exemple.
 
 Le coefficient de corps (`scale`) et la graisse par défaut (`weight`) sont définis par famille dans `FONTS`.
 Chaque ligne est **optionnelle** : une case à cocher devant chaque champ l'affiche ou la masque, sans effacer le texte saisi (état `show`, persisté). Dans les gabarits à cartouche (Cadre, Fondu, Médaillon), les lignes masquées ou vides sont retirées et les suivantes remontent ; le gabarit Fondu garde le bloc calé en bas. Dans le gabarit Souvenir, une ligne d'en-tête seule occupe toute la largeur, et les noms sans dédicace s'affichent seuls, sans filet.
@@ -231,9 +263,38 @@ Sont conservés : l'accord aux services tiers, les suspensions de miroirs Overpa
 
 ---
 
+### 4.6. Ambiances et papier
+
+**Ambiances** (en tête de l'onglet Style) : un toucher applique un ensemble assorti de thème, duo de polices, gabarit, repère et papier, en gardant le lieu et les textes. Vignettes rendues avec chaque ambiance ; l'ambiance active est signalée ; « Annuler » revient en arrière.
+
+| Ambiance | Thème | Polices (titre / texte) | Gabarit | Repère | Papier |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Mariage doré | Galerie Or & Noir | Italiana / Calligraphie | Cœur | Alliances | Lisse |
+| Naissance sauge | Sauge | Fraunces | Arche | Petits pieds | Grain |
+| Carnet de voyage | Terracotta | Bebas / Jost | Voyage | Épingle | Kraft |
+| Plan d'architecte | Plan d'architecte | Mono | Cadre | Point | Lisse |
+| Nuit en ville | Néon | Bebas / Jost | Fondu | Anneau | Lisse |
+| Bord de mer | Marine | Italiana / Jost | Polaroid | Ancre | Toile |
+| Encre de Chine | Encre de Chine | Bodoni / Garamond | Médaillon | Cœur géométrique | Aquarelle |
+| Souvenir | Souvenir | Playfair | Souvenir | Cœur | Lisse |
+
+**Papier** : Lisse, Grain, Aquarelle, Kraft, Toile. Les textures sont générées par le code (bruit pseudo-aléatoire à graine fixe), sans image. La base mesure 1 240 px de large et s'agrandit à la taille voulue : le grain est le même à l'aperçu et à l'export. Fusion `multiply` sur papier clair, `screen` sur papier sombre (texture inversée et désaturée). Dans l'aperçu, un calque `#cvTex` posé au-dessus de l'affiche reproduit la fusion avec `mix-blend-mode` ; à l'export, elle est appliquée au canvas final.
+
+### 4.7. Deux lieux
+
+Deux cartes sur la même affiche (par exemple « Notre rencontre » et « Notre mariage »), chacune avec son cadrage et son repère, une légende éditable et ses coordonnées. Une seule carte est interactive à la fois ; l'autre est une **image figée** rendue hors écran (MapLibre ou vecteurs) et redessinée quand ses réglages changent. Le choix du lieu édité se fait dans l'onglet Lieu ou en touchant l'autre carte de l'affiche. L'export rend les deux vues à pleine résolution. Avec Overpass ou Fichier, la seconde vue n'affiche que les données déjà chargées : pour deux lieux éloignés, le moteur Vectoriel GPU est conseillé. Ce gabarit n'affiche qu'un repère par carte (pas de lieux supplémentaires ni d'itinéraire).
+
+### 4.8. Carte du ciel
+
+Gabarit **Ciel** : disque des étoiles visibles au-dessus du repère principal à la date et à l'heure choisies, puis la carte en bandeau et le texte. Données : `lib/sky/sky-data.js` (2 851 étoiles de magnitude ≤ 5,5 et 150 tracés de constellations, époque J2000), issues de d3-celestial (licence BSD-3, compilées depuis XHIP et l'UAI), chargées seulement quand le gabarit est utilisé.
+* **Calcul** : temps sidéral moyen de Greenwich, angle horaire, puis hauteur et azimut de chaque étoile ; la précession depuis J2000 est négligée (moins d'un demi-degré sur des décennies). Contrôle : l'étoile Polaire est à une hauteur égale à la latitude, à 1° près.
+* **Projection** : stéréographique centrée sur le zénith, l'horizon au bord du disque, nord en haut et est à gauche (vue du ciel en levant les yeux), points cardinaux autour.
+* **Réglages** : date et heure locales du lieu (proposées depuis la date du texte, à 22 h), fuseau horaire (celui de l'appareil à cette date, ou de UTC−12 à UTC+14 par demi-heure), constellations, grille.
+* **Couleurs** : sur papier clair, disque à l'encre du texte et étoiles couleur papier ; sur papier sombre, disque couleur terre et étoiles couleur texte. L'attribution mentionne la source des données du ciel.
+
 ## 5. Export haute définition
 
-* **Format** : 2480 × 3508 px (A4 à 300 DPI ; 212 DPI en A3 par mise à l'échelle chez l'imprimeur). L'export est un **recalcul intégral** à pleine résolution, jamais un agrandissement de l'aperçu.
+* **Format** : 2480 × 3508 px en portrait, 3508 × 2480 px en paysage (A4 à 300 DPI ; 212 DPI en A3 par mise à l'échelle chez l'imprimeur). L'export est un **recalcul intégral** à pleine résolution, jamais un agrandissement de l'aperçu.
 * **Étapes** :
   1. Attente du chargement des polices (`document.fonts.load`), puis contrôle par `document.fonts.check` : si une variante manque, l'export se fait avec une police de secours et le signale dans la fenêtre de résultat.
   2. Création d'un canvas 2480 × 3508 et dessin de la couche basse.
@@ -245,6 +306,10 @@ Sont conservés : l'accord aux services tiers, les suspensions de miroirs Overpa
 * **Mémoire** : 8,7 Mpx, sous la limite de 16,7 Mpx de Safari iOS ; le canvas WebGL (environ 2160 × 2500 px) reste sous la limite de 4096 px.
 
 ---
+
+* **Composition commune** (`composePoster`) : la même fonction produit l'export, l'aperçu au mur et les vues des deux lieux ; elle rend chaque vue (une ou deux), puis l'affiche et enfin le papier.
+* **Aperçu au mur** (onglet Style) : l'affiche rendue à 1 100 px environ, dans un cadre (chêne, noir, blanc, doré) avec ou sans passe-partout, sur un mur au choix (blanc cassé, sauge, terracotta, béton, nuit), avec une ombre portée. L'image se télécharge en PNG.
+* **Partage par lien** (onglet Style) : l'état de l'affiche, sans le moteur cartographique, est compressé (`CompressionStream` deflate) dans l'ancre de l'adresse (`#a=…`). Rien n'est envoyé à un serveur ; le lien contient le lieu et les textes, ce que l'interface rappelle. À l'ouverture, l'affiche est reconstituée, l'ancre effacée, et « Annuler » retrouve l'affiche précédente. Un itinéraire de plus de 400 points n'est pas inclus, et c'est signalé.
 
 ## 6. Interface (mobile en priorité)
 
@@ -320,7 +385,8 @@ city-map-studio/
 ├── index.html              # application complète (HTML + CSS + JS, sans build)
 ├── lib/                    # dépendances embarquées
 │   ├── maplibre-gl.js/.css # MapLibre GL JS 4.7.1 (licence BSD-3)
-│   └── fonts/              # polices woff2 + fonts.css + OFL.txt par famille
+│   ├── fonts/              # polices woff2 + fonts.css + OFL.txt par famille (11 familles)
+│   └── sky/                # données du ciel (sky-data.js) + licence BSD-3 de d3-celestial
 ├── .nojekyll               # GitHub Pages : fichiers servis tels quels
 ├── LICENSE                 # MIT (code de l'application) + rappel des licences tierces
 ├── README.md
@@ -340,7 +406,11 @@ city-map-studio/
     ├── texts.py            # lignes de texte optionnelles, dans les 4 gabarits
     ├── fonts.py            # polices auto-hébergées, file:// et HTTP, aucun appel tiers
     ├── consent.py          # accord préalable : aucune requête tierce sans accord
-    └── reset.py            # réinitialisation des réglages par défaut
+    ├── reset.py            # réinitialisation des réglages par défaut
+    ├── textsize.py         # taille des textes de l'affiche
+    ├── mobile.py           # panneau coulissant, mode Cadrer, paysage, A− / A+
+    ├── ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
+    └── design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel
 ```
 
 ### 8.2. Sections de `index.html`
@@ -382,6 +452,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Polices | Les 5 familles (normale et italique) se chargent depuis `lib/fonts/`, y compris hors ligne et en `file://` ; elles s'appliquent à l'aperçu et à l'export ; le choix est conservé ; aucune requête vers Google. |
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
 | Taille des textes | Chaque curseur (par ligne et global) modifie l'affiche dans les 4 gabarits ; retour à 100 % = rendu d'origine ; réduction automatique signalée ; tailles persistées et remises à 100 % par « Réinitialiser » ; export 2480 × 3508. |
+| Évolutions graphiques | 11 polices et duos, police manuscrite limitée à la dédicace et aux noms ; 15 thèmes, filtres, contraste ; gabarits distincts, cœur découpé dans l'aperçu ; ambiances et modèles annulables ; 10 repères distincts ; 3 lieux numérotés et reliés ; 4 textures ; aperçu au mur téléchargeable ; lien reconstituant l'affiche ; paysage 3508 × 2480 ; deux vues conservées ; GPX simplifié et cadré ; Polaire à la hauteur de la latitude ; exports aux bonnes dimensions. Gabarits d'origine identiques au pixel près. |
 | Lisibilité et confort | Onglets dans l'ordre du parcours, rôles ARIA et navigation au clavier ; « Étape suivante » ; « Avancé » et couleurs repliés, « Avancé » rouvert d'office et mémorisé ; cibles tactiles ; annuler / rétablir (boutons, clavier, après réinitialisation, moteur exclu) ; calendrier (« 1er », lecture inverse) ; aperçu des polices ; « Ma position » ; recherche unique, sans requête pendant la frappe. |
 | Mobile | iPhone 13 (390 × 664) : au moins 180 px de réglages à mi-hauteur ; poignée (toucher, glisser) ; dépliage à la saisie ; carte verrouillée hors du mode Cadrer ; placement du repère ; bulle au-dessus du panneau ; A− / A+ persistant, sans défilement horizontal ; paysage en deux colonnes ; ordinateur inchangé. |
 | Saisie du repère | Formats du § 3.4 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
@@ -409,6 +480,7 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 | Saisie des coordonnées du repère | ✅ | `tests/coords.py` |
 | Lignes de texte optionnelles | ✅ | `tests/texts.py` |
 | Taille des textes de l'affiche | ✅ | `tests/textsize.py` |
+| Polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel | ✅ | `tests/design.py` (moteur Fichier, sans réseau) ; ⏳ Deux lieux et aperçu au mur avec les vraies tuiles OpenFreeMap. |
 | Parcours guidé, accessibilité, historique, date, géolocalisation, recherche | ✅ | `tests/ux.py` (émulation) ; ⏳ géolocalisation et calendrier natif à valider sur iOS et Android. |
 | Panneau coulissant, mode Cadrer, paysage, A− / A+ | ✅ | `tests/mobile.py` (émulation) ; ⏳ gestes à valider sur iOS Safari et Chrome Android. |
 | MapLibre avec les vraies tuiles OpenFreeMap | ⏳ à valider | Sur l'URL GitHub Pages, dans un vrai navigateur ([#5](https://github.com/thiryyan/city-map-studio/issues/5)). |
