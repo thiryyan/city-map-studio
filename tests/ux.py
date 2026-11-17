@@ -150,8 +150,8 @@ async def main():
         check(box == [True, True], 'bouton calendrier ≥ 44 px, entièrement couvert par le champ date natif (iOS)')
 
         # ---------- Polices ----------
-        smp = await page.evaluate("[...document.querySelectorAll('#fontSeg .smp')].map(e=>e.textContent)")
-        check(len(smp) == 5 and all(t == 'Tours' for t in smp), f'aperçu des polices avec le titre saisi {smp}')
+        smp = await page.evaluate("[...document.querySelectorAll('#fontTitleSeg button:not([data-v=\\'\\']) .smp')].map(e=>e.textContent)")
+        check(len(smp) == 11 and all(t == 'Tours' for t in smp), f'aperçu des polices du titre avec le titre saisi {smp}')
         await page.click('#fontSeg [data-v=garamond]')
         check(await page.evaluate("[__cms.st.font, document.querySelector('#fontSeg [data-v=garamond]').getAttribute('aria-checked')]") == ['garamond', 'true'], 'police choisie (radio ARIA)')
 

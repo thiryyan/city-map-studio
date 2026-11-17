@@ -13,7 +13,7 @@ T = pathlib.Path(__file__).resolve().parent
 ROOT = T.parent
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'overpass.json').read()
-FAMILIES = ['serif', 'sans', 'mono', 'garamond', 'deco']
+FAMILIES = ['serif', 'sans', 'mono', 'garamond', 'deco', 'bodoni', 'italiana', 'fraunces', 'jost', 'bebas', 'vibes']
 
 class Q(SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -34,10 +34,11 @@ async def check(b, url, label):
     await page.click('#tabs [data-tab=textes]')
     for f in FAMILIES:
         await page.click(f'#fontSeg [data-v={f}]'); await page.wait_for_timeout(300)
-        res = await page.evaluate("""async f=>{ const L=({serif:'Playfair Display',sans:'Montserrat',mono:'Space Mono',garamond:'Cormorant Garamond',deco:'Josefin Sans'})[f];
+        # variantes attendues : celles que déclare FONTS[f].load (certaines familles n'ont pas d'italique)
+        res = await page.evaluate("""async f=>{ const F=__cms.FONTS[f], L=F.fam.split(',')[0].replace(/["']/g,'').trim();
             const faces=[...document.fonts].filter(x=>x.family.replace(/["']/g,'')===L && x.status==='loaded').map(x=>x.style+' '+x.weight);
-            return {faces:[...new Set(faces)].sort()} }""", f)
-        ok = any(x.startswith('normal') for x in res['faces']) and any(x.startswith('italic') for x in res['faces'])
+            return {faces:[...new Set(faces)].sort(), italic:F.load.some(l=>l.startsWith('italic'))} }""", f)
+        ok = any(x.startswith('normal') for x in res['faces']) and (not res['italic'] or any(x.startswith('italic') for x in res['faces']))
         print(f'  {label} {f:9}', '✓' if ok else '✗', res['faces'])
         if not ok: fails.append(f'{label}:{f}')
     async with page.expect_download() as dl: await page.click('#bExport')

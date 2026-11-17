@@ -112,6 +112,10 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
 #poster{position:relative;box-shadow:0 18px 50px #000a,0 2px 6px #0008;background:#fff;flex:none}
 #poster canvas{position:absolute;left:0;top:0;width:100%;height:100%}
 #cvOver{pointer-events:none;z-index:3}
+#cvTex{pointer-events:none;z-index:3}
+#poster{isolation:isolate}
+.placeSwitch{z-index:5;align-items:center}
+.placeSwitch span{margin:0}
 #cvUnder{z-index:1}
 #slot{position:absolute;z-index:2;overflow:hidden}
 #slot.circle{clip-path:circle(50% at 50% 50%)}
@@ -218,6 +222,20 @@ details.adv>h3:first-of-type{margin-top:6px}
 .hist{flex:none;display:flex;gap:2px}
 .hist button{background:none;border:1px solid var(--line);border-radius:8px;min-width:38px;min-height:36px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .hist button[disabled]{opacity:.3;cursor:default}
+/* Évolutions graphiques : duos, ambiances, lieux, aperçu au mur */
+.fcats{margin:-2px 0 4px}.fcats .chip{font-size:.8125rem}
+.duos button{min-width:132px}.duos .t{font-size:1.2rem;line-height:1.2}.duos .d{font-size:1rem;color:var(--mut);line-height:1.3;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.ambs button{min-width:96px;padding:6px 6px 8px}.ambs canvas{display:block;width:84px;height:auto;border-radius:3px;box-shadow:0 1px 3px #0006}
+.ambs button.land canvas{width:110px}
+.prow{display:grid;grid-template-columns:28px 1fr auto auto;gap:6px;align-items:center;margin:6px 0}.prow b{width:26px;height:26px;border-radius:50%;background:var(--acc);color:#141414;display:flex;align-items:center;justify-content:center;font-size:.8125rem}
+.prow input{min-width:0}
+.dt,.sel{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;color:var(--txt);font-size:max(16px,1rem);color-scheme:dark}
+#shareBox input{width:100%;margin-top:8px}
+#mockup{position:fixed;inset:0;background:#000c;z-index:92;display:none;align-items:center;justify-content:center;padding:14px}
+#mockup.show{display:flex}
+#mockup .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;max-width:560px;width:100%;max-height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+#mockCv{display:block;max-width:100%;max-height:56dvh;width:auto;height:auto;align-self:center;border-radius:8px}
+#mockup .row .btn{flex:1}
 /* Taille des lignes de texte de l'affiche */
 .tsz{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:2px 0 0}
 .tsz span{color:var(--mut);font-size:.8125rem}
@@ -236,6 +254,8 @@ details.adv>h3:first-of-type{margin-top:6px}
       <canvas id="cvUnder"></canvas>
       <div id="slot"><div id="mlMap"></div><canvas id="opCanvas"></canvas></div>
       <canvas id="cvOver"></canvas>
+      <canvas id="cvTex" hidden></canvas>
+      <button class="shield placeSwitch" id="placeSwitch" type="button" hidden><span>Modifier le lieu 2</span></button>
       <button class="shield" id="shield" type="button" aria-label="Cadrer la carte" hidden><span><svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16M2 10h16M10 2l-3 3M10 2l3 3M10 18l-3-3M10 18l3-3M2 10l3-3M2 10l3 3M18 10l-3-3M18 10l-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Toucher pour cadrer</span></button>
     </div>
     <div class="fab">
@@ -265,6 +285,11 @@ details.adv>h3:first-of-type{margin-top:6px}
       <!-- LIEU -->
       <div class="tab on" id="tab-lieu" role="tabpanel" aria-labelledby="tb-lieu">
         <div class="warn" id="envWarn" hidden></div>
+        <div id="placeBox" hidden>
+          <h3>Lieu édité</h3>
+          <div class="seg" id="placeSeg"><button data-v="0" type="button">Lieu 1</button><button data-v="1" type="button">Lieu 2</button></div>
+          <p class="hint">Gabarit « Deux lieux » : la recherche, le repère et le cadrage s'appliquent au lieu choisi. Touchez aussi l'autre carte de l'affiche pour passer d'un lieu à l'autre.</p>
+        </div>
         <h3>Rechercher une adresse ou une ville</h3>
         <form class="row" id="searchForm" autocomplete="off">
           <input class="grow" type="search" id="q" placeholder="Ex. : Château de Blois" enterkeyhint="search">
@@ -315,12 +340,31 @@ details.adv>h3:first-of-type{margin-top:6px}
       </div>
       <!-- STYLE -->
       <div class="tab" id="tab-style" role="tabpanel" aria-labelledby="tb-style">
+        <h3>Ambiances</h3>
+        <p class="hint">Un toucher pour un ensemble assorti (thème, polices, gabarit, repère, papier) ; tout reste modifiable ensuite.</p>
+        <div class="fonts ambs" id="ambiances"></div>
+        <h3>Orientation</h3>
+        <div class="seg" id="orientSeg"><button data-v="portrait" type="button">Portrait</button><button data-v="landscape" type="button">Paysage</button></div>
         <h3>Gabarit</h3>
         <div class="cards" id="layouts"></div>
         <div class="slider"><span>Marge (passe-partout)</span><output id="oMargin"></output><input type="range" data-k="margin" min="3" max="12" step="0.5"></div>
-        <label class="tog" id="ringTog">Anneau du médaillon<input type="checkbox" data-k="ring"></label>
+        <label class="tog" id="ringTog">Contour de la forme<input type="checkbox" data-k="ring"></label>
+        <div id="skyBox" hidden>
+          <h3>Ciel du jour J</h3>
+          <p class="hint">Les étoiles visibles au-dessus du repère, à la date et à l'heure choisies.</p>
+          <label class="f" for="skyWhen">Date et heure (heure locale du lieu)</label>
+          <input type="datetime-local" id="skyWhen" class="dt">
+          <label class="f" for="skyTz">Fuseau horaire du lieu</label>
+          <select id="skyTz" class="sel"></select>
+          <label class="tog">Constellations<input type="checkbox" data-k="sky.lines"></label>
+          <label class="tog">Grille de repérage<input type="checkbox" data-k="sky.grid"></label>
+        </div>
         <h3>Thème</h3>
+        <div class="chips fcats" id="themeCats" role="group" aria-label="Catégories de thèmes"></div>
         <div class="themes" id="themes"></div>
+        <p class="fitnote" id="contrastWarn" aria-live="polite"></p>
+        <h3>Papier</h3>
+        <div class="chips" id="textures"></div>
         <h3>Touche d'or</h3>
         <div class="chips">
           <button class="chip" data-gold="water">Fleuve</button>
@@ -340,6 +384,9 @@ details.adv>h3:first-of-type{margin-top:6px}
           <div class="colors" id="colors"></div>
         </details>
         <label class="tog" style="margin-top:8px">Mention © OpenStreetMap sur l'affiche<input type="checkbox" data-k="attribution"></label>
+        <h3>Avant d'imprimer</h3>
+        <div class="row"><button class="btn grow" type="button" id="bMockup">Voir l'affiche au mur</button><button class="btn grow" type="button" id="bShare">Copier le lien de l'affiche</button></div>
+        <div id="shareBox" hidden><input type="text" id="shareOut" readonly aria-label="Lien de l'affiche"><p class="hint">Le lien contient le lieu, les textes et les réglages, encodés dans l'adresse : rien n'est envoyé à un serveur. Partagez-le seulement avec des personnes de confiance.</p></div>
         <button class="btn next pri2" type="button" id="bNextExport">Tout est prêt : exporter l'affiche<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v9M4 7l4 4 4-4M3 14h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- REPERE -->
@@ -356,18 +403,37 @@ details.adv>h3:first-of-type{margin-top:6px}
           <div class="chips grow" id="mColors"></div>
           <input type="color" id="mColor" aria-label="Couleur personnalisée du repère" style="width:48px;height:44px;border:1px solid var(--line);border-radius:8px;background:none;padding:0">
         </div>
+        <h3>Plusieurs lieux</h3>
+        <p class="hint">Jusqu'à trois lieux sur la même carte : rencontre, mariage, maison…</p>
+        <p class="hint" id="placesHint" hidden>Le gabarit « Deux lieux » n'affiche qu'un repère par carte.</p>
+        <div id="mList" class="plist"></div>
+        <button class="btn" type="button" id="bAddPlace" style="width:100%;margin-top:6px">+ Ajouter un lieu</button>
+        <label class="tog">Numéroter les lieux (légende sous la carte)<input type="checkbox" data-k="numbered"></label>
+        <label class="tog">Relier les lieux par un trait<input type="checkbox" data-k="linkMarkers"></label>
+        <h3>Itinéraire</h3>
+        <label class="btn" style="width:100%">Importer un tracé GPX<input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden></label>
+        <div id="routeBox" hidden>
+          <p class="hint" id="routeInfo"></p>
+          <label class="tog">Afficher l'itinéraire<input type="checkbox" id="routeShow"></label>
+          <div class="seg" id="routeColor" style="margin-top:8px"><button data-v="marker" type="button">Couleur du repère</button><button data-v="roadMajor" type="button">Rues</button><button data-v="frame" type="button">Filets</button></div>
+          <div class="slider"><span>Épaisseur</span><output id="oRouteW"></output><input type="range" id="routeW" min="0.5" max="3" step="0.25"></div>
+          <label class="tog">Pointillés<input type="checkbox" id="routeDash"></label>
+          <div class="row" style="margin-top:8px"><button class="btn grow" type="button" id="bFitRoute">Cadrer sur l'itinéraire</button><button class="btn" type="button" id="bDelRoute">Retirer</button></div>
+        </div>
         <button class="btn next" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- TEXTES -->
       <div class="tab" id="tab-textes" role="tabpanel" aria-labelledby="tb-textes">
-        <h3>Police</h3>
-        <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police">
-          <button type="button" data-v="serif" role="radio" aria-checked="false"><span class="smp" style="font-family:'Playfair Display',serif;">Blois</span><small>Serif</small></button>
-          <button type="button" data-v="sans" role="radio" aria-checked="false"><span class="smp" style="font-family:Montserrat,sans-serif;">Blois</span><small>Sans</small></button>
-          <button type="button" data-v="mono" role="radio" aria-checked="false"><span class="smp" style="font-family:'Space Mono',monospace;">Blois</span><small>Mono</small></button>
-          <button type="button" data-v="garamond" role="radio" aria-checked="false"><span class="smp" style="font-family:'Cormorant Garamond',serif;font-size:1.12em;font-weight:500">Blois</span><small>Garamond</small></button>
-          <button type="button" data-v="deco" role="radio" aria-checked="false"><span class="smp" style="font-family:'Josefin Sans',sans-serif;">Blois</span><small>Art déco</small></button>
-        </div>
+        <h3>Modèles de texte</h3>
+        <div class="chips" id="occasions"></div>
+        <h3>Duos typographiques</h3>
+        <div class="fonts duos" id="duos" role="radiogroup" aria-label="Duo de polices"></div>
+        <div class="chips fcats" id="fontCats" role="group" aria-label="Catégories de polices"></div>
+        <h3>Police du titre</h3>
+        <div class="fonts" id="fontTitleSeg" role="radiogroup" aria-label="Police du titre"></div>
+        <h3>Police du texte</h3>
+        <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police du texte"></div>
+        <p class="hint">Une police manuscrite n'est jamais mise en capitales : réservez-la à la dédicace et aux noms.</p>
         <h3>Taille des textes</h3>
         <div class="slider"><span>Tous les textes</span><output id="oTsAll"></output><input type="range" data-k="textScaleAll" min="70" max="140" step="5" aria-label="Taille de tous les textes"></div>
         <div class="row" style="justify-content:flex-end;margin-top:-6px"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>
@@ -385,6 +451,11 @@ details.adv>h3:first-of-type{margin-top:6px}
         <label class="f show"><input type="checkbox" data-k="show.date" aria-label="Afficher la date">Date</label>
         <div class="row"><input class="grow" type="text" data-k="texts.date" aria-label="Date"><label class="btn datebtn" title="Choisir dans le calendrier"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 8.5h14M7 2.5v4M13 2.5v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span class="xl2">Calendrier</span><input type="date" id="dateIn" aria-label="Choisir la date dans le calendrier"></label></div>
         <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.date" min="60" max="150" step="5" aria-label="Taille de la date"><output id="oTs-date"></output></div>
+        <div id="labelsBox" hidden>
+          <h3>Deux lieux</h3>
+          <label class="f">Légende du lieu 1</label><input type="text" data-k="texts.label1" aria-label="Légende du lieu 1">
+          <label class="f">Légende du lieu 2</label><input type="text" data-k="texts.label2" aria-label="Légende du lieu 2">
+        </div>
         <h3>Coordonnées</h3>
         <div class="seg" id="coordSeg"><button data-v="dec">Décimal</button><button data-v="dms">Degrés ° ′ ″</button></div>
         <label class="f show"><input type="checkbox" data-k="show.coords" aria-label="Afficher les coordonnées">Texte affiché (vide = automatique depuis le repère)</label>
@@ -408,6 +479,14 @@ details.adv>h3:first-of-type{margin-top:6px}
 </div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="busy"><div class="spin"></div><div id="busyTxt">Génération de l'affiche…</div></div>
+<div id="mockup" role="dialog" aria-modal="true" aria-label="Aperçu au mur"><div class="box">
+  <canvas id="mockCv"></canvas>
+  <div class="chips" id="mockWalls" aria-label="Couleur du mur"></div>
+  <div class="chips" id="mockFrames" aria-label="Cadre"></div>
+  <label class="tog">Passe-partout<input type="checkbox" id="mockMat"></label>
+  <div class="row"><button class="btn pri" type="button" id="mockDl">Télécharger l'aperçu</button></div>
+  <button class="btn" type="button" id="mockClose">Fermer</button>
+</div></div>
 <div id="result"><div class="box">
   <img id="resImg" alt="Aperçu de l'affiche exportée">
   <div class="hint" id="resInfo"></div>
@@ -425,7 +504,7 @@ details.adv>h3:first-of-type{margin-top:6px}
    ========================================================================= */
 
 // ---------- Constantes ----------
-const EXPORT_W = 2480, EXPORT_H = 3508, RATIO = EXPORT_H / EXPORT_W;
+const EXPORT_W = 2480, EXPORT_H = 3508;   // A4 à 300 DPI, en portrait ; inversé en paysage (posterDims)
 const REF_W = 800;               // largeur de référence du cadre carte (zoom de référence)
 const MARKER_BASE = 0.055;       // 100 % = 5,5 % de la largeur de l'affiche
 const GOLD = '#C5A059';
@@ -447,22 +526,75 @@ const FONTS = {
   // Géométrique Art déco : capitales élancées, esprit affiche de voyage
   deco:{fam:'"Josefin Sans", "Futura", "Century Gothic", sans-serif', scale:1.04, load:['400 20px "Josefin Sans"','italic 400 20px "Josefin Sans"']},
   sans:{fam:'Montserrat, "Helvetica Neue", Arial, sans-serif', load:['400 20px Montserrat','italic 400 20px Montserrat']},
-  mono:{fam:'"Space Mono", "Courier New", monospace', load:['400 20px "Space Mono"','italic 400 20px "Space Mono"']}
+  mono:{fam:'"Space Mono", "Courier New", monospace', load:['400 20px "Space Mono"','italic 400 20px "Space Mono"']},
+  // Didone très contrastée : titres « magazine », luxe
+  bodoni:{fam:'"Bodoni Moda", Didot, "Times New Roman", serif', load:['400 20px "Bodoni Moda"','italic 400 20px "Bodoni Moda"']},
+  // Capitales fines et élancées (pas d'italique : penchée par le navigateur si besoin)
+  italiana:{fam:'Italiana, Didot, Georgia, serif', scale:1.05, load:['400 20px Italiana']},
+  // Serif douce et chaleureuse
+  fraunces:{fam:'Fraunces, Georgia, serif', load:['400 20px Fraunces','italic 400 20px Fraunces']},
+  // Géométrique façon Futura
+  jost:{fam:'Jost, Futura, "Century Gothic", sans-serif', load:['400 20px Jost','italic 400 20px Jost']},
+  // Linéale condensée, capitales seules : affiche de voyage
+  bebas:{fam:'"Bebas Neue", Oswald, Impact, sans-serif', scale:1.18, load:['400 20px "Bebas Neue"']},
+  // Calligraphie anglaise : dédicace et noms ; jamais en capitales ni espacée (script:true), petit œil compensé
+  vibes:{fam:'"Great Vibes", "Brush Script MT", cursive', scale:1.4, script:true, load:['400 20px "Great Vibes"']}
 };
+// Cartes de police : [clé, nom, catégorie]
+const FONT_LIST=[['serif','Playfair','classique'],['garamond','Garamond','classique'],['bodoni','Bodoni','classique'],['italiana','Italiana','classique'],['fraunces','Fraunces','classique'],
+  ['sans','Montserrat','moderne'],['jost','Jost','moderne'],['mono','Mono','moderne'],['deco','Art déco','affiche'],['bebas','Bebas','affiche'],['vibes','Calligraphie','manuscrite']];
+const FONT_CATS=[['','Toutes'],['classique','Classiques'],['moderne','Modernes'],['manuscrite','Manuscrites'],['affiche','Affiche']];
+// Duos typographiques : [clé, nom, police du titre, police du texte]
+const DUOS=[['origine','Origine','serif','serif'],['mariage','Mariage','italiana','vibes'],['voyage','Voyage','bebas','jost'],['classique','Classique','bodoni','garamond'],
+  ['moderne','Moderne','jost','jost'],['chaleureux','Chaleureux','fraunces','sans']];
 
 const COLOR_LABELS = {paper:'Papier',land:'Terre',water:'Eau',park:'Parcs',building:'Bâtiments',roadMajor:'Rues principales',roadMinor:'Rues secondaires',path:'Chemins',rail:'Voies ferrées',text:'Texte',frame:'Filets',marker:'Repère'};
 const THEMES = {
-  souvenir:{name:'Souvenir',c:{paper:'#FFFFFF',land:'#F2F2F2',water:'#C9D9DE',park:'#E2E2E2',building:'#D8D8D8',roadMajor:'#111111',roadMinor:'#4A4A4A',path:'#8E8E8E',rail:'#9A9A9A',text:'#111111',frame:'#111111',marker:'#D0312D'}},
-  galerie:{name:'Galerie Or & Noir',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#E9DDBF',park:'#F1F1F1',building:'#ECECEC',roadMajor:'#18181B',roadMinor:'#3F3F46',path:'#8A8A93',rail:'#A1A1AA',text:'#18181B',frame:'#C5A059',marker:'#C5A059'}},
-  onyx:{name:'Prestige Onyx & Or',c:{paper:'#0F1115',land:'#0F1115',water:'#2A2415',park:'#16171C',building:'#1A1B21',roadMajor:'#D4AF37',roadMinor:'#8C7A3E',path:'#5E5432',rail:'#6B5E33',text:'#F3E5AB',frame:'#D4AF37',marker:'#F3E5AB'}},
-  blanc:{name:'Blanc minimaliste',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#E5E7EB',park:'#F3F4F6',building:'#EEEEEE',roadMajor:'#111111',roadMinor:'#3A3A3A',path:'#9CA3AF',rail:'#9CA3AF',text:'#111111',frame:'#111111',marker:'#111111'}},
-  creme:{name:'Crème & Encre',c:{paper:'#F4EFE6',land:'#F4EFE6',water:'#D6E0E2',park:'#E9E3D6',building:'#E6DFD2',roadMajor:'#2C2A29',roadMinor:'#57534E',path:'#A8A29E',rail:'#A8A29E',text:'#2C2A29',frame:'#2C2A29',marker:'#C5A059'}},
-  nuit:{name:'Nuit boréale',c:{paper:'#0B192C',land:'#0B192C',water:'#1E3E62',park:'#10213A',building:'#132640',roadMajor:'#E2E8F0',roadMinor:'#94A3B8',path:'#475569',rail:'#64748B',text:'#E2E8F0',frame:'#D4AF37',marker:'#D4AF37'}},
-  sepia:{name:'Sépia vintage',c:{paper:'#EFE6D5',land:'#EFE6D5',water:'#DFD2B8',park:'#E6DCC6',building:'#E2D6BF',roadMajor:'#433422',roadMinor:'#6B5A43',path:'#A8957A',rail:'#A8957A',text:'#433422',frame:'#433422',marker:'#8B2635'}}
+  souvenir:{cat:'clair',name:'Souvenir',c:{paper:'#FFFFFF',land:'#F2F2F2',water:'#C9D9DE',park:'#E2E2E2',building:'#D8D8D8',roadMajor:'#111111',roadMinor:'#4A4A4A',path:'#8E8E8E',rail:'#9A9A9A',text:'#111111',frame:'#111111',marker:'#D0312D'}},
+  galerie:{cat:'clair',name:'Galerie Or & Noir',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#E9DDBF',park:'#F1F1F1',building:'#ECECEC',roadMajor:'#18181B',roadMinor:'#3F3F46',path:'#8A8A93',rail:'#A1A1AA',text:'#18181B',frame:'#C5A059',marker:'#C5A059'}},
+  onyx:{cat:'sombre',name:'Prestige Onyx & Or',c:{paper:'#0F1115',land:'#0F1115',water:'#2A2415',park:'#16171C',building:'#1A1B21',roadMajor:'#D4AF37',roadMinor:'#8C7A3E',path:'#5E5432',rail:'#6B5E33',text:'#F3E5AB',frame:'#D4AF37',marker:'#F3E5AB'}},
+  blanc:{cat:'clair',name:'Blanc minimaliste',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#E5E7EB',park:'#F3F4F6',building:'#EEEEEE',roadMajor:'#111111',roadMinor:'#3A3A3A',path:'#9CA3AF',rail:'#9CA3AF',text:'#111111',frame:'#111111',marker:'#111111'}},
+  creme:{cat:'clair',name:'Crème & Encre',c:{paper:'#F4EFE6',land:'#F4EFE6',water:'#D6E0E2',park:'#E9E3D6',building:'#E6DFD2',roadMajor:'#2C2A29',roadMinor:'#57534E',path:'#A8A29E',rail:'#A8A29E',text:'#2C2A29',frame:'#2C2A29',marker:'#C5A059'}},
+  nuit:{cat:'sombre',name:'Nuit boréale',c:{paper:'#0B192C',land:'#0B192C',water:'#1E3E62',park:'#10213A',building:'#132640',roadMajor:'#E2E8F0',roadMinor:'#94A3B8',path:'#475569',rail:'#64748B',text:'#E2E8F0',frame:'#D4AF37',marker:'#D4AF37'}},
+  sepia:{cat:'couleur',name:'Sépia vintage',c:{paper:'#EFE6D5',land:'#EFE6D5',water:'#DFD2B8',park:'#E6DCC6',building:'#E2D6BF',roadMajor:'#433422',roadMinor:'#6B5A43',path:'#A8957A',rail:'#A8957A',text:'#433422',frame:'#433422',marker:'#8B2635'}}
 };
 
-const LAYOUTS = [['souvenir','Souvenir'],['classic','Cadre'],['fade','Fondu'],['medallion','Médaillon']];
-const MARKERS = [['heartGeo','Cœur géo.'],['dot','Point'],['heart','Cœur'],['ring','Anneau'],['pin','Épingle']];
+Object.assign(THEMES,{
+  sauge:{cat:'couleur',name:'Sauge',c:{paper:'#EEF1EA',land:'#EEF1EA',water:'#C8D6CF',park:'#DCE5D6',building:'#E2E7DE',roadMajor:'#34473B',roadMinor:'#5E6F62',path:'#9AA89C',rail:'#9AA89C',text:'#34473B',frame:'#34473B',marker:'#B5654B'}},
+  terracotta:{cat:'couleur',name:'Terracotta',c:{paper:'#F4EADF',land:'#F4EADF',water:'#B9CFCB',park:'#EADCCB',building:'#EBDDCF',roadMajor:'#7A3B26',roadMinor:'#9C6248',path:'#C4A28E',rail:'#C4A28E',text:'#5A2A1A',frame:'#C96A3D',marker:'#C96A3D'}},
+  rose:{cat:'couleur',name:'Rose poudré',c:{paper:'#F8EEEC',land:'#F8EEEC',water:'#E2D3D6',park:'#F0E2E0',building:'#EFE3E1',roadMajor:'#5E4447',roadMinor:'#846A6D',path:'#B9A3A5',rail:'#B9A3A5',text:'#5E4447',frame:'#C5A059',marker:'#C98A8E'}},
+  automne:{cat:'couleur',name:'Automne',c:{paper:'#F2E6D0',land:'#F2E6D0',water:'#CFD8D3',park:'#E6D9BE',building:'#E8DCC4',roadMajor:'#3B2F2A',roadMinor:'#6A5A50',path:'#A8988A',rail:'#A8988A',text:'#3B2F2A',frame:'#B07A1E',marker:'#C2861F'}},
+  marine:{cat:'clair',name:'Marine',c:{paper:'#F1ECE2',land:'#F1ECE2',water:'#D5DCE4',park:'#E6E2D6',building:'#E7E1D5',roadMajor:'#14284B',roadMinor:'#3E5274',path:'#98A3B4',rail:'#98A3B4',text:'#14284B',frame:'#14284B',marker:'#C0392B'}},
+  encre:{cat:'clair',name:'Encre de Chine',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#111111',park:'#E5E5E5',building:'#EDEDED',roadMajor:'#000000',roadMinor:'#1A1A1A',path:'#6B6B6B',rail:'#6B6B6B',text:'#000000',frame:'#000000',marker:'#D0312D'}},
+  plan:{cat:'sombre',name:'Plan d\'architecte',c:{paper:'#1F3A5F',land:'#1F3A5F',water:'#2C4F7C',park:'#24436B',building:'#284A73',roadMajor:'#E8F1FA',roadMinor:'#A9C1DA',path:'#6F8DB0',rail:'#6F8DB0',text:'#E8F1FA',frame:'#E8F1FA',marker:'#FFD166'}},
+  neon:{cat:'sombre',name:'Néon',c:{paper:'#120B24',land:'#120B24',water:'#1E1440',park:'#170F2E',building:'#1B1236',roadMajor:'#FF4FD8',roadMinor:'#9B5DE5',path:'#4B3A78',rail:'#4B3A78',text:'#F5E9FF',frame:'#36E3FF',marker:'#36E3FF'}}
+});
+const THEME_CATS=[['','Tous'],['clair','Clairs'],['sombre','Sombres'],['couleur','Couleurs']];
+
+const LAYOUTS = [['souvenir','Souvenir'],['classic','Cadre'],['fade','Fondu'],['medallion','Médaillon'],['heart','Cœur'],['arch','Arche'],['travel','Voyage'],['polaroid','Polaroid'],['diptych','Deux lieux'],['sky','Ciel']];
+const MARKERS = [['heartGeo','Cœur géo.'],['dot','Point'],['heart','Cœur'],['ring','Anneau'],['pin','Épingle'],['star','Étoile'],['house','Maison'],['rings','Alliances'],['anchor','Ancre'],['feet','Petits pieds']];
+// Papier : texture générée par le code (aucune image), appliquée à l'aperçu et à l'export
+const TEXTURES=[['none','Lisse'],['grain','Grain'],['aquarelle','Aquarelle'],['kraft','Kraft'],['toile','Toile']];
+// Ambiances : thème + duo de polices + gabarit + repère (+ papier) ; les textes et le lieu sont conservés
+const AMBIANCES=[
+  ['mariage','Mariage doré',{theme:'galerie',fontTitle:'italiana',font:'vibes',layout:'heart',markerStyle:'rings',texture:'none'}],
+  ['naissance','Naissance sauge',{theme:'sauge',fontTitle:'fraunces',font:'fraunces',layout:'arch',markerStyle:'feet',texture:'grain'}],
+  ['voyage','Carnet de voyage',{theme:'terracotta',fontTitle:'bebas',font:'jost',layout:'travel',markerStyle:'pin',texture:'kraft'}],
+  ['plan','Plan d\'architecte',{theme:'plan',fontTitle:'mono',font:'mono',layout:'classic',markerStyle:'dot',texture:'none'}],
+  ['nuit','Nuit en ville',{theme:'neon',fontTitle:'bebas',font:'jost',layout:'fade',markerStyle:'ring',texture:'none'}],
+  ['mer','Bord de mer',{theme:'marine',fontTitle:'italiana',font:'jost',layout:'polaroid',markerStyle:'anchor',texture:'toile'}],
+  ['encre','Encre de Chine',{theme:'encre',fontTitle:'bodoni',font:'garamond',layout:'medallion',markerStyle:'heartGeo',texture:'aquarelle'}],
+  ['souvenir','Souvenir',{theme:'souvenir',fontTitle:'',font:'serif',layout:'souvenir',markerStyle:'heart',texture:'none'}]
+];
+// Modèles de texte par occasion : la dédicace change ; les noms seulement s'ils sont encore ceux de l'exemple
+const OCCASIONS=[
+  ['rencontre','Rencontre','Là où tout a commencé','Camille & Julien'],
+  ['mariage','Mariage','Le plus beau jour de notre vie','Camille & Julien'],
+  ['naissance','Naissance','Bienvenue, petit trésor','Léa'],
+  ['maison','Maison','Bienvenue à la maison','Famille Martin'],
+  ['voyage','Voyage','Le voyage d\'une vie','Camille & Julien'],
+  ['anniversaire','Anniversaire','Dix ans, et toujours ici','Camille & Julien']
+];
 const MARKER_COLORS = [['Or','#C5A059'],['Rouge','#D0312D'],['Noir','#111111'],['Blanc','#FFFFFF']];
 
 const PRESETS = [
@@ -491,12 +623,20 @@ const DEFAULT_STATE = {
   center:{lat:47.5861,lon:1.3359}, zoom:14, marker:{lat:47.5861,lon:1.3359},
   markerStyle:'heart', markerFill:true, markerSize:100, markerOpacity:1,
   coordFormat:'dec', coordsManual:'',
-  texts:{title:'Blois',subtitle:'Val de Loire • France',dedication:'Là où tout a commencé',names:'Camille & Julien',date:'Le 14 juillet 2023'},
+  texts:{title:'Blois',subtitle:'Val de Loire • France',dedication:'Là où tout a commencé',names:'Camille & Julien',date:'Le 14 juillet 2023',label1:'Notre rencontre',label2:'Notre mariage'},
   show:{title:true,subtitle:true,coords:true,dedication:true,names:true,date:true},   // lignes de texte affichées
   textScale:{title:100,subtitle:100,coords:100,dedication:100,names:100,date:100},   // taille de chaque ligne (%)
   textScaleAll:100,                                                                  // taille de tous les textes (%)
   font:'serif', margin:6.5, stroke:1, waterMult:1, ring:true, attribution:true,
-  layers:{parks:true,buildings:true,rail:true}
+  layers:{parks:true,buildings:true,rail:true},
+  fontTitle:'',                 // police du titre ('' : celle du texte)
+  orient:'portrait',            // 'portrait' | 'landscape'
+  texture:'none',               // papier (TEXTURES)
+  markers2:[], markerLabel:'', numbered:false, linkMarkers:false,   // lieux supplémentaires (2 au plus)
+  route:null,                   // itinéraire importé : {name, pts:[[lat,lon],…], show}
+  routeStyle:{color:'marker',width:1,dash:false},
+  active:0, place2:null,        // gabarit « Deux lieux » : vue éditée (0 ou 1) et l'autre vue {center, zoom, marker}
+  sky:{when:'',tz:'auto',lines:true,grid:true}   // gabarit « Ciel » : date et heure locales, fuseau (minutes ou 'auto')
 };
 let st = loadState();
 const ui = {placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
@@ -575,18 +715,20 @@ function opFailText(f,serverSide){
 const opServerSide = fails => fails.some(f=>f.kind!=='nores');
 
 function loadState(){
-  try{
-    const s = JSON.parse(localStorage.getItem(STORE_KEY)||'null');
-    if(s && typeof s==='object'){
-      return {...structuredClone(DEFAULT_STATE),...s,
-        colors:{...DEFAULT_STATE.colors,...(s.colors||{})},
-        texts:{...DEFAULT_STATE.texts,...(s.texts||{})},
-        show:{...DEFAULT_STATE.show,...(s.show||{})},
-        textScale:{...DEFAULT_STATE.textScale,...(s.textScale||{})},
-        layers:{...DEFAULT_STATE.layers,...(s.layers||{})}};
-    }
-  }catch(e){}
+  try{ const s=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(s && typeof s==='object') return normState(s); }catch(e){}
   return structuredClone(DEFAULT_STATE);
+}
+/** Complète un état enregistré ou partagé avec les valeurs par défaut (champs ajoutés depuis) */
+function normState(s){
+  return {...structuredClone(DEFAULT_STATE),...s,
+    colors:{...DEFAULT_STATE.colors,...(s.colors||{})},
+    texts:{...DEFAULT_STATE.texts,...(s.texts||{})},
+    show:{...DEFAULT_STATE.show,...(s.show||{})},
+    textScale:{...DEFAULT_STATE.textScale,...(s.textScale||{})},
+    routeStyle:{...DEFAULT_STATE.routeStyle,...(s.routeStyle||{})},
+    sky:{...DEFAULT_STATE.sky,...(s.sky||{})},
+    markers2:Array.isArray(s.markers2)?s.markers2.slice(0,2):[],
+    layers:{...DEFAULT_STATE.layers,...(s.layers||{})}};
 }
 let saveT=0;
 function saveState(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} if(typeof recordHistory==='function') recordHistory();},300)}
@@ -623,31 +765,107 @@ function dms(v,pos,neg){
   return `${d}° ${String(m).padStart(2,'0')}′ ${s.toFixed(1).padStart(4,'0')}″ ${v>=0?pos:neg}`;
 }
 /** Texte d'une ligne de l'affiche, ou '' si la ligne est masquée */
-function textLine(k){ if(!st.show[k]) return ''; return k==='coords' ? coordText() : (st.texts[k]||'').trim(); }
+function textLine(k){
+  if(k==='legend') return legendText();
+  if(st.show[k]===false) return '';
+  return k==='coords' ? coordText() : (st.texts[k]||'').trim();
+}
+/** Légende des lieux numérotés : « 1 Rencontre · 2 Mariage » */
+function legendText(){
+  const ex=st.markers2||[]; if(!st.numbered || !ex.length) return '';
+  return [st.markerLabel,...ex.map(p=>p.label)].map((l,i)=>(l||'').trim()?`${i+1}  ${l.trim()}`:'').filter(Boolean).join('   ·   ');
+}
+function placeCoordText(mk){ return st.coordFormat==='dms' ? `${dms(mk.lat,'N','S')}, ${dms(mk.lon,'E','W')}` : `${mk.lat.toFixed(4)}, ${mk.lon.toFixed(4)}`; }
 function coordText(){
   if(st.coordsManual.trim()) return st.coordsManual.trim();
   const {lat,lon}=st.marker;
   return st.coordFormat==='dms' ? `${dms(lat,'N','S')}, ${dms(lon,'E','W')}` : `${lat.toFixed(7)}, ${lon.toFixed(7)}`;
 }
 
+/** Dimensions d'export (px) selon l'orientation */
+function posterDims(s=st){ return s.orient==='landscape' ? {W:EXPORT_H,H:EXPORT_W} : {W:EXPORT_W,H:EXPORT_H}; }
+function ratio(s=st){ const d=posterDims(s); return d.H/d.W; }
+
 // ---------- Géométrie des gabarits ----------
+// U : unité de mise en page = petit côté de l'affiche (2480 px à l'export, en portrait comme en paysage).
+// Renvoie : map (cadre de la carte interactive), places (une ou deux vues : {rect, view}), sky (disque du ciel),
+// text (zone du cartouche : cx, maxW, y0, avail, mode 'top' | 'bottom' | 'center').
 function geom(s, W, H){
-  const m = W*s.margin/100;
-  switch(s.layout){
-    case 'classic': return {m, map:{x:m,y:m,w:W-2*m,h:H-2*m-0.36*W}};
-    case 'fade': return {m, map:{x:0,y:0,w:W,h:H*0.80}};
-    case 'medallion': { const d=W-2*m-0.12*W; return {m, map:{x:(W-d)/2,y:m+0.075*W,w:d,h:d,circle:true}}; }
-    default: return {m, map:{x:m,y:m+0.104*W,w:W-2*m,h:H-2*m-0.214*W}};
+  const U=Math.min(W,H), m=U*s.margin/100, land=W>H, lay=s.layout;
+  const below=(r,gap)=>{ const y0=r.y+r.h+gap*U; return {cx:W/2,maxW:W-2*m-0.04*U,y0,avail:H-y0-0.6*m-0.01*U,mode:'top'}; };
+  const g={m,U,land,lay};
+  if(!land){
+    switch(lay){
+      case 'classic': g.map={x:m,y:m,w:W-2*m,h:H-2*m-0.36*U}; g.text=below(g.map,0.014); break;
+      case 'fade': g.map={x:0,y:0,w:W,h:H*0.80}; g.text={cx:W/2,maxW:W-2*m-0.04*U,y0:H-m-0.345*U,avail:0.56*U,mode:'bottom'}; break;
+      case 'medallion': { const d=W-2*m-0.12*U; g.map={x:(W-d)/2,y:m+0.075*U,w:d,h:d,shape:'circle'}; g.text=below(g.map,0.02); break; }
+      case 'heart': { const d=W-2*m-0.10*U; g.map={x:(W-d)/2,y:m+0.05*U,w:d,h:d*0.92,shape:'heart'}; g.text=below(g.map,0.025); break; }
+      case 'arch': g.map={x:m+0.03*U,y:m+0.02*U,w:W-2*m-0.06*U,h:H-2*m-0.40*U,shape:'arch'}; g.text=below(g.map,0.02); break;
+      case 'travel': g.map={x:0,y:0,w:W,h:H-0.42*U}; g.box={x:m,y:g.map.h,w:W-2*m,h:H-g.map.h-m}; break;
+      case 'polaroid': { const p=Math.max(m,0.07*U); g.map={x:p,y:p,w:W-2*p,h:W-2*p}; g.text=below(g.map,0.02); break; }
+      case 'sky': { const d=0.62*U; g.sky={x:(W-d)/2,y:m+0.04*U,w:d,h:d,shape:'circle'};
+        g.map={x:m,y:g.sky.y+d+0.045*U,w:W-2*m,h:0.20*U}; g.text=below(g.map,0.01); break; }
+      case 'diptych': { const hM=(H-2*m-0.10*U-0.15*U-0.20*U)/2;
+        const a={x:m,y:m+0.10*U,w:W-2*m,h:hM}, b={x:m,y:a.y+hM+0.075*U,w:W-2*m,h:hM};
+        g.rects=[a,b]; g.title={y:m+0.07*U}; g.labels=[a.y+hM+0.045*U,b.y+hM+0.045*U]; g.text=below(b,0.07); break; }
+      default: g.map={x:m,y:m+0.104*U,w:W-2*m,h:H-2*m-0.214*U};
+    }
+  } else {
+    // Paysage : la carte (ou le ciel) à gauche, le texte en colonne à droite, centré verticalement
+    const col=x=>{ const cx0=x+0.05*U, cw=W-m-cx0; return {cx:cx0+cw/2,maxW:cw,y0:m,avail:H-2*m,mode:'center',x:cx0,w:cw}; };
+    switch(lay){
+      case 'fade': g.map={x:0,y:0,w:W*0.64,h:H}; break;
+      case 'travel': g.map={x:0,y:0,w:W*0.6,h:H}; break;
+      case 'medallion': case 'heart': { const d=H-2*m-0.06*U; g.map={x:m+0.03*U,y:(H-d*(lay==='heart'?0.92:1))/2,w:d,h:d*(lay==='heart'?0.92:1),shape:lay==='heart'?'heart':'circle'}; break; }
+      case 'arch': g.map={x:m,y:m,w:W*0.6-m,h:H-2*m,shape:'arch'}; break;
+      case 'polaroid': { const p=Math.max(m,0.07*U), d=H-2*p; g.map={x:p,y:p,w:d,h:d}; break; }
+      case 'sky': { const d=H-2*m; g.sky={x:m,y:m,w:d,h:d,shape:'circle'}; const t=col(g.sky.x+d);
+        g.map={x:t.x,y:m,w:t.w,h:0.40*U}; g.text={...t,y0:g.map.y+g.map.h+0.01*U,avail:H-m-(g.map.y+g.map.h+0.01*U),mode:'top'}; break; }
+      case 'diptych': { const gap=0.05*U, w=(W-2*m-gap)/2, h=H-2*m-0.10*U-0.22*U;
+        const a={x:m,y:m+0.10*U,w,h}, b={x:m+w+gap,y:a.y,w,h};
+        g.rects=[a,b]; g.title={y:m+0.07*U}; g.labels=[a.y+h+0.045*U,a.y+h+0.045*U];
+        g.text={cx:W/2,maxW:W-2*m,y0:a.y+h+0.07*U,avail:H-m-(a.y+h+0.07*U),mode:'top'}; break; }
+      default: g.map={x:m,y:m,w:W*0.6-m,h:H-2*m};
+    }
+    if(!g.text && !g.box && lay!=='diptych'){ const t=col(g.map.x+g.map.w); if(lay==='travel'){ g.box={x:t.x,y:m,w:t.w,h:H-2*m}; } else g.text=t; }
   }
+  if(g.rects){ g.map=g.rects[s.active||0]; g.places=[{rect:g.rects[s.active||0],view:s,main:true},{rect:g.rects[1-(s.active||0)],view:s.place2||s}]; }
+  else g.places=[{rect:g.map,view:s,main:true}];
+  g.map.circle=g.map.shape==='circle';
+  return g;
 }
-function clipMap(ctx, r){
-  ctx.beginPath();
-  if(r.circle) ctx.arc(r.x+r.w/2, r.y+r.h/2, r.w/2, 0, Math.PI*2); else ctx.rect(r.x,r.y,r.w,r.h);
-  ctx.clip();
+/** Contour d'une forme de carte en coordonnées locales (0..w, 0..h), au format SVG (Path2D et clip-path CSS) */
+const HEART_B=(()=>{ // bornes du cœur unitaire (mêmes courbes que le repère « Cœur »)
+  const C=[[[0,-0.42],[-0.15,-0.85],[-1,-0.95],[-1,-0.3]],[[-1,-0.3],[-1,0.2],[-0.38,0.52],[0,0.9]]];
+  let y0=1e9,y1=-1e9; for(const [a,b,c,d] of C) for(let t=0;t<=1;t+=0.01){ const u=1-t, y=u*u*u*a[1]+3*u*u*t*b[1]+3*u*t*t*c[1]+t*t*t*d[1]; y0=Math.min(y0,y); y1=Math.max(y1,y); }
+  return {y0,y1}; })();
+function shapeD(shape,w,h){
+  const f=n=>Math.round(n*100)/100;
+  if(shape==='heart'){ const X=x=>f((x+1)/2*w), Y=y=>f((y-HEART_B.y0)/(HEART_B.y1-HEART_B.y0)*h);
+    return `M${X(0)},${Y(-0.42)} C${X(-0.15)},${Y(-0.85)} ${X(-1)},${Y(-0.95)} ${X(-1)},${Y(-0.3)} C${X(-1)},${Y(0.2)} ${X(-0.38)},${Y(0.52)} ${X(0)},${Y(0.9)} C${X(0.38)},${Y(0.52)} ${X(1)},${Y(0.2)} ${X(1)},${Y(-0.3)} C${X(1)},${Y(-0.95)} ${X(0.15)},${Y(-0.85)} ${X(0)},${Y(-0.42)} Z`; }
+  if(shape==='arch'){ const R=w/2; return `M0,${f(h)} L0,${f(R)} A${f(R)},${f(R)} 0 0 1 ${f(w)},${f(R)} L${f(w)},${f(h)} Z`; }
+  if(shape==='circle'){ const R=w/2; return `M0,${f(R)} A${f(R)},${f(R)} 0 1 1 ${f(w)},${f(R)} A${f(R)},${f(R)} 0 1 1 0,${f(R)} Z`; }
+  return `M0,0 H${f(w)} V${f(h)} H0 Z`;
 }
+function shapePath(ctx, r){
+  if(r.shape==='circle'){ ctx.beginPath(); ctx.arc(r.x+r.w/2, r.y+r.h/2, r.w/2, 0, Math.PI*2); return null; }
+  if(r.shape){ const p=new Path2D(); p.addPath(new Path2D(shapeD(r.shape,r.w,r.h)),new DOMMatrix().translate(r.x,r.y)); return p; }
+  ctx.beginPath(); ctx.rect(r.x,r.y,r.w,r.h); return null;
+}
+function clipMap(ctx, r){ const p=shapePath(ctx,r); p ? ctx.clip(p) : ctx.clip(); }
+function strokeShape(ctx, r, o){ const e={...r,x:r.x-o,y:r.y-o,w:r.w+2*o,h:r.h+2*o}; const p=shapePath(ctx,e); p ? ctx.stroke(p) : ctx.stroke(); }
 
 // ---------- Typographie ----------
-function fontStr(size, o={}){const f=FONTS[st.font]||FONTS.serif; return `${o.italic?'italic ':''}${o.weight||f.weight||400} ${size*(f.scale||1)}px ${f.fam}`}
+/** Police d'un rôle : 'title' (titre) ou texte (autres lignes). Une police manuscrite ne sert qu'aux lignes
+ *  d'émotion (dédicace, noms, légendes des lieux) : sous-titre, coordonnées, date et légende prennent la police du titre. */
+const SCRIPT_KEYS=['dedication','names','label1','label2'];
+function fontKey(role,key){
+  if(role==='title') return st.fontTitle||st.font;
+  if(FONTS[st.font]?.script && !SCRIPT_KEYS.includes(key)) return (st.fontTitle && !FONTS[st.fontTitle]?.script) ? st.fontTitle : 'serif';
+  return st.font;
+}
+function fontOf(role,key){ return FONTS[fontKey(role,key)]||FONTS.serif; }
+function fontStr(size, o={}){const f=fontOf(o.role,o.key); return `${o.italic&&!f.script?'italic ':''}${o.weight||f.weight||400} ${size*(f.scale||1)}px ${f.fam}`}
 function textW(ctx, t, sp, size){return ctx.measureText(t).width + (t.length>1 ? sp*size*(t.length-1) : 0)}
 /** Facteur de taille d'une ligne de texte : réglage de la ligne × réglage global */
 function tScale(k){ return (st.textScale?.[k]??100)/100 * (st.textScaleAll??100)/100; }
@@ -655,10 +873,13 @@ function tScale(k){ return (st.textScale?.[k]??100)/100 * (st.textScaleAll??100)
 let fitSink=null;
 const FIT_WARN=0.9;   // en deçà de 10 % de réduction, pas d'avertissement
 function noteFit(k,f){ if(fitSink && k && f<FIT_WARN) fitSink[k]=Math.min(fitSink[k]??1,f); }
-/** Dessine un texte avec interlettrage et réduction automatique ; renvoie la largeur dessinée */
+/** Dessine un texte avec interlettrage et réduction automatique ; renvoie la largeur dessinée.
+ *  Une police manuscrite n'est jamais mise en capitales ni espacée. */
 function drawText(ctx, t, x, y, o){
   if(!t) return 0;
-  let size=o.size; const sp=o.spacing||0;
+  const F=fontOf(o.role,o.key);
+  if(o.upper && !F.script) t=t.toUpperCase();
+  let size=o.size; const sp=F.script?0:(o.spacing||0);
   ctx.font=fontStr(size,o);
   let w=textW(ctx,t,sp,size);
   if(o.maxW && w>o.maxW){ noteFit(o.key,o.maxW/w); size*=o.maxW/w; ctx.font=fontStr(size,o); w=textW(ctx,t,sp,size); }
@@ -670,7 +891,7 @@ function drawText(ctx, t, x, y, o){
   return w;
 }
 /** Dessine bout à bout plusieurs segments de tailles différentes, alignés sur la même ligne de base,
- *  avec une réduction commune s'ils dépassent maxW. parts : [{t, size, key, italic}] ; renvoie la largeur. */
+ *  avec une réduction commune s'ils dépassent maxW. parts : [{t, size, key, italic, role}] ; renvoie la largeur. */
 function drawRun(ctx, parts, x, y, o){
   parts=parts.filter(p=>p.t); if(!parts.length) return 0;
   const ws=parts.map(p=>{ ctx.font=fontStr(p.size,p); return ctx.measureText(p.t).width; });
@@ -683,37 +904,68 @@ function drawRun(ctx, parts, x, y, o){
 }
 function hline(ctx,x1,x2,y,lw,color){ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke()}
 
+// Lignes du cartouche : [clé, écart avant la ligne (× U), options de texte (tailles × U)]
+const CART_ROWS=[
+  ['title',0.115,{size:0.075,spacing:0.2,upper:true,role:'title'}],
+  ['subtitle',0.050,{size:0.021,spacing:0.32,upper:true,narrow:0.7,rules:true}],
+  ['coords',0.042,{size:0.019,spacing:0.12}],
+  ['dedication',0.055,{size:0.034,italic:true}],
+  ['names',0.038,{size:0.024,italic:true}],
+  ['date',0.038,{size:0.017,spacing:0.3,upper:true}],
+  ['legend',0.034,{size:0.016,spacing:0.06}]
+];
+// Polaroid : la dédicace en tête, le lieu en petit
+const POLA_ROWS=[
+  ['dedication',0.075,{size:0.05,italic:true}],
+  ['names',0.045,{size:0.026,italic:true}],
+  ['title',0.05,{size:0.024,spacing:0.3,upper:true,role:'title'}],
+  ['date',0.032,{size:0.016,spacing:0.3,upper:true}],
+  ['coords',0.03,{size:0.015,spacing:0.12}],
+  ['legend',0.03,{size:0.015,spacing:0.06}]
+];
 /** Cartouche centré : les lignes masquées ou vides sont retirées et les suivantes remontent.
- *  bottom = true : le bloc reste calé en bas (gabarit Fondu), et grandit vers le haut.
- *  avail : hauteur disponible (px) ; si les tailles choisies la dépassent, tout le bloc est réduit pour tenir. */
-function drawCartouche(ctx, W, y0, m, bottom, avail){
-  const c=st.colors, cx=W/2, maxW=W-2*m-0.04*W;
-  // [clé, écart avant la ligne (× W), options de texte]
-  const rows=[
-    ['title',0.115,{size:0.075*W,spacing:0.2,upper:true,maxW}],
-    ['subtitle',0.050,{size:0.021*W,spacing:0.32,upper:true,maxW:maxW*0.7,rules:true}],
-    ['coords',0.042,{size:0.019*W,spacing:0.12,maxW}],
-    ['dedication',0.055,{size:0.034*W,italic:true,maxW}],
-    ['names',0.038,{size:0.024*W,italic:true,maxW}],
-    ['date',0.038,{size:0.017*W,spacing:0.3,upper:true,maxW}]
-  ].map(([k,d,o])=>[textLine(k),d,{...o,key:k},k]).filter(([txt])=>txt);
+ *  box : {cx, maxW, y0, avail, mode, rows} ; mode 'bottom' (Fondu : calé en bas, grandit vers le haut) ou 'center'.
+ *  Si les tailles choisies dépassent la hauteur disponible, tout le bloc est réduit pour tenir. */
+function drawCartouche(ctx, U, box){
+  const c=st.colors, cx=box.cx, maxW=box.maxW, avail=box.avail;
+  const rows=(box.rows||CART_ROWS).filter(([k])=>!(box.only && !box.only.includes(k)))
+    .map(([k,d,o])=>[textLine(k),d,{...o,size:o.size*U,maxW:maxW*(o.narrow||1),key:k},k]).filter(([txt])=>txt);
   if(!rows.length) return;
   // Taille choisie : la ligne grandit (ou rétrécit) et les interlignes suivent (≈ 0,8 × l'écart de corps de la ligne, 0,25 × celui de la précédente)
   let prevGrow=0;
-  for(const r of rows){ const base=r[2].size, grow=base*(tScale(r[3])-1); r[2].size=base+grow; r[1]=Math.max(0.2*r[2].size/W, r[1]+(0.8*grow+0.25*prevGrow)/W); prevGrow=grow; }
-  rows[0][1]=Math.max(rows[0][1],rows[0][2].size/W*1.1);   // première ligne : juste sous le haut du bloc
-  let total=rows.reduce((a,r)=>a+r[1],0)*W;
+  for(const r of rows){ const base=r[2].size, grow=base*(tScale(r[3])-1); r[2].size=base+grow; r[1]=Math.max(0.2*r[2].size/U, r[1]+(0.8*grow+0.25*prevGrow)/U); prevGrow=grow; }
+  rows[0][1]=Math.max(rows[0][1],rows[0][2].size/U*1.1);   // première ligne : juste sous le haut du bloc
+  let total=rows.reduce((a,r)=>a+r[1],0)*U;
   if(avail && total>avail){ const f=avail/total; for(const r of rows){ r[1]*=f; r[2].size*=f; noteFit(r[3],f); } total=avail; }
-  let y=y0 + (bottom ? 0.338*W-total : 0);
+  let y=box.y0 + (box.mode==='bottom' ? 0.338*U-total : box.mode==='center' ? (avail-total)/2 - 0.02*U : 0);
   for(const [txt,d,o] of rows){
-    y+=d*W;
-    const w=drawText(ctx,o.upper?txt.toUpperCase():txt,cx,y,{...o,align:'center',color:c.text});
-    if(o.rules){ const gap=0.025*W, len=0.07*W, yy=y-0.007*W;
-      hline(ctx,cx-w/2-gap-len,cx-w/2-gap,yy,0.0016*W,c.frame); hline(ctx,cx+w/2+gap,cx+w/2+gap+len,yy,0.0016*W,c.frame); }
+    y+=d*U;
+    const w=drawText(ctx,txt,cx,y,{...o,align:'center',color:c.text});
+    if(o.rules){ const gap=0.025*U, len=0.07*U, yy=y-0.007*U;
+      hline(ctx,cx-w/2-gap-len,cx-w/2-gap,yy,0.0016*U,c.frame); hline(ctx,cx+w/2+gap,cx+w/2+gap+len,yy,0.0016*U,c.frame); }
   }
+}
+/** Gabarit « Affiche de voyage » : ville en très grand, alignée à gauche, informations en dessous */
+function drawTravelText(ctx, U, b){
+  const c=st.colors, x=b.x, R=b.x+b.w;
+  let y=b.y+(b.h-0.37*U)/2+0.155*U; if(b.h>0.6*U) y=b.y+b.h-0.215*U;   // colonne paysage : bloc en bas
+  drawText(ctx,textLine('title'),x,y,{size:0.15*U*tScale('title'),spacing:0.02,upper:true,role:'title',key:'title',align:'left',color:c.text,maxW:b.w});
+  hline(ctx,x,R,y+0.035*U,0.003*U,c.frame);
+  const sub=textLine('subtitle'), co=textLine('coords');
+  drawText(ctx,sub,x,y+0.085*U,{size:0.022*U*tScale('subtitle'),spacing:0.25,upper:true,key:'subtitle',align:'left',color:c.text,maxW:b.w*(co?0.55:1)});
+  drawText(ctx,co,R,y+0.085*U,{size:0.019*U*tScale('coords'),spacing:0.08,key:'coords',align:'right',color:c.text,maxW:b.w*(sub?0.42:1)});
+  const ded=textLine('dedication'), da=textLine('date');
+  drawText(ctx,ded,x,y+0.15*U,{size:0.036*U*tScale('dedication'),italic:true,key:'dedication',align:'left',color:c.text,maxW:b.w*(da?0.64:1)});
+  drawText(ctx,da,R,y+0.15*U,{size:0.017*U*tScale('date'),spacing:0.3,upper:true,key:'date',align:'right',color:c.text,maxW:b.w*(ded?0.34:1)});
+  drawText(ctx,[textLine('names'),textLine('legend')].filter(Boolean).join('   ·   '),x,y+0.198*U,{size:0.024*U*tScale('names'),italic:true,key:'names',align:'left',color:c.text,maxW:b.w});
 }
 
 // ---------- Repères vectoriels (unité : rayon r) ----------
+const STAR_D=(()=>{ let d=''; for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5, r=i%2?0.42:1; d+=(i?'L':'M')+(r*Math.cos(a)).toFixed(3)+','+(r*Math.sin(a)+0.08).toFixed(3); } return d+'Z'; })();
+const MARKER_D={
+  star:STAR_D,
+  house:'M0,-0.95 L0.98,-0.08 L0.74,-0.08 L0.74,0.9 L0.24,0.9 L0.24,0.32 L-0.24,0.32 L-0.24,0.9 L-0.74,0.9 L-0.74,-0.08 L-0.98,-0.08 Z'
+};
 function markerPath(ctx, style){
   ctx.beginPath();
   if(style==='heart'){
@@ -739,19 +991,41 @@ function drawMarker(ctx, x, y, size, o){
   ctx.save(); ctx.translate(x,y); ctx.scale(r,r); ctx.globalAlpha=o.opacity;
   ctx.lineJoin='round'; ctx.lineCap='round';
   const st_=o.style;
+  ctx.fillStyle=col; ctx.strokeStyle=col;
   if(st_==='dot'){
-    ctx.fillStyle=col; ctx.strokeStyle=col;
     ctx.beginPath(); ctx.arc(0,0,0.26,0,7); fill?ctx.fill():(ctx.lineWidth=0.08,ctx.stroke());
     ctx.lineWidth=0.06; ctx.beginPath(); ctx.arc(0,0,0.68,0,7); ctx.stroke();
     ctx.globalAlpha*=0.45; ctx.lineWidth=0.035; ctx.beginPath(); ctx.arc(0,0,1.0,0,7); ctx.stroke();
   } else if(st_==='ring'){
-    ctx.strokeStyle=col; ctx.fillStyle=col;
     ctx.lineWidth=fill?0.16:0.09; ctx.beginPath(); ctx.arc(0,0,0.72,0,7); ctx.stroke();
     ctx.beginPath(); ctx.arc(0,0,0.09,0,7); ctx.fill();
+  } else if(MARKER_D[st_]){
+    const p=new Path2D(MARKER_D[st_]);
+    if(fill) ctx.fill(p); else { ctx.lineWidth=0.1; ctx.stroke(p); }
+    if(st_==='house' && fill){ ctx.fillStyle=o.facet||'#fff'; ctx.fillRect(-0.12,-0.18,0.24,0.24); }
+  } else if(st_==='rings'){   // alliances entrelacées
+    ctx.lineWidth=fill?0.15:0.09;
+    ctx.beginPath(); ctx.arc(-0.3,0.12,0.52,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0.3,0.12,0.52,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-0.3,-0.62); ctx.lineTo(-0.16,-0.48); ctx.lineTo(-0.3,-0.34); ctx.lineTo(-0.44,-0.48); ctx.closePath(); fill?ctx.fill():ctx.stroke();
+  } else if(st_==='anchor'){   // ancre marine
+    ctx.lineWidth=fill?0.14:0.09;
+    ctx.beginPath(); ctx.arc(0,-0.74,0.15,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-0.59); ctx.lineTo(0,0.88); ctx.moveTo(-0.42,-0.36); ctx.lineTo(0.42,-0.36); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,0.18,0.7,0.2,Math.PI-0.2); ctx.stroke();
+    for(const s of [-1,1]){ ctx.beginPath(); const ax=s*0.7*Math.cos(0.2), ay=0.18+0.7*Math.sin(0.2); ctx.moveTo(ax,ay-0.24); ctx.lineTo(ax,ay); ctx.lineTo(ax-s*0.22,ay-0.06); ctx.stroke(); }
+  } else if(st_==='feet'){   // pieds de bébé
+    for(const s of [-1,1]){
+      ctx.save(); ctx.translate(s*0.38,0.12); ctx.rotate(s*0.12);
+      ctx.beginPath(); ctx.ellipse(0,0.22,0.24,0.48,0,0,7); fill?ctx.fill():(ctx.lineWidth=0.07,ctx.stroke());
+      const T=[[-0.15,-0.42,0.09],[-0.01,-0.5,0.08],[0.11,-0.47,0.07],[0.2,-0.4,0.06],[0.26,-0.31,0.05]].map(([tx,ty,tr])=>[s>0?tx:-tx,ty,tr]);
+      for(const [tx,ty,tr] of T){ ctx.beginPath(); ctx.arc(tx,ty,tr,0,7); fill?ctx.fill():(ctx.lineWidth=0.05,ctx.stroke()); }
+      ctx.restore();
+    }
   } else {
     markerPath(ctx,st_);
-    if(fill){ ctx.fillStyle=col; ctx.fill(); }
-    else { ctx.strokeStyle=col; ctx.lineWidth=0.1; ctx.stroke(); }
+    if(fill){ ctx.fill(); }
+    else { ctx.lineWidth=0.1; ctx.stroke(); }
     if(st_==='heartGeo'){ // facettes
       const F=[[[0,-0.42],[0,0.92]],[[0,-0.42],[-0.5,-0.32]],[[-0.32,-0.86],[-0.5,-0.32]],[[-0.78,-0.8],[-0.5,-0.32]],[[-1,-0.36],[-0.5,-0.32]],[[-0.8,0.12],[-0.5,-0.32]],[[-0.5,-0.32],[0,0.92]],
                [[0,-0.42],[0.5,-0.32]],[[0.32,-0.86],[0.5,-0.32]],[[0.78,-0.8],[0.5,-0.32]],[[1,-0.36],[0.5,-0.32]],[[0.8,0.12],[0.5,-0.32]],[[0.5,-0.32],[0,0.92]]];
@@ -763,74 +1037,170 @@ function drawMarker(ctx, x, y, size, o){
   ctx.restore();
 }
 function markerOpts(){return {style:st.markerStyle, color:st.colors.marker, fill:st.markerFill, opacity:st.markerOpacity, facet:st.colors.paper}}
+/** Pastille numérotée (lieux multiples) */
+function drawBadge(ctx, x, y, n, d){
+  ctx.save(); ctx.fillStyle=st.colors.marker; ctx.strokeStyle=st.colors.paper; ctx.lineWidth=d*0.12;
+  ctx.beginPath(); ctx.arc(x,y,d/2,0,7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=st.colors.paper; ctx.font=`600 ${d*0.62}px Montserrat, Arial, sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(String(n),x,y+d*0.04); ctx.restore();
+}
+/** Tracé d'un itinéraire (GPX ou lieux reliés) dans un cadre de carte */
+function drawRoute(ctx, pts, r, view, U, dashed){
+  if(!pts || pts.length<2) return;
+  const rs=st.routeStyle||{};
+  ctx.save(); ctx.strokeStyle=st.colors[rs.color]||st.colors.marker; ctx.lineWidth=U*0.0035*(rs.width||1); ctx.lineJoin='round'; ctx.lineCap='round'; ctx.globalAlpha=0.92;
+  if(dashed) ctx.setLineDash([U*0.012,U*0.009]);
+  ctx.beginPath(); pts.forEach(([la,lo],i)=>{ const p=project(la,lo,r,view); i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y); }); ctx.stroke(); ctx.restore();
+}
+/** Repère principal, lieux supplémentaires numérotés et itinéraires d'une vue */
+function drawMarkers(ctx, r, view, U, W, main){
+  const size=W*MARKER_BASE*st.markerSize/100*(U/W), extra=(main && st.layout!=='diptych') ? (st.markers2||[]) : [];
+  if(main && st.layout!=='diptych'){
+    if(st.route?.pts?.length && st.route.show!==false) drawRoute(ctx,st.route.pts,r,view,U,!!st.routeStyle?.dash);
+    if(st.linkMarkers && extra.length) drawRoute(ctx,[[view.marker.lat,view.marker.lon],...extra.map(p=>[p.lat,p.lon])],r,view,U,true);
+  }
+  const pts=[view.marker,...extra];
+  pts.forEach((p,i)=>{ const q=project(p.lat,p.lon,r,view); drawMarker(ctx,q.x,q.y,i?size*0.75:size,markerOpts());
+    if(st.numbered && extra.length){ const s=(i?size*0.75:size); drawBadge(ctx,q.x+s*0.55,q.y-s*0.55,i+1,Math.max(U*0.026,s*0.38)); } });
+}
+
+// ---------- Carte du ciel ----------
+// Étoiles (magnitude ≤ 5,5) et constellations : lib/sky/sky-data.js (d3-celestial, BSD-3), chargé à la demande.
+let skyLoading=null;
+function ensureSky(){ if(window.SKY_DATA) return Promise.resolve(true);
+  if(!skyLoading) skyLoading=loadScript('lib/sky/sky-data.js',15000).then(()=>{ drawUnder(); refreshCards(); return true; }).catch(e=>{ skyLoading=null; toast('Données du ciel indisponibles : '+e.message,true); return false; });
+  return skyLoading; }
+/** Instant observé, en ms UTC : date et heure locales du lieu, fuseau choisi (« auto » : celui de l'appareil à cette date) */
+function skyTime(s=st.sky){
+  const m=/^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(s?.when||''); if(!m) return null;
+  const [y,mo,d,h,mi]=m.slice(1).map(Number);
+  const tz = s.tz==='auto' || s.tz==null ? -new Date(y,mo-1,d,h,mi).getTimezoneOffset() : +s.tz;
+  return Date.UTC(y,mo-1,d,h,mi)-tz*60000;
+}
+/** Hauteur et azimut (degrés, azimut depuis le nord vers l'est) d'un astre (AD, Déc en degrés) */
+function altAz(ra, dec, lat, lon, ms){
+  const jd=ms/86400000+2440587.5, gmst=280.46061837+360.98564736629*(jd-2451545);
+  const H=((gmst+lon-ra)%360)*D2R, d=dec*D2R, p=lat*D2R;
+  const alt=Math.asin(Math.sin(p)*Math.sin(d)+Math.cos(p)*Math.cos(d)*Math.cos(H));
+  const az=Math.atan2(-Math.sin(H)*Math.cos(d), Math.cos(p)*Math.sin(d)-Math.sin(p)*Math.cos(d)*Math.cos(H));
+  return {alt:alt/D2R, az:(az/D2R+360)%360};
+}
+function drawSky(ctx, r, U){
+  const c=st.colors, dark=lum(c.paper)<0.3, R=r.w/2, cx=r.x+R, cy=r.y+R;
+  const bg=dark?c.land:c.text, ink=dark?c.text:c.paper;
+  ctx.save(); ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill(); ctx.clip();
+  const ms=skyTime(), S=window.SKY_DATA;
+  if(ms!=null && S){
+    const {lat,lon}=st.marker;
+    // projection stéréographique centrée sur le zénith : horizon = bord du disque, nord en haut, est à gauche
+    const P=(ra,dec)=>{ const a=altAz(ra,dec,lat,lon,ms), q=Math.tan((90-a.alt)*D2R/2)*R, z=a.az*D2R; return {x:cx-q*Math.sin(z), y:cy-q*Math.cos(z), alt:a.alt}; };
+    ctx.strokeStyle=ink;
+    if(st.sky.grid){ ctx.globalAlpha=0.18; ctx.lineWidth=U*0.0008;
+      for(const a of [30,60]){ const q=Math.tan((90-a)*D2R/2)*R; ctx.beginPath(); ctx.arc(cx,cy,q,0,7); ctx.stroke(); }
+      for(let k=0;k<8;k++){ const z=k*Math.PI/4; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx-R*Math.sin(z),cy-R*Math.cos(z)); ctx.stroke(); } }
+    if(st.sky.lines){ ctx.globalAlpha=0.5; ctx.lineWidth=U*0.0011; ctx.beginPath();
+      for(const l of S.lines){ let prev=null; for(const [ra,dec] of l){ const p=P(ra,dec); if(prev && (p.alt>-15 || prev.alt>-15)){ ctx.moveTo(prev.x,prev.y); ctx.lineTo(p.x,p.y); } prev=p; } }
+      ctx.stroke(); }
+    ctx.globalAlpha=1; ctx.fillStyle=ink;
+    for(const [ra,dec,mag] of S.stars){ const p=P(ra,dec); if(p.alt<0) continue;
+      const rr=U*0.0016*Math.max(0.6,(6.2-mag)*0.75); ctx.beginPath(); ctx.arc(p.x,p.y,rr,0,7); ctx.fill(); }
+  } else if(!S && !ui.thumb) ensureSky();
+  ctx.restore();
+  // horizon, points cardinaux
+  ctx.strokeStyle=c.frame; ctx.lineWidth=0.0022*U; ctx.beginPath(); ctx.arc(cx,cy,R+0.012*U,0,7); ctx.stroke();
+  ctx.lineWidth=0.0008*U; ctx.beginPath(); ctx.arc(cx,cy,R+0.004*U,0,7); ctx.stroke();
+  const cs=0.016*U, o=R+0.032*U;
+  [['N',0,-1],['E',-1,0],['S',0,1],['O',1,0]].forEach(([t,dx,dy])=>drawText(ctx,t,cx+dx*o,cy+dy*o+cs*0.36,{size:cs,align:'center',color:c.text}));
+}
+function lum(hex){ const n=parseInt(hex.slice(1),16), f=v=>{ v/=255; return v<=0.03928?v/12.92:((v+0.055)/1.055)**2.4; }; return 0.2126*f(n>>16&255)+0.7152*f(n>>8&255)+0.0722*f(n&255); }
+function contrast(a,b){ const x=lum(a), y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); }
 
 // ---------- Rendu de l'affiche (aperçu ET export) ----------
-/** pass: 'under' (papier) | 'over' (tout ce qui est au-dessus de la carte) | 'all' */
+/** pass: 'under' (papier, ciel) | 'over' (tout ce qui est au-dessus de la carte) | 'all'.
+ *  mapFn(ctx, rect, view, index) dessine la carte d'une vue (export : une ou deux vues). */
 function drawPoster(ctx, W, H, pass, mapFn){
-  const c=st.colors, g=geom(st,W,H), m=g.m, r=g.map, t=st.texts;
-  if(pass!=='over'){ ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H); }
-  if(pass==='all' && mapFn){ ctx.save(); clipMap(ctx,r); ctx.fillStyle=c.land; ctx.fillRect(r.x,r.y,r.w,r.h); mapFn(ctx,r); ctx.restore(); }
+  const c=st.colors, g=geom(st,W,H), m=g.m, U=g.U, r=g.map;
+  if(pass!=='over'){ ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H); if(g.sky) drawSky(ctx,g.sky,U); }
+  if(pass==='all' && mapFn) g.places.forEach((p,i)=>{ ctx.save(); clipMap(ctx,p.rect); ctx.fillStyle=c.land; ctx.fillRect(p.rect.x,p.rect.y,p.rect.w,p.rect.h); mapFn(ctx,p.rect,p.view,i); ctx.restore(); });
   if(pass==='under') return g;
 
   // Fondu
   if(st.layout==='fade'){
     const pc=hexA(c.paper);
-    let gr=ctx.createLinearGradient(0,r.h*0.62,0,r.h); gr.addColorStop(0,pc(0)); gr.addColorStop(1,pc(1));
-    ctx.fillStyle=gr; ctx.fillRect(0,r.h*0.62,W,r.h*0.38+1);
-    const sw=m*1.6;
-    gr=ctx.createLinearGradient(0,0,sw,0); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(0,0,sw,r.h);
-    gr=ctx.createLinearGradient(W,0,W-sw,0); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(W-sw,0,sw,r.h);
-    gr=ctx.createLinearGradient(0,0,0,sw); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(0,0,W,sw);
+    if(!g.land){
+      let gr=ctx.createLinearGradient(0,r.h*0.62,0,r.h); gr.addColorStop(0,pc(0)); gr.addColorStop(1,pc(1));
+      ctx.fillStyle=gr; ctx.fillRect(0,r.h*0.62,W,r.h*0.38+1);
+      const sw=m*1.6;
+      gr=ctx.createLinearGradient(0,0,sw,0); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(0,0,sw,r.h);
+      gr=ctx.createLinearGradient(W,0,W-sw,0); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(W-sw,0,sw,r.h);
+      gr=ctx.createLinearGradient(0,0,0,sw); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(0,0,W,sw);
+    } else {
+      let gr=ctx.createLinearGradient(r.w*0.62,0,r.w,0); gr.addColorStop(0,pc(0)); gr.addColorStop(1,pc(1));
+      ctx.fillStyle=gr; ctx.fillRect(r.w*0.62,0,r.w*0.38+1,H);
+      const sw=m*1.6;
+      for(const [x0,y0,x1,y1,rx,ry,rw,rh] of [[0,0,sw,0,0,0,sw,H],[0,0,0,sw,0,0,r.w,sw],[0,H,0,H-sw,0,H-sw,r.w,sw]]){
+        gr=ctx.createLinearGradient(x0,y0,x1,y1); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(rx,ry,rw,rh); }
+    }
   }
-  // Repère
-  ctx.save(); clipMap(ctx,r);
-  const p=project(st.marker.lat,st.marker.lon,r,st);
-  drawMarker(ctx,p.x,p.y,W*MARKER_BASE*st.markerSize/100,markerOpts());
-  ctx.restore();
+  // Repères (et itinéraires) de chaque vue
+  for(const p of g.places){ ctx.save(); clipMap(ctx,p.rect); drawMarkers(ctx,p.rect,p.view,U,W,p.main); ctx.restore(); }
 
   // Filets & textes
-  if(st.layout==='souvenir'){
-    const yH=m+0.061*W, inner=W-2*m;
-    const title=textLine('title'), date=textLine('date'), coords=textLine('coords'), hs=0.031*W;
-    // En-tête : « Titre - Date », chaque partie à sa taille, sur une même ligne de base
-    const left = title&&date&&tScale('title')===tScale('date') ? [{t:title+' - '+date,size:hs*tScale('title'),keys:['title','date']}]
-               : title&&date ? [{t:title,size:hs*tScale('title'),key:'title'},{t:' - ',size:hs*Math.min(tScale('title'),tScale('date'))},{t:date,size:hs*tScale('date'),key:'date'}]
-               : [{t:title||date,size:hs*tScale(title?'title':'date'),key:title?'title':'date'}];
+  const lay=st.layout;
+  if(lay==='souvenir' && !g.land){
+    const yH=m+0.061*U, inner=W-2*m;
+    const title=textLine('title'), date=textLine('date'), coords=textLine('coords'), hs=0.031*U;
+    // En-tête : « Titre - Date », chaque partie à sa taille et dans sa police, sur une même ligne de base
+    const same=tScale('title')===tScale('date') && fontKey('title')===fontKey('','date');
+    const left = title&&date&&same ? [{t:title+' - '+date,size:hs*tScale('title'),keys:['title','date']}]
+               : title&&date ? [{t:title,size:hs*tScale('title'),key:'title',role:'title'},{t:' - ',size:hs*Math.min(tScale('title'),tScale('date'))},{t:date,size:hs*tScale('date'),key:'date'}]
+               : [{t:title||date,size:hs*tScale(title?'title':'date'),key:title?'title':'date',role:title?'title':''}];
     drawRun(ctx,left,m,yH,{align:'left',color:c.text,maxW:inner*(coords?0.58:1)});
-    drawText(ctx,coords,W-m,yH,{size:0.026*W*tScale('coords'),key:'coords',align:'right',color:c.text,maxW:inner*(title||date?0.4:1)});
-    const yF=H-m-0.0195*W, ded=textLine('dedication'), names=textLine('names'), ns=tScale('names'), ds=0.062*W*tScale('dedication');
+    drawText(ctx,coords,W-m,yH,{size:0.026*U*tScale('coords'),key:'coords',align:'right',color:c.text,maxW:inner*(title||date?0.4:1)});
+    const yF=H-m-0.0195*U, ded=textLine('dedication'), names=textLine('names'), ns=tScale('names'), ds=0.062*U*tScale('dedication');
     if(names && ded){
       // Dédicace | Noms : s'ils dépassent la largeur, les deux sont réduits du même facteur (les tailles choisies gardent leur rapport)
-      const gap=0.062*W, nsz=0.026*W*ns;
-      ctx.font=fontStr(ds); const wd=ctx.measureText(ded).width; ctx.font=fontStr(nsz,{italic:true}); const wn=ctx.measureText(names).width;
+      const gap=0.062*U, nsz=0.026*U*ns;
+      ctx.font=fontStr(ds,{key:'dedication'}); const wd=ctx.measureText(ded).width; ctx.font=fontStr(nsz,{italic:true,key:'names'}); const wn=ctx.measureText(names).width;
       const f=Math.min(1,(inner-gap)/(wd+wn)); noteFit('dedication',f); noteFit('names',f);
-      drawText(ctx,ded,m,yF,{size:ds*f,align:'left',color:c.text});
-      const bx=m+wd*f+0.032*W;
-      ctx.strokeStyle=c.frame; ctx.lineWidth=0.0018*W; ctx.beginPath(); ctx.moveTo(bx,yF-0.04*W); ctx.lineTo(bx,yF+0.004*W); ctx.stroke();
-      drawText(ctx,names,bx+0.03*W,yF-0.008*W,{size:nsz*f,italic:true,align:'left',color:c.text});
+      drawText(ctx,ded,m,yF,{size:ds*f,align:'left',color:c.text,key:'dedication'});
+      const bx=m+wd*f+0.032*U;
+      ctx.strokeStyle=c.frame; ctx.lineWidth=0.0018*U; ctx.beginPath(); ctx.moveTo(bx,yF-0.04*U); ctx.lineTo(bx,yF+0.004*U); ctx.stroke();
+      drawText(ctx,names,bx+0.03*U,yF-0.008*U,{size:nsz*f,italic:true,align:'left',color:c.text,key:'names'});
     } else if(ded){
       drawText(ctx,ded,m,yF,{size:ds,key:'dedication',align:'left',color:c.text,maxW:inner});
     } else if(names){
-      drawText(ctx,names,m,yF-0.008*W,{size:0.026*W*ns,key:'names',italic:true,align:'left',color:c.text,maxW:inner});
+      drawText(ctx,names,m,yF-0.008*U,{size:0.026*U*ns,key:'names',italic:true,align:'left',color:c.text,maxW:inner});
     }
-  } else if(st.layout==='classic'){
-    ctx.strokeStyle=c.frame;
-    ctx.lineWidth=0.0025*W; const o1=0.014*W; ctx.strokeRect(r.x-o1,r.y-o1,r.w+2*o1,r.h+2*o1);
-    ctx.lineWidth=0.0009*W; const o2=0.006*W; ctx.strokeRect(r.x-o2,r.y-o2,r.w+2*o2,r.h+2*o2);
-    { const y0=r.y+r.h+0.014*W; drawCartouche(ctx,W,y0,m,false,H-y0-0.6*m-0.01*W); }
-  } else if(st.layout==='medallion'){
-    if(st.ring){
-      ctx.strokeStyle=c.frame; ctx.lineWidth=0.0022*W; ctx.beginPath(); ctx.arc(r.x+r.w/2,r.y+r.h/2,r.w/2+0.014*W,0,7); ctx.stroke();
-      ctx.lineWidth=0.0008*W; ctx.beginPath(); ctx.arc(r.x+r.w/2,r.y+r.h/2,r.w/2+0.006*W,0,7); ctx.stroke();
+  } else if(lay==='diptych'){
+    drawText(ctx,textLine('title'),W/2,g.title.y,{size:0.06*U*tScale('title'),spacing:0.15,upper:true,role:'title',key:'title',align:'center',color:c.text,maxW:W-2*m});
+    const views=[], A=st.active||0; views[A]=st; views[1-A]=st.place2||st;
+    g.rects.forEach((rc,i)=>{ ctx.strokeStyle=c.frame; ctx.lineWidth=0.0018*U; ctx.strokeRect(rc.x,rc.y,rc.w,rc.h);
+      const lab=textLine('label'+(i+1)), co=placeCoordText(views[i].marker);
+      drawText(ctx,lab,rc.x,g.labels[i],{size:0.03*U*tScale('dedication'),italic:true,key:'label'+(i+1),align:'left',color:c.text,maxW:rc.w*(co?0.6:1)});
+      if(st.show.coords!==false) drawText(ctx,co,rc.x+rc.w,g.labels[i],{size:0.015*U*tScale('coords'),spacing:0.08,align:'right',color:c.text,maxW:rc.w*(lab?0.38:1)}); });
+    drawCartouche(ctx,U,{...g.text,rows:CART_ROWS,only:['subtitle','dedication','names','date']});
+  } else if(g.box){
+    drawTravelText(ctx,U,g.box);
+  } else {
+    if(lay==='classic'){
+      ctx.strokeStyle=c.frame;
+      ctx.lineWidth=0.0025*U; const o1=0.014*U; ctx.strokeRect(r.x-o1,r.y-o1,r.w+2*o1,r.h+2*o1);
+      ctx.lineWidth=0.0009*U; const o2=0.006*U; ctx.strokeRect(r.x-o2,r.y-o2,r.w+2*o2,r.h+2*o2);
+    } else if(['medallion','heart','arch'].includes(lay) && st.ring){
+      ctx.strokeStyle=c.frame; ctx.lineWidth=0.0022*U; strokeShape(ctx,r,0.014*U);
+      ctx.lineWidth=0.0008*U; strokeShape(ctx,r,0.006*U);
+    } else if(lay==='polaroid'){
+      ctx.strokeStyle=hexA(c.text)(0.18); ctx.lineWidth=0.0012*U; ctx.strokeRect(r.x,r.y,r.w,r.h);
+    } else if(lay==='sky'){
+      ctx.strokeStyle=c.frame; ctx.lineWidth=0.0012*U; ctx.strokeRect(r.x,r.y,r.w,r.h);
     }
-    { const y0=r.y+r.h+0.02*W; drawCartouche(ctx,W,y0,m,false,H-y0-0.6*m-0.01*W); }
-  } else if(st.layout==='fade'){
-    drawCartouche(ctx,W,H-m-0.345*W,m,true,0.56*W);
+    drawCartouche(ctx,U,{...g.text,rows:lay==='polaroid'?POLA_ROWS:CART_ROWS});
   }
   // Attribution OSM (ODbL)
   if(st.attribution){
     ctx.globalAlpha=0.55;
-    drawText(ctx,'© contributeurs OpenStreetMap'+(st.engine==='maplibre'?' · OpenFreeMap © OpenMapTiles':''),W-m,H-m*0.38,{size:0.0085*W,align:'right',color:c.text});
+    drawText(ctx,'© contributeurs OpenStreetMap'+(st.engine==='maplibre'?' · OpenFreeMap © OpenMapTiles':'')+(g.sky?' · Ciel : d3-celestial (XHIP)':''),W-m,H-m*0.38,{size:0.0085*U,align:'right',color:c.text});
     ctx.globalAlpha=1;
   }
   return g;
@@ -951,7 +1321,7 @@ function drawVectors(ctx, r, data){
 async function fetchOverpass(){
   if(opLoading) return;
   if(!needConsent(()=>fetchOverpass())) return;
-  const g=geom(st,EXPORT_W,EXPORT_H), aspect=g.map.h/g.map.w;
+  const g=geom(st,posterDims().W,posterDims().H), aspect=g.map.h/g.map.w;
   if(st.zoom<11.5){ toast('Zone trop vaste pour Overpass : zoomez au-delà de 11,5 ou utilisez le moteur Vectoriel GPU.',true); return; }
   const b=viewBounds(st,aspect,0.4);
   const q=buildQuery(b);
@@ -994,7 +1364,7 @@ async function fetchOverpass(){
 function checkOpCoverage(){
   if(st.engine!=='overpass'||opLoading){ if(st.engine==='file') showBanner(!opData,'Aucun fichier importé','Importer',()=>$('fileIn').click()); return; }
   if(!opData){ showBanner(true,'Aucune donnée chargée'); return; }
-  const g=geom(st,EXPORT_W,EXPORT_H), v=viewBounds(st,g.map.h/g.map.w,0), b=opData.bounds;
+  const g=geom(st,posterDims().W,posterDims().H), v=viewBounds(st,g.map.h/g.map.w,0), b=opData.bounds;
   const out = v.w<b.w||v.e>b.e||v.s<b.s||v.n>b.n || opData.layers!==JSON.stringify(st.layers);
   showBanner(out,'Zone modifiée');
 }
@@ -1067,7 +1437,7 @@ function initMaplibre(){
   mlMap.touchZoomRotate.disableRotation(); mlMap.keyboard.disableRotation();
   mlMap.on('move',()=>{ if(mlSync) return; const cc=mlMap.getCenter(); st.center={lat:cc.lat,lon:cc.lng}; st.zoom=mlMap.getZoom()-Math.log2(ui.slotCss.w/REF_W); scheduleOver(); syncZoomUI(); });
   mlMap.on('moveend',()=>{ mlMap.setStyle(buildStyle(mlK(ui.slotCss.w))); saveState(); });
-  mlMap.on('click',e=>{ if(ui.placing){ setMarker(e.lngLat.lat,e.lngLat.lng); } });
+  mlMap.on('click',e=>{ if(ui.placing){ placeAt(e.lngLat.lat,e.lngLat.lng); } });
   mlMap.on('dataloading',()=>setStatus('Chargement des tuiles…','busy'));
   mlMap.on('idle',()=>setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'));
   let gotTiles=false;
@@ -1083,7 +1453,7 @@ function mlUpdateView(){
 }
 function mlRestyle(){ if(mlMap) mlMap.setStyle(buildStyle(mlK(ui.slotCss.w))); }
 /** Rendu MapLibre hors écran à pleine résolution pour l'export */
-function renderMaplibreOffscreen(wPx,hPx){
+function renderMaplibreOffscreen(wPx,hPx,view=st){
   return new Promise((resolve,reject)=>{
     const cssW=REF_W, cssH=Math.round(REF_W*hPx/wPx), pr=wPx/REF_W;
     const div=document.createElement('div');
@@ -1094,7 +1464,7 @@ function renderMaplibreOffscreen(wPx,hPx){
       try{ const out=document.createElement('canvas'); out.width=wPx; out.height=hPx; out.getContext('2d').drawImage(map.getCanvas(),0,0,wPx,hPx); map.remove(); div.remove(); resolve({canvas:out,warn}); }
       catch(e){ try{map.remove()}catch(_){} div.remove(); reject(e); } };
     try{
-      map=new maplibregl.Map({container:div,style:buildStyle(st.stroke*zoomFactor(st.zoom)),center:[st.center.lon,st.center.lat],zoom:st.zoom,
+      map=new maplibregl.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom)),center:[view.center.lon,view.center.lat],zoom:view.zoom,
         pixelRatio:pr,interactive:false,preserveDrawingBuffer:true,fadeDuration:0,attributionControl:false,renderWorldCopies:false,maxCanvasSize:[8192,8192]});
     }catch(e){ div.remove(); reject(e); return; }
     map.once('idle',()=>finish(false));
@@ -1104,11 +1474,11 @@ function renderMaplibreOffscreen(wPx,hPx){
 
 // ---------- Aperçu ----------
 const $=id=>document.getElementById(id);
-const cvU=$('cvUnder'), cvO=$('cvOver'), opC=$('opCanvas'), slot=$('slot'), poster=$('poster'), stage=$('stage');
+const cvU=$('cvUnder'), cvO=$('cvOver'), cvT=$('cvTex'), opC=$('opCanvas'), slot=$('slot'), poster=$('poster'), stage=$('stage');
 function layoutPreview(){
   const SW=stage.clientWidth, SH=stage.clientHeight, small=innerWidth<900;
   const pad = small ? (SH<260 ? 8 : 14) : 36, FAB=54;
-  const fit=(aw,ah)=>Math.min(aw,ah/RATIO);
+  const RATIO=ratio(), fit=(aw,ah)=>Math.min(aw,ah/RATIO);
   // Boutons flottants : à droite ou en bas, selon ce qui laisse l'affiche la plus grande ; masqués si l'aperçu est une vignette
   let mode='side', w;
   if(!small) w=fit(SW-pad*2,SH-pad*2);
@@ -1120,16 +1490,61 @@ function layoutPreview(){
   if(mode==='side') poster.style.marginRight=FAB+'px'; else poster.style.marginRight='';
   ui.posterCss={w,h}; ui.dpr=Math.min(window.devicePixelRatio||1,3);
   poster.style.width=w+'px'; poster.style.height=h+'px';
-  for(const cv of [cvU,cvO]){ cv.width=Math.round(w*ui.dpr); cv.height=Math.round(h*ui.dpr); }
-  const g=geom(st,w,h).map; ui.slotCss=g;
-  Object.assign(slot.style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px'});
-  Object.assign($('shield').style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px',borderRadius:g.circle?'50%':''});
+  for(const cv of [cvU,cvO,cvT]){ cv.width=Math.round(w*ui.dpr); cv.height=Math.round(h*ui.dpr); }
+  const G=geom(st,w,h), g=G.map; ui.slotCss=g; ui.geomCss=G;
+  const clip=g.shape && g.shape!=='circle' ? `path('${shapeD(g.shape,g.w,g.h)}')` : '';
+  Object.assign(slot.style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px',clipPath:clip});
+  Object.assign($('shield').style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px',borderRadius:g.circle?'50%':'',clipPath:clip});
   $('shield').classList.toggle('mini',g.w<170);
   slot.classList.toggle('circle',!!g.circle);
+  // Deux lieux : la vue non éditée est une image figée ; la toucher la rend éditable
+  const other=G.rects ? G.rects[1-(st.active||0)] : null, ps=$('placeSwitch');
+  ps.hidden=!other; if(other){ Object.assign(ps.style,{left:other.x+'px',top:other.y+'px',width:other.w+'px',height:other.h+'px'}); ps.querySelector('span').textContent=`Modifier le lieu ${2-(st.active||0)}`; ps.classList.toggle('mini',other.w<170); }
+  if(G.sky) ensureSky();
+  drawTexture();
   opC.width=Math.round(g.w*ui.dpr); opC.height=Math.round(g.h*ui.dpr);
   drawUnder(); renderMap(true);
 }
-function drawUnder(){ const ctx=cvU.getContext('2d'); drawPoster(ctx,cvU.width,cvU.height,'under'); }
+function drawUnder(){
+  const ctx=cvU.getContext('2d'), g=drawPoster(ctx,cvU.width,cvU.height,'under');
+  if(g.rects){   // vue figée du lieu non édité
+    const r=g.rects[1-(st.active||0)];
+    ctx.save(); clipMap(ctx,r); ctx.fillStyle=st.colors.land; ctx.fillRect(r.x,r.y,r.w,r.h);
+    if(ui.snap && ui.snap.key===snapKey()) ctx.drawImage(ui.snap.canvas,r.x,r.y,r.w,r.h); else scheduleSnap();
+    ctx.restore();
+  }
+}
+// ---------- Deux lieux : image de la vue non éditée ----------
+function otherView(){ return st.place2 || {center:{...st.center},zoom:st.zoom,marker:{...st.marker}}; }
+function snapKey(){ const r=ui.geomCss?.rects?.[1-(st.active||0)]; return JSON.stringify([st.engine,otherView(),st.colors,st.stroke,st.waterMult,st.layers,r&&Math.round(r.w),r&&Math.round(r.h),!!opData]); }
+let snapT=0, snapBusy=false;
+function scheduleSnap(){ clearTimeout(snapT); snapT=setTimeout(makeSnap,250); }
+async function makeSnap(){
+  const G=ui.geomCss; if(!G?.rects || snapBusy) return;
+  const r=G.rects[1-(st.active||0)], key=snapKey(), w=Math.round(r.w*ui.dpr), h=Math.round(r.h*ui.dpr);
+  snapBusy=true;
+  try{ const canvas=await renderView(otherView(),w,h); if(canvas){ ui.snap={canvas,key}; drawUnder(); } }
+  catch(e){ console.warn('vue figée',e); } finally{ snapBusy=false; }
+}
+/** Carte d'une vue quelconque, à la taille demandée (px) : MapLibre hors écran, ou vecteurs Overpass / Fichier */
+async function renderView(view,wPx,hPx){
+  if(st.engine==='maplibre'){ if(mlLib!=='ok' || !consent) return null; return (await renderMaplibreOffscreen(wPx,hPx,view)).canvas; }
+  if(!opData) return null;
+  const cv=document.createElement('canvas'); cv.width=wPx; cv.height=hPx; const c=cv.getContext('2d');
+  c.fillStyle=st.colors.land; c.fillRect(0,0,wPx,hPx); withView(view,()=>drawVectors(c,{x:0,y:0,w:wPx,h:hPx},opData)); return cv;
+}
+/** Exécute fn avec le cadrage d'une autre vue (drawVectors lit st.center et st.zoom) */
+function withView(view,fn){ const c=st.center, z=st.zoom; st.center=view.center; st.zoom=view.zoom; try{ return fn(); } finally{ st.center=c; st.zoom=z; } }
+/** Change le lieu édité (gabarit Deux lieux) : la carte interactive passe sur l'autre cadre */
+function setActivePlace(i){
+  if(st.layout!=='diptych' || i===(st.active||0)) return;
+  const cur={center:st.center,zoom:st.zoom,marker:st.marker}, o=otherView();
+  st.center=o.center; st.zoom=o.zoom; st.marker=o.marker; st.place2=cur; st.active=i; ui.snap=null;
+  setSeg('placeSeg',String(i)); syncZoomUI(); updateMarkerTxt(); opData && st.engine==='overpass' && (opData=null);
+  layoutPreview(); if(mlMap) mlRestyle(); saveState();
+  if(st.engine==='overpass') fetchOverpass();
+  toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
+}
 function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); }
 /** Signale dans l'onglet Textes les lignes réduites automatiquement pour tenir dans l'affiche */
 const FIT_NAMES={title:'titre',subtitle:'sous-titre',coords:'coordonnées',dedication:'dédicace',names:'noms',date:'date'};
@@ -1176,11 +1591,255 @@ function redrawAll(restyle){ drawUnder(); if(restyle) mlRestyle(); renderMap(fal
     renderMap();
   });
   const up=e=>{ const wasTap=!moved && pts.size===1; pts.delete(e.pointerId); if(pts.size<2) startD=0; if(pts.size===1){ const q=[...pts.values()][0]; last={x:q.x,y:q.y}; moved=true; }
-    if(wasTap && ui.placing){ const rc=opC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); setMarker(ll.lat,ll.lon); }
+    if(wasTap && ui.placing){ const rc=opC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); placeAt(ll.lat,ll.lon); }
     if(pts.size===0) saveState(); };
   opC.addEventListener('pointerup',up); opC.addEventListener('pointercancel',up);
   opC.addEventListener('wheel',e=>{ e.preventDefault(); st.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18); syncZoomUI(); renderMap(); saveState(); },{passive:false});
 })();
+
+// ---------- Papier : textures générées (aucune image) ----------
+// Base de largeur fixe (1240 px) agrandie à la taille voulue : le grain est le même à l'aperçu et à l'export.
+// Papier clair : fusion « multiply » (assombrit légèrement) ; papier sombre : « screen » sur la texture inversée.
+const TEX_BASE=1240, texCache=new Map();
+function rng(seed){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function textureBase(kind, land, dark){
+  const key=kind+land+dark; if(texCache.has(key)) return texCache.get(key);
+  const w=land?Math.round(TEX_BASE*1.4145):TEX_BASE, h=land?TEX_BASE:Math.round(TEX_BASE*1.4145);
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const c=cv.getContext('2d');
+  const R=rng({grain:11,aquarelle:23,kraft:37,toile:53}[kind]||1);
+  c.fillStyle=kind==='kraft'?'#E3CFAE':'#fff'; c.fillRect(0,0,w,h);
+  if(kind==='aquarelle'){   // taches douces : bruit de valeur à basse résolution, agrandi avec lissage
+    for(const [n,a] of [[9,0.10],[23,0.06],[60,0.035]]){
+      const sm=document.createElement('canvas'); sm.width=n; sm.height=Math.round(n*h/w); const sc=sm.getContext('2d'), d=sc.createImageData(sm.width,sm.height);
+      for(let i=0;i<d.data.length;i+=4){ const v=255-R()*255*a*0.55; d.data[i]=d.data[i+1]=d.data[i+2]=v; d.data[i+3]=255; }
+      sc.putImageData(d,0,0); c.globalCompositeOperation='multiply'; c.imageSmoothingEnabled=true; c.imageSmoothingQuality='high'; c.drawImage(sm,0,0,w,h); }
+    c.globalCompositeOperation='multiply'; const gr=c.createRadialGradient(w/2,h/2,Math.min(w,h)*0.35,w/2,h/2,Math.max(w,h)*0.75);
+    gr.addColorStop(0,'#fff'); gr.addColorStop(1,'#ECE8E2'); c.fillStyle=gr; c.fillRect(0,0,w,h); c.globalCompositeOperation='source-over';
+  }
+  if(kind==='kraft'){   // fibres
+    c.lineCap='round';
+    for(let i=0;i<9000;i++){ const x=R()*w, y=R()*h, a=R()*Math.PI, l=3+R()*12; c.strokeStyle=`rgba(${110+R()*40|0},${80+R()*30|0},${40+R()*20|0},${0.10+R()*0.18})`; c.lineWidth=0.5+R()*0.8;
+      c.beginPath(); c.moveTo(x,y); c.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l); c.stroke(); }
+  }
+  if(kind==='toile'){   // trame de toile de lin
+    for(let y=0;y<h;y+=3){ c.fillStyle=`rgba(0,0,0,${0.025+R()*0.03})`; c.fillRect(0,y,w,1); }
+    for(let x=0;x<w;x+=3){ c.fillStyle=`rgba(0,0,0,${0.02+R()*0.03})`; c.fillRect(x,0,1,h); }
+  }
+  // grain fin, commun à toutes les textures
+  const d=c.getImageData(0,0,w,h), D=d.data, amp={grain:34,aquarelle:14,kraft:22,toile:12}[kind]||20;
+  for(let i=0;i<D.length;i+=4){ const n=R()*R()*amp; D[i]-=n; D[i+1]-=n; D[i+2]-=n; }
+  c.putImageData(d,0,0);
+  if(dark){ c.globalCompositeOperation='difference'; c.fillStyle='#fff'; c.fillRect(0,0,w,h); c.globalCompositeOperation='saturation'; c.fillStyle='#808080'; c.fillRect(0,0,w,h); c.globalCompositeOperation='source-over'; }
+  texCache.set(key,cv); return cv;
+}
+function texMode(){ return lum(st.colors.paper)<0.3 ? 'screen' : 'multiply'; }
+/** Applique le papier à un rendu complet (export, aperçu au mur) */
+function applyTexture(ctx,W,H){
+  if(!st.texture || st.texture==='none') return;
+  ctx.save(); ctx.globalCompositeOperation=texMode(); ctx.drawImage(textureBase(st.texture,W>H,texMode()==='screen'),0,0,W,H); ctx.restore();
+}
+/** Aperçu : calque de texture au-dessus de l'affiche, fondu par CSS (mix-blend-mode) comme à l'export */
+function drawTexture(){
+  const on=st.texture && st.texture!=='none'; cvT.hidden=!on; if(!on) return;
+  cvT.style.mixBlendMode=texMode();
+  const c=cvT.getContext('2d'); c.clearRect(0,0,cvT.width,cvT.height); c.drawImage(textureBase(st.texture,cvT.width>cvT.height,texMode()==='screen'),0,0,cvT.width,cvT.height);
+}
+
+// ---------- Composition complète (export et aperçu au mur) ----------
+async function composePoster(W,H,step=()=>{}){
+  step('Chargement des polices…'); await loadFonts(); const fontWarn=!fontsReady();
+  const g=geom(st,W,H); if(g.sky){ step('Chargement du ciel…'); await ensureSky(); }
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d');
+  let warn=false; const imgs=[];
+  if(st.engine==='maplibre'){
+    step('Rendu vectoriel haute définition…');
+    for(const [i,p] of g.places.entries()){ const r=await renderMaplibreOffscreen(Math.round(p.rect.w),Math.round(p.rect.h),p.view); imgs[i]=r.canvas; warn=warn||r.warn; }
+  } else step('Re-projection des vecteurs…');
+  const mapFn=(c,rect,view,i)=> st.engine==='maplibre' ? c.drawImage(imgs[i],rect.x,rect.y,rect.w,rect.h) : withView(view,()=>drawVectors(c,rect,opData));
+  drawPoster(ctx,W,H,'all',mapFn); applyTexture(ctx,W,H);
+  return {canvas:cv,warn,fontWarn};
+}
+
+// ---------- Aperçu au mur ----------
+const WALLS=[['Blanc cassé','#ECE8E1'],['Sauge','#C7D1C1'],['Terracotta','#C98B6B'],['Béton','#9C9C99'],['Nuit','#2B2F36']];
+const FRAMES=[['Chêne','oak'],['Noir','#1B1B1B'],['Blanc','#F4F4F2'],['Doré','gold']];
+const mock={wall:0,frame:0,mat:true,poster:null};
+async function openMockup(){
+  if(st.engine==='maplibre' && !needConsent(()=>openMockup())) return;
+  if(st.engine!=='maplibre' && !opData){ toast('Chargez d\'abord la carte (onglet Lieu, section Avancé).',true); return; }
+  $('busy').classList.add('show');
+  try{ const d=posterDims(), k=1100/Math.max(d.W,d.H); mock.poster=(await composePoster(Math.round(d.W*k),Math.round(d.H*k),t=>$('busyTxt').textContent=t)).canvas;
+    drawMockup(); $('mockup').classList.add('show'); }
+  catch(e){ console.error(e); toast('Aperçu impossible : '+(e.message||e),true); }
+  finally{ $('busy').classList.remove('show'); }
+}
+function drawMockup(){
+  const P=mock.poster; if(!P) return;
+  const land=P.width>P.height, SW=land?1800:1400, SH=land?1350:1750, cv=$('mockCv'); cv.width=SW; cv.height=SH; const c=cv.getContext('2d');
+  const wall=WALLS[mock.wall][1];
+  c.fillStyle=wall; c.fillRect(0,0,SW,SH);
+  let g=c.createLinearGradient(0,0,0,SH); g.addColorStop(0,'rgba(255,255,255,0.10)'); g.addColorStop(0.7,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.12)'); c.fillStyle=g; c.fillRect(0,0,SW,SH);
+  c.fillStyle='rgba(0,0,0,0.10)'; c.fillRect(0,SH*0.93,SW,SH*0.07); c.fillStyle='rgba(255,255,255,0.08)'; c.fillRect(0,SH*0.93,SW,3);
+  // cadre
+  const ph=land?SH*0.56:SH*0.62, pw=ph*P.width/P.height, mat=mock.mat?pw*0.08:0, fw=pw*0.045;
+  const ow=pw+2*mat+2*fw, oh=ph+2*mat+2*fw, ox=(SW-ow)/2, oy=SH*0.42-oh/2;
+  c.save(); c.shadowColor='rgba(0,0,0,0.38)'; c.shadowBlur=46; c.shadowOffsetY=22; c.fillStyle='#000'; c.fillRect(ox,oy,ow,oh); c.restore();
+  const fr=FRAMES[mock.frame][1];
+  if(fr==='oak'){ c.fillStyle='#B98A5C'; c.fillRect(ox,oy,ow,oh); const R=rng(7); c.globalAlpha=0.18;
+    for(let i=0;i<140;i++){ const y=oy+R()*oh; c.strokeStyle=R()>0.5?'#7A5434':'#E2BC8E'; c.lineWidth=1+R()*2; c.beginPath(); c.moveTo(ox,y); c.bezierCurveTo(ox+ow*0.3,y+R()*8-4,ox+ow*0.7,y+R()*8-4,ox+ow,y); c.stroke(); } c.globalAlpha=1; }
+  else if(fr==='gold'){ g=c.createLinearGradient(ox,oy,ox+ow,oy+oh); g.addColorStop(0,'#E6C979'); g.addColorStop(0.5,'#B8913E'); g.addColorStop(1,'#E1C470'); c.fillStyle=g; c.fillRect(ox,oy,ow,oh); }
+  else { c.fillStyle=fr; c.fillRect(ox,oy,ow,oh); }
+  c.strokeStyle='rgba(255,255,255,0.25)'; c.lineWidth=2; c.strokeRect(ox+1,oy+1,ow-2,oh-2);
+  c.strokeStyle='rgba(0,0,0,0.35)'; c.strokeRect(ox+fw-1,oy+fw-1,ow-2*fw+2,oh-2*fw+2);
+  if(mat){ c.fillStyle='#F7F5F0'; c.fillRect(ox+fw,oy+fw,ow-2*fw,oh-2*fw); c.strokeStyle='rgba(0,0,0,0.18)'; c.lineWidth=2; c.strokeRect(ox+fw+mat-1,oy+fw+mat-1,pw+2,ph+2); }
+  c.drawImage(P,ox+fw+mat,oy+fw+mat,pw,ph);
+  g=c.createLinearGradient(ox,oy,ox+ow,oy+oh); g.addColorStop(0,'rgba(255,255,255,0.10)'); g.addColorStop(0.45,'rgba(255,255,255,0)'); c.fillStyle=g; c.fillRect(ox+fw,oy+fw,ow-2*fw,oh-2*fw);
+  document.querySelectorAll('#mockWalls .chip').forEach((b,i)=>b.classList.toggle('on',i===mock.wall));
+  document.querySelectorAll('#mockFrames .chip').forEach((b,i)=>b.classList.toggle('on',i===mock.frame));
+  $('mockMat').checked=mock.mat;
+}
+function downloadMockup(){
+  $('mockCv').toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`apercu-au-mur-${slug(st.texts.title)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); },'image/png');
+}
+
+// ---------- Plusieurs lieux ----------
+function placeAt(lat,lon){
+  const i=ui.placeIdx||0;
+  if(i && st.markers2[i-1]){ st.markers2[i-1].lat=lat; st.markers2[i-1].lon=lon; setPlacing(false); renderPlaces(); scheduleOver(); saveState(); toast(`Lieu ${i+1} placé`); }
+  else setMarker(lat,lon);
+}
+function renderPlaces(){
+  const box=$('mList'); box.textContent='';
+  const row=(n,label,onLabel,extra)=>{ const d=document.createElement('div'); d.className='prow';
+    const b=document.createElement('b'); b.textContent=n; const i=document.createElement('input'); i.type='text'; i.value=label; i.placeholder=n===1?'Lieu principal (ex. Rencontre)':'Nom du lieu (ex. Mariage)'; i.setAttribute('aria-label',`Nom du lieu ${n}`);
+    i.oninput=()=>{ onLabel(i.value); scheduleOver(); saveState(); }; d.append(b,i); if(extra) extra.forEach(e=>d.append(e)); box.appendChild(d); };
+  row(1,st.markerLabel||'',v=>st.markerLabel=v);
+  (st.markers2||[]).forEach((p,k)=>{
+    const pl=document.createElement('button'); pl.type='button'; pl.className='btn sm'; pl.textContent='Placer'; pl.onclick=()=>setPlacing(true,k+1);
+    const rm=document.createElement('button'); rm.type='button'; rm.className='btn sm'; rm.textContent='✕'; rm.setAttribute('aria-label',`Retirer le lieu ${k+2}`);
+    rm.onclick=()=>{ st.markers2.splice(k,1); renderPlaces(); scheduleOver(); saveState(); };
+    row(k+2,p.label||'',v=>p.label=v,[pl,rm]); });
+  $('bAddPlace').disabled=(st.markers2||[]).length>=2;
+  $('placesHint').hidden=st.layout!=='diptych';
+}
+function addPlace(){
+  if((st.markers2||[]).length>=2) return;
+  st.markers2.push({lat:st.center.lat,lon:st.center.lon,label:''}); renderPlaces(); scheduleOver(); saveState();
+  setPlacing(true,st.markers2.length);
+}
+
+// ---------- Itinéraire (GPX) ----------
+/** Simplification de Douglas-Peucker (tolérance en degrés) */
+function simplify(pts,tol){
+  if(pts.length<3) return pts; const keep=new Uint8Array(pts.length); keep[0]=keep[pts.length-1]=1; const stack=[[0,pts.length-1]];
+  while(stack.length){ const [a,b]=stack.pop(); let md=0, mi=-1; const [y1,x1]=pts[a], [y2,x2]=pts[b], dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy)||1e-12;
+    for(let i=a+1;i<b;i++){ const d=Math.abs(dy*pts[i][1]-dx*pts[i][0]+x2*y1-y2*x1)/L; if(d>md){ md=d; mi=i; } }
+    if(md>tol && mi>0){ keep[mi]=1; stack.push([a,mi],[mi,b]); } }
+  return pts.filter((_,i)=>keep[i]);
+}
+function parseGpx(txt){
+  const x=new DOMParser().parseFromString(txt,'application/xml'); if(x.querySelector('parsererror')) throw new Error('fichier GPX illisible');
+  let nodes=[...x.getElementsByTagName('trkpt')]; if(!nodes.length) nodes=[...x.getElementsByTagName('rtept')]; if(!nodes.length) nodes=[...x.getElementsByTagName('wpt')];
+  let pts=nodes.map(n=>[+n.getAttribute('lat'),+n.getAttribute('lon')]).filter(([a,b])=>isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180);
+  if(pts.length<2) throw new Error('aucun tracé trouvé (points trkpt, rtept ou wpt)');
+  let tol=0.00002; while(pts.length>1500){ pts=simplify(pts,tol); tol*=2; }
+  pts=pts.map(([a,b])=>[+a.toFixed(6),+b.toFixed(6)]);
+  return {name:(x.querySelector('trk > name, rte > name, metadata > name, name')?.textContent||'').trim(), pts, show:true};
+}
+async function importGpx(f){
+  try{ st.route=parseGpx(await f.text()); renderRoute(); fitRoute(); scheduleOver(); saveState(); toast(`Itinéraire importé · ${st.route.pts.length} points`); }
+  catch(e){ toast('Import GPX impossible : '+e.message,true); }
+}
+function fitRoute(){
+  const pts=[...(st.route?.pts||[])]; if(pts.length<2) return;
+  let y0=90,y1=-90,x0=180,x1=-180; for(const [a,b] of pts){ y0=Math.min(y0,a); y1=Math.max(y1,a); x0=Math.min(x0,b); x1=Math.max(x1,b); }
+  const r=ui.slotCss, dl=Math.max(x1-x0,1e-6), dm=Math.max(merc(y1)-merc(y0),1e-9);
+  const zx=Math.log2(0.82*360*REF_W/(512*dl)), zy=Math.log2(0.82*2*Math.PI*REF_W*(r.h/r.w)/(512*dm));
+  const z=Math.min(zx,zy); if(z<10) toast('Itinéraire très étendu : la carte est au zoom minimal, une partie peut sortir du cadre.');
+  goTo(imerc((merc(y0)+merc(y1))/2),(x0+x1)/2,clamp(z,10,18));
+}
+function renderRoute(){
+  const r=st.route; $('routeBox').hidden=!r;
+  if(r){ $('routeInfo').textContent=`${r.name||'Itinéraire'} · ${r.pts.length} points`; $('routeShow').checked=r.show!==false; }
+  setSeg('routeColor',st.routeStyle.color); $('routeDash').checked=!!st.routeStyle.dash; $('routeW').value=st.routeStyle.width; $('oRouteW').textContent='× '+st.routeStyle.width;
+}
+
+// ---------- Partage par lien ----------
+// L'état de l'affiche (sans le moteur, ni un itinéraire long) est compressé dans l'ancre de l'adresse (#a=…) :
+// rien n'est envoyé à un serveur ; le lien contient le lieu et les textes.
+const b64u={enc:b=>{ let s=''; for(const x of b) s+=String.fromCharCode(x); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); },
+  dec:t=>{ const s=atob(t.replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(s,c=>c.charCodeAt(0)); }};
+async function pipeBytes(bytes,stream){ return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+async function encodeShare(){
+  const o=JSON.parse(JSON.stringify(st)); delete o.engine; let dropped=false;
+  if(o.route && o.route.pts.length>400){ o.route=null; dropped=true; }
+  const raw=new TextEncoder().encode(JSON.stringify(o));
+  const data=window.CompressionStream ? 'z'+b64u.enc(await pipeBytes(raw,new CompressionStream('deflate-raw'))) : 'j'+b64u.enc(raw);
+  return {url:location.href.split('#')[0]+'#a='+data, dropped};
+}
+async function decodeShare(t){
+  const kind=t[0], bytes=b64u.dec(t.slice(1));
+  const raw = kind==='z' ? await pipeBytes(bytes,new DecompressionStream('deflate-raw')) : bytes;
+  return JSON.parse(new TextDecoder().decode(raw));
+}
+async function shareLink(){
+  try{ const {url,dropped}=await encodeShare(); $('shareOut').value=url; $('shareBox').hidden=false; $('shareOut').select();
+    let ok=false; try{ await navigator.clipboard.writeText(url); ok=true; }catch(e){}
+    toast((ok?'Lien copié':'Copiez le lien affiché')+(dropped?' · itinéraire non inclus (trop long)':'')); }
+  catch(e){ toast('Lien impossible : '+e.message,true); }
+}
+async function loadFromHash(){
+  const m=/^#a=([zj][A-Za-z0-9_-]+)$/.exec(location.hash); if(!m) return;
+  try{
+    const o=await decodeShare(m[1]); commitHistory(0);
+    const eng=st.engine, fresh=normState(o); for(const k of Object.keys(st)) delete st[k]; Object.assign(st,fresh,{engine:eng});
+    setPlacing(false); syncInputs(); layoutPreview(); loadFonts().then(()=>scheduleOver()); goTo(st.center.lat,st.center.lon,st.zoom); redrawAll(true);
+    commitHistory(); history.replaceState(null,'',location.pathname+location.search);
+    toast('Affiche chargée depuis le lien · « Annuler » pour retrouver la vôtre');
+  }catch(e){ toast('Lien d\'affiche illisible : '+e.message,true); }
+}
+
+// ---------- Ambiances et modèles de texte ----------
+function applyAmbiance(k){
+  const a=AMBIANCES.find(x=>x[0]===k); if(!a) return; const p=a[2];
+  st.theme=p.theme; st.colors={...THEMES[p.theme].c}; st.font=p.font; st.fontTitle=p.fontTitle; st.markerStyle=p.markerStyle; st.texture=p.texture;
+  setLayout(p.layout,true);
+  syncInputs(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); redrawAll(true); drawTexture();
+  toast(`Ambiance « ${a[1]} » appliquée · tout reste personnalisable`);
+}
+function applyOccasion(k){
+  const o=OCCASIONS.find(x=>x[0]===k); if(!o) return;
+  st.texts.dedication=o[2]; st.show.dedication=true;
+  if(!st.texts.names.trim() || OCCASIONS.some(x=>x[3]===st.texts.names)) st.texts.names=o[3];
+  syncInputs(); scheduleOver(); saveState(); toast(`Modèle « ${o[1]} » appliqué · « Annuler » pour revenir`);
+}
+/** Gabarit : met à jour l'état propre à certains gabarits (deux lieux, ciel), puis l'aperçu */
+function setLayout(k,quiet){
+  st.layout=k;
+  if(k==='diptych' && !st.place2) st.place2={center:{...st.center},zoom:st.zoom,marker:{...st.marker}};
+  if(k!=='diptych' && (st.active||0)===1) { st.active=0; const o=st.place2; st.place2={center:st.center,zoom:st.zoom,marker:st.marker}; st.center=o.center; st.zoom=o.zoom; st.marker=o.marker; }
+  if(k==='sky' && !st.sky.when){ st.sky.when=(isoFromFr(st.texts.date)||new Date().toISOString().slice(0,10))+'T22:00'; }
+  ui.snap=null; refreshCards(); updateLayoutUI(); layoutPreview(); saveState();
+  if(!quiet && k==='diptych') toast('Deux lieux : touchez la seconde carte pour la cadrer et y placer son repère');
+}
+function setOrient(v){ st.orient=v; setSeg('orientSeg',v); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
+/** Sections visibles selon le gabarit */
+function updateLayoutUI(){
+  const L=st.layout;
+  $('ringTog').style.display=['medallion','heart','arch'].includes(L)?'flex':'none';
+  $('skyBox').hidden=L!=='sky'; $('placeBox').hidden=L!=='diptych'; $('labelsBox').hidden=L!=='diptych';
+  setSeg('placeSeg',String(st.active||0));
+  if(L==='sky'){ $('skyWhen').value=st.sky.when; $('skyTz').value=String(st.sky.tz); }
+  if($('mList')) renderPlaces();
+}
+/** Contraste à l'impression : avertit quand des éléments se distinguent mal */
+function updateContrast(){
+  const c=st.colors, w=[];
+  if(contrast(c.roadMajor,c.land)<3) w.push('les rues principales ressortent peu sur la terre');
+  if(contrast(c.text,c.paper)<4.5) w.push('le texte manque de contraste avec le papier');
+  if(contrast(c.marker,c.land)<1.8) w.push('le repère se distingue mal de la carte');
+  $('contrastWarn').textContent = w.length ? '⚠ À l\'impression, '+w.join(' ; ')+'.' : '';
+}
 
 // ---------- Interface ----------
 function setStatus(t,kind,detail){ $('stTxt').textContent=t; $('stTxt').title=detail?t+' — '+detail:t; $('stDot').className='dot'+(kind?' '+kind:''); }
@@ -1191,7 +1850,9 @@ function showBanner(show,txt,label,action){
   if(ui.sheet==='peek') applySheet();
   const b=$('bRefresh'); b.textContent=label||'Actualiser les vecteurs'; b.onclick=action||(()=>fetchOverpass());
 }
-function setPlacing(on){ ui.placing=on; $('bPlace').classList.toggle('on',on); $('bPlace2').classList.toggle('on',on); $('placeHint').classList.toggle('show',on); slot.classList.toggle('placing',on); stageMode(); }
+function setPlacing(on,idx=0){ ui.placing=on; ui.placeIdx=on?idx:0;
+  $('placeHint').textContent = idx ? `Touchez la carte pour placer le lieu ${idx+1}` : 'Touchez la carte pour placer le repère';
+  if(on && idx && isSheet()) setSheet(ui.sheet); $('bPlace').classList.toggle('on',on); $('bPlace2').classList.toggle('on',on); $('placeHint').classList.toggle('show',on); slot.classList.toggle('placing',on); stageMode(); }
 
 // ---------- Panneau coulissant et mode Cadrer (mobile portrait) ----------
 // Trois crans : « peek » (onglets + export, affiche presque plein écran), « half » (défaut), « full » (réglages, affiche en vignette).
@@ -1304,7 +1965,7 @@ function parseCoords(input){
 function placeMarkerFromInput(){
   let c; try{ c=parseCoords($('markerIn').value); }catch(e){ toast(e.message,true); return; }
   setMarker(c.lat,c.lon);
-  const g=geom(st,EXPORT_W,EXPORT_H), v=viewBounds(st,g.map.h/g.map.w,0);
+  const g=geom(st,posterDims().W,posterDims().H), v=viewBounds(st,g.map.h/g.map.w,0);
   const out=c.lat<v.s||c.lat>v.n||c.lon<v.w||c.lon>v.e;
   if(out) goTo(c.lat,c.lon);
   $('markerIn').value=''; $('markerIn').blur();
@@ -1331,7 +1992,12 @@ function showTab(name, focus){
 const ADV_KEY='cityMapStudio.advOpen';
 function openAdvanced(scroll){ const d=$('adv'); if(!d.open) d.open=true; if(scroll){ showTab('lieu'); setTimeout(()=>d.scrollIntoView({block:'start',behavior:'smooth'}),60); } }
 /** Aperçu des polices : chaque carte montre le titre saisi */
-function updateFontSamples(){ const t=(st.texts.title||'').trim()||'Blois'; document.querySelectorAll('#fontSeg .smp').forEach(e=>e.textContent=t); }
+function updateFontSamples(){
+  const t=(st.texts.title||'').trim()||'Blois', x=(st.texts.names||'').trim()||(st.texts.dedication||'').trim()||'Aa';
+  document.querySelectorAll('#fontTitleSeg .smp').forEach(e=>e.textContent=e.parentElement.dataset.v?t:'= texte');
+  document.querySelectorAll('#fontSeg .smp').forEach(e=>e.textContent=x);
+  document.querySelectorAll('#duos .t').forEach(e=>e.textContent=t); document.querySelectorAll('#duos .d').forEach(e=>e.textContent=x);
+}
 /** Date au format de l'affiche : « Le 1er juillet 2023 » */
 function frDate(iso){
   const [y,m,d]=iso.split('-').map(Number); if(!y||!m||!d) return '';
@@ -1419,17 +2085,64 @@ function buildUI(){
   // gabarits
   const lay=$('layouts');
   LAYOUTS.forEach(([k,n])=>{ const d=document.createElement('div'); d.className='card'; d.dataset.v=k; d.innerHTML=`<canvas width="70" height="99"></canvas>${n}`;
-    d.onclick=()=>{ st.layout=k; refreshCards(); layoutPreview(); saveState(); }; lay.appendChild(d); });
+    d.onclick=()=>setLayout(k); lay.appendChild(d); });
+  // ambiances
+  AMBIANCES.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; b.innerHTML='<canvas width="70" height="99"></canvas><small></small>';
+    b.querySelector('small').textContent=n; b.onclick=()=>applyAmbiance(k); $('ambiances').appendChild(b); });
+  // orientation
+  document.querySelectorAll('#orientSeg button').forEach(b=>b.onclick=()=>setOrient(b.dataset.v));
+  // ciel
+  const tz=$('skyTz'); tz.add(new Option('Celui de cet appareil','auto'));
+  for(let m=-720;m<=840;m+=30){ const h=Math.trunc(Math.abs(m)/60), mi=Math.abs(m)%60; tz.add(new Option(`UTC${m<0?'−':'+'}${h}${mi?':'+String(mi).padStart(2,'0'):''}`,String(m))); }
+  $('skyWhen').onchange=e=>{ st.sky.when=e.target.value; drawUnder(); saveState(); };
+  tz.onchange=e=>{ st.sky.tz=e.target.value==='auto'?'auto':+e.target.value; drawUnder(); saveState(); };
+  // deux lieux
+  document.querySelectorAll('#placeSeg button').forEach(b=>b.onclick=()=>setActivePlace(+b.dataset.v));
+  $('placeSwitch').onclick=()=>setActivePlace(1-(st.active||0));
+  // filtres des thèmes
+  THEME_CATS.forEach(([k,n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'+(i?'':' on'); b.textContent=n; b.dataset.v=k;
+    b.onclick=()=>{ document.querySelectorAll('#themeCats .chip').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll('#themes .theme').forEach(t=>t.hidden=!!k && t.dataset.cat!==k); }; $('themeCats').appendChild(b); });
+  // papier
+  TEXTURES.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.dataset.v=k; b.textContent=n; b.onclick=()=>{ st.texture=k; setSeg('textures',k); drawTexture(); saveState(); }; $('textures').appendChild(b); });
+  // modèles de texte
+  OCCASIONS.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.onclick=()=>applyOccasion(k); $('occasions').appendChild(b); });
+  // polices : duos, catégories, police du titre, police du texte
+  const fam=k=>FONTS[k].fam.replace(/"/g,"'");
+  DUOS.forEach(([k,n,ft,fx])=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; b.setAttribute('role','radio');
+    b.innerHTML=`<span class="t" style="font-family:${fam(ft)}"></span><span class="d" style="font-family:${fam(fx)}"></span><small></small>`; b.querySelector('small').textContent=n;
+    b.onclick=async()=>{ st.fontTitle=ft===fx?'':ft; st.font=fx; syncFonts(); await loadFonts(); scheduleOver(); saveState(); }; $('duos').appendChild(b); });
+  FONT_CATS.forEach(([k,n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'+(i?'':' on'); b.textContent=n;
+    b.onclick=()=>{ document.querySelectorAll('#fontCats .chip').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll('#fontSeg button,#fontTitleSeg button').forEach(f=>f.hidden=!!k && f.dataset.cat && f.dataset.cat!==k); }; $('fontCats').appendChild(b); });
+  const fbtn=(k,n,cat)=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; if(cat) b.dataset.cat=cat; b.setAttribute('role','radio');
+    b.innerHTML=`<span class="smp"${k?` style="font-family:${fam(k)}${FONTS[k].scale?`;font-size:${(1.25*FONTS[k].scale).toFixed(2)}rem`:''}"`:''}></span><small></small>`; b.querySelector('small').textContent=n; return b; };
+  const same=fbtn('','Comme le texte'); same.onclick=async()=>{ st.fontTitle=''; syncFonts(); await loadFonts(); scheduleOver(); saveState(); }; $('fontTitleSeg').appendChild(same);
+  FONT_LIST.forEach(([k,n,cat])=>{
+    const t=fbtn(k,n,cat); t.onclick=async()=>{ st.fontTitle=k===st.font?'':k; syncFonts(); await loadFonts(); scheduleOver(); saveState(); }; $('fontTitleSeg').appendChild(t);
+    const x=fbtn(k,n,cat); x.onclick=async()=>{ if(!st.fontTitle && FONTS[k].script) st.fontTitle=st.font; st.font=k; if(st.fontTitle===k) st.fontTitle=''; syncFonts(); await loadFonts(); scheduleOver(); saveState(); }; $('fontSeg').appendChild(x); });
+  // plusieurs lieux, itinéraire, aperçu au mur, lien
+  $('bAddPlace').onclick=addPlace;
+  $('gpxIn').onchange=e=>{ const f=e.target.files[0]; if(f) importGpx(f); e.target.value=''; };
+  $('routeShow').onchange=e=>{ if(st.route){ st.route.show=e.target.checked; scheduleOver(); saveState(); } };
+  document.querySelectorAll('#routeColor button').forEach(b=>b.onclick=()=>{ st.routeStyle.color=b.dataset.v; renderRoute(); scheduleOver(); saveState(); });
+  $('routeW').oninput=e=>{ st.routeStyle.width=+e.target.value; renderRoute(); scheduleOver(); saveState(); };
+  $('routeDash').onchange=e=>{ st.routeStyle.dash=e.target.checked; scheduleOver(); saveState(); };
+  $('bFitRoute').onclick=fitRoute;
+  $('bDelRoute').onclick=()=>{ st.route=null; renderRoute(); scheduleOver(); saveState(); toast('Itinéraire retiré · « Annuler » pour le retrouver'); };
+  $('bMockup').onclick=openMockup; $('mockClose').onclick=()=>$('mockup').classList.remove('show'); $('mockDl').onclick=downloadMockup;
+  WALLS.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.onclick=()=>{ mock.wall=i; drawMockup(); }; $('mockWalls').appendChild(b); });
+  FRAMES.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent='Cadre '+n.toLowerCase(); b.onclick=()=>{ mock.frame=i; drawMockup(); }; $('mockFrames').appendChild(b); });
+  $('mockMat').onchange=e=>{ mock.mat=e.target.checked; drawMockup(); };
+  $('bShare').onclick=shareLink;
   // thèmes
   const th=$('themes');
-  Object.entries(THEMES).forEach(([k,t])=>{ const d=document.createElement('div'); d.className='theme'; d.dataset.v=k;
+  Object.entries(THEMES).forEach(([k,t])=>{ const d=document.createElement('div'); d.className='theme'; d.dataset.v=k; d.dataset.cat=t.cat;
     d.innerHTML=`<div class="sw"><i style="background:${t.c.paper}"></i><i style="background:${t.c.land}"></i><i style="background:${t.c.water}"></i><i style="background:${t.c.roadMajor}"></i><i style="background:${t.c.marker}"></i></div><div class="n"></div>`;
     d.querySelector('.n').textContent=t.name;
     d.onclick=()=>{ st.theme=k; st.colors={...t.c}; refreshColors(); refreshCards(); redrawAll(true); }; th.appendChild(d); });
   // couleurs
   const co=$('colors');
   Object.entries(COLOR_LABELS).forEach(([k,n])=>{ const l=document.createElement('label'); l.innerHTML=`<input type="color" data-c="${k}"><span></span>`; l.querySelector('span').textContent=n;
-    l.querySelector('input').oninput=e=>{ st.colors[k]=e.target.value.toUpperCase(); redrawAll(true); if(k==='marker'||k==='paper') refreshCards(); }; co.appendChild(l); });
+    l.querySelector('input').oninput=e=>{ st.colors[k]=e.target.value.toUpperCase(); redrawAll(true); updateContrast(); if(k==='paper') drawTexture(); if(k==='marker'||k==='paper') refreshCards(); }; co.appendChild(l); });
   document.querySelectorAll('[data-gold]').forEach(b=>b.onclick=()=>{ st.colors[b.dataset.gold]=GOLD; refreshColors(); redrawAll(true); refreshCards(); toast('Touche d\'or appliquée'); });
   // repères
   const mk=$('marks');
@@ -1441,7 +2154,6 @@ function buildUI(){
   // segments
   document.querySelectorAll('#engineSeg button').forEach(b=>b.onclick=()=>setEngine(b.dataset.v));
   document.querySelectorAll('#fillSeg button').forEach(b=>b.onclick=()=>{ st.markerFill=b.dataset.v==='1'; setSeg('fillSeg',b.dataset.v); refreshCards(); scheduleOver(); saveState(); });
-  document.querySelectorAll('#fontSeg button').forEach(b=>b.onclick=async()=>{ st.font=b.dataset.v; setSeg('fontSeg',st.font); await loadFonts(); scheduleOver(); saveState(); });
   document.querySelectorAll('#coordSeg button').forEach(b=>b.onclick=()=>{ st.coordFormat=b.dataset.v; setSeg('coordSeg',st.coordFormat); updateMarkerTxt(); scheduleOver(); saveState(); });
   // champs liés data-k
   document.querySelectorAll('[data-k]').forEach(el=>{
@@ -1449,7 +2161,9 @@ function buildUI(){
     el.addEventListener('input',()=>{
       const v = el.type==='checkbox' ? el.checked : el.type==='range' ? parseFloat(el.value) : el.value;
       setPath(st,k,v); syncOutputs();
-      if(k==='texts.title') updateFontSamples();
+      if(k==='texts.title'||k==='texts.names'||k==='texts.dedication') updateFontSamples();
+      if(k.startsWith('sky.')){ drawUnder(); saveState(); return; }
+      if(k==='numbered'||k==='linkMarkers'){ scheduleOver(); saveState(); return; }
       if(k.startsWith('layers.')){ redrawAll(true); }
       else if(k==='margin'){ layoutPreview(); saveState(); }
       else if(k==='stroke'||k==='waterMult'){ redrawAll(true); }
@@ -1501,24 +2215,34 @@ function resetAll(){
 }
 function syncInputs(){
   document.querySelectorAll('[data-k]').forEach(el=>{ const v=getPath(st,el.dataset.k); if(el.type==='checkbox') el.checked=!!v; else el.value=v??''; });
-  setSeg('engineSeg',st.engine); setSeg('fillSeg',st.markerFill?'1':'0'); setSeg('fontSeg',st.font); setSeg('coordSeg',st.coordFormat);
-  syncZoomUI(); syncOutputs(); refreshColors(); refreshCards(); updateMarkerTxt(); updateEngineUI(); updateFontSamples();
+  setSeg('engineSeg',st.engine); setSeg('fillSeg',st.markerFill?'1':'0'); setSeg('coordSeg',st.coordFormat);
+  setSeg('orientSeg',st.orient); setSeg('textures',st.texture);
+  syncZoomUI(); syncOutputs(); refreshColors(); refreshCards(); updateMarkerTxt(); updateEngineUI(); syncFonts(); updateLayoutUI(); renderRoute(); drawTexture();
+}
+/** Polices : sélection des cartes (titre, texte, duo) et aperçus */
+function syncFonts(){
+  setSeg('fontSeg',st.font); setSeg('fontTitleSeg',st.fontTitle||'');
+  const duo=DUOS.find(([,,ft,fx])=>fx===st.font && (st.fontTitle||st.font)===ft);
+  setSeg('duos',duo?duo[0]:'—'); updateFontSamples();
 }
 function syncOutputs(){
   $('oMargin').textContent=st.margin+' %'; $('oStroke').textContent='× '+st.stroke.toFixed(2); $('oWater').textContent='× '+st.waterMult.toFixed(1);
   $('oMSize').textContent=st.markerSize+' %'; $('oMOp').textContent=Math.round(st.markerOpacity*100)+' %';
   $('oTsAll').textContent=st.textScaleAll+' %';
   for(const k of Object.keys(FIT_NAMES)){ const o=$('oTs-'+k); if(o) o.textContent=st.textScale[k]+' %'+(o.classList.contains('shrunk')?' ↘':''); }
-  $('ringTog').style.display=st.layout==='medallion'?'flex':'none';
 }
-function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker; }
+function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker; updateContrast(); drawTexture(); }
+/** Exécute fn avec un état provisoirement modifié (vignettes) */
+function withState(patch,fn){ const saved={}; for(const k in patch){ saved[k]=st[k]; st[k]=patch[k]; } ui.thumb=true; try{ return fn(); } finally{ Object.assign(st,saved); ui.thumb=false; } }
+const thumbMap=(c,r)=>{ c.strokeStyle=st.colors.roadMinor; c.globalAlpha=.35; c.lineWidth=.5; for(let i=0;i<14;i++){c.beginPath();c.moveTo(r.x+i*7,r.y);c.lineTo(r.x+i*7-20,r.y+r.h);c.stroke();c.beginPath();c.moveTo(r.x,r.y+i*8);c.lineTo(r.x+r.w,r.y+i*8+6);c.stroke()} c.globalAlpha=1; c.fillStyle=st.colors.water; c.fillRect(r.x,r.y+r.h*0.45,r.w,r.h*0.08); };
+function thumb(cv,patch){ const land=st.orient==='landscape'; if(cv.width!==(land?99:70)){ cv.width=land?99:70; cv.height=land?70:99; }
+  const ctx=cv.getContext('2d'); withState(patch,()=>{ drawPoster(ctx,cv.width,cv.height,'all',thumbMap); drawPoster(ctx,cv.width,cv.height,'over'); }); }
 function refreshCards(){
-  document.querySelectorAll('#layouts .card').forEach(d=>{
-    d.classList.toggle('on',d.dataset.v===st.layout);
-    const cv=d.querySelector('canvas'), ctx=cv.getContext('2d'), saved=st.layout; st.layout=d.dataset.v;
-    drawPoster(ctx,cv.width,cv.height,'all',(c,r)=>{ c.strokeStyle=st.colors.roadMinor; c.globalAlpha=.35; c.lineWidth=.5; for(let i=0;i<14;i++){c.beginPath();c.moveTo(r.x+i*7,r.y);c.lineTo(r.x+i*7-20,r.y+r.h);c.stroke();c.beginPath();c.moveTo(r.x,r.y+i*8);c.lineTo(r.x+r.w,r.y+i*8+6);c.stroke()} c.globalAlpha=1; c.fillStyle=st.colors.water; c.fillRect(r.x,r.y+r.h*0.45,r.w,r.h*0.08); });
-    drawPoster(ctx,cv.width,cv.height,'over'); st.layout=saved;
-  });
+  document.querySelectorAll('#layouts .card').forEach(d=>{ d.classList.toggle('on',d.dataset.v===st.layout); thumb(d.querySelector('canvas'),{layout:d.dataset.v}); });
+  document.querySelectorAll('#ambiances button').forEach(d=>{ const p=AMBIANCES.find(a=>a[0]===d.dataset.v)[2];
+    d.classList.toggle('land',st.orient==='landscape');
+    d.classList.toggle('on',st.theme===p.theme && st.layout===p.layout && st.font===p.font && (st.fontTitle||'')===p.fontTitle && st.markerStyle===p.markerStyle);
+    thumb(d.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
   document.querySelectorAll('#themes .theme').forEach(d=>d.classList.toggle('on',d.dataset.v===st.theme));
   document.querySelectorAll('#marks .card').forEach(d=>{
     d.classList.toggle('on',d.dataset.v===st.markerStyle);
@@ -1598,10 +2322,10 @@ async function search(q){
 
 // ---------- Polices ----------
 async function loadFonts(){
-  try{ await Promise.all((FONTS[st.font]||FONTS.serif).load.map(f=>document.fonts.load(f))); }catch(e){}
+  try{ await Promise.all([fontOf('title'),fontOf('','dedication'),fontOf('','date')].flatMap(f=>f.load).map(f=>document.fonts.load(f))); }catch(e){}
 }
 /** true si toutes les variantes de la famille active sont chargées (sinon l'export utiliserait une police de secours) */
-function fontsReady(){ try{ return (FONTS[st.font]||FONTS.serif).load.every(f=>document.fonts.check(f)); }catch(e){ return true; } }
+function fontsReady(){ try{ return [fontOf('title'),fontOf('','dedication'),fontOf('','date')].flatMap(f=>f.load).every(f=>document.fonts.check(f)); }catch(e){ return true; } }
 
 // ---------- Export PNG 300 DPI ----------
 const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
@@ -1622,21 +2346,8 @@ async function exportPoster(){
   if(st.engine!=='maplibre' && !opData){ toast(st.engine==='file'?'Importez d\'abord un fichier de données.':'Chargez d\'abord les vecteurs Overpass.',true); return; }
   $('busy').classList.add('show'); $('busyTxt').textContent='Chargement des polices…';
   try{
-    await loadFonts();
-    const fontWarn=!fontsReady();
-    const cv=document.createElement('canvas'); cv.width=EXPORT_W; cv.height=EXPORT_H;
-    const ctx=cv.getContext('2d');
-    const g=geom(st,EXPORT_W,EXPORT_H); let warn=false;
-    let mapFn;
-    if(st.engine==='maplibre'){
-      $('busyTxt').textContent='Rendu vectoriel haute définition…';
-      const r=await renderMaplibreOffscreen(Math.round(g.map.w),Math.round(g.map.h)); warn=r.warn;
-      mapFn=(c,rect)=>c.drawImage(r.canvas,rect.x,rect.y,rect.w,rect.h);
-    } else {
-      $('busyTxt').textContent='Re-projection des vecteurs Overpass…';
-      mapFn=(c,rect)=>drawVectors(c,rect,opData);
-    }
-    drawPoster(ctx,EXPORT_W,EXPORT_H,'all',mapFn);
+    const {W:EW,H:EH}=posterDims();
+    const {canvas:cv,warn,fontWarn}=await composePoster(EW,EH,t=>$('busyTxt').textContent=t);
     $('busyTxt').textContent='Encodage PNG 300 DPI…';
     const blob0=await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('toBlob a échoué')),'image/png'));
     const blob=await withDpi(blob0,300);
@@ -1644,7 +2355,7 @@ async function exportPoster(){
     if(lastUrl) URL.revokeObjectURL(lastUrl);
     lastUrl=URL.createObjectURL(blob);
     $('resImg').src=lastUrl; $('resDl').href=lastUrl; $('resDl').download=name;
-    $('resInfo').textContent=`${name} · ${EXPORT_W} × ${EXPORT_H} px · 300 DPI · ${(blob.size/1048576).toFixed(1)} Mo`+(warn?' · ⚠ certaines tuiles ont pu manquer (délai dépassé)':'')+(fontWarn?' · ⚠ police non chargée : une police de secours a été utilisée':'');
+    $('resInfo').textContent=`${name} · ${EW} × ${EH} px · 300 DPI · ${(blob.size/1048576).toFixed(1)} Mo`+(warn?' · ⚠ certaines tuiles ont pu manquer (délai dépassé)':'')+(fontWarn?' · ⚠ police non chargée : une police de secours a été utilisée':'');
     const file=new File([blob],name,{type:'image/png'});
     const canShare=navigator.canShare && navigator.canShare({files:[file]});
     $('resShare').style.display=canShare?'flex':'none';
@@ -1717,7 +2428,7 @@ async function runDiagnostics(){
 
 // ---------- Moteur 3 : import de fichier (hors ligne) ----------
 function currentQuery(){
-  const g=geom(st,EXPORT_W,EXPORT_H); return buildQuery(viewBounds(st,g.map.h/g.map.w,0.15));
+  const g=geom(st,posterDims().W,posterDims().H); return buildQuery(viewBounds(st,g.map.h/g.map.w,0.15));
 }
 function overpassGetUrl(){ return (opAvailable()[0]||OVERPASS[0])+'?data='+encodeURIComponent(currentQuery()); }
 function osmXmlToElements(txt){
@@ -1786,6 +2497,7 @@ async function boot(){
   addEventListener('resize',()=>applySheet());
   layoutPreview();
   loadFonts().then(()=>{ scheduleOver(); refreshCards(); });
+  loadFromHash();
   document.fonts && document.fonts.ready.then(()=>{ scheduleOver(); refreshCards(); });
   if(st.engine==='overpass' && !opData) fetchOverpass();
   const ok=await loadMaplibre();
@@ -1797,7 +2509,7 @@ async function boot(){
     setStatus('MapLibre injoignable (aucun CDN accessible)','err');
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
-  window.__cms={get ui(){return ui},undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,OP_TIMEOUT,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
+  window.__cms={get ui(){return ui},setLayout,setOrient,applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,OP_TIMEOUT,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
 }
 boot();
 </script>
