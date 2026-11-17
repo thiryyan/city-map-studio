@@ -294,6 +294,17 @@ Gabarit **Ciel** : disque des étoiles visibles au-dessus du repère principal �
 * **Réglages** : date et heure locales du lieu (proposées depuis la date du texte, à 22 h), fuseau horaire (celui de l'appareil à cette date, ou de UTC−12 à UTC+14 par demi-heure), constellations, grille.
 * **Couleurs** : sur papier clair, disque à l'encre du texte et étoiles couleur papier ; sur papier sombre, disque couleur terre et étoiles couleur texte. L'attribution mentionne la source des données du ciel.
 
+### 4.9. Effets de tracé
+
+Trois effets cumulables (onglet Style), rendus de la même façon par les deux moteurs, à l'aperçu comme à l'export. Toutes les mesures sont exprimées pour un cadre de 800 px, puis mises à l'échelle du cadre.
+* **Eau hachurée** : hachures à 45°, au pas de 6 px, sur fond couleur terre ; les traits prennent la couleur de l'eau assombrie de 28 %, pour rester lisibles sur une eau pâle.
+  * Moteur Vectoriel GPU : motif `fill-pattern` fourni à la demande (événement `styleimagemissing`). Son identifiant contient le pas, la densité de pixels et les deux couleurs, ce qui permet de le recréer sans état.
+  * Vecteurs : motif de canvas (`createPattern`) à la même échelle.
+* **Bâtiments en contour** : un trait fin (0,35 × l'épaisseur de référence) dans la couleur des rues secondaires, à la place de l'aplat.
+* **Trait crayon** : chaque classe de rue est tracée deux fois, décalée de (1,2 ; −0,9) puis (−0,9 ; 1,0) × l'épaisseur de référence, à 72 % de sa largeur et 62 % d'opacité, comme une esquisse reprise au crayon. Côté GPU, deux couches par classe avec `line-translate`. Un tracé « tremblé » a été écarté : le moteur GPU ne peut pas le produire, et l'export ne correspondrait plus à l'aperçu.
+
+Les ambiances fixent leurs effets : Encre de Chine (eau hachurée), Plan d'architecte (bâtiments en contour), Carnet de voyage (trait crayon) ; les autres les désactivent.
+
 ## 5. Export haute définition
 
 * **Format** : 2480 × 3508 px en portrait, 3508 × 2480 px en paysage (A4 à 300 DPI ; 212 DPI en A3 par mise à l'échelle chez l'imprimeur). L'export est un **recalcul intégral** à pleine résolution, jamais un agrandissement de l'aperçu.
@@ -456,6 +467,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Polices | Les 5 familles (normale et italique) se chargent depuis `lib/fonts/`, y compris hors ligne et en `file://` ; elles s'appliquent à l'aperçu et à l'export ; le choix est conservé ; aucune requête vers Google. |
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
 | Taille des textes | Chaque curseur (par ligne et global) modifie l'affiche dans les 4 gabarits ; retour à 100 % = rendu d'origine ; réduction automatique signalée ; tailles persistées et remises à 100 % par « Réinitialiser » ; export 2480 × 3508. |
+| Effets de tracé | Eau hachurée, bâtiments en contour et trait crayon : rendus distincts, retour exact au rendu d'origine, export aux bonnes dimensions ; moteur GPU : motif fourni, couche en contour, deux passes décalées, hachures présentes à l'export ; effets fixés par les ambiances et annulables. |
 | Premier lancement | Accord d'abord, puis choix d'une ambiance ; ambiance appliquée et annulable ; proposition unique (après un choix ou « Commencer sans ambiance ») ; rien pour une affiche existante ni pour un lien partagé. |
 | Évolutions graphiques | 11 polices et duos, police manuscrite limitée à la dédicace et aux noms ; 15 thèmes, filtres, contraste ; gabarits distincts, cœur découpé dans l'aperçu ; ambiances et modèles annulables ; 10 repères distincts ; 3 lieux numérotés et reliés ; 4 textures ; aperçu au mur téléchargeable ; lien reconstituant l'affiche ; paysage 3508 × 2480 ; deux vues conservées ; GPX simplifié et cadré ; Polaire à la hauteur de la latitude ; exports aux bonnes dimensions. Gabarits d'origine identiques au pixel près. |
 | Lisibilité et confort | Onglets dans l'ordre du parcours, rôles ARIA et navigation au clavier ; « Étape suivante » ; « Avancé » et couleurs repliés, « Avancé » rouvert d'office et mémorisé ; cibles tactiles ; annuler / rétablir (boutons, clavier, après réinitialisation, moteur exclu) ; calendrier (« 1er », lecture inverse) ; aperçu des polices ; « Ma position » ; recherche unique, sans requête pendant la frappe. |
@@ -467,6 +479,8 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Aperçu intégré | Page dans une iframe : avertissement explicite dans l'onglet Lieu. |
 
 ### 9.2. Tests automatisés
+
+**Visibilité** : un test vérifie l'affichage réel d'un élément (`offsetParent`, `is_visible`), pas son attribut `hidden`. Une règle `display` de composant l'emportait sur `hidden` : les filtres de polices semblaient fonctionner en test, mais rien ne changeait à l'écran. La règle globale `[hidden]{display:none!important}` corrige ce piège.
 
 **Persistance et rechargement** : un script injecté par Playwright (`add_init_script`) qui accède à `localStorage` au démarrage de chaque document fait perdre, au rechargement suivant, les écritures récentes de la page. Mesuré sur une page minimale, sans l'application : 0 perte sur 25 rechargements sans script injecté, 3 à 4 sur 25 avec. C'était la cause des échecs intermittents de `overpass_policy.py`, et un risque pour tous les tests qui rechargent la page. Ces tests préparent désormais le stockage avec `tests/seed.py` (écriture par la page elle-même, puis rechargement), et attendent que l'état soit enregistré avant de recharger. Un utilisateur réel n'est pas concerné.
 

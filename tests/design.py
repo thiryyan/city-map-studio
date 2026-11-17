@@ -49,9 +49,15 @@ async def main():
         cards = await ev("[document.querySelectorAll('#fontSeg button').length, document.querySelectorAll('#fontTitleSeg button').length, document.querySelectorAll('#duos button').length]")
         check(n == 11 and cards == [11, 12, 6], f'11 polices, cartes titre et texte, 6 duos ({n}, {cards})')
         await page.click('#fontCats .chip:has-text("Manuscrites")')
-        vis = await ev("[...document.querySelectorAll('#fontSeg button')].filter(b=>!b.hidden).map(b=>b.dataset.v)")
-        check(vis == ['vibes'], f'filtre « Manuscrites » {vis}')
+        # affichage réel (offsetParent), pas l'attribut hidden : un display:flex l'emportait sur hidden
+        VIS = "s=>[...document.querySelectorAll(s)].filter(b=>b.offsetParent!==null).map(b=>b.dataset.v)"
+        vis = await ev(VIS, '#fontSeg button'); vt = await ev(VIS, '#fontTitleSeg button')
+        check(vis == ['vibes'] and vt == ['', 'vibes'], f'filtre « Manuscrites » : seules les polices manuscrites restent affichées {vis} {vt}')
+        await page.click('#fontCats .chip:has-text("Affiche")')
+        vis = await ev(VIS, '#fontSeg button')
+        check(vis == ['deco', 'bebas'], f'filtre « Affiche » {vis}')
         await page.click('#fontCats .chip:has-text("Toutes")')
+        check(len(await ev(VIS, '#fontSeg button')) == 11, 'filtre « Toutes » : 11 polices affichées')
         base = await snap()
         await page.click('#duos [data-v=mariage]'); await page.wait_for_timeout(400)
         st = await ev("[__cms.st.fontTitle, __cms.st.font]")
@@ -71,7 +77,7 @@ async def main():
         await ev("__cms.showTab('style')")
         themes = await ev("Object.keys(__cms.THEMES).length")
         await page.click('#themeCats .chip:has-text("Sombres")')
-        dark = await ev("[...document.querySelectorAll('#themes .theme')].filter(t=>!t.hidden).map(t=>t.dataset.v)")
+        dark = await ev("[...document.querySelectorAll('#themes .theme')].filter(t=>t.offsetParent!==null).map(t=>t.dataset.v)")
         check(themes == 15 and sorted(dark) == ['neon', 'nuit', 'onyx', 'plan'], f'15 thèmes, filtre « Sombres » {dark}')
         await page.click('#themeCats .chip:has-text("Tous")')
         bad = []
@@ -222,6 +228,28 @@ async def main():
         d = await dl.value; path = str(T / 'design-sky.png'); await d.save_as(path)
         w, h = struct.unpack('>II', open(path, 'rb').read()[16:24])
         check((w, h) == (2480, 3508), f'export « Ciel » {w} × {h}')
+
+        # ================= Effets de tracé (moteur Fichier ; le moteur Vectoriel GPU est vérifié par maplibre.py) =================
+        print('— Effets de tracé')
+        await page.click('#resClose')
+        await ev("__cms.showTab('style')"); await page.click('#layouts .card[data-v=classic]'); await page.wait_for_timeout(400)
+        MAP = "(()=>document.getElementById('opCanvas').toDataURL())()"
+        base = await ev(MAP); seen = {}
+        for k in ['hatch', 'outline', 'pencil']:
+            await page.click(f'label.tog:has(input[data-k="fx.{k}"])'); await page.wait_for_timeout(300)
+            seen[k] = await ev(MAP)
+            await page.click(f'label.tog:has(input[data-k="fx.{k}"])'); await page.wait_for_timeout(300)
+        check(all(v != base for v in seen.values()) and len(set(seen.values())) == 3, 'eau hachurée, bâtiments en contour, trait crayon : trois rendus distincts')
+        check(await ev(MAP) == base, 'effets retirés : rendu d\'origine')
+        dims = await ev("""(async()=>{ __cms.st.fx={hatch:true,outline:true,pencil:true}; const r=await __cms.composePoster(2480,3508); __cms.st.fx={hatch:false,outline:false,pencil:false}; return [r.canvas.width,r.canvas.height]; })()""")
+        check(dims == [2480, 3508], f'export avec les trois effets {dims}')
+        await page.click('#ambiances [data-v=encre]'); await page.wait_for_timeout(300)
+        e1 = await ev("JSON.stringify(__cms.st.fx)")
+        await page.click('#ambiances [data-v=voyage]'); await page.wait_for_timeout(300)
+        e2 = await ev("JSON.stringify(__cms.st.fx)")
+        check('"hatch":true' in e1 and '"pencil":true' in e2 and '"hatch":false' in e2, f'ambiances : Encre de Chine hachurée, Carnet de voyage au crayon ({e1} {e2})')
+        await page.click('#bUndo'); await page.wait_for_timeout(300)
+        check('"hatch":true' in await ev("JSON.stringify(__cms.st.fx)"), 'effets annulables avec l\'ambiance')
         check(not errs, f'aucune erreur de page {errs}')
         await b.close()
     print('échecs', fails); assert not fails
