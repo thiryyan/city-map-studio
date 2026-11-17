@@ -78,6 +78,20 @@ async def main():
         st = await page.inner_text('#stTxt'); ban = await page.inner_text('#banner'); print('  tous suspendus :', st, '| bandeau :', ban)
         check(dict(hits) == before, 'tous suspendus : aucune requête émise')
         check('suspendu' in st.lower(), 'tous suspendus : message explicite')
+        # 6. Requête allégée et lecture de la réponse (bâtiments sans étiquettes, relations découpées au cadre)
+        q = await page.evaluate("__cms.buildQuery({s:47.57,w:1.31,n:47.60,e:1.36})")
+        check('[timeout:90]' in q and 'out skel geom qt;' in q and 'out tags geom(47.57000,1.31000,47.60000,1.36000) qt;' in q and 'relation["natural"="water"]' in q,
+              'requête : délai serveur 90 s, relations découpées au cadre, bâtiments sans étiquettes')
+        parsed = await page.evaluate("""(()=>{ const P=(la,lo)=>({lat:la,lon:lo});
+            const d=__cms.parseOverpass({elements:[
+              {type:'way',id:1,geometry:[P(47.58,1.33),P(47.58,1.331),P(47.581,1.331),P(47.58,1.33)]},                       // bâtiment (out skel geom)
+              {type:'relation',id:2,tags:{natural:'water'},members:[{type:'way',ref:3,role:'outer',
+                 geometry:[null,P(47.57,1.32),P(47.575,1.34),null,null,P(47.578,1.35),P(47.57,1.32)]}]},                        // points hors cadre : null
+              {type:'way',id:4,tags:{highway:'residential'},geometry:[P(47.58,1.32),P(47.59,1.33)]}]});
+            return [d.buildings.length, d.water.length, d.roads.minor.length]; })()""")
+        check(parsed == [1, 1, 1], f'réponse : bâtiment sans étiquette reconnu, relation avec points null assemblée, rue lue {parsed}')
+        order = await page.evaluate("__cms.OP_ORDER.map(u=>new URL(u).host)")
+        check(order[-1] == 'overpass-api.de', f'page en file:// : overpass-api.de en dernier (406 sans Referer) {order}')
         check(not errs, f'aucune erreur de page {errs}')
         await b.close()
     print('échecs', fails); assert not fails

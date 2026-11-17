@@ -67,11 +67,16 @@ Une fonction unique, `drawPoster(ctx, W, H, pass, mapFn)`, dessine l'affiche à 
 
   Tant que l'accord n'est pas donné, chaque point d'accès au réseau (`initMaplibre`, `fetchOverpass`, `search`, `runDiagnostics`, `exportPoster` avec le moteur Vectoriel GPU, CDN de secours de MapLibre) affiche la demande au lieu d'appeler le service. L'onglet Lieu indique l'état de l'accord et permet de le retirer, ce qui recharge la page dans l'état initial.
 * **Overpass**
-  * Requêtes uniquement à la demande, **une seule à la fois**. Après un déplacement hors de la zone chargée, un bandeau propose « Actualiser les vecteurs ». La zone demandée est élargie de 40 % pour absorber les petits déplacements.
-  * `[timeout:25]` côté serveur ; `AbortController` à **30 s** côté client, puis passage au miroir suivant. Une erreur HTTP 5xx ou un délai dépassé fait aussi passer au miroir suivant. Les délais sont regroupés dans `OP_TIMEOUT` (`fetch` : 30 s ; `diag` : 20 s pour la sonde du diagnostic).
+  * Requêtes uniquement à la demande, **une seule à la fois**. Après un déplacement hors de la zone chargée, un bandeau propose « Actualiser les vecteurs ». La zone demandée est élargie de 20 % (`OP_PAD`) pour absorber les petits déplacements.
+  * **Délais** : `[timeout:90]` côté serveur (`OP_SERVER_TIMEOUT`) ; `AbortController` à **100 s** côté client, puis passage au miroir suivant. Mesure réelle pour l'affiche par défaut (Blois, zoom 14) : 24 à 32 s de calcul sur un miroir chargé, au-delà des anciens 25 s (serveur) et 30 s (client), qui coupaient donc systématiquement une réponse valide. Les délais sont regroupés dans `OP_TIMEOUT` (`fetch` : 100 s ; `diag` : 20 s pour le diagnostic ; `probe` : 5 s pour le sondage ; `retry` : 1,5 s avant un second essai).
+  * **Ordre des miroirs** : sur une page en http(s) (GitHub Pages), overpass-api.de, l'instance de référence, est essayé en premier ; en `file://`, il passe en dernier (406 sans Referer). Avant la requête, la page d'état de chaque miroir disponible est sondée en parallèle, en 5 s et en mode `no-cors` (seule l'existence d'une réponse compte). Les miroirs qui répondent passent devant, sans qu'aucun soit écarté : on ne perd plus jusqu'à 100 s par miroir muet avant d'atteindre celui qui fonctionne.
+  * **Second essai** : une erreur serveur (5xx) ou une absence de réponse obtenue en moins de 4 s (passerelle surchargée, qui alterne souvent 504 et réponse valide) donne lieu à un second essai, 1,5 s plus tard, une seule fois. Un délai dépassé ne donne jamais lieu à un second essai.
+  * **Calcul interrompu** : une réponse HTTP 200 dont la remarque (`remark`) signale un arrêt du calcul (délai, mémoire) compte comme un échec du miroir, au lieu d'afficher une carte vide ou partielle.
+  * **Progression** : pendant la requête, la barre d'état indique le miroir interrogé et le temps écoulé.
   * **Message d'échec** : quand aucun miroir ne répond, chaque échec est enregistré (HTTP, délai dépassé, ou absence de réponse lisible). Une passerelle en 502/504 répond souvent sans en-tête CORS : le navigateur ne voit alors qu'un `TypeError` (« Failed to fetch »), indiscernable d'une coupure réseau. Si au moins un miroir a répondu en HTTP ou a dépassé le délai, la connexion fonctionne : la barre d'état et la notification indiquent « serveurs en panne ou surchargés » et non « accès réseau bloqué ». Le détail par miroir figure dans l'infobulle de la barre d'état et dans la notification. Ces échecs (5xx, délai) ne suspendent pas le miroir.
   * **Suspension après 406 ou 429** : overpass-api.de renvoie HTTP 406 aux clients qu'il ne juge pas légitimes (User-Agent, Referer, en-tête Accept). Une page ouverte en `file://` n'envoie pas de Referer, d'où le refus. Les clients qui insistent après une erreur 406 ou 429 sont bannis plus vite. Un miroir qui répond 406 est donc suspendu **24 h**, et un miroir qui répond 429 **1 h**. Pour un 429, l'application retient la durée de `Retry-After` si elle est plus longue, mais elle ne peut lire cet en-tête que si le serveur l'autorise par CORS. La suspension est conservée dans `localStorage` (clé `cityMapStudio.opBlocked`), y compris après un rechargement, et le diagnostic la respecte. Si tous les miroirs sont suspendus, aucune requête n'est émise : l'application indique l'heure de reprise et oriente vers le moteur Fichier.
-  * overpass-api.de est essayé en dernier. Le lien « requête Overpass » du moteur Fichier vise le premier miroir disponible.
+  * Le lien « requête Overpass » du moteur Fichier vise le premier miroir disponible.
+  * Les messages d'état du moteur Vectoriel GPU (« Chargement des tuiles », « Prêt ») ne s'affichent que lorsque ce moteur est actif : ils écrasaient l'état d'Overpass.
   * Un navigateur ne peut pas modifier son User-Agent : seul un hébergement HTTPS (GitHub Pages) fournit un Referer et une Origin valides.
 * **Nominatim** : appel uniquement à la validation de la recherche (jamais à la frappe), 5 résultats, `accept-language=fr`. Les résultats sont insérés via `textContent` (aucune injection HTML).
 * **Persistance** : l'état de l'atelier est sauvegardé dans `localStorage` (clé `cityMapStudio.v2`, sous `try/catch`).
@@ -100,27 +105,35 @@ Côté MapLibre, le zoom effectif d'un conteneur de largeur CSS $w_{\text{css}}$
 
 ### 3.2. Requête Overpass QL
 
-La zone `(S,W,N,E)` est calculée par l'application. `out geom qt` inclut les coordonnées dans chaque `way` et chaque membre de `relation`, ce qui évite de reconstruire la géométrie à partir des nœuds.
+La zone `(S,W,N,E)` est calculée par l'application. `out geom` inclut les coordonnées dans chaque `way` et chaque membre de `relation`, ce qui évite de reconstruire la géométrie à partir des nœuds. La requête est découpée en trois sorties pour alléger le travail des serveurs publics :
 
 ```overpassql
-[out:json][timeout:25];
+[out:json][timeout:90];
 (
   way["natural"="water"](S,W,N,E);
-  relation["natural"="water"](S,W,N,E);
   way["waterway"="riverbank"](S,W,N,E);
-  relation["waterway"="riverbank"](S,W,N,E);
   way["waterway"~"^(river|canal|stream)$"](S,W,N,E);
   way["leisure"~"^(park|garden)$"](S,W,N,E);
-  relation["leisure"="park"](S,W,N,E);
   way["landuse"~"^(grass|forest|meadow|recreation_ground)$"](S,W,N,E);
   way["natural"="wood"](S,W,N,E);
   way["highway"~"^(motorway|trunk|primary|secondary|tertiary)(_link)?$"](S,W,N,E);
   way["highway"~"^(unclassified|residential|living_street|pedestrian|service|footway|path|cycleway|steps|track)$"](S,W,N,E);
   way["railway"="rail"](S,W,N,E);   // si le calque Voies ferrées est actif
-  way["building"](S,W,N,E);         // si le calque Bâtiments est actif
 );
-out geom qt;
+out tags geom qt;
+(
+  relation["natural"="water"](S,W,N,E);
+  relation["waterway"="riverbank"](S,W,N,E);
+  relation["leisure"="park"](S,W,N,E);
+);
+out tags geom(S,W,N,E) qt;          // géométrie découpée au cadre
+way["building"](S,W,N,E);           // si le calque Bâtiments est actif (zoom ≥ 12,5)
+out skel geom qt;                   // contour seul, sans étiquettes
 ```
+
+* **Relations découpées au cadre** : sans `geom(S,W,N,E)`, une relation comme la Loire est renvoyée sur toute sa longueur. Avec le découpage, les points hors du cadre arrivent comme `null` : les tracés sont coupés à ces points (`splitNull`) avant l'assemblage des anneaux.
+* **Bâtiments sans étiquettes** : ils représentaient 69 % du volume (9 Mo sur 15,6 Mo pour Blois au zoom 14), surtout à cause d'étiquettes inutiles (adresses…). Un chemin sans étiquette mais avec une géométrie fournie par le serveur est reconnu comme bâtiment, avant la reconstruction des géométries des fichiers importés, pour ne pas confondre ces derniers avec les membres non étiquetés d'une relation.
+* **Volume** (Blois, zoom 14, mesuré) : 12,7 Mo de JSON, transférés compressés en 2,2 Mo.
 
 `waterway=riverbank` est un étiquetage obsolète, conservé pour les données anciennes ; `natural=water` reste la source principale. Les anneaux des relations multipolygones sont **assemblés** par chaînage des segments à extrémités communes, puis remplis en `evenodd` (îles).
 

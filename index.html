@@ -525,7 +525,9 @@ const OFM_URL = 'https://tiles.openfreemap.org/planet';
 // overpass-api.de en dernier : depuis juin 2026 il renvoie 406 aux clients sans Referer (fichier local, aperçus)
 const OVERPASS = ['https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass-api.de/api/interpreter'];
 // Délais côté client (ms) : requête de données et sonde du diagnostic. Objet modifiable par les tests (__cms.OP_TIMEOUT).
-const OP_TIMEOUT = {fetch: 30000, diag: 20000};
+// fetch : attente d'une réponse (le serveur calcule jusqu'à OP_SERVER_TIMEOUT s) ; probe : sondage de la page d'état ; retry : délai avant un 2e essai après une erreur serveur immédiate
+const OP_TIMEOUT = {fetch: 100000, diag: 20000, probe: 5000, retry: 1500};
+const OP_SERVER_TIMEOUT = 90, OP_PAD = 0.2;
 const ML_VERSION = '4.7.1';
 // lib/ : copie embarquée dans le dépôt (BSD-3, cf. lib/LICENSE-maplibre-gl.txt) ; les CDN restent en secours
 const ML_CDNS = ['lib/',`https://unpkg.com/maplibre-gl@${ML_VERSION}/dist/`,`https://cdn.jsdelivr.net/npm/maplibre-gl@${ML_VERSION}/dist/`,`https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/${ML_VERSION}/`];
@@ -716,7 +718,9 @@ function opSuspend(url,status,retryAfter){
   opBlock[url]={status,until:Date.now()+ms};
   try{ localStorage.setItem(OP_BLOCK_KEY,JSON.stringify(opBlock)); }catch(e){}
 }
-const opAvailable = () => OVERPASS.filter(u=>!opBlockInfo(u));
+// Page servie en http(s) (GitHub Pages) : overpass-api.de, l'instance de référence, en premier ; en file:// il refuse les requêtes sans Referer (406).
+const OP_ORDER = /^https?:/.test(location.protocol) ? [OVERPASS[3],OVERPASS[2],OVERPASS[1],OVERPASS[0]] : OVERPASS;
+const opAvailable = () => OP_ORDER.filter(u=>!opBlockInfo(u));
 const hhmm = t => new Date(t).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'});
 const opBlockMsg = b => `suspendu après HTTP ${b.status} · nouvel essai possible ${hhmm(b.until)}`;
 // Échec d'un miroir : {host, status?, kind:'http'|'timeout'|'nores'}.
@@ -725,7 +729,29 @@ const opBlockMsg = b => `suspendu après HTTP ${b.status} · nouvel essai possib
 // a répondu en HTTP ou a dépassé le délai, le réseau fonctionne : la panne vient des serveurs.
 function opFailText(f,serverSide){
   return f.kind==='http' ? 'HTTP '+f.status : f.kind==='timeout' ? 'délai dépassé'
+    : f.kind==='heavy' ? 'calcul interrompu par le serveur (surcharge)'
     : serverSide ? 'réponse illisible (erreur serveur sans CORS)' : 'pas de réponse (connexion ou serveur)';
+}
+/** Une requête vers un miroir : {json} en cas de succès, sinon {kind:'http'|'timeout'|'nores'|'heavy', status, fast, retryAfter} */
+async function opQuery(url,q){
+  const ctl=new AbortController(), timer=setTimeout(()=>ctl.abort(),OP_TIMEOUT.fetch), t=performance.now();
+  const fast=()=>performance.now()-t<4000;
+  try{
+    const res=await fetch(url,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ctl.signal});
+    if(!res.ok){ clearTimeout(timer); return {kind:'http',status:res.status,fast:fast(),retryAfter:res.headers.get('Retry-After')}; }
+    const json=await res.json(); clearTimeout(timer);
+    // Calcul arrêté par le serveur (délai ou mémoire) : réponse 200, données partielles ou vides, « remark » explicite
+    if(/runtime error|timed out|out of memory|rate_limited/i.test(json.remark||'')) return {kind:'heavy',fast:fast()};
+    return {json};
+  }catch(e){ clearTimeout(timer); const to=e.name==='AbortError'; return {kind:to?'timeout':'nores',fast:!to && fast()}; }   // délai dépassé : jamais de second essai
+}
+/** Ordre d'essai : miroirs dont la page d'état répond en quelques secondes d'abord (requête légère, « no-cors » :
+ *  seule l'existence d'une réponse compte), puis les autres, dans l'ordre de préférence. */
+async function opProbeOrder(mirrors){
+  if(mirrors.length<2) return mirrors;
+  const alive=await Promise.all(mirrors.map(async u=>{ const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),OP_TIMEOUT.probe);
+    try{ await fetch(u.replace(/interpreter$/,'status'),{mode:'no-cors',cache:'no-store',signal:ctl.signal}); return true; }catch(e){ return false; } finally{ clearTimeout(t); } }));
+  return [...mirrors.filter((u,i)=>alive[i]), ...mirrors.filter((u,i)=>!alive[i])];
 }
 const opServerSide = fails => fails.some(f=>f.kind!=='nores');
 
@@ -1224,21 +1250,28 @@ function drawPoster(ctx, W, H, pass, mapFn){
 function hexA(hex){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g=n>>8&255,b=n&255;return a=>`rgba(${r},${g},${b},${a})`}
 
 // ---------- Moteur 2 : Overpass + Canvas ----------
+/** Requête Overpass, allégée pour les serveurs publics :
+ *  - chemins : géométrie complète (ils sont courts) ;
+ *  - relations (Loire, grands parcs…) : géométrie découpée au cadre, out geom(bbox) — sans cela, une relation
+ *    de plusieurs centaines de kilomètres est renvoyée en entier ;
+ *  - bâtiments (≈ 70 % du volume) : contour seul, sans étiquettes (out skel geom) ; reconnus à la réception. */
 function buildQuery(b){
   const bb=`(${b.s.toFixed(5)},${b.w.toFixed(5)},${b.n.toFixed(5)},${b.e.toFixed(5)})`;
-  return `[out:json][timeout:25];(
-way["natural"="water"]${bb};relation["natural"="water"]${bb};
-way["waterway"="riverbank"]${bb};relation["waterway"="riverbank"]${bb};
+  return `[out:json][timeout:${OP_SERVER_TIMEOUT}];(
+way["natural"="water"]${bb};way["waterway"="riverbank"]${bb};
 way["waterway"~"^(river|canal|stream)$"]${bb};
-way["leisure"~"^(park|garden)$"]${bb};relation["leisure"="park"]${bb};
+way["leisure"~"^(park|garden)$"]${bb};
 way["landuse"~"^(grass|forest|meadow|recreation_ground)$"]${bb};way["natural"="wood"]${bb};
 way["highway"~"^(motorway|trunk|primary|secondary|tertiary)(_link)?$"]${bb};
 way["highway"~"^(unclassified|residential|living_street|pedestrian|service|footway|path|cycleway|steps|track)$"]${bb};
 ${st.layers.rail?`way["railway"="rail"]${bb};`:''}
-${st.layers.buildings && st.zoom>=12.5?`way["building"]${bb};`:''}
-);out geom qt;`;
+);out tags geom qt;
+(relation["natural"="water"]${bb};relation["waterway"="riverbank"]${bb};relation["leisure"="park"]${bb};);out tags geom${bb} qt;
+${st.layers.buildings && st.zoom>=12.5?`way["building"]${bb};out skel geom qt;`:''}`;
 }
-function toPts(geo){const a=new Array(geo.length);for(let i=0;i<geo.length;i++)a[i]=[geo[i].lon,merc(geo[i].lat)];return a}
+function toPts(geo){const a=[];for(const p of geo) if(p) a.push([p.lon,merc(p.lat)]);return a}   // points null (hors cadre) ignorés
+/** Coupe une géométrie aux points null (out geom(bbox) : points hors du cadre) */
+function splitNull(geo){ const out=[]; let cur=[]; for(const p of geo){ if(p) cur.push(p); else { if(cur.length>1) out.push(cur); cur=[]; } } if(cur.length>1) out.push(cur); return out; }
 function bboxOf(rings){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const r of rings)for(const p of r){if(p[0]<x0)x0=p[0];if(p[0]>x1)x1=p[0];if(p[1]<y0)y0=p[1];if(p[1]>y1)y1=p[1]}return [x0,y0,x1,y1]}
 /** Assemble des segments de ways (membres de relation) en anneaux fermés */
 function stitch(segs){
@@ -1272,6 +1305,9 @@ function normalizeElements(els){
   return els;
 }
 function parseOverpass(json){
+  // Bâtiments demandés sans étiquettes (out skel geom) : chemin sans étiquette, géométrie fournie par le serveur.
+  // Testé avant normalizeElements, qui ajoute une géométrie aux chemins des fichiers importés (nœuds séparés).
+  for(const e of json.elements||[]) if(e.type==='way' && !e.tags && Array.isArray(e.geometry)) e.tags={building:'yes'};
   normalizeElements(json.elements||[]);
   const d={water:[],waterLines:[],parks:[],buildings:[],rails:[],roads:{}};
   ROADS.forEach(([k])=>d.roads[k]=[]);
@@ -1287,7 +1323,7 @@ function parseOverpass(json){
       else if(t.railway==='rail') add(d.rails,g,{tunnel:t.tunnel&&t.tunnel!=='no'});
       else if(HW_CLASS[t.highway] && t.area!=='yes') add(d.roads[HW_CLASS[t.highway]],g,{tunnel:t.tunnel&&t.tunnel!=='no'});
     } else if(el.type==='relation' && el.members){
-      const segs=el.members.filter(m=>m.type==='way'&&m.geometry&&m.geometry.length&&m.geometry[0]).map(m=>m.geometry);
+      const segs=el.members.filter(m=>m.type==='way'&&m.geometry&&m.geometry.length).flatMap(m=>splitNull(m.geometry));
       if(!segs.length) continue;
       const rings=stitch(segs);
       if(t.natural==='water'||t.waterway==='riverbank') add(d.water,rings);
@@ -1351,7 +1387,7 @@ async function fetchOverpass(){
   if(!needConsent(()=>fetchOverpass())) return;
   const g=geom(st,posterDims().W,posterDims().H), aspect=g.map.h/g.map.w;
   if(st.zoom<11.5){ toast('Zone trop vaste pour Overpass : zoomez au-delà de 11,5 ou utilisez le moteur Vectoriel GPU.',true); return; }
-  const b=viewBounds(st,aspect,0.4);
+  const b=viewBounds(st,aspect,OP_PAD);
   const q=buildQuery(b);
   opLoading=true; setStatus('Requête Overpass en cours…','busy'); showBanner(false);
   const mirrors=opAvailable();
@@ -1363,23 +1399,27 @@ async function fetchOverpass(){
     return;
   }
   const fails=[];
-  for(const url of mirrors){
-    const host=new URL(url).host;
-    const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),OP_TIMEOUT.fetch);
-    try{
-      const res=await fetch(url,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ctl.signal});
-      clearTimeout(timer);
-      if(res.status===406||res.status===429){
-        opSuspend(url,res.status,res.headers.get('Retry-After'));
-        fails.push({host,status:res.status,kind:'http'}); console.warn('Overpass',url,res.status,'→ suspendu'); continue;
+  // Sondage rapide et parallèle des pages d'état : les miroirs qui répondent passent devant (aucun n'est écarté)
+  const order=await opProbeOrder(mirrors);
+  const t0=performance.now(); let cur='';
+  const tick=setInterval(()=>setStatus(`Requête Overpass en cours · ${cur} · ${Math.round((performance.now()-t0)/1000)} s`,'busy'),1000);
+  try{
+    for(const url of order){
+      const host=new URL(url).host; cur=host;
+      for(let attempt=1; attempt<=2; attempt++){
+        const r=await opQuery(url,q);
+        if(r.json){
+          opData=parseOverpass(r.json); opData.bounds=b; opData.layers=JSON.stringify(st.layers); opData.source='overpass';
+          opLoading=false; setStatus(`Vecteurs chargés · ${r.json.elements.length.toLocaleString('fr-FR')} objets · ${host} · ${Math.round((performance.now()-t0)/1000)} s`);
+          renderMap(); return;
+        }
+        if(r.status===406||r.status===429){ opSuspend(url,r.status,r.retryAfter); fails.push({host,status:r.status,kind:'http'}); console.warn('Overpass',url,r.status,'→ suspendu'); break; }
+        // Erreur serveur ou absence de réponse immédiate (passerelle surchargée) : un second essai, une seule fois
+        if(attempt===1 && r.fast && r.kind!=='heavy'){ console.warn('Overpass',url,r.status||r.kind,'→ nouvel essai'); await new Promise(z=>setTimeout(z,OP_TIMEOUT.retry)); continue; }
+        fails.push({host,status:r.status,kind:r.kind}); console.warn('Overpass',url,r.status||r.kind); break;
       }
-      if(!res.ok){ fails.push({host,status:res.status,kind:'http'}); console.warn('Overpass',url,res.status); continue; }
-      const json=await res.json();
-      opData=parseOverpass(json); opData.bounds=b; opData.layers=JSON.stringify(st.layers); opData.source='overpass';
-      opLoading=false; setStatus(`Vecteurs chargés · ${json.elements.length.toLocaleString('fr-FR')} objets · ${new URL(url).host}`);
-      renderMap(); return;
-    }catch(e){ clearTimeout(timer); fails.push({host,kind:e.name==='AbortError'?'timeout':'nores'}); console.warn('Overpass',url,e.name==='AbortError'?'délai dépassé':e); }
-  }
+    }
+  } finally { clearInterval(tick); }
   opLoading=false;
   const server=opServerSide(fails);
   const detail=fails.map(f=>f.host+' : '+opFailText(f,server)).join(' · ');
@@ -1493,8 +1533,9 @@ function initMaplibre(){
   mlMap.on('styleimagemissing',e=>onImageMissing(mlMap,e));
   mlMap.on('moveend',()=>{ mlMap.setStyle(buildStyle(mlK(ui.slotCss.w),ui.slotCss.w/REF_W)); saveState(); });
   mlMap.on('click',e=>{ if(ui.placing){ placeAt(e.lngLat.lat,e.lngLat.lng); } });
-  mlMap.on('dataloading',()=>setStatus('Chargement des tuiles…','busy'));
-  mlMap.on('idle',()=>setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'));
+  // Messages du moteur GPU seulement quand il est actif : sinon ils écraseraient l'état d'Overpass ou du moteur Fichier
+  mlMap.on('dataloading',()=>{ if(st.engine==='maplibre') setStatus('Chargement des tuiles…','busy'); });
+  mlMap.on('idle',()=>{ if(st.engine==='maplibre') setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'); });
   let gotTiles=false;
   mlMap.on('data',e=>{ if(e.dataType==='source' && e.sourceId==='omt' && e.isSourceLoaded){ gotTiles=true; if(mlFailMsg){ mlFailMsg=''; showBanner(false); } } });
   mlMap.on('error',e=>{ const m=(e&&e.error&&e.error.message)||''; console.warn('MapLibre',m);
@@ -2596,7 +2637,7 @@ async function boot(){
     setStatus('MapLibre injoignable (aucun CDN accessible)','err');
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
-  window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,OP_TIMEOUT,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
+  window.__cms={get mlMap(){return mlMap},buildQuery,get OP_ORDER(){return OP_ORDER},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,OP_TIMEOUT,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
 }
 boot();
 </script>
