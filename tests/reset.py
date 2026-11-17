@@ -8,6 +8,7 @@ résultat est persisté après rechargement.
 """
 import pathlib, os, asyncio, json
 from playwright.async_api import async_playwright
+from seed import seed
 T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri()
 CHROME = os.environ.get('CHROME') or None
@@ -22,12 +23,11 @@ async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
         page = await b.new_page(viewport={'width': 390, 'height': 844}); errs = []
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1')}catch(e){}")
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):
             await (r.continue_() if r.request.url.startswith('file:') else r.abort())
         await page.route('**/*', route)
-        await page.goto(APP); await page.wait_for_timeout(1500)
+        await seed(page, APP, wait=1500)   # accord préalable et section Avancé, sans script injecté (cf. tests/seed.py)
         await page.evaluate("localStorage.removeItem('cityMapStudio.v2')"); await page.reload(); await page.wait_for_timeout(1500)
         default_state = json.loads(await page.evaluate(STATE)); base = await page.evaluate(SNAP)
 

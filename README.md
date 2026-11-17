@@ -4,7 +4,8 @@ Atelier web de création d'affiches cartographiques souvenir : tracé minimalist
 
 - **100 % open source** : MapLibre GL JS, tuiles OpenFreeMap, Overpass API, Nominatim, polices SIL OFL auto-hébergées. Aucune clé API, aucun appel à Google.
 - **Trois moteurs** : Vectoriel GPU (par défaut), Overpass (tracé artistique) et Fichier (hors ligne : JSON Overpass, `.osm`, GeoJSON).
-- **Quatre gabarits** (Souvenir, Cadre classique, Fondu moderne, Médaillon), sept thèmes, cinq styles de repère, cinq familles de polices.
+- **Dix gabarits** (Souvenir, Cadre, Fondu, Médaillon, Cœur, Arche, Voyage, Polaroid, Deux lieux, Ciel) en portrait ou paysage, quinze thèmes, huit ambiances, dix repères, onze polices en duos, quatre papiers.
+- **Plus que la carte** : jusqu'à trois lieux, itinéraire GPX, carte du ciel du jour J, aperçu au mur, partage par lien.
 - **Un seul fichier** `index.html`, sans build, pensé d'abord pour le mobile.
 
 ## Utilisation
@@ -25,5 +26,6 @@ Ouvrir directement `index.html` en `file://` fonctionne aussi, mais certains ser
 - Données : © contributeurs OpenStreetMap, licence ODbL.
 - Schéma des tuiles vectorielles : © OpenMapTiles, CC-BY 4.0 (tuiles servies par OpenFreeMap).
 - Polices (`lib/fonts/`) : SIL Open Font License 1.1, auto-hébergées (`OFL.txt` dans chaque dossier). Aucun appel à Google Fonts.
+- Données du ciel (`lib/sky/`) : d3-celestial © Olaf Frohn, BSD-3-Clause (`lib/sky/LICENSE-d3-celestial.txt`), compilées depuis XHIP et les tracés de l'UAI.
 
 Les affiches produites doivent porter l'attribution « © contributeurs OpenStreetMap », complétée de « OpenFreeMap © OpenMapTiles » avec le moteur Vectoriel GPU. L'application l'ajoute par défaut.

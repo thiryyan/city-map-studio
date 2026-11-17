@@ -43,7 +43,7 @@ async def main():
         ctx = await b.new_context(viewport={'width': 390, 'height': 664}, is_mobile=True, has_touch=True,
                                   permissions=['geolocation'], geolocation={'latitude': 48.8584, 'longitude': 2.2945})
         page = await ctx.new_page(); errs = []; nomi = []
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1')}catch(e){}")
+        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):
             u = r.request.url
@@ -93,7 +93,7 @@ async def main():
         # Relecture au démarrage : nouvelle page avec la préférence déjà enregistrée (un rechargement immédiat
         # peut précéder l'écriture différée de localStorage par Chromium)
         p2 = await ctx.new_page(); await p2.route('**/*', route)
-        await p2.add_init_script("try{localStorage.setItem('cityMapStudio.advOpen','1')}catch(e){}")
+        await p2.add_init_script("try{localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
         await p2.goto(APP); await p2.wait_for_timeout(1000)
         check(await p2.evaluate("document.getElementById('adv').open"), '« Avancé » rouvert au démarrage suivant')
         await p2.close()
@@ -150,8 +150,8 @@ async def main():
         check(box == [True, True], 'bouton calendrier ≥ 44 px, entièrement couvert par le champ date natif (iOS)')
 
         # ---------- Polices ----------
-        smp = await page.evaluate("[...document.querySelectorAll('#fontSeg .smp')].map(e=>e.textContent)")
-        check(len(smp) == 5 and all(t == 'Tours' for t in smp), f'aperçu des polices avec le titre saisi {smp}')
+        smp = await page.evaluate("[...document.querySelectorAll('#fontTitleSeg button:not([data-v=\\'\\']) .smp')].map(e=>e.textContent)")
+        check(len(smp) == 11 and all(t == 'Tours' for t in smp), f'aperçu des polices du titre avec le titre saisi {smp}')
         await page.click('#fontSeg [data-v=garamond]')
         check(await page.evaluate("[__cms.st.font, document.querySelector('#fontSeg [data-v=garamond]').getAttribute('aria-checked')]") == ['garamond', 'true'], 'police choisie (radio ARIA)')
 

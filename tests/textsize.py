@@ -7,6 +7,7 @@ gabarit, que la réduction automatique est signalée, que « Tailles par défaut
 """
 import pathlib, os, asyncio, struct
 from playwright.async_api import async_playwright
+from seed import seed
 T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri()
 CHROME = os.environ.get('CHROME') or None
@@ -24,7 +25,6 @@ async def main():
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
         ctx = await b.new_context(viewport={'width': 1400, 'height': 900}, accept_downloads=True)
         page = await ctx.new_page(); errs = []
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1')}catch(e){}")
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):
             u = r.request.url
@@ -32,7 +32,7 @@ async def main():
             elif u.startswith('file:'): await r.continue_()
             else: await r.abort()
         await page.route('**/*', route)
-        await page.goto(APP); await page.wait_for_timeout(1200)
+        await seed(page, APP, wait=1200)   # accord préalable et section Avancé, sans script injecté (cf. tests/seed.py)
         await page.click('#engineSeg [data-v=overpass]'); await page.wait_for_timeout(800)
         setv = lambda k, v: page.evaluate(SET, [k, v])
 

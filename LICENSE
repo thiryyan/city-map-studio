@@ -28,4 +28,7 @@ their own licenses:
 - Map data: © OpenStreetMap contributors, ODbL 1.0
 - Vector tile schema: © OpenMapTiles, CC-BY 4.0 (tiles served by OpenFreeMap)
 - lib/fonts/ (Playfair Display, Montserrat, Space Mono, Cormorant Garamond,
-  Josefin Sans): SIL Open Font License 1.1, see lib/fonts/*/OFL.txt
+  Josefin Sans, Bodoni Moda, Italiana, Fraunces, Jost, Bebas Neue, Great Vibes):
+  SIL Open Font License 1.1, see lib/fonts/*/OFL.txt
+- lib/sky/sky-data.js (star and constellation data from d3-celestial,
+  © 2015 Olaf Frohn): BSD-3-Clause, see lib/sky/LICENSE-d3-celestial.txt

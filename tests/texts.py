@@ -6,6 +6,7 @@ conservé, que l'état est persisté, et que l'export fonctionne sans aucune lig
 """
 import pathlib, os, asyncio, struct
 from playwright.async_api import async_playwright
+from seed import seed
 T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri()
 CHROME = os.environ.get('CHROME') or None
@@ -18,7 +19,6 @@ async def main():
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
         ctx = await b.new_context(viewport={'width': 1400, 'height': 900}, accept_downloads=True)
         page = await ctx.new_page(); errs = []
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):
             u = r.request.url
@@ -26,7 +26,7 @@ async def main():
             elif u.startswith('file:'): await r.continue_()
             else: await r.abort()
         await page.route('**/*', route)
-        await page.goto(APP); await page.wait_for_timeout(1200)
+        await seed(page, APP, wait=1200)   # accord préalable et section Avancé, sans script injecté (cf. tests/seed.py)
         await page.click('#engineSeg [data-v=overpass]'); await page.wait_for_timeout(800)
         await page.click('#tabs [data-tab=textes]')
         fails = []
@@ -49,6 +49,7 @@ async def main():
         for k in KEYS: await page.click(f'input[data-k="show.{k}"]')
         await page.wait_for_timeout(500)
         kept = await page.evaluate("__cms.st.texts.title")
+        await page.wait_for_function("Object.values(JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').show||{}).every(v=>v===false)")   # lignes masquées enregistrées
         await page.reload(); await page.wait_for_timeout(1500)
         show = await page.evaluate("__cms.st.show")
         print('après rechargement :', show, '| titre conservé :', kept)
@@ -63,6 +64,7 @@ async def main():
         snaps = set()
         for f in ['serif', 'sans', 'mono', 'garamond', 'deco']:
             await page.click(f'#fontSeg [data-v={f}]'); await page.wait_for_timeout(300); snaps.add(await page.evaluate(SNAP))
+        await page.wait_for_function("JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').font==='deco'")   # choix enregistré avant de recharger
         await page.reload(); await page.wait_for_timeout(1200)
         font = await page.evaluate('__cms.st.font'); print('polices : rendus distincts', len(snaps), '| après rechargement', font)
         if len(snaps) != 5 or font != 'deco': fails.append('polices')
