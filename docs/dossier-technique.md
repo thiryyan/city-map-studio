@@ -445,6 +445,8 @@ city-map-studio/
     ├── design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel
     ├── vectors.py          # cache de tracés du moteur Fichier : réutilisation, invalidation, rendu identique, carreaux
     ├── art.py              # pistes artistiques : effets, halo, dorure, ornements, Lettres, papiers, ciel, palette d'une photo
+    ├── make_city.py        # génère city.json : ville fictive réaliste (fleuve à îles, vieille ville, damiers, ponts, ~22 000 bâtiments)
+    ├── city.py             # moteur Fichier sur city.json : import JSON et XML, fleuve assemblé, points de contrôle, fluidité, exports
     ├── compare.py          # comparer avant / après un changement de thème (souris, toucher, clavier)
     ├── welcome.py          # ambiance proposée au premier lancement
     ├── security.py         # lien forgé ou piégé, état corrompu, crochets de test, libellé d'export
@@ -554,6 +556,7 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Taille des textes de l'affiche | ✅ | `tests/textsize.py` |
 | Polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel | ✅ | `tests/design.py` (moteur Fichier, sans réseau) ; ⏳ Deux lieux et aperçu au mur avec les vraies tuiles OpenFreeMap. |
 | Cache de tracés du moteur Fichier | ✅ | `tests/vectors.py` ; ⏳ fluidité des gestes sur un téléphone réel. |
+| Moteur Fichier sur une ville réaliste (6,4 × 5,2 km, ~22 000 bâtiments, 8,6 Mo) | ✅ | `tests/city.py` : import JSON (≈ 0,15 s) et XML, fleuve assemblé depuis 7 membres avec 2 îles, eau et pont aux points de contrôle, cache en ≈ 0,2 s, déplacement ≈ 2 ms par image (Chromium, ordinateur) ; ⏳ mêmes mesures sur un téléphone réel et sur un vrai extrait OSM. |
 | Pistes artistiques (effets, autour du repère, dorure, ornements, Lettres, papier Ancien et plis, Lune, planètes, Voie lactée, palette d'une photo) | ✅ | `tests/art.py` (moteur Fichier) et `tests/maplibre.py` (couches GPU, tuiles simulées) ; ⏳ rendu avec les vraies tuiles OpenFreeMap, impression réelle de la dorure et du riso. |
 | Comparer avant / après un changement de thème | ✅ | `tests/compare.py` (émulation du toucher) ; ⏳ appui long sur iOS Safari et Chrome Android. |
 | Parcours guidé, accessibilité, historique, date, géolocalisation, recherche | ✅ | `tests/ux.py` (émulation) ; ⏳ géolocalisation et calendrier natif à valider sur iOS et Android. |
