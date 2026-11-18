@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#16161a">
+<meta name="color-scheme" content="dark">
 <title>City Map Studio — Atelier d'affiches cartographiques</title>
 <!-- Polices auto-hébergées (SIL OFL 1.1) : aucun appel à un service tiers, fonctionne hors ligne -->
 <link rel="stylesheet" href="lib/fonts/fonts.css">
 <style>
-:root{
+:root{color-scheme:dark;
   --bg:#16161a; --panel:#1e1e23; --panel2:#26262c; --line:#34343c; --txt:#ececf1; --mut:#9a9aa6;
   --acc:#c5a059; --acc2:#e2c27f; --danger:#e5484d; --r:12px;
   --sab:env(safe-area-inset-bottom,0px);
@@ -30,7 +31,8 @@ button,input,select{font:inherit;color:inherit}
 .grab:focus-visible i{background:var(--acc)}
 #app[data-sheet=peek] .tabbody{display:none}
 #app.dragging .tabbody{overflow:hidden}
-#app.sheetmode .status{font-size:.75rem;margin-bottom:5px}
+#app.sheetmode .status{font-size:.75rem;margin-bottom:2px}
+#app.sheetmode .foot{padding-top:3px}   /* boutons de la ligne d'état à 44 px : le pied garde sa hauteur */
 #app.sheetmode .btn.pri{min-height:46px}
 /* Ordinateur, tablette paysage et téléphone en paysage : deux colonnes */
 @media (min-width:900px), (orientation:landscape) and (min-width:560px){
@@ -84,20 +86,20 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
 .seg button.on{background:var(--acc);color:#141414;font-weight:600}
 
 .slider{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;margin:10px 0}
-.slider span{color:var(--mut);font-size:.8125rem}.slider output{font-size:.8125rem;color:var(--txt);font-variant-numeric:tabular-nums}
+.slider label{color:var(--mut);font-size:.8125rem}.slider output{font-size:.8125rem;color:var(--txt);font-variant-numeric:tabular-nums}
 .slider input{grid-column:1/3;width:100%;accent-color:var(--acc);height:28px}
 .tog{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
 .tog input{width:20px;height:20px;accent-color:var(--acc)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;text-align:center;font-size:.75rem;color:var(--mut)}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;text-align:center;font-size:.75rem;color:var(--mut);min-width:0}
 .card canvas{display:block;width:100%;height:auto;border-radius:3px;margin-bottom:4px;box-shadow:0 1px 3px #0006}
 .card.on{border-color:var(--acc);color:var(--txt)}
 .themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
-.theme{border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel2);font-size:.75rem}
+.theme{display:block;width:100%;padding:0;text-align:left;border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel2);font-size:.75rem}
 .theme .sw{display:flex;height:34px}.theme .sw i{flex:1}
-.theme div.n{padding:5px 7px;color:var(--mut)}
-.theme.on{border-color:var(--acc)}.theme.on div.n{color:var(--txt)}
+.theme .n{display:block;padding:5px 7px;color:var(--mut)}
+.theme.on{border-color:var(--acc)}.theme.on .n{color:var(--txt)}
 .colors{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
 .colors label{display:flex;align-items:center;gap:8px;font-size:.8125rem;color:var(--mut)}
 .colors input{width:34px;height:28px;border:1px solid var(--line);border-radius:6px;background:none;padding:0;flex:none}
@@ -146,22 +148,27 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
 .banner.show{display:flex}
 .banner span{flex:1;min-width:0}
 /* Accord préalable : panneau en bas d'écran sur fond assombri */
-.consent{position:fixed;inset:0;z-index:95;background:#000a;display:none;align-items:flex-end;justify-content:center}
-.consent.show{display:flex}
-.consent .box{width:min(480px,100%);max-height:100%;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:18px 18px 0 0;padding:18px 18px calc(16px + var(--sab));box-shadow:0 -12px 40px #000a;font-size:.9375rem;line-height:1.45}
-@media (min-width:600px){.consent{align-items:center}.consent .box{border-radius:16px;border-bottom:1px solid var(--line)}}
-.consent h2{margin:0 0 8px;font-size:1.0625rem}
-.consent p{margin:0 0 10px;color:var(--txt)}
-.consent details{margin:0 0 12px;color:var(--mut);font-size:.875rem}
-.consent summary{cursor:pointer;color:var(--acc2);padding:6px 0;min-height:32px}
-.consent details p{color:var(--mut);margin:4px 0 0}
-.consent .row .btn{flex:1 1 140px}
+/* Fenêtres modales : <dialog> ouvert par showModal() (focus retenu, Échap, arrière-plan inerte) */
+dialog.modal{position:fixed;inset:0;z-index:95;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:20px;border:0;background:transparent;color:var(--txt);display:none;align-items:center;justify-content:center;overflow:hidden}
+dialog.modal[open]{display:flex}
+dialog.modal::backdrop{background:#000b}
+dialog.sheet{padding:0;align-items:flex-end}
+dialog.sheet::backdrop{background:#000a}
+#mockup{padding:14px}#mockup::backdrop{background:#000c}
+dialog.sheet .box{width:min(480px,100%);max-height:100%;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:18px 18px 0 0;padding:18px 18px calc(16px + var(--sab));box-shadow:0 -12px 40px #000a;font-size:.9375rem;line-height:1.45}
+@media (min-width:600px){dialog.sheet{align-items:center}dialog.sheet .box{border-radius:16px;border-bottom:1px solid var(--line)}}
+dialog.sheet h2{margin:0 0 8px;font-size:1.0625rem}
+dialog.sheet p{margin:0 0 10px;color:var(--txt)}
+dialog.sheet details{margin:0 0 12px;color:var(--mut);font-size:.875rem}
+dialog.sheet summary{cursor:pointer;color:var(--acc2);padding:6px 0;min-height:32px}
+dialog.sheet details p{color:var(--mut);margin:4px 0 0}
+dialog.sheet .row .btn{flex:1 1 140px}
 #toast{position:fixed;left:50%;bottom:calc(var(--sheetH,0px) + 14px);transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:#2b2b31;border:1px solid var(--line);padding:10px 14px;border-radius:10px;z-index:100;max-width:90vw;font-size:.875rem;pointer-events:none;box-shadow:0 6px 20px #0008}
 @media (min-width:900px), (orientation:landscape) and (min-width:560px){#toast{bottom:24px;left:calc(50% + min(200px,23vw))}}
 #toast.show{opacity:1;transform:translateX(-50%)}
 #toast.err{border-color:var(--danger)}
-#busy,#result{position:fixed;inset:0;background:#000b;z-index:90;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px}
-#busy.show,#result.show{display:flex}
+#busy{position:fixed;inset:0;background:#000b;z-index:90;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px}
+#busy.show{display:flex}
 .spin{width:38px;height:38px;border:3px solid #fff3;border-top-color:var(--acc);border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 #result .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;max-width:420px;width:100%;max-height:100%;display:flex;flex-direction:column;gap:10px}
@@ -191,8 +198,8 @@ label.f.show{min-height:44px;margin:6px 0 2px}
 label.f.show input{width:22px;height:22px}
 .colors label{min-height:44px;cursor:pointer}
 .colors input{width:44px;height:36px}
-.lnk{min-height:36px;padding:4px 2px}
-.uisz button{min-height:36px;min-width:38px}
+.lnk{min-height:44px;padding:4px 2px}
+.uisz button{min-height:44px;min-width:40px}
 .btn,.chip,.seg button,.card,.theme,.fonts button,.tabs button{transition:background-color .15s,border-color .15s,color .15s}
 /* Sections repliables (Avancé, couleurs) */
 details.adv{margin:18px 0 0;border:1px solid var(--line);border-radius:12px;background:#1a1a1f}
@@ -221,7 +228,7 @@ details.adv>h3:first-of-type{margin-top:6px}
 .xl2{display:none}@media (min-width:400px){.xl2{display:inline}}
 /* Annuler / rétablir */
 .hist{flex:none;display:flex;gap:2px}
-.hist button{background:none;border:1px solid var(--line);border-radius:8px;min-width:38px;min-height:36px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.hist button{background:none;border:1px solid var(--line);border-radius:8px;min-width:40px;min-height:44px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .hist button[disabled]{opacity:.3;cursor:default}
 /* Évolutions graphiques : duos, ambiances, lieux, aperçu au mur */
 .fcats{margin:-2px 0 4px}.fcats .chip{font-size:.8125rem}
@@ -234,8 +241,6 @@ details.adv>h3:first-of-type{margin-top:6px}
 .prow input{min-width:0}
 .dt,.sel{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;color:var(--txt);font-size:max(16px,1rem);color-scheme:dark}
 #shareBox input{width:100%;margin-top:8px}
-#mockup{position:fixed;inset:0;background:#000c;z-index:92;display:none;align-items:center;justify-content:center;padding:14px}
-#mockup.show{display:flex}
 #mockup .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;max-width:560px;width:100%;max-height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
 #mockCv{display:block;max-width:100%;max-height:56dvh;width:auto;height:auto;align-self:center;border-radius:8px}
 #mockup .row .btn{flex:1}
@@ -254,10 +259,10 @@ details.adv>h3:first-of-type{margin-top:6px}
 <div id="app">
   <section id="stage">
     <div id="poster">
-      <canvas id="cvUnder"></canvas>
+      <canvas id="cvUnder" aria-hidden="true"></canvas>
       <div id="slot"><div id="mlMap"></div><canvas id="opCanvas"></canvas></div>
-      <canvas id="cvOver"></canvas>
-      <canvas id="cvTex" hidden></canvas>
+      <canvas id="cvOver" role="img" aria-label="Aperçu de l'affiche"></canvas>
+      <canvas id="cvTex" hidden aria-hidden="true"></canvas>
       <button class="shield placeSwitch" id="placeSwitch" type="button" hidden><span>Modifier le lieu 2</span></button>
       <button class="shield" id="shield" type="button" aria-label="Cadrer la carte" hidden><span><svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16M2 10h16M10 2l-3 3M10 2l3 3M10 18l-3-3M10 18l3-3M2 10l3-3M2 10l3 3M18 10l-3-3M18 10l-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Toucher pour cadrer</span></button>
     </div>
@@ -295,7 +300,7 @@ details.adv>h3:first-of-type{margin-top:6px}
         </div>
         <h3>Rechercher une adresse ou une ville</h3>
         <form class="row" id="searchForm" autocomplete="off">
-          <input class="grow" type="search" id="q" placeholder="Ex. : Château de Blois" enterkeyhint="search">
+          <input class="grow" type="search" id="q" placeholder="Ex. : Château de Blois" enterkeyhint="search" aria-label="Adresse ou ville">
           <button class="btn" type="submit">Chercher</button>
         </form>
         <button class="btn" id="bGeo" type="button" style="width:100%;margin-top:8px" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="2.2" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg>Ma position actuelle</button>
@@ -314,7 +319,7 @@ details.adv>h3:first-of-type{margin-top:6px}
         </form>
         <p class="hint">Décimal (47.5861, 1.3359 · 47,5861 ; 1,3359), DMS (47° 35′ 10″ N, 1° 20′ 09″ E) ou lien Google Maps / OpenStreetMap. La carte se recentre si le point sort du cadre.</p>
         <h3>Cadrage</h3>
-        <div class="slider"><span>Zoom</span><output id="oZoom"></output><input type="range" id="zoom" min="10" max="18" step="0.1"></div>
+        <div class="slider"><label for="zoom">Zoom</label><output id="oZoom"></output><input type="range" id="zoom" min="10" max="18" step="0.1"></div>
         <details class="adv" id="adv">
           <summary><span>Avancé</span><small>moteur, connexion, hors ligne</small></summary>
           <h3>Moteur cartographique</h3>
@@ -345,12 +350,12 @@ details.adv>h3:first-of-type{margin-top:6px}
       <div class="tab" id="tab-style" role="tabpanel" aria-labelledby="tb-style">
         <h3>Ambiances</h3>
         <p class="hint">Un toucher pour un ensemble assorti (thème, polices, gabarit, repère, papier) ; tout reste modifiable ensuite.</p>
-        <div class="fonts ambs" id="ambiances"></div>
+        <div class="fonts ambs" id="ambiances" role="group" aria-label="Ambiances"></div>
         <h3>Orientation</h3>
         <div class="seg" id="orientSeg"><button data-v="portrait" type="button">Portrait</button><button data-v="landscape" type="button">Paysage</button></div>
         <h3>Gabarit</h3>
-        <div class="cards" id="layouts"></div>
-        <div class="slider"><span>Marge (passe-partout)</span><output id="oMargin"></output><input type="range" data-k="margin" min="3" max="12" step="0.5"></div>
+        <div class="cards" id="layouts" role="group" aria-label="Gabarits"></div>
+        <div class="slider"><label for="sMargin">Marge (passe-partout)</label><output id="oMargin"></output><input type="range" id="sMargin" data-k="margin" min="3" max="12" step="0.5"></div>
         <label class="tog" id="ringTog">Contour de la forme<input type="checkbox" data-k="ring"></label>
         <div id="skyBox" hidden>
           <h3>Ciel du jour J</h3>
@@ -364,7 +369,7 @@ details.adv>h3:first-of-type{margin-top:6px}
         </div>
         <h3>Thème</h3>
         <div class="chips fcats" id="themeCats" role="group" aria-label="Catégories de thèmes"></div>
-        <div class="themes" id="themes"></div>
+        <div class="themes" id="themes" role="group" aria-label="Thèmes"></div>
         <p class="fitnote" id="contrastWarn" aria-live="polite"></p>
         <h3>Papier</h3>
         <div class="chips" id="textures"></div>
@@ -376,8 +381,8 @@ details.adv>h3:first-of-type{margin-top:6px}
           <button class="chip" data-gold="frame">Filets</button>
         </div>
         <h3>Tracé</h3>
-        <div class="slider"><span>Épaisseur des rues</span><output id="oStroke"></output><input type="range" data-k="stroke" min="0.5" max="2.5" step="0.05"></div>
-        <div class="slider"><span>Mise en valeur des cours d'eau</span><output id="oWater"></output><input type="range" data-k="waterMult" min="0.5" max="3" step="0.1"></div>
+        <div class="slider"><label for="sStroke">Épaisseur des rues</label><output id="oStroke"></output><input type="range" id="sStroke" data-k="stroke" min="0.5" max="2.5" step="0.05"></div>
+        <div class="slider"><label for="sWater">Mise en valeur des cours d'eau</label><output id="oWater"></output><input type="range" id="sWater" data-k="waterMult" min="0.5" max="3" step="0.1"></div>
         <h3>Effets de tracé</h3>
         <label class="tog">Eau hachurée<input type="checkbox" data-k="fx.hatch"></label>
         <label class="tog">Bâtiments en contour<input type="checkbox" data-k="fx.outline"></label>
@@ -399,12 +404,12 @@ details.adv>h3:first-of-type{margin-top:6px}
       <!-- REPERE -->
       <div class="tab" id="tab-repere" role="tabpanel" aria-labelledby="tb-repere">
         <h3>Style du repère</h3>
-        <div class="marks cards" id="marks"></div>
+        <div class="marks cards" id="marks" role="group" aria-label="Styles de repère"></div>
         <div class="seg" id="fillSeg" style="margin-top:10px">
           <button data-v="1">Plein</button><button data-v="0">Contour</button>
         </div>
-        <div class="slider"><span>Taille</span><output id="oMSize"></output><input type="range" data-k="markerSize" min="10" max="300" step="5"></div>
-        <div class="slider"><span>Opacité</span><output id="oMOp"></output><input type="range" data-k="markerOpacity" min="0.2" max="1" step="0.05"></div>
+        <div class="slider"><label for="sMSize">Taille</label><output id="oMSize"></output><input type="range" id="sMSize" data-k="markerSize" min="10" max="300" step="5"></div>
+        <div class="slider"><label for="sMOp">Opacité</label><output id="oMOp"></output><input type="range" id="sMOp" data-k="markerOpacity" min="0.2" max="1" step="0.05"></div>
         <h3>Couleur</h3>
         <div class="row">
           <div class="chips grow" id="mColors"></div>
@@ -423,7 +428,7 @@ details.adv>h3:first-of-type{margin-top:6px}
           <p class="hint" id="routeInfo"></p>
           <label class="tog">Afficher l'itinéraire<input type="checkbox" id="routeShow"></label>
           <div class="seg" id="routeColor" style="margin-top:8px"><button data-v="marker" type="button">Couleur du repère</button><button data-v="roadMajor" type="button">Rues</button><button data-v="frame" type="button">Filets</button></div>
-          <div class="slider"><span>Épaisseur</span><output id="oRouteW"></output><input type="range" id="routeW" min="0.5" max="3" step="0.25"></div>
+          <div class="slider"><label for="routeW">Épaisseur</label><output id="oRouteW"></output><input type="range" id="routeW" min="0.5" max="3" step="0.25"></div>
           <label class="tog">Pointillés<input type="checkbox" id="routeDash"></label>
           <div class="row" style="margin-top:8px"><button class="btn grow" type="button" id="bFitRoute">Cadrer sur l'itinéraire</button><button class="btn" type="button" id="bDelRoute">Retirer</button></div>
         </div>
@@ -442,7 +447,7 @@ details.adv>h3:first-of-type{margin-top:6px}
         <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police du texte"></div>
         <p class="hint">Une police manuscrite n'est jamais mise en capitales : réservez-la à la dédicace et aux noms.</p>
         <h3>Taille des textes</h3>
-        <div class="slider"><span>Tous les textes</span><output id="oTsAll"></output><input type="range" data-k="textScaleAll" min="70" max="140" step="5" aria-label="Taille de tous les textes"></div>
+        <div class="slider"><label for="sTsAll">Tous les textes</label><output id="oTsAll"></output><input type="range" id="sTsAll" data-k="textScaleAll" min="70" max="140" step="5"></div>
         <div class="row" style="justify-content:flex-end;margin-top:-6px"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>
         <p class="fitnote" id="fitNote" aria-live="polite"></p>
         <h3>Lignes</h3>
@@ -460,8 +465,8 @@ details.adv>h3:first-of-type{margin-top:6px}
         <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.date" min="60" max="150" step="5" aria-label="Taille de la date"><output id="oTs-date"></output></div>
         <div id="labelsBox" hidden>
           <h3>Deux lieux</h3>
-          <label class="f">Légende du lieu 1</label><input type="text" data-k="texts.label1" aria-label="Légende du lieu 1">
-          <label class="f">Légende du lieu 2</label><input type="text" data-k="texts.label2" aria-label="Légende du lieu 2">
+          <label class="f" for="label1In">Légende du lieu 1</label><input type="text" id="label1In" data-k="texts.label1">
+          <label class="f" for="label2In">Légende du lieu 2</label><input type="text" id="label2In" data-k="texts.label2">
         </div>
         <h3>Coordonnées</h3>
         <div class="seg" id="coordSeg"><button data-v="dec">Décimal</button><button data-v="dms">Degrés ° ′ ″</button></div>
@@ -478,35 +483,35 @@ details.adv>h3:first-of-type{margin-top:6px}
     </div>
   </aside>
 </div>
-<div class="consent" id="consent" role="dialog" aria-modal="true" aria-labelledby="consentTitle"><div class="box">
+<dialog class="modal sheet" id="consent" aria-labelledby="consentTitle"><div class="box">
   <h2 id="consentTitle">Afficher la carte ?</h2>
   <p>Le fond de carte vient d'<b>OpenFreeMap</b> : l'afficher lui transmet votre adresse IP. Rien d'autre n'est envoyé, ni cookie ni mesure d'audience.</p>
   <details><summary>En savoir plus</summary><p>La recherche d'adresse (<b>Nominatim</b>) et le moteur <b>Overpass</b>, utilisés seulement à votre demande, reçoivent aussi votre adresse IP. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p></details>
-  <div class="row"><button class="btn pri" id="bConsentYes">Afficher la carte</button><button class="btn" id="bConsentFile">Travailler hors ligne</button></div>
-</div></div>
-<div class="consent" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welTitle"><div class="box">
+  <div class="row"><button class="btn pri" id="bConsentYes" type="button" autofocus>Afficher la carte</button><button class="btn" id="bConsentFile" type="button">Travailler hors ligne</button></div>
+</div></dialog>
+<dialog class="modal sheet" id="welcome" aria-labelledby="welTitle"><div class="box">
   <h2 id="welTitle">Choisissez une ambiance</h2>
   <p>Un point de départ assorti : thème, polices, gabarit, repère et papier. Vous pourrez tout modifier ensuite, et changer d'ambiance dans l'onglet Style.</p>
   <div class="fonts ambs wel" id="welAmb" role="list"></div>
   <button class="btn" type="button" id="welSkip" style="width:100%;margin-top:4px">Commencer sans ambiance</button>
-</div></div>
+</div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
-<div id="busy"><div class="spin"></div><div id="busyTxt">Génération de l'affiche…</div></div>
-<div id="mockup" role="dialog" aria-modal="true" aria-label="Aperçu au mur"><div class="box">
+<div id="busy" role="status" aria-live="polite"><div class="spin" aria-hidden="true"></div><div id="busyTxt">Génération de l'affiche…</div></div>
+<dialog class="modal" id="mockup" aria-label="Aperçu au mur"><div class="box">
   <canvas id="mockCv"></canvas>
   <div class="chips" id="mockWalls" aria-label="Couleur du mur"></div>
   <div class="chips" id="mockFrames" aria-label="Cadre"></div>
   <label class="tog">Passe-partout<input type="checkbox" id="mockMat"></label>
   <div class="row"><button class="btn pri" type="button" id="mockDl">Télécharger l'aperçu</button></div>
   <button class="btn" type="button" id="mockClose">Fermer</button>
-</div></div>
-<div id="result"><div class="box">
+</div></dialog>
+<dialog class="modal" id="result" aria-label="Affiche exportée"><div class="box">
   <img id="resImg" alt="Aperçu de l'affiche exportée">
   <div class="hint" id="resInfo"></div>
   <div class="hint">Si le téléchargement ne démarre pas, faites un appui long sur l'image puis « Enregistrer l'image ».</div>
   <div class="row"><a class="btn pri" id="resDl" download>Télécharger</a><button class="btn" id="resShare" style="display:none">Partager</button></div>
-  <button class="btn" id="resClose">Fermer</button>
-</div></div>
+  <button class="btn" id="resClose" type="button">Fermer</button>
+</div></dialog>
 
 <script>
 'use strict';
@@ -720,6 +725,38 @@ const ui = {placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'l
 let mlMap = null, opData = null, opLoading = false;
 let mlLib = 'loading', mlCdn = '', mlFailMsg = '';   // état de la librairie MapLibre
 
+// ---------- Fenêtres modales ----------
+// <dialog> + showModal() : focus retenu dans la fenêtre, arrière-plan inerte, touche Échap (événement « cancel »).
+// La classe « show » reste posée sur la fenêtre ouverte (état lisible par les tests et le CSS de secours).
+const dlgOpener=new Map(), dlgCancel={};
+function openDialog(id){
+  const d=document.getElementById(id); if(d.open) return;
+  dlgOpener.set(id,document.activeElement); d.classList.add('show');
+  if(typeof d.showModal==='function') d.showModal(); else d.setAttribute('open','');
+}
+function closeDialog(id){
+  const d=document.getElementById(id); d.classList.remove('show');
+  if(d.open){ if(typeof d.close==='function') d.close(); else d.removeAttribute('open'); }
+  const o=dlgOpener.get(id); dlgOpener.delete(id);
+  if(o && o!==document.body && o.isConnected && typeof o.focus==='function') o.focus({preventScroll:true});   // retour à l'élément d'origine
+}
+/** Échap : action propre à chaque fenêtre (refuser, passer, fermer) au lieu de la fermeture brute du navigateur */
+function initDialogs(){
+  for(const d of document.querySelectorAll('dialog.modal')){
+    d.addEventListener('cancel',e=>{ e.preventDefault(); (dlgCancel[d.id]||(()=>closeDialog(d.id)))(); });
+    d.addEventListener('close',()=>d.classList.remove('show'));
+  }
+}
+/** Écran d'attente : annoncé aux lecteurs d'écran, le reste de la page devient inerte */
+let busyFocus=null;
+function setBusy(on,txt){
+  if(txt) document.getElementById('busyTxt').textContent=txt;
+  if(on && !busyFocus) busyFocus=document.activeElement;   // la page devient inerte : le focus est rendu à la fin
+  document.getElementById('busy').classList.toggle('show',!!on);
+  document.getElementById('app').inert=!!on; document.getElementById('busy').setAttribute('aria-busy',String(!!on));
+  if(!on && busyFocus){ const f=busyFocus; busyFocus=null; if(f.isConnected && typeof f.focus==='function') f.focus({preventScroll:true}); }
+}
+
 // ---------- Accord préalable aux services tiers (RGPD) ----------
 // Aucune requête vers un service tiers (tuiles, Overpass, Nominatim, CDN) avant l'accord explicite de l'utilisateur.
 const CONSENT_KEY = 'cityMapStudio.consent';
@@ -729,12 +766,12 @@ let consentNext = null;
 function needConsent(next){
   if(consent) return true;
   consentNext = next || null;
-  document.getElementById('consent').classList.add('show');
+  openDialog('consent');
   return false;
 }
 function giveConsent(){
   consent=true; try{ localStorage.setItem(CONSENT_KEY,'1'); }catch(e){}
-  document.getElementById('consent').classList.remove('show');
+  closeDialog('consent');
   updateConsentInfo();
   const next=consentNext; consentNext=null;
   (async()=>{
@@ -746,7 +783,7 @@ function giveConsent(){
   })();
 }
 function declineConsent(){
-  consentNext=null; document.getElementById('consent').classList.remove('show');
+  consentNext=null; closeDialog('consent');
   setEngine('file',true); openAdvanced(true); maybeWelcome();   // consigne d'import : ligne d'état et section Avancé (la bulle masquerait le choix d'ambiance)
   if(!opData) setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
 }
@@ -1695,7 +1732,14 @@ function setActivePlace(i){
   if(st.engine==='overpass') fetchOverpass();
   toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
 }
-function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); }
+function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); describePoster(); }
+/** Texte de remplacement de l'aperçu (lecteurs d'écran) : gabarit, thème, orientation et textes affichés */
+function describePoster(){
+  const lay=(LAYOUTS.find(l=>l[0]===st.layout)||[,''])[1], th=THEMES[st.theme]?.name||'personnalisé';
+  const txt=['title','subtitle','dedication','names','date'].map(textLine).filter(Boolean).join(', ');
+  const d=`Aperçu de l'affiche, gabarit ${lay}, thème ${th}, ${st.orient==='landscape'?'paysage':'portrait'}${txt?' : '+txt:''}`;
+  if(cvO.getAttribute('aria-label')!==d) cvO.setAttribute('aria-label',d);
+}
 /** Signale dans l'onglet Textes les lignes réduites automatiquement pour tenir dans l'affiche */
 const FIT_NAMES={title:'titre',subtitle:'sous-titre',coords:'coordonnées',dedication:'dédicace',names:'noms',date:'date'};
 let fitPrev='';
@@ -1817,11 +1861,12 @@ const mock={wall:0,frame:0,mat:true,poster:null};
 async function openMockup(){
   if(st.engine==='maplibre' && !needConsent(()=>openMockup())) return;
   if(st.engine!=='maplibre' && !opData){ toast('Chargez d\'abord la carte (onglet Lieu, section Avancé).',true); return; }
-  $('busy').classList.add('show');
+  setBusy(true,'Préparation de l\'aperçu…'); let ok=false;
   try{ const d=posterDims(), k=1100/Math.max(d.W,d.H); mock.poster=(await composePoster(Math.round(d.W*k),Math.round(d.H*k),t=>$('busyTxt').textContent=t)).canvas;
-    drawMockup(); $('mockup').classList.add('show'); }
+    drawMockup(); ok=true; }
   catch(e){ console.error(e); toast('Aperçu impossible : '+(e.message||e),true); }
-  finally{ $('busy').classList.remove('show'); }
+  finally{ setBusy(false); }
+  if(ok) openDialog('mockup');
 }
 function drawMockup(){
   const P=mock.poster; if(!P) return;
@@ -1986,11 +2031,11 @@ function maybeWelcome(){
   draw();
   // polices des ambiances : chargées une fois (fichiers locaux), puis vignettes redessinées
   Promise.all(AMBIANCES.flatMap(([,,p])=>[p.font,p.fontTitle].filter(Boolean)).flatMap(f=>FONTS[f].load).map(f=>document.fonts.load(f).catch(()=>0))).then(draw);
-  $('welcome').classList.add('show');
+  openDialog('welcome');
   setTimeout(()=>box.querySelector('button')?.focus(),50);
 }
 function closeWelcome(){
-  welcomeDone=true; $('welcome').classList.remove('show');
+  welcomeDone=true; closeDialog('welcome');
   try{ localStorage.setItem(WELCOME_KEY,'1'); }catch(e){}
 }
 
@@ -2282,7 +2327,7 @@ function buildUI(){
     pr.appendChild(b); });
   // gabarits
   const lay=$('layouts');
-  LAYOUTS.forEach(([k,n])=>{ const d=document.createElement('div'); d.className='card'; d.dataset.v=k; d.innerHTML=`<canvas width="70" height="99"></canvas>${n}`;
+  LAYOUTS.forEach(([k,n])=>{ const d=document.createElement('button'); d.type='button'; d.className='card'; d.dataset.v=k; d.innerHTML=`<canvas width="70" height="99"></canvas>${n}`;
     d.onclick=()=>setLayout(k); lay.appendChild(d); });
   // ambiances
   AMBIANCES.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; b.innerHTML='<canvas width="70" height="99"></canvas><small></small>';
@@ -2326,17 +2371,16 @@ function buildUI(){
   $('routeDash').onchange=e=>{ st.routeStyle.dash=e.target.checked; scheduleOver(); saveState(); };
   $('bFitRoute').onclick=fitRoute;
   $('bDelRoute').onclick=()=>{ st.route=null; renderRoute(); scheduleOver(); saveState(); toast('Itinéraire retiré · « Annuler » pour le retrouver'); };
-  $('bMockup').onclick=openMockup; $('mockClose').onclick=()=>$('mockup').classList.remove('show'); $('mockDl').onclick=downloadMockup;
+  $('bMockup').onclick=openMockup; $('mockClose').onclick=()=>closeDialog('mockup'); $('mockDl').onclick=downloadMockup;
   WALLS.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.onclick=()=>{ mock.wall=i; drawMockup(); }; $('mockWalls').appendChild(b); });
   FRAMES.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent='Cadre '+n.toLowerCase(); b.onclick=()=>{ mock.frame=i; drawMockup(); }; $('mockFrames').appendChild(b); });
   $('mockMat').onchange=e=>{ mock.mat=e.target.checked; drawMockup(); };
   $('bShare').onclick=shareLink;
   $('welSkip').onclick=()=>{ closeWelcome(); toast('Vous pourrez choisir une ambiance plus tard, dans l\'onglet Style'); };
-  $('welcome').addEventListener('keydown',e=>{ if(e.key==='Escape') $('welSkip').click(); });
   // thèmes
   const th=$('themes');
-  Object.entries(THEMES).forEach(([k,t])=>{ const d=document.createElement('div'); d.className='theme'; d.dataset.v=k; d.dataset.cat=t.cat;
-    d.innerHTML=`<div class="sw"><i style="background:${t.c.paper}"></i><i style="background:${t.c.land}"></i><i style="background:${t.c.water}"></i><i style="background:${t.c.roadMajor}"></i><i style="background:${t.c.marker}"></i></div><div class="n"></div>`;
+  Object.entries(THEMES).forEach(([k,t])=>{ const d=document.createElement('button'); d.type='button'; d.className='theme'; d.dataset.v=k; d.dataset.cat=t.cat;
+    d.innerHTML=`<span class="sw"><i style="background:${t.c.paper}"></i><i style="background:${t.c.land}"></i><i style="background:${t.c.water}"></i><i style="background:${t.c.roadMajor}"></i><i style="background:${t.c.marker}"></i></span><span class="n"></span>`;
     d.querySelector('.n').textContent=t.name;
     d.onclick=()=>{ st.theme=k; st.colors={...t.c}; refreshColors(); refreshCards(); redrawAll(true); }; th.appendChild(d); });
   // couleurs
@@ -2346,7 +2390,7 @@ function buildUI(){
   document.querySelectorAll('[data-gold]').forEach(b=>b.onclick=()=>{ st.colors[b.dataset.gold]=GOLD; refreshColors(); redrawAll(true); refreshCards(); toast('Touche d\'or appliquée'); });
   // repères
   const mk=$('marks');
-  MARKERS.forEach(([k,n])=>{ const d=document.createElement('div'); d.className='card'; d.dataset.v=k; d.innerHTML=`<canvas width="96" height="96"></canvas>${n}`;
+  MARKERS.forEach(([k,n])=>{ const d=document.createElement('button'); d.type='button'; d.className='card'; d.dataset.v=k; d.innerHTML=`<canvas width="96" height="96"></canvas>${n}`;
     d.onclick=()=>{ st.markerStyle=k; refreshCards(); scheduleOver(); saveState(); }; mk.appendChild(d); });
   const mc=$('mColors');
   MARKER_COLORS.forEach(([n,v])=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=n; b.onclick=()=>{ st.colors.marker=v; refreshColors(); refreshCards(); scheduleOver(); saveState(); }; mc.appendChild(b); });
@@ -2386,7 +2430,7 @@ function buildUI(){
   $('lnkTurbo').onclick=e=>{ e.currentTarget.href='https://overpass-turbo.eu/?R&Q='+encodeURIComponent(currentQuery()); };
   $('searchForm').onsubmit=e=>{ e.preventDefault(); search($('q').value); };
   $('bExport').onclick=exportPoster;
-  $('resClose').onclick=()=>{ $('result').classList.remove('show'); };
+  $('resClose').onclick=()=>closeDialog('result');
 }
 /** Réinitialisation : un premier appui demande confirmation (pas de confirm(), bloqué dans les aperçus intégrés) */
 let resetT=0;
@@ -2430,6 +2474,8 @@ function syncOutputs(){
   $('oTsAll').textContent=st.textScaleAll+' %';
   for(const k of Object.keys(FIT_NAMES)){ const o=$('oTs-'+k); if(o) o.textContent=st.textScale[k]+' %'+(o.classList.contains('shrunk')?' ↘':''); }
 }
+/** État « choisi » d'un bouton de sélection : classe visuelle et état ARIA */
+function pressed(b,on){ b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); }
 function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker; updateContrast(); drawTexture(); }
 /** Exécute fn avec un état provisoirement modifié (vignettes) */
 function withState(patch,fn){ const saved={}; for(const k in patch){ saved[k]=st[k]; st[k]=patch[k]; } ui.thumb=true; try{ return fn(); } finally{ Object.assign(st,saved); ui.thumb=false; } }
@@ -2437,14 +2483,14 @@ const thumbMap=(c,r)=>{ c.strokeStyle=st.colors.roadMinor; c.globalAlpha=.35; c.
 function thumb(cv,patch){ const land=st.orient==='landscape'; if(cv.width!==(land?99:70)){ cv.width=land?99:70; cv.height=land?70:99; }
   const ctx=cv.getContext('2d'); withState(patch,()=>{ drawPoster(ctx,cv.width,cv.height,'all',thumbMap); drawPoster(ctx,cv.width,cv.height,'over'); }); }
 function refreshCards(){
-  document.querySelectorAll('#layouts .card').forEach(d=>{ d.classList.toggle('on',d.dataset.v===st.layout); thumb(d.querySelector('canvas'),{layout:d.dataset.v}); });
+  document.querySelectorAll('#layouts .card').forEach(d=>{ pressed(d,d.dataset.v===st.layout); thumb(d.querySelector('canvas'),{layout:d.dataset.v}); });
   document.querySelectorAll('#ambiances button').forEach(d=>{ const p=AMBIANCES.find(a=>a[0]===d.dataset.v)[2];
     d.classList.toggle('land',st.orient==='landscape');
-    d.classList.toggle('on',st.theme===p.theme && st.layout===p.layout && st.font===p.font && (st.fontTitle||'')===p.fontTitle && st.markerStyle===p.markerStyle);
+    pressed(d,st.theme===p.theme && st.layout===p.layout && st.font===p.font && (st.fontTitle||'')===p.fontTitle && st.markerStyle===p.markerStyle);
     thumb(d.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
-  document.querySelectorAll('#themes .theme').forEach(d=>d.classList.toggle('on',d.dataset.v===st.theme));
+  document.querySelectorAll('#themes .theme').forEach(d=>pressed(d,d.dataset.v===st.theme));
   document.querySelectorAll('#marks .card').forEach(d=>{
-    d.classList.toggle('on',d.dataset.v===st.markerStyle);
+    pressed(d,d.dataset.v===st.markerStyle);
     const cv=d.querySelector('canvas'), ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,96,96);
     const col = st.colors.marker.toUpperCase()==='#FFFFFF' ? '#999' : st.colors.marker;
     drawMarker(ctx,48,d.dataset.v==='pin'?72:50,d.dataset.v==='pin'?42:58,{style:d.dataset.v,color:col,fill:st.markerFill,opacity:1,facet:'#fff'});
@@ -2543,7 +2589,7 @@ let lastUrl=null;
 async function exportPoster(){
   if(st.engine==='maplibre' && !needConsent(()=>exportPoster())) return;
   if(st.engine!=='maplibre' && !opData){ toast(st.engine==='file'?'Importez d\'abord un fichier de données.':'Chargez d\'abord les vecteurs Overpass.',true); return; }
-  $('busy').classList.add('show'); $('busyTxt').textContent='Chargement des polices…';
+  setBusy(true,'Chargement des polices…'); let show=false;
   try{
     const {W:EW,H:EH}=posterDims();
     const {canvas:cv,warn,fontWarn}=await composePoster(EW,EH,t=>$('busyTxt').textContent=t);
@@ -2559,11 +2605,12 @@ async function exportPoster(){
     const canShare=navigator.canShare && navigator.canShare({files:[file]});
     $('resShare').style.display=canShare?'flex':'none';
     $('resShare').onclick=()=>navigator.share({files:[file],title:name}).catch(()=>{});
-    $('result').classList.add('show');
+    show=true;
     try{ const a=document.createElement('a'); a.href=lastUrl; a.download=name; document.body.appendChild(a); a.click(); a.remove(); }catch(e){}
   }catch(e){
     console.error(e); toast('Échec de l\'export : '+(e.message||e),true);
-  }finally{ $('busy').classList.remove('show'); }
+  }finally{ setBusy(false); }
+  if(show) openDialog('result');
 }
 
 // ---------- Contexte d'exécution ----------
@@ -2691,6 +2738,7 @@ const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ ret
 async function boot(){
   buildUI(); initSheet(); applyUiScale();
   $('bConsentYes').onclick=giveConsent; $('bConsentFile').onclick=declineConsent; updateConsentInfo();
+  dlgCancel.consent=declineConsent; dlgCancel.welcome=()=>$('welSkip').click(); initDialogs();
   showEnvWarning();
   if(st.engine==='file') st.engine='maplibre';   // un fichier importé n'est pas conservé entre deux sessions
   syncInputs();
