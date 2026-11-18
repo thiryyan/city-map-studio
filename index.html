@@ -8,6 +8,8 @@
 <title>City Map Studio — Atelier d'affiches cartographiques</title>
 <!-- Polices auto-hébergées (SIL OFL 1.1) : aucun appel à un service tiers, fonctionne hors ligne -->
 <link rel="stylesheet" href="lib/fonts/fonts.css">
+<!-- MapLibre (copie locale, aucun tiers) : téléchargé pendant l'analyse de la page, exécuté au démarrage -->
+<link rel="preload" href="lib/maplibre-gl.js" as="script">
 <style>
 :root{color-scheme:dark;
   --bg:#16161a; --panel:#1e1e23; --panel2:#26262c; --line:#34343c; --txt:#ececf1; --mut:#9a9aa6;
@@ -509,7 +511,7 @@ details.adv>h3:first-of-type{margin-top:6px}
   <img id="resImg" alt="Aperçu de l'affiche exportée">
   <div class="hint" id="resInfo"></div>
   <div class="hint">Si le téléchargement ne démarre pas, faites un appui long sur l'image puis « Enregistrer l'image ».</div>
-  <div class="row"><a class="btn pri" id="resDl" download>Télécharger</a><button class="btn" id="resShare" style="display:none">Partager</button></div>
+  <div class="row"><a class="btn pri" id="resDl" download>Télécharger</a><button class="btn" id="resShare" type="button" hidden>Partager</button></div>
   <button class="btn" id="resClose" type="button">Fermer</button>
 </div></dialog>
 
@@ -1851,6 +1853,7 @@ async function composePoster(W,H,step=()=>{}){
   } else step('Re-projection des vecteurs…');
   const mapFn=(c,rect,view,i)=> st.engine==='maplibre' ? c.drawImage(imgs[i],rect.x,rect.y,rect.w,rect.h) : withView(view,()=>drawVectors(c,rect,opData));
   drawPoster(ctx,W,H,'all',mapFn); applyTexture(ctx,W,H);
+  for(const c of imgs) if(c){ c.width=c.height=0; }   // rendus MapLibre intermédiaires : mémoire rendue tout de suite (iOS)
   return {canvas:cv,warn,fontWarn};
 }
 
@@ -2230,7 +2233,7 @@ function setSeg(id,v){ document.querySelectorAll(`#${id} button`).forEach(b=>{ c
 function showTab(name, focus){
   document.querySelectorAll('#tabs button').forEach(x=>{ const on=x.dataset.tab===name; x.classList.toggle('on',on); x.setAttribute('aria-selected',String(on)); x.tabIndex=on?0:-1; if(on&&focus) x.focus(); });
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));
-  ui.tab=name;
+  ui.tab=name; drawCards(name);
 }
 /** Section « Avancé » de l'onglet Lieu : ouverte à la demande, mémorisée ; ouverte d'office quand elle devient utile */
 const ADV_KEY='cityMapStudio.advOpen';
@@ -2386,7 +2389,7 @@ function buildUI(){
   // couleurs
   const co=$('colors');
   Object.entries(COLOR_LABELS).forEach(([k,n])=>{ const l=document.createElement('label'); l.innerHTML=`<input type="color" data-c="${k}"><span></span>`; l.querySelector('span').textContent=n;
-    l.querySelector('input').oninput=e=>{ st.colors[k]=e.target.value.toUpperCase(); redrawAll(true); updateContrast(); if(k==='paper') drawTexture(); if(k==='marker'||k==='paper') refreshCards(); }; co.appendChild(l); });
+    l.querySelector('input').oninput=e=>{ st.colors[k]=e.target.value.toUpperCase(); colorChanged(k); }; co.appendChild(l); });
   document.querySelectorAll('[data-gold]').forEach(b=>b.onclick=()=>{ st.colors[b.dataset.gold]=GOLD; refreshColors(); redrawAll(true); refreshCards(); toast('Touche d\'or appliquée'); });
   // repères
   const mk=$('marks');
@@ -2394,7 +2397,7 @@ function buildUI(){
     d.onclick=()=>{ st.markerStyle=k; refreshCards(); scheduleOver(); saveState(); }; mk.appendChild(d); });
   const mc=$('mColors');
   MARKER_COLORS.forEach(([n,v])=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=n; b.onclick=()=>{ st.colors.marker=v; refreshColors(); refreshCards(); scheduleOver(); saveState(); }; mc.appendChild(b); });
-  $('mColor').oninput=e=>{ st.colors.marker=e.target.value.toUpperCase(); refreshColors(); refreshCards(); scheduleOver(); saveState(); };
+  $('mColor').oninput=e=>{ st.colors.marker=e.target.value.toUpperCase(); colorChanged('marker'); };
   // segments
   document.querySelectorAll('#engineSeg button').forEach(b=>b.onclick=()=>setEngine(b.dataset.v));
   document.querySelectorAll('#fillSeg button').forEach(b=>b.onclick=()=>{ st.markerFill=b.dataset.v==='1'; setSeg('fillSeg',b.dataset.v); refreshCards(); scheduleOver(); saveState(); });
@@ -2474,6 +2477,18 @@ function syncOutputs(){
   $('oTsAll').textContent=st.textScaleAll+' %';
   for(const k of Object.keys(FIT_NAMES)){ const o=$('oTs-'+k); if(o) o.textContent=st.textScale[k]+' %'+(o.classList.contains('shrunk')?' ↘':''); }
 }
+/** Sélecteur de couleur : il émet un événement par mouvement du curseur ; le rendu complet (affiche, style MapLibre,
+ *  vignettes) est regroupé en un seul passage par image. */
+const colorQueue=new Set(); let rafColor=0;
+function colorChanged(k){
+  updateContrast();   // léger : immédiat
+  colorQueue.add(k); if(rafColor) return;
+  rafColor=requestAnimationFrame(()=>{ rafColor=0; const ks=[...colorQueue]; colorQueue.clear();
+    redrawAll(true); if(ks.includes('paper')) drawTexture();
+    // les autres sélecteurs de la même couleur suivent (jamais celui en cours de manipulation)
+    document.querySelectorAll('[data-c],#mColor').forEach(i=>{ const c=i.id==='mColor'?'marker':i.dataset.c; if(ks.includes(c) && i!==document.activeElement) i.value=st.colors[c]; });
+    if(ks.some(x=>x==='marker'||x==='paper')) refreshCards(); });
+}
 /** État « choisi » d'un bouton de sélection : classe visuelle et état ARIA */
 function pressed(b,on){ b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); }
 function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker; updateContrast(); drawTexture(); }
@@ -2482,20 +2497,32 @@ function withState(patch,fn){ const saved={}; for(const k in patch){ saved[k]=st
 const thumbMap=(c,r)=>{ c.strokeStyle=st.colors.roadMinor; c.globalAlpha=.35; c.lineWidth=.5; for(let i=0;i<14;i++){c.beginPath();c.moveTo(r.x+i*7,r.y);c.lineTo(r.x+i*7-20,r.y+r.h);c.stroke();c.beginPath();c.moveTo(r.x,r.y+i*8);c.lineTo(r.x+r.w,r.y+i*8+6);c.stroke()} c.globalAlpha=1; c.fillStyle=st.colors.water; c.fillRect(r.x,r.y+r.h*0.45,r.w,r.h*0.08); };
 function thumb(cv,patch){ const land=st.orient==='landscape'; if(cv.width!==(land?99:70)){ cv.width=land?99:70; cv.height=land?70:99; }
   const ctx=cv.getContext('2d'); withState(patch,()=>{ drawPoster(ctx,cv.width,cv.height,'all',thumbMap); drawPoster(ctx,cv.width,cv.height,'over'); }); }
+/** Vignettes (gabarits, ambiances, repères) : l'état choisi est mis à jour tout de suite ; le dessin, coûteux
+ *  (28 vignettes, deux passes de drawPoster chacune), une fois par image et seulement pour l'onglet affiché.
+ *  Les vignettes d'un onglet masqué sont redessinées à son ouverture (showTab). */
+const cardsDirty=new Set(); let rafCards=0;
 function refreshCards(){
-  document.querySelectorAll('#layouts .card').forEach(d=>{ pressed(d,d.dataset.v===st.layout); thumb(d.querySelector('canvas'),{layout:d.dataset.v}); });
+  document.querySelectorAll('#layouts .card').forEach(d=>pressed(d,d.dataset.v===st.layout));
   document.querySelectorAll('#ambiances button').forEach(d=>{ const p=AMBIANCES.find(a=>a[0]===d.dataset.v)[2];
     d.classList.toggle('land',st.orient==='landscape');
-    pressed(d,st.theme===p.theme && st.layout===p.layout && st.font===p.font && (st.fontTitle||'')===p.fontTitle && st.markerStyle===p.markerStyle);
-    thumb(d.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
+    pressed(d,st.theme===p.theme && st.layout===p.layout && st.font===p.font && (st.fontTitle||'')===p.fontTitle && st.markerStyle===p.markerStyle); });
   document.querySelectorAll('#themes .theme').forEach(d=>pressed(d,d.dataset.v===st.theme));
-  document.querySelectorAll('#marks .card').forEach(d=>{
-    pressed(d,d.dataset.v===st.markerStyle);
-    const cv=d.querySelector('canvas'), ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,96,96);
-    const col = st.colors.marker.toUpperCase()==='#FFFFFF' ? '#999' : st.colors.marker;
-    drawMarker(ctx,48,d.dataset.v==='pin'?72:50,d.dataset.v==='pin'?42:58,{style:d.dataset.v,color:col,fill:st.markerFill,opacity:1,facet:'#fff'});
-  });
+  document.querySelectorAll('#marks .card').forEach(d=>pressed(d,d.dataset.v===st.markerStyle));
+  cardsDirty.add('style'); cardsDirty.add('repere');
+  if(!rafCards) rafCards=requestAnimationFrame(()=>{ rafCards=0; drawCards(ui.tab); });
   syncOutputs();
+}
+function drawCards(tab){
+  if(!cardsDirty.delete(tab)) return;
+  if(tab==='style'){
+    document.querySelectorAll('#layouts .card').forEach(d=>thumb(d.querySelector('canvas'),{layout:d.dataset.v}));
+    document.querySelectorAll('#ambiances button').forEach(d=>{ const p=AMBIANCES.find(a=>a[0]===d.dataset.v)[2];
+      thumb(d.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
+  } else if(tab==='repere'){
+    const col = st.colors.marker.toUpperCase()==='#FFFFFF' ? '#999' : st.colors.marker;
+    document.querySelectorAll('#marks .card').forEach(d=>{ const cv=d.querySelector('canvas'), ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,96,96);
+      drawMarker(ctx,48,d.dataset.v==='pin'?72:50,d.dataset.v==='pin'?42:58,{style:d.dataset.v,color:col,fill:st.markerFill,opacity:1,facet:'#fff'}); });
+  }
 }
 function updateEngineUI(){
   document.querySelector('#engineSeg [data-v=maplibre]').disabled = mlLib==='fail';
@@ -2595,16 +2622,18 @@ async function exportPoster(){
     const {canvas:cv,warn,fontWarn}=await composePoster(EW,EH,t=>$('busyTxt').textContent=t);
     $('busyTxt').textContent='Encodage PNG 300 DPI…';
     const blob0=await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('toBlob a échoué')),'image/png'));
+    cv.width=cv.height=0;   // ≈ 35 Mo de pixels libérés avant d'assembler le PNG final (limite mémoire des canevas sur iOS)
     const blob=await withDpi(blob0,300);
     const name=`affiche-carte-${slug(st.texts.title)}-300dpi.png`;
     if(lastUrl) URL.revokeObjectURL(lastUrl);
     lastUrl=URL.createObjectURL(blob);
     $('resImg').src=lastUrl; $('resDl').href=lastUrl; $('resDl').download=name;
     $('resInfo').textContent=`${name} · ${EW} × ${EH} px · 300 DPI · ${(blob.size/1048576).toFixed(1)} Mo`+(warn?' · ⚠ certaines tuiles ont pu manquer (délai dépassé)':'')+(fontWarn?' · ⚠ police non chargée : une police de secours a été utilisée':'');
-    const file=new File([blob],name,{type:'image/png'});
-    const canShare=navigator.canShare && navigator.canShare({files:[file]});
-    $('resShare').style.display=canShare?'flex':'none';
-    $('resShare').onclick=()=>navigator.share({files:[file],title:name}).catch(()=>{});
+    // Partage : le fichier n'est créé qu'au moment du partage (pas de copie gardée en mémoire avec la fenêtre)
+    const asFile=()=>new File([blob],name,{type:'image/png'});
+    const canShare=!!(navigator.canShare && navigator.canShare({files:[asFile()]}));
+    $('resShare').hidden=!canShare;
+    $('resShare').onclick=()=>navigator.share({files:[asFile()],title:name}).catch(()=>{});
     show=true;
     try{ const a=document.createElement('a'); a.href=lastUrl; a.download=name; document.body.appendChild(a); a.click(); a.remove(); }catch(e){}
   }catch(e){
