@@ -56,10 +56,10 @@ button,input,select{font:inherit;color:inherit}
 .foot{flex:none;padding:8px 12px calc(8px + var(--sab));border-top:1px solid var(--line);background:var(--panel)}
 .status{font-size:.8125rem;color:var(--mut);margin-bottom:6px;display:flex;gap:6px;align-items:center;min-height:16px}
 #stTxt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lnk{flex:none;background:none;border:0;padding:4px 0;color:var(--mut);font-size:.8125rem;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.lnk{flex:none;background:none;border:0;min-height:44px;padding:4px 2px;color:var(--mut);font-size:.8125rem;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .lnk.confirm{color:var(--acc);font-weight:600}
 .uisz{flex:none;display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.uisz button{background:none;border:0;min-width:36px;min-height:30px;padding:0 6px;color:var(--mut);cursor:pointer;line-height:1}
+.uisz button{background:none;border:0;min-width:40px;min-height:44px;padding:0 6px;color:var(--mut);cursor:pointer;line-height:1}
 .uisz button+button{border-left:1px solid var(--line)}
 .uisz button[disabled]{opacity:.35}
 .dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex:none}.dot.busy{background:#facc15}.dot.wait{background:#f59e0b}.dot.err{background:var(--danger)}
@@ -67,7 +67,7 @@ button,input,select{font:inherit;color:inherit}
 .btn:active{transform:scale(.98)}
 .btn.pri{background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600;width:100%;min-height:48px;font-size:1rem}
 .btn.on{border-color:var(--acc);color:var(--acc2)}
-.btn.sm{min-height:36px;padding:6px 10px;font-size:.875rem}
+.btn.sm{min-height:44px;padding:6px 10px;font-size:.875rem}
 .btn[disabled]{opacity:.45;pointer-events:none}
 h3{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px;font-weight:600}
 h3:first-child{margin-top:2px}
@@ -77,21 +77,21 @@ input[type=text],input[type=search],input[type=number]{width:100%;background:var
 input[type=text]:focus,input[type=search]:focus{border-color:var(--acc)}
 @media (max-width:899px){input[type=text],input[type=search],input[type=number]{font-size:max(16px,1rem)}} /* iOS : pas de zoom à la saisie */
 label.f{display:block;margin:10px 0 4px;color:var(--mut);font-size:.8125rem}
-label.f.show{display:flex;align-items:center;gap:8px;cursor:pointer}
-label.f.show input{width:18px;height:18px;margin:0;accent-color:var(--acc)}
+label.f.show{display:flex;align-items:center;gap:8px;cursor:pointer;min-height:44px;margin:6px 0 2px}
+label.f.show input{width:22px;height:22px;margin:0;accent-color:var(--acc)}
 label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked))+input+.tsz{opacity:.45}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer;font-size:.875rem}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;min-height:44px;display:inline-flex;align-items:center;padding:8px 14px;cursor:pointer;font-size:.875rem}
 .chip.on{border-color:var(--acc);color:var(--acc2)}
 .seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
-.seg button{flex:1;border:0;background:none;padding:8px 6px;border-radius:8px;cursor:pointer;color:var(--mut);font-size:.875rem}
+.seg button{flex:1;border:0;background:none;min-height:40px;padding:8px 6px;border-radius:8px;cursor:pointer;color:var(--mut);font-size:.875rem}
 .seg button.on{background:var(--acc);color:#141414;font-weight:600}
 
 .slider{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;margin:10px 0}
-.slider label{color:var(--mut);font-size:.8125rem}.slider output{font-size:.8125rem;color:var(--txt);font-variant-numeric:tabular-nums}
+.slider label{color:var(--mut);font-size:.8125rem}
 .slider input{grid-column:1/3;width:100%;accent-color:var(--acc);height:28px}
-.tog{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
-.tog input{width:20px;height:20px;accent-color:var(--acc)}
+.tog{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:48px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.tog input{width:22px;height:22px;flex:none;accent-color:var(--acc)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;text-align:center;font-size:.75rem;color:var(--mut);min-width:0}
@@ -103,8 +103,8 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
 .theme .n{display:block;padding:5px 7px;color:var(--mut)}
 .theme.on{border-color:var(--acc)}.theme.on .n{color:var(--txt)}
 .colors{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
-.colors label{display:flex;align-items:center;gap:8px;font-size:.8125rem;color:var(--mut)}
-.colors input{width:34px;height:28px;border:1px solid var(--line);border-radius:6px;background:none;padding:0;flex:none}
+.colors label{display:flex;align-items:center;gap:8px;min-height:44px;font-size:.8125rem;color:var(--mut);cursor:pointer}
+.colors input{width:44px;height:36px;border:1px solid var(--line);border-radius:6px;background:none;padding:0;flex:none}
 .marks{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .marks .card canvas{box-shadow:none;background:#fff}
 .results{margin-top:8px;display:flex;flex-direction:column;gap:6px}
@@ -114,11 +114,10 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
 .hint{font-size:.8125rem;color:var(--mut);margin:6px 0}
 .mono{font-family:ui-monospace,Menlo,monospace;font-size:.8125rem}
 /* poster */
-#poster{position:relative;box-shadow:0 18px 50px #000a,0 2px 6px #0008;background:#fff;flex:none}
+#poster{position:relative;isolation:isolate;box-shadow:0 18px 50px #000a,0 2px 6px #0008;background:#fff;flex:none}
 #poster canvas{position:absolute;left:0;top:0;width:100%;height:100%}
 #cvOver{pointer-events:none;z-index:3}
 #cvTex{pointer-events:none;z-index:3}
-#poster{isolation:isolate}
 .placeSwitch{z-index:5;align-items:center}
 .placeSwitch span{margin:0}
 #cvUnder{z-index:1}
@@ -136,7 +135,6 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
 #app.sheetmode #bFrame{display:flex}
 /* Verrou de la carte (mobile) : un toucher sur la carte ouvre le mode Cadrer au lieu de la déplacer par erreur */
 .shield{position:absolute;z-index:4;border:0;padding:0;margin:0;background:none;cursor:pointer;display:flex;align-items:flex-end;justify-content:center}
-.shield[hidden]{display:none}
 .shield.mini span{display:none}
 .shield span{white-space:nowrap;margin-bottom:8px;background:#1e1e23d9;color:var(--txt);border:1px solid #ffffff22;border-radius:999px;padding:5px 11px;font-size:.8125rem;display:flex;gap:6px;align-items:center;backdrop-filter:blur(6px);pointer-events:none}
 .stagebar{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:11;display:flex;flex-direction:column;align-items:center;gap:6px;width:max-content;max-width:calc(100% - 20px)}
@@ -146,7 +144,7 @@ label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked)
 .framebar.show{display:flex}
 .framebar .btn{min-height:36px;border-radius:999px;background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600}
 /* Bandeau d'action (zone modifiée, carte indisponible) : en tête du panneau, il ne masque plus l'affiche */
-.banner{flex:none;display:none;align-items:center;gap:10px;background:#2a2418;border-bottom:1px solid #8a6a2a;padding:6px 10px 6px 14px;font-size:.875rem}
+.banner{flex:none;display:none;align-items:center;gap:10px;background:#2a2418;border-bottom:1px solid #8a6a2a;padding:4px 10px 4px 14px;font-size:.875rem}
 .banner.show{display:flex}
 .banner span{flex:1;min-width:0}
 /* Accord préalable : panneau en bas d'écran sur fond assombri */
@@ -189,19 +187,6 @@ dialog.sheet .row .btn{flex:1 1 140px}
 :focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
 .tabs button:focus-visible{outline-offset:-3px;border-radius:6px}
 input[type=text]:focus-visible,input[type=search]:focus-visible{outline:none}
-.chip{min-height:44px;display:inline-flex;align-items:center;padding:8px 14px}
-.seg button{min-height:40px}
-.tog{min-height:48px;cursor:pointer;gap:12px}
-.tog input{width:22px;height:22px;flex:none}
-label.f.show{min-height:44px;margin:6px 0 2px}
-.btn.sm{min-height:44px}
-.banner{padding-top:4px;padding-bottom:4px}
-.datebtn{min-width:48px}
-label.f.show input{width:22px;height:22px}
-.colors label{min-height:44px;cursor:pointer}
-.colors input{width:44px;height:36px}
-.lnk{min-height:44px;padding:4px 2px}
-.uisz button{min-height:44px;min-width:40px}
 .btn,.chip,.seg button,.card,.theme,.fonts button,.tabs button{transition:background-color .15s,border-color .15s,color .15s}
 /* Sections repliables (Avancé, couleurs) */
 details.adv{margin:18px 0 0;border:1px solid var(--line);border-radius:12px;background:#1a1a1f}
@@ -225,7 +210,7 @@ details.adv>h3:first-of-type{margin-top:6px}
 .fonts button.on{border-color:var(--acc);background:#2a2418}
 .fonts button.on small{color:var(--acc2)}
 /* Date : bouton calendrier (le champ date natif, transparent, couvre le bouton : fonctionne aussi sur iOS) */
-.datebtn{position:relative;overflow:hidden;flex:none}
+.datebtn{position:relative;overflow:hidden;flex:none;min-width:48px}
 .datebtn input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:16px}
 .xl2{display:none}@media (min-width:400px){.xl2{display:inline}}
 /* Annuler / rétablir */
@@ -254,6 +239,12 @@ details.adv>h3:first-of-type{margin-top:6px}
 .tsz output.shrunk,.slider output.shrunk{color:#f59e0b}
 .fitnote{font-size:.8125rem;color:#f5c88a;margin:2px 0 0;min-height:0}
 .fitnote:empty{display:none}
+/* Utilitaires (aucun style en ligne dans le HTML : compatible avec la politique de sécurité du contenu) */
+.wide{width:100%}.nw{white-space:nowrap}.mt4{margin-top:4px}.mt6{margin-top:6px}.mt8{margin-top:8px}.mt10{margin-top:10px}
+.row.end{justify-content:flex-end;margin-top:-6px}
+#mColor{width:48px;height:44px;border:1px solid var(--line);border-radius:8px;background:none;padding:0}
+#bUiLarger{font-size:1.15em}
+.diag .note{margin-top:6px}.diag .diagOp{margin-top:4px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
 </style>
 </head>
@@ -305,17 +296,17 @@ details.adv>h3:first-of-type{margin-top:6px}
           <input class="grow" type="search" id="q" placeholder="Ex. : Château de Blois" enterkeyhint="search" aria-label="Adresse ou ville">
           <button class="btn" type="submit">Chercher</button>
         </form>
-        <button class="btn" id="bGeo" type="button" style="width:100%;margin-top:8px" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="2.2" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg>Ma position actuelle</button>
+        <button class="btn wide mt8" id="bGeo" type="button" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="2.2" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg>Ma position actuelle</button>
         <div class="results" id="results" aria-live="polite"></div>
         <h3>Villes</h3>
         <div class="chips" id="presets"></div>
         <h3>Lieu de rencontre</h3>
         <div class="mono" id="markerTxt"></div>
-        <div class="row" style="margin-top:8px">
+        <div class="row mt8">
           <button class="btn grow" id="bPlace2">Placer le repère sur la carte</button>
           <button class="btn" id="bMarkerCenter">Au centre</button>
         </div>
-        <form class="row" id="markerForm" autocomplete="off" style="margin-top:8px">
+        <form class="row mt8" id="markerForm" autocomplete="off">
           <input class="grow" type="text" id="markerIn" inputmode="text" enterkeyhint="done" aria-label="Coordonnées du lieu de rencontre" placeholder="Coordonnées : 47.5861, 1.3359">
           <button class="btn" type="submit">Placer</button>
         </form>
@@ -331,17 +322,17 @@ details.adv>h3:first-of-type{margin-top:6px}
             <button data-v="file">Fichier (hors ligne)</button>
           </div>
           <p class="hint" id="engineHint"></p>
-          <div id="opBlock" style="display:none">
-            <button class="btn" id="bRefresh2" style="width:100%">Actualiser les vecteurs Overpass</button>
+          <div id="opBlock" hidden>
+            <button class="btn wide" id="bRefresh2">Actualiser les vecteurs Overpass</button>
           </div>
-          <div id="fileBlock" style="display:none">
+          <div id="fileBlock" hidden>
             <ol>
               <li>Cadrez la zone voulue, puis ouvrez <a id="lnkApi" target="_blank" rel="noopener">la requête Overpass</a> (le navigateur affiche ou télécharge un fichier JSON). Alternative : <a id="lnkTurbo" target="_blank" rel="noopener">overpass-turbo</a> → Exporter → « données brutes », ou <a href="https://www.openstreetmap.org/export" target="_blank" rel="noopener">openstreetmap.org/export</a> (fichier .osm).</li>
               <li>Enregistrez le fichier, puis importez-le ici. Formats acceptés : JSON Overpass, .osm (XML) ou GeoJSON.</li>
             </ol>
-            <label class="btn" style="width:100%">Importer un fichier de données<input type="file" id="fileIn" accept=".json,.geojson,.osm,.xml,application/json,application/geo+json,text/xml" hidden></label>
+            <label class="btn wide">Importer un fichier de données<input type="file" id="fileIn" accept=".json,.geojson,.osm,.xml,application/json,application/geo+json,text/xml" hidden></label>
           </div>
-          <button class="btn" id="bDiag" type="button" style="width:100%;margin-top:10px">Diagnostiquer la connexion</button>
+          <button class="btn wide mt10" id="bDiag" type="button">Diagnostiquer la connexion</button>
           <p class="hint" id="consentInfo"></p>
           <div class="diag" id="diag"></div>
         </details>
@@ -397,7 +388,7 @@ details.adv>h3:first-of-type{margin-top:6px}
           <summary><span>Personnaliser les couleurs</span><small>12 teintes</small></summary>
           <div class="colors" id="colors"></div>
         </details>
-        <label class="tog" style="margin-top:8px">Mention © OpenStreetMap sur l'affiche<input type="checkbox" data-k="attribution"></label>
+        <label class="tog mt8">Mention © OpenStreetMap sur l'affiche<input type="checkbox" data-k="attribution"></label>
         <h3>Avant d'imprimer</h3>
         <div class="row"><button class="btn grow" type="button" id="bMockup">Voir l'affiche au mur</button><button class="btn grow" type="button" id="bShare">Copier le lien de l'affiche</button></div>
         <div id="shareBox" hidden><input type="text" id="shareOut" readonly aria-label="Lien de l'affiche"><p class="hint">Le lien contient le lieu, les textes et les réglages, encodés dans l'adresse : rien n'est envoyé à un serveur. Partagez-le seulement avec des personnes de confiance.</p></div>
@@ -407,7 +398,7 @@ details.adv>h3:first-of-type{margin-top:6px}
       <div class="tab" id="tab-repere" role="tabpanel" aria-labelledby="tb-repere">
         <h3>Style du repère</h3>
         <div class="marks cards" id="marks" role="group" aria-label="Styles de repère"></div>
-        <div class="seg" id="fillSeg" style="margin-top:10px">
+        <div class="seg mt10" id="fillSeg">
           <button data-v="1">Plein</button><button data-v="0">Contour</button>
         </div>
         <div class="slider"><label for="sMSize">Taille</label><output id="oMSize"></output><input type="range" id="sMSize" data-k="markerSize" min="10" max="300" step="5"></div>
@@ -415,24 +406,24 @@ details.adv>h3:first-of-type{margin-top:6px}
         <h3>Couleur</h3>
         <div class="row">
           <div class="chips grow" id="mColors"></div>
-          <input type="color" id="mColor" aria-label="Couleur personnalisée du repère" style="width:48px;height:44px;border:1px solid var(--line);border-radius:8px;background:none;padding:0">
+          <input type="color" id="mColor" aria-label="Couleur personnalisée du repère">
         </div>
         <h3>Plusieurs lieux</h3>
         <p class="hint">Jusqu'à trois lieux sur la même carte : rencontre, mariage, maison…</p>
         <p class="hint" id="placesHint" hidden>Le gabarit « Deux lieux » n'affiche qu'un repère par carte.</p>
         <div id="mList" class="plist"></div>
-        <button class="btn" type="button" id="bAddPlace" style="width:100%;margin-top:6px">+ Ajouter un lieu</button>
+        <button class="btn wide mt6" type="button" id="bAddPlace">+ Ajouter un lieu</button>
         <label class="tog">Numéroter les lieux (légende sous la carte)<input type="checkbox" data-k="numbered"></label>
         <label class="tog">Relier les lieux par un trait<input type="checkbox" data-k="linkMarkers"></label>
         <h3>Itinéraire</h3>
-        <label class="btn" style="width:100%">Importer un tracé GPX<input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden></label>
+        <label class="btn wide">Importer un tracé GPX<input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden></label>
         <div id="routeBox" hidden>
           <p class="hint" id="routeInfo"></p>
           <label class="tog">Afficher l'itinéraire<input type="checkbox" id="routeShow"></label>
-          <div class="seg" id="routeColor" style="margin-top:8px"><button data-v="marker" type="button">Couleur du repère</button><button data-v="roadMajor" type="button">Rues</button><button data-v="frame" type="button">Filets</button></div>
+          <div class="seg mt8" id="routeColor"><button data-v="marker" type="button">Couleur du repère</button><button data-v="roadMajor" type="button">Rues</button><button data-v="frame" type="button">Filets</button></div>
           <div class="slider"><label for="routeW">Épaisseur</label><output id="oRouteW"></output><input type="range" id="routeW" min="0.5" max="3" step="0.25"></div>
           <label class="tog">Pointillés<input type="checkbox" id="routeDash"></label>
-          <div class="row" style="margin-top:8px"><button class="btn grow" type="button" id="bFitRoute">Cadrer sur l'itinéraire</button><button class="btn" type="button" id="bDelRoute">Retirer</button></div>
+          <div class="row mt8"><button class="btn grow" type="button" id="bFitRoute">Cadrer sur l'itinéraire</button><button class="btn" type="button" id="bDelRoute">Retirer</button></div>
         </div>
         <button class="btn next" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
@@ -450,7 +441,7 @@ details.adv>h3:first-of-type{margin-top:6px}
         <p class="hint">Une police manuscrite n'est jamais mise en capitales : réservez-la à la dédicace et aux noms.</p>
         <h3>Taille des textes</h3>
         <div class="slider"><label for="sTsAll">Tous les textes</label><output id="oTsAll"></output><input type="range" id="sTsAll" data-k="textScaleAll" min="70" max="140" step="5"></div>
-        <div class="row" style="justify-content:flex-end;margin-top:-6px"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>
+        <div class="row end"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>
         <p class="fitnote" id="fitNote" aria-live="polite"></p>
         <h3>Lignes</h3>
         <p class="hint">Cochez les lignes à afficher sur l'affiche ; un texte décoché est conservé. Chaque ligne a sa propre taille ; un texte trop long est réduit pour tenir dans la largeur.</p>
@@ -480,8 +471,8 @@ details.adv>h3:first-of-type{margin-top:6px}
       </div>
     </div>
     <div class="foot">
-      <div class="status"><span class="hist" role="group" aria-label="Historique"><button type="button" id="bUndo" aria-label="Annuler" title="Annuler (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 8l4 4M3 8h9a5 5 0 0 1 0 10H8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" id="bRedo" aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="m13 4 4 4-4 4M17 8H8a5 5 0 0 0 0 10h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span><button class="lnk" id="bReset" type="button" title="Revenir aux réglages par défaut">Réinitialiser</button><span class="uisz" role="group" aria-label="Taille du texte de l'interface"><button type="button" id="bUiSmaller" aria-label="Réduire le texte de l'interface">A−</button><button type="button" id="bUiLarger" aria-label="Agrandir le texte de l'interface" style="font-size:1.15em">A+</button></span></div>
-      <button class="btn pri" id="bExport">Exporter l'affiche HD<span class="xl" id="exportDims">&nbsp;· 2480 × 3508 px</span>&nbsp;· 300 DPI</button>
+      <div class="status"><span class="hist" role="group" aria-label="Historique"><button type="button" id="bUndo" aria-label="Annuler" title="Annuler (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 8l4 4M3 8h9a5 5 0 0 1 0 10H8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" id="bRedo" aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="m13 4 4 4-4 4M17 8H8a5 5 0 0 0 0 10h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span><button class="lnk" id="bReset" type="button" title="Revenir aux réglages par défaut">Réinitialiser</button><span class="uisz" role="group" aria-label="Taille du texte de l'interface"><button type="button" id="bUiSmaller" aria-label="Réduire le texte de l'interface">A−</button><button type="button" id="bUiLarger" aria-label="Agrandir le texte de l'interface">A+</button></span></div>
+      <button class="btn pri" id="bExport" type="button"><span>Exporter l'affiche HD<span class="xl" id="exportDims">&nbsp;· 2480 × 3508 px</span><span class="nw">&nbsp;· 300 DPI</span></span></button>
     </div>
   </aside>
 </div>
@@ -495,7 +486,7 @@ details.adv>h3:first-of-type{margin-top:6px}
   <h2 id="welTitle">Choisissez une ambiance</h2>
   <p>Un point de départ assorti : thème, polices, gabarit, repère et papier. Vous pourrez tout modifier ensuite, et changer d'ambiance dans l'onglet Style.</p>
   <div class="fonts ambs wel" id="welAmb" role="list"></div>
-  <button class="btn" type="button" id="welSkip" style="width:100%;margin-top:4px">Commencer sans ambiance</button>
+  <button class="btn wide mt4" type="button" id="welSkip">Commencer sans ambiance</button>
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="busy" role="status" aria-live="polite"><div class="spin" aria-hidden="true"></div><div id="busyTxt">Génération de l'affiche…</div></div>
@@ -995,7 +986,14 @@ function fontKey(role,key){
 }
 function fontOf(role,key){ return FONTS[fontKey(role,key)]||FONTS.serif; }
 function fontStr(size, o={}){const f=fontOf(o.role,o.key); return `${o.italic&&!f.script?'italic ':''}${o.weight||f.weight||400} ${size*(f.scale||1)}px ${f.fam}`}
-function textW(ctx, t, sp, size){return ctx.measureText(t).width + (t.length>1 ? sp*size*(t.length-1) : 0)}
+/** Largeur dessinée : texte d'un bloc sans interlettrage ; sinon somme des caractères dessinés un à un (comme drawText),
+ *  pour que le centrage et l'alignement à droite tombent juste (le crénage d'un bloc ne s'applique pas lettre à lettre).
+ *  Les caractères sont comptés en points de code (emoji, lettres hors du plan de base). */
+function textW(ctx, t, sp, size){
+  if(!sp) return ctx.measureText(t).width;
+  const chars=[...t]; let w=0; for(const ch of chars) w+=ctx.measureText(ch).width;
+  return w + sp*size*Math.max(0,chars.length-1);
+}
 /** Facteur de taille d'une ligne de texte : réglage de la ligne × réglage global */
 function tScale(k){ return (st.textScale?.[k]??100)/100 * (st.textScaleAll??100)/100; }
 /** Réductions automatiques relevées pendant le rendu de l'aperçu (clé de ligne → facteur appliqué < 1) */
@@ -1427,10 +1425,11 @@ function dataExtent(d){
     if(f.bb[0]<x0)x0=f.bb[0]; if(f.bb[1]<y0)y0=f.bb[1]; if(f.bb[2]>x1)x1=f.bb[2]; if(f.bb[3]>y1)y1=f.bb[3]; }
   return x0>x1?null:{w:x0,e:x1,s:imerc(y0),n:imerc(y1)};
 }
-function drawVectors(ctx, r, data){
-  const c=st.colors, S=worldSize(r.w,st.zoom), cx=r.x+r.w/2, cy=r.y+r.h/2, lon0=st.center.lon, m0=merc(st.center.lat);
+/** Vecteurs Overpass / Fichier dans le cadre r, pour une vue {center, zoom} (par défaut la vue éditée) */
+function drawVectors(ctx, r, data, view=st){
+  const c=st.colors, S=worldSize(r.w,view.zoom), cx=r.x+r.w/2, cy=r.y+r.h/2, lon0=view.center.lon, m0=merc(view.center.lat);
   const kx=S/360, ky=S/(2*Math.PI);
-  const k=r.w/REF_W*st.stroke*zoomFactor(st.zoom);
+  const k=r.w/REF_W*st.stroke*zoomFactor(view.zoom);
   // fenêtre visible en coordonnées (lon, merc) pour l'élagage
   const vx0=lon0-(r.w/2)/kx, vx1=lon0+(r.w/2)/kx, vy0=m0-(r.h/2)/ky, vy1=m0+(r.h/2)/ky;
   const vis=f=>!(f.bb[2]<vx0||f.bb[0]>vx1||f.bb[3]<vy0||f.bb[1]>vy1);
@@ -1663,6 +1662,16 @@ function renderMaplibreOffscreen(wPx,hPx,view=st){
 
 // ---------- Aperçu ----------
 const $=id=>document.getElementById(id);
+/** Crée un élément sans innerHTML : h('button', {type:'button', className:'card', dataset:{v:k}, style:{…}}, enfant, 'texte').
+ *  Les textes sont insérés comme texte (jamais interprétés) et les styles passent par le CSSOM (compatibles avec la CSP). */
+function h(tag,props={},...kids){
+  const e=document.createElement(tag);
+  for(const [k,v] of Object.entries(props)){
+    if(k==='dataset') Object.assign(e.dataset,v); else if(k==='style') Object.assign(e.style,v);
+    else if(k in e && !k.includes('-')) e[k]=v; else e.setAttribute(k,v);
+  }
+  e.append(...kids.filter(x=>x!=null)); return e;
+}
 const cvU=$('cvUnder'), cvO=$('cvOver'), cvT=$('cvTex'), opC=$('opCanvas'), slot=$('slot'), poster=$('poster'), stage=$('stage');
 function layoutPreview(){
   const SW=stage.clientWidth, SH=stage.clientHeight, small=innerWidth<900;
@@ -1720,10 +1729,8 @@ async function renderView(view,wPx,hPx){
   if(st.engine==='maplibre'){ if(mlLib!=='ok' || !consent) return null; return (await renderMaplibreOffscreen(wPx,hPx,view)).canvas; }
   if(!opData) return null;
   const cv=document.createElement('canvas'); cv.width=wPx; cv.height=hPx; const c=cv.getContext('2d');
-  c.fillStyle=st.colors.land; c.fillRect(0,0,wPx,hPx); withView(view,()=>drawVectors(c,{x:0,y:0,w:wPx,h:hPx},opData)); return cv;
+  c.fillStyle=st.colors.land; c.fillRect(0,0,wPx,hPx); drawVectors(c,{x:0,y:0,w:wPx,h:hPx},opData,view); return cv;
 }
-/** Exécute fn avec le cadrage d'une autre vue (drawVectors lit st.center et st.zoom) */
-function withView(view,fn){ const c=st.center, z=st.zoom; st.center=view.center; st.zoom=view.zoom; try{ return fn(); } finally{ st.center=c; st.zoom=z; } }
 /** Change le lieu édité (gabarit Deux lieux) : la carte interactive passe sur l'autre cadre */
 function setActivePlace(i){
   if(st.layout!=='diptych' || i===(st.active||0)) return;
@@ -1757,8 +1764,8 @@ let rafO=0, rafM=0;
 function scheduleOver(){ if(!rafO) rafO=requestAnimationFrame(()=>{rafO=0;drawOver()}); }
 function renderMap(viewChanged){
   const isML = st.engine==='maplibre';
-  $('mlMap').style.display = isML?'block':'none';
-  opC.style.display = isML?'none':'block';
+  $('mlMap').hidden = !isML;
+  opC.hidden = isML;
   if(isML){ if(!mlMap) initMaplibre(); if(viewChanged) mlUpdateView(); if(mlLib==='loading') setStatus('Chargement de la librairie MapLibre…','busy'); }
   else scheduleOp();
   scheduleOver();
@@ -1771,6 +1778,13 @@ function drawOp(){
   checkOpCoverage();
 }
 function redrawAll(restyle){ drawUnder(); if(restyle) mlRestyle(); renderMap(false); saveState(); }
+/** Après une modification de l'état : redessine ce qui en dépend, puis enregistre (différé, cf. saveState).
+ *  Par défaut, la couche du dessus (textes, repères) ; cards : vignettes ; all : fond, carte et style MapLibre. */
+function changed(o={}){
+  if(o.cards) refreshCards();
+  if(o.all) redrawAll(true);
+  else { scheduleOver(); saveState(); }
+}
 
 // Gestes Overpass (glisser, pincer, molette, toucher)
 (function(){
@@ -1851,7 +1865,7 @@ async function composePoster(W,H,step=()=>{}){
     step('Rendu vectoriel haute définition…');
     for(const [i,p] of g.places.entries()){ const r=await renderMaplibreOffscreen(Math.round(p.rect.w),Math.round(p.rect.h),p.view); imgs[i]=r.canvas; warn=warn||r.warn; }
   } else step('Re-projection des vecteurs…');
-  const mapFn=(c,rect,view,i)=> st.engine==='maplibre' ? c.drawImage(imgs[i],rect.x,rect.y,rect.w,rect.h) : withView(view,()=>drawVectors(c,rect,opData));
+  const mapFn=(c,rect,view,i)=> st.engine==='maplibre' ? c.drawImage(imgs[i],rect.x,rect.y,rect.w,rect.h) : drawVectors(c,rect,opData,view);
   drawPoster(ctx,W,H,'all',mapFn); applyTexture(ctx,W,H);
   for(const c of imgs) if(c){ c.width=c.height=0; }   // rendus MapLibre intermédiaires : mémoire rendue tout de suite (iOS)
   return {canvas:cv,warn,fontWarn};
@@ -1903,26 +1917,26 @@ function downloadMockup(){
 // ---------- Plusieurs lieux ----------
 function placeAt(lat,lon){
   const i=ui.placeIdx||0;
-  if(i && st.markers2[i-1]){ st.markers2[i-1].lat=lat; st.markers2[i-1].lon=lon; setPlacing(false); renderPlaces(); scheduleOver(); saveState(); toast(`Lieu ${i+1} placé`); }
+  if(i && st.markers2[i-1]){ st.markers2[i-1].lat=lat; st.markers2[i-1].lon=lon; setPlacing(false); renderPlaces(); changed(); toast(`Lieu ${i+1} placé`); }
   else setMarker(lat,lon);
 }
 function renderPlaces(){
   const box=$('mList'); box.textContent='';
   const row=(n,label,onLabel,extra)=>{ const d=document.createElement('div'); d.className='prow';
     const b=document.createElement('b'); b.textContent=n; const i=document.createElement('input'); i.type='text'; i.value=label; i.placeholder=n===1?'Lieu principal (ex. Rencontre)':'Nom du lieu (ex. Mariage)'; i.setAttribute('aria-label',`Nom du lieu ${n}`);
-    i.oninput=()=>{ onLabel(i.value); scheduleOver(); saveState(); }; d.append(b,i); if(extra) extra.forEach(e=>d.append(e)); box.appendChild(d); };
+    i.oninput=()=>{ onLabel(i.value); changed(); }; d.append(b,i); if(extra) extra.forEach(e=>d.append(e)); box.appendChild(d); };
   row(1,st.markerLabel||'',v=>st.markerLabel=v);
   (st.markers2||[]).forEach((p,k)=>{
     const pl=document.createElement('button'); pl.type='button'; pl.className='btn sm'; pl.textContent='Placer'; pl.onclick=()=>setPlacing(true,k+1);
     const rm=document.createElement('button'); rm.type='button'; rm.className='btn sm'; rm.textContent='✕'; rm.setAttribute('aria-label',`Retirer le lieu ${k+2}`);
-    rm.onclick=()=>{ st.markers2.splice(k,1); renderPlaces(); scheduleOver(); saveState(); };
+    rm.onclick=()=>{ st.markers2.splice(k,1); renderPlaces(); changed(); };
     row(k+2,p.label||'',v=>p.label=v,[pl,rm]); });
   $('bAddPlace').disabled=(st.markers2||[]).length>=2;
   $('placesHint').hidden=st.layout!=='diptych';
 }
 function addPlace(){
   if((st.markers2||[]).length>=2) return;
-  st.markers2.push({lat:st.center.lat,lon:st.center.lon,label:''}); renderPlaces(); scheduleOver(); saveState();
+  st.markers2.push({lat:st.center.lat,lon:st.center.lon,label:''}); renderPlaces(); changed();
   setPlacing(true,st.markers2.length);
 }
 
@@ -1945,7 +1959,7 @@ function parseGpx(txt){
   return {name:(x.querySelector('trk > name, rte > name, metadata > name, name')?.textContent||'').trim(), pts, show:true};
 }
 async function importGpx(f){
-  try{ st.route=parseGpx(await f.text()); renderRoute(); fitRoute(); scheduleOver(); saveState(); toast(`Itinéraire importé · ${st.route.pts.length} points`); }
+  try{ st.route=parseGpx(await f.text()); renderRoute(); fitRoute(); changed(); toast(`Itinéraire importé · ${st.route.pts.length} points`); }
   catch(e){ toast('Import GPX impossible : '+e.message,true); }
 }
 function fitRoute(){
@@ -2026,8 +2040,7 @@ function maybeWelcome(){
   if(welcomeDone || $('welcome').classList.contains('show')) return;
   if($('consent').classList.contains('show')) return;   // repris après le choix d'accord (giveConsent / declineConsent)
   const box=$('welAmb'); box.textContent='';
-  AMBIANCES.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; b.setAttribute('role','listitem');
-    b.innerHTML='<canvas width="70" height="99"></canvas><small></small>'; b.querySelector('small').textContent=n;
+  AMBIANCES.forEach(([k,n])=>{ const b=h('button',{type:'button',dataset:{v:k},role:'listitem'},h('canvas',{width:70,height:99}),h('small',{},n));
     b.onclick=()=>{ closeWelcome(); applyAmbiance(k); showTab('lieu'); toast(`Ambiance « ${n} » · cherchez maintenant votre lieu`); }; box.appendChild(b); });
   const draw=()=>box.querySelectorAll('button').forEach(b=>{ const p=AMBIANCES.find(a=>a[0]===b.dataset.v)[2];
     thumb(b.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
@@ -2073,7 +2086,7 @@ function updateExportLabel(){ const d=posterDims(); $('exportDims').textContent=
 /** Sections visibles selon le gabarit */
 function updateLayoutUI(){
   const L=st.layout;
-  $('ringTog').style.display=['medallion','heart','arch'].includes(L)?'flex':'none';
+  $('ringTog').hidden=!['medallion','heart','arch'].includes(L);
   $('skyBox').hidden=L!=='sky'; $('placeBox').hidden=L!=='diptych'; $('labelsBox').hidden=L!=='diptych';
   setSeg('placeSeg',String(st.active||0));
   if(L==='sky'){ $('skyWhen').value=st.sky.when; $('skyTz').value=String(st.sky.tz); }
@@ -2218,7 +2231,7 @@ function placeMarkerFromInput(){
   $('markerIn').value=''; $('markerIn').blur();
   toast('Repère placé'+(out?' · carte recentrée':'')+(st.engine==='overpass'&&out?' : actualisez les vecteurs':''));
 }
-function setMarker(lat,lon){ st.marker={lat,lon}; setPlacing(false); updateMarkerTxt(); scheduleOver(); saveState(); }
+function setMarker(lat,lon){ st.marker={lat,lon}; setPlacing(false); updateMarkerTxt(); changed(); }
 function updateMarkerTxt(){ $('markerTxt').textContent=`${dms(st.marker.lat,'N','S')}  ·  ${dms(st.marker.lon,'E','W')}`; $('coordsManual').placeholder=coordText(); }
 function syncZoomUI(){ $('zoom').value=st.zoom.toFixed(1); $('oZoom').textContent=st.zoom.toFixed(1); }
 function setZoom(z){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
@@ -2311,7 +2324,7 @@ function buildUI(){
   // date : calendrier natif
   $('dateIn').addEventListener('focus',()=>{ const v=isoFromFr(st.texts.date); if(v) $('dateIn').value=v; });
   $('dateIn').addEventListener('pointerdown',()=>{ const v=isoFromFr(st.texts.date); if(v) $('dateIn').value=v; });
-  $('dateIn').addEventListener('change',e=>{ const t=frDate(e.target.value); if(!t) return; st.texts.date=t; st.show.date=true; syncInputs(); scheduleOver(); saveState(); toast('Date : '+t); });
+  $('dateIn').addEventListener('change',e=>{ const t=frDate(e.target.value); if(!t) return; st.texts.date=t; st.show.date=true; syncInputs(); changed(); toast('Date : '+t); });
   // ma position (géolocalisation de l'appareil, demandée par le navigateur)
   if('geolocation' in navigator){ $('bGeo').hidden=false; $('bGeo').onclick=locateMe; }
   // annuler / rétablir
@@ -2330,11 +2343,11 @@ function buildUI(){
     pr.appendChild(b); });
   // gabarits
   const lay=$('layouts');
-  LAYOUTS.forEach(([k,n])=>{ const d=document.createElement('button'); d.type='button'; d.className='card'; d.dataset.v=k; d.innerHTML=`<canvas width="70" height="99"></canvas>${n}`;
+  LAYOUTS.forEach(([k,n])=>{ const d=h('button',{type:'button',className:'card',dataset:{v:k}},h('canvas',{width:70,height:99}),n);
     d.onclick=()=>setLayout(k); lay.appendChild(d); });
   // ambiances
-  AMBIANCES.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; b.innerHTML='<canvas width="70" height="99"></canvas><small></small>';
-    b.querySelector('small').textContent=n; b.onclick=()=>applyAmbiance(k); $('ambiances').appendChild(b); });
+  AMBIANCES.forEach(([k,n])=>{ const b=h('button',{type:'button',dataset:{v:k}},h('canvas',{width:70,height:99}),h('small',{},n));
+    b.onclick=()=>applyAmbiance(k); $('ambiances').appendChild(b); });
   // orientation
   document.querySelectorAll('#orientSeg button').forEach(b=>b.onclick=()=>setOrient(b.dataset.v));
   // ciel
@@ -2353,14 +2366,14 @@ function buildUI(){
   // modèles de texte
   OCCASIONS.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.onclick=()=>applyOccasion(k); $('occasions').appendChild(b); });
   // polices : duos, catégories, police du titre, police du texte
-  const fam=k=>FONTS[k].fam.replace(/"/g,"'");
-  DUOS.forEach(([k,n,ft,fx])=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; b.setAttribute('role','radio');
-    b.innerHTML=`<span class="t" style="font-family:${fam(ft)}"></span><span class="d" style="font-family:${fam(fx)}"></span><small></small>`; b.querySelector('small').textContent=n;
+  const fam=k=>FONTS[k].fam;
+  DUOS.forEach(([k,n,ft,fx])=>{ const b=h('button',{type:'button',dataset:{v:k},role:'radio'},
+      h('span',{className:'t',style:{fontFamily:fam(ft)}}),h('span',{className:'d',style:{fontFamily:fam(fx)}}),h('small',{},n));
     b.onclick=async()=>{ st.fontTitle=ft===fx?'':ft; st.font=fx; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('duos').appendChild(b); });
   FONT_CATS.forEach(([k,n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'+(i?'':' on'); b.textContent=n;
     b.onclick=()=>{ document.querySelectorAll('#fontCats .chip').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll('#fontSeg button,#fontTitleSeg button').forEach(f=>f.hidden=!!k && f.dataset.cat && f.dataset.cat!==k); }; $('fontCats').appendChild(b); });
-  const fbtn=(k,n,cat)=>{ const b=document.createElement('button'); b.type='button'; b.dataset.v=k; if(cat) b.dataset.cat=cat; b.setAttribute('role','radio');
-    b.innerHTML=`<span class="smp"${k?` style="font-family:${fam(k)}${FONTS[k].scale?`;font-size:${(1.25*FONTS[k].scale).toFixed(2)}rem`:''}"`:''}></span><small></small>`; b.querySelector('small').textContent=n; return b; };
+  const fbtn=(k,n,cat)=>h('button',{type:'button',dataset:cat?{v:k,cat}:{v:k},role:'radio'},
+    h('span',{className:'smp',style:k?{fontFamily:fam(k),fontSize:FONTS[k].scale?(1.25*FONTS[k].scale).toFixed(2)+'rem':''}:{}}),h('small',{},n));
   const same=fbtn('','Comme le texte'); same.onclick=async()=>{ st.fontTitle=''; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(same);
   FONT_LIST.forEach(([k,n,cat])=>{
     const t=fbtn(k,n,cat); t.onclick=async()=>{ st.fontTitle=k===st.font?'':k; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(t);
@@ -2368,12 +2381,12 @@ function buildUI(){
   // plusieurs lieux, itinéraire, aperçu au mur, lien
   $('bAddPlace').onclick=addPlace;
   $('gpxIn').onchange=e=>{ const f=e.target.files[0]; if(f) importGpx(f); e.target.value=''; };
-  $('routeShow').onchange=e=>{ if(st.route){ st.route.show=e.target.checked; scheduleOver(); saveState(); } };
-  document.querySelectorAll('#routeColor button').forEach(b=>b.onclick=()=>{ st.routeStyle.color=b.dataset.v; renderRoute(); scheduleOver(); saveState(); });
-  $('routeW').oninput=e=>{ st.routeStyle.width=+e.target.value; renderRoute(); scheduleOver(); saveState(); };
-  $('routeDash').onchange=e=>{ st.routeStyle.dash=e.target.checked; scheduleOver(); saveState(); };
+  $('routeShow').onchange=e=>{ if(st.route){ st.route.show=e.target.checked; changed(); } };
+  document.querySelectorAll('#routeColor button').forEach(b=>b.onclick=()=>{ st.routeStyle.color=b.dataset.v; renderRoute(); changed(); });
+  $('routeW').oninput=e=>{ st.routeStyle.width=+e.target.value; renderRoute(); changed(); };
+  $('routeDash').onchange=e=>{ st.routeStyle.dash=e.target.checked; changed(); };
   $('bFitRoute').onclick=fitRoute;
-  $('bDelRoute').onclick=()=>{ st.route=null; renderRoute(); scheduleOver(); saveState(); toast('Itinéraire retiré · « Annuler » pour le retrouver'); };
+  $('bDelRoute').onclick=()=>{ st.route=null; renderRoute(); changed(); toast('Itinéraire retiré · « Annuler » pour le retrouver'); };
   $('bMockup').onclick=openMockup; $('mockClose').onclick=()=>closeDialog('mockup'); $('mockDl').onclick=downloadMockup;
   WALLS.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.onclick=()=>{ mock.wall=i; drawMockup(); }; $('mockWalls').appendChild(b); });
   FRAMES.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent='Cadre '+n.toLowerCase(); b.onclick=()=>{ mock.frame=i; drawMockup(); }; $('mockFrames').appendChild(b); });
@@ -2382,26 +2395,26 @@ function buildUI(){
   $('welSkip').onclick=()=>{ closeWelcome(); toast('Vous pourrez choisir une ambiance plus tard, dans l\'onglet Style'); };
   // thèmes
   const th=$('themes');
-  Object.entries(THEMES).forEach(([k,t])=>{ const d=document.createElement('button'); d.type='button'; d.className='theme'; d.dataset.v=k; d.dataset.cat=t.cat;
-    d.innerHTML=`<span class="sw"><i style="background:${t.c.paper}"></i><i style="background:${t.c.land}"></i><i style="background:${t.c.water}"></i><i style="background:${t.c.roadMajor}"></i><i style="background:${t.c.marker}"></i></span><span class="n"></span>`;
-    d.querySelector('.n').textContent=t.name;
-    d.onclick=()=>{ st.theme=k; st.colors={...t.c}; refreshColors(); refreshCards(); redrawAll(true); }; th.appendChild(d); });
+  Object.entries(THEMES).forEach(([k,t])=>{
+    const d=h('button',{type:'button',className:'theme',dataset:{v:k,cat:t.cat}},
+      h('span',{className:'sw'},...['paper','land','water','roadMajor','marker'].map(c=>h('i',{style:{background:t.c[c]}}))),h('span',{className:'n'},t.name));
+    d.onclick=()=>{ st.theme=k; st.colors={...t.c}; refreshColors(); changed({all:true,cards:true}); }; th.appendChild(d); });
   // couleurs
   const co=$('colors');
-  Object.entries(COLOR_LABELS).forEach(([k,n])=>{ const l=document.createElement('label'); l.innerHTML=`<input type="color" data-c="${k}"><span></span>`; l.querySelector('span').textContent=n;
+  Object.entries(COLOR_LABELS).forEach(([k,n])=>{ const l=h('label',{},h('input',{type:'color',dataset:{c:k}}),h('span',{},n));
     l.querySelector('input').oninput=e=>{ st.colors[k]=e.target.value.toUpperCase(); colorChanged(k); }; co.appendChild(l); });
-  document.querySelectorAll('[data-gold]').forEach(b=>b.onclick=()=>{ st.colors[b.dataset.gold]=GOLD; refreshColors(); redrawAll(true); refreshCards(); toast('Touche d\'or appliquée'); });
+  document.querySelectorAll('[data-gold]').forEach(b=>b.onclick=()=>{ st.colors[b.dataset.gold]=GOLD; refreshColors(); changed({all:true,cards:true}); toast('Touche d\'or appliquée'); });
   // repères
   const mk=$('marks');
-  MARKERS.forEach(([k,n])=>{ const d=document.createElement('button'); d.type='button'; d.className='card'; d.dataset.v=k; d.innerHTML=`<canvas width="96" height="96"></canvas>${n}`;
-    d.onclick=()=>{ st.markerStyle=k; refreshCards(); scheduleOver(); saveState(); }; mk.appendChild(d); });
+  MARKERS.forEach(([k,n])=>{ const d=h('button',{type:'button',className:'card',dataset:{v:k}},h('canvas',{width:96,height:96}),n);
+    d.onclick=()=>{ st.markerStyle=k; changed({cards:true}); }; mk.appendChild(d); });
   const mc=$('mColors');
-  MARKER_COLORS.forEach(([n,v])=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=n; b.onclick=()=>{ st.colors.marker=v; refreshColors(); refreshCards(); scheduleOver(); saveState(); }; mc.appendChild(b); });
+  MARKER_COLORS.forEach(([n,v])=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=n; b.onclick=()=>{ st.colors.marker=v; refreshColors(); changed({cards:true}); }; mc.appendChild(b); });
   $('mColor').oninput=e=>{ st.colors.marker=e.target.value.toUpperCase(); colorChanged('marker'); };
   // segments
   document.querySelectorAll('#engineSeg button').forEach(b=>b.onclick=()=>setEngine(b.dataset.v));
-  document.querySelectorAll('#fillSeg button').forEach(b=>b.onclick=()=>{ st.markerFill=b.dataset.v==='1'; setSeg('fillSeg',b.dataset.v); refreshCards(); scheduleOver(); saveState(); });
-  document.querySelectorAll('#coordSeg button').forEach(b=>b.onclick=()=>{ st.coordFormat=b.dataset.v; setSeg('coordSeg',st.coordFormat); updateMarkerTxt(); scheduleOver(); saveState(); });
+  document.querySelectorAll('#fillSeg button').forEach(b=>b.onclick=()=>{ st.markerFill=b.dataset.v==='1'; setSeg('fillSeg',b.dataset.v); changed({cards:true}); });
+  document.querySelectorAll('#coordSeg button').forEach(b=>b.onclick=()=>{ st.coordFormat=b.dataset.v; setSeg('coordSeg',st.coordFormat); updateMarkerTxt(); changed(); });
   // champs liés data-k
   document.querySelectorAll('[data-k]').forEach(el=>{
     const k=el.dataset.k;
@@ -2410,11 +2423,11 @@ function buildUI(){
       setPath(st,k,v); syncOutputs();
       if(k==='texts.title'||k==='texts.names'||k==='texts.dedication') updateFontSamples();
       if(k.startsWith('sky.')){ drawUnder(); saveState(); return; }
-      if(k==='numbered'||k==='linkMarkers'){ scheduleOver(); saveState(); return; }
+      if(k==='numbered'||k==='linkMarkers'){ changed(); return; }
       if(k.startsWith('layers.')||k.startsWith('fx.')){ ui.snap=null; redrawAll(true); }
       else if(k==='margin'){ layoutPreview(); saveState(); }
       else if(k==='stroke'||k==='waterMult'){ redrawAll(true); }
-      else { scheduleOver(); saveState(); }
+      else { changed(); }
     });
   });
   $('zoom').oninput=e=>setZoom(parseFloat(e.target.value));
@@ -2427,7 +2440,7 @@ function buildUI(){
   $('bDiag').onclick=runDiagnostics;
   $('bReset').onclick=askReset;
   $('bUiSmaller').onclick=()=>stepUiScale(-1); $('bUiLarger').onclick=()=>stepUiScale(1);
-  $('bTsReset').onclick=()=>{ st.textScale={...DEFAULT_STATE.textScale}; st.textScaleAll=DEFAULT_STATE.textScaleAll; syncInputs(); scheduleOver(); saveState(); toast('Tailles des textes rétablies'); };
+  $('bTsReset').onclick=()=>{ st.textScale={...DEFAULT_STATE.textScale}; st.textScaleAll=DEFAULT_STATE.textScaleAll; syncInputs(); changed(); toast('Tailles des textes rétablies'); };
   $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
   $('lnkApi').onclick=e=>{ e.currentTarget.href=overpassGetUrl(); };
   $('lnkTurbo').onclick=e=>{ e.currentTarget.href='https://overpass-turbo.eu/?R&Q='+encodeURIComponent(currentQuery()); };
@@ -2493,7 +2506,13 @@ function colorChanged(k){
 function pressed(b,on){ b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); }
 function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker; updateContrast(); drawTexture(); }
 /** Exécute fn avec un état provisoirement modifié (vignettes) */
-function withState(patch,fn){ const saved={}; for(const k in patch){ saved[k]=st[k]; st[k]=patch[k]; } ui.thumb=true; try{ return fn(); } finally{ Object.assign(st,saved); ui.thumb=false; } }
+/** Vignettes : drawPoster lit l'état global ; il est modifié le temps d'un rendu SYNCHRONE puis rétabli.
+ *  Une fonction asynchrone rendrait la main avec l'état modifié : elle est refusée. */
+function withState(patch,fn){
+  const saved={}; for(const k in patch){ saved[k]=st[k]; st[k]=patch[k]; } ui.thumb=true;
+  try{ const r=fn(); if(r && typeof r.then==='function') throw new Error('withState : fonction asynchrone interdite'); return r; }
+  finally{ Object.assign(st,saved); ui.thumb=false; }
+}
 const thumbMap=(c,r)=>{ c.strokeStyle=st.colors.roadMinor; c.globalAlpha=.35; c.lineWidth=.5; for(let i=0;i<14;i++){c.beginPath();c.moveTo(r.x+i*7,r.y);c.lineTo(r.x+i*7-20,r.y+r.h);c.stroke();c.beginPath();c.moveTo(r.x,r.y+i*8);c.lineTo(r.x+r.w,r.y+i*8+6);c.stroke()} c.globalAlpha=1; c.fillStyle=st.colors.water; c.fillRect(r.x,r.y+r.h*0.45,r.w,r.h*0.08); };
 function thumb(cv,patch){ const land=st.orient==='landscape'; if(cv.width!==(land?99:70)){ cv.width=land?99:70; cv.height=land?70:99; }
   const ctx=cv.getContext('2d'); withState(patch,()=>{ drawPoster(ctx,cv.width,cv.height,'all',thumbMap); drawPoster(ctx,cv.width,cv.height,'over'); }); }
@@ -2526,8 +2545,8 @@ function drawCards(tab){
 }
 function updateEngineUI(){
   document.querySelector('#engineSeg [data-v=maplibre]').disabled = mlLib==='fail';
-  $('opBlock').style.display=st.engine==='overpass'?'block':'none';
-  $('fileBlock').style.display=st.engine==='file'?'block':'none';
+  $('opBlock').hidden=st.engine!=='overpass';
+  $('fileBlock').hidden=st.engine!=='file';
   $('engineHint').textContent = {
     maplibre: mlLib==='fail' ? 'Librairie MapLibre impossible à charger (aucun CDN joignable).' : 'Tuiles vectorielles OpenFreeMap : instantané, mers et côtes correctes, idéal sur mobile.',
     overpass:'Géométrie OSM brute, détail maximal, chargée à la demande. Ne trace pas le littoral marin.',
@@ -2649,11 +2668,11 @@ const ENV = (()=>{
   return {framed, proto, http:/^https?:$/.test(proto), blocked:false};
 })();
 function showEnvWarning(){
-  const w=$('envWarn'); let msg='';
-  if(ENV.framed) msg='<b>Page ouverte dans un aperçu intégré.</b> Ces aperçus (messageries, assistants, visionneuses) bloquent le réseau et les téléchargements : les cartes ne peuvent pas se charger. Ouvrez le fichier directement dans Chrome, ou utilisez le moteur « Fichier ».';
-  else if(!ENV.http && ENV.proto!=='file:') msg='<b>Page ouverte depuis une visionneuse ('+ENV.proto.replace(':','')+').</b> Si les cartes ne se chargent pas, ouvrez le fichier dans Chrome ou utilisez le moteur « Fichier ».';
-  if(navigator.onLine===false) msg='<b>Appareil hors ligne.</b> Utilisez le moteur « Fichier » avec des données déjà téléchargées.';
-  w.hidden=!msg; w.innerHTML=msg;
+  const w=$('envWarn'); let msg=null;   // [titre en gras, explication]
+  if(ENV.framed) msg=['Page ouverte dans un aperçu intégré.','Ces aperçus (messageries, assistants, visionneuses) bloquent le réseau et les téléchargements : les cartes ne peuvent pas se charger. Ouvrez le fichier directement dans Chrome, ou utilisez le moteur « Fichier ».'];
+  else if(!ENV.http && ENV.proto!=='file:') msg=['Page ouverte depuis une visionneuse ('+ENV.proto.replace(':','')+').','Si les cartes ne se chargent pas, ouvrez le fichier dans Chrome ou utilisez le moteur « Fichier ».'];
+  if(navigator.onLine===false) msg=['Appareil hors ligne.','Utilisez le moteur « Fichier » avec des données déjà téléchargées.'];
+  w.hidden=!msg; w.replaceChildren(...(msg ? [h('b',{},msg[0]),' '+msg[1]] : []));
 }
 
 // ---------- Diagnostic réseau ----------
@@ -2665,8 +2684,8 @@ async function probe(fn,ms=10000){
 async function runDiagnostics(){
   if(!needConsent(()=>runDiagnostics())) return;
   openAdvanced(true);
-  const box=$('diag'); box.innerHTML=''; $('bDiag').disabled=true;
-  const line=(label)=>{ const d=document.createElement('div'); d.innerHTML='<span class="wt">…</span><span></span><small></small>'; d.children[1].textContent=label; box.appendChild(d); return d; };
+  const box=$('diag'); box.textContent=''; $('bDiag').disabled=true;
+  const line=(label)=>{ const d=h('div',{},h('span',{className:'wt'},'…'),h('span',{},label),h('small')); box.appendChild(d); return d; };
   const set=(d,r)=>{ d.children[0].className=r.ok?'ok':'ko'; d.children[0].textContent=r.ok?'✓':'✗'; d.children[2].textContent=r.info+(r.ms?` · ${r.ms} ms`:''); };
   const env=line('Contexte'); set(env,{ok:!ENV.framed&&navigator.onLine!==false, info:(ENV.framed?'aperçu intégré (sandbox) · ':'')+ENV.proto+(navigator.onLine===false?' · hors ligne':'')});
   const lib=line('Librairie MapLibre'); set(lib,{ok:mlLib==='ok', info: mlLib==='ok'?('chargée'+(mlCdn?' via '+mlCdn:'')):mlLib==='loading'?'chargement en cours':'aucun CDN joignable'});
@@ -2684,7 +2703,7 @@ async function runDiagnostics(){
   const results=await Promise.all(tests.map(async([label,fn,ms])=>{ const d=line(label); const r=await probe(fn,ms); set(d,r); return r; }));
   const anyOk=results.some(r=>r.ok);
   ENV.blocked=!anyOk;
-  const c=document.createElement('div'); c.style.marginTop='6px';
+  const c=document.createElement('div'); c.className='note';
   c.textContent = !anyOk ? '→ Aucun service n\'est joignable depuis cette page. Ouvrez le fichier dans Chrome (pas dans un aperçu), vérifiez la connexion, ou utilisez le moteur « Fichier ».'
     : results[0].ok && mlLib==='ok' ? '→ Le moteur Vectoriel GPU devrait fonctionner.'
     : results.slice(1,1+OVERPASS.length).some(r=>r.ok) ? '→ Utilisez le moteur Overpass.' : '→ Utilisez le moteur « Fichier ».';
@@ -2692,7 +2711,7 @@ async function runDiagnostics(){
   // Overpass : tous les miroirs en échec alors que d'autres services répondent → panne côté serveurs
   const op=results.slice(1,1+OVERPASS.length);
   if(anyOk && !op.some(r=>r.ok)){
-    const o=document.createElement('div'); o.className='diagOp'; o.style.marginTop='4px';
+    const o=document.createElement('div'); o.className='diagOp';
     o.textContent = op.every(r=>r.op==='suspended')
       ? '→ Overpass : tous les serveurs sont suspendus après un refus (406/429). Utilisez le moteur Vectoriel GPU ou « Fichier » en attendant la reprise.'
       : '→ Overpass : aucun serveur public ne répond correctement (erreurs 5xx ou délai dépassé), alors que votre connexion fonctionne. La panne vient des serveurs Overpass : réessayez plus tard, ou utilisez le moteur Vectoriel GPU ou « Fichier ».';
