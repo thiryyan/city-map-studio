@@ -44,6 +44,8 @@ python tests/textsize.py         # taille des textes de l'affiche (par ligne et 
 python tests/mobile.py           # panneau coulissant, mode Cadrer, paysage, A− / A+
 python tests/ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
 python tests/design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, mur, lien, paysage, GPX, ciel
+python tests/vectors.py          # cache de tracés du moteur Fichier
+python tests/compare.py          # comparer avant / après un changement de thème
 python tests/welcome.py          # ambiance proposée au premier lancement
 python tests/fonts.py            # polices auto-hébergées, aucun appel tiers
 python tests/consent.py          # accord préalable : aucune requête tierce sans accord
