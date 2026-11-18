@@ -504,8 +504,8 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel | ✅ | `tests/design.py` (moteur Fichier, sans réseau) ; ⏳ Deux lieux et aperçu au mur avec les vraies tuiles OpenFreeMap. |
 | Parcours guidé, accessibilité, historique, date, géolocalisation, recherche | ✅ | `tests/ux.py` (émulation) ; ⏳ géolocalisation et calendrier natif à valider sur iOS et Android. |
 | Panneau coulissant, mode Cadrer, paysage, A− / A+ | ✅ | `tests/mobile.py` (émulation) ; ⏳ gestes à valider sur iOS Safari et Chrome Android. |
-| MapLibre avec les vraies tuiles OpenFreeMap | ⏳ à valider | Sur l'URL GitHub Pages, dans un vrai navigateur ([#5](https://github.com/thiryyan/city-map-studio/issues/5)). |
-| Nominatim réel | ⏳ à valider | Idem, avec le diagnostic ([#4](https://github.com/thiryyan/city-map-studio/issues/4)). |
+| MapLibre avec les vraies tuiles OpenFreeMap (aperçu, déplacement et zoom, export, rendu Souvenir) | ✅ | Sur l'URL GitHub Pages, dans un vrai navigateur ([#5](https://github.com/thiryyan/city-map-studio/issues/5)). |
+| Diagnostic réel (MapLibre, OpenFreeMap, Nominatim) | ✅ mobile ; ⏳ ordinateur | Diagnostic depuis GitHub Pages ([#4](https://github.com/thiryyan/city-map-studio/issues/4)). |
 | Polices auto-hébergées dans l'aperçu et l'export, contrôle `document.fonts.check` | ✅ | `tests/fonts.py` |
 | Accord préalable aux services tiers | ✅ | `tests/consent.py` |
 | Réinitialisation des réglages | ✅ | `tests/reset.py` |
@@ -514,4 +514,4 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Politique de sécurité du contenu | ✅ | `tests/csp.py`, `tests/maplibre.py` |
 | Sous-chemin GitHub Pages, application installable, hors ligne | ✅ | `tests/pwa.py` (serveur local) ; ⏳ installation et hors ligne sur l'URL publiée, iOS et Android. |
 | Image d'aperçu des liens partagés | ⏳ à valider | L'adresse `https://thiryyan.github.io/city-map-studio/icons/og-image.jpg` suppose la publication à cette adresse ; à adapter en cas de domaine personnalisé. |
-| Téléchargement sur iOS Safari et Chrome Android | ⏳ à valider | Appareils réels ([#7](https://github.com/thiryyan/city-map-studio/issues/7)). |
+| Téléchargement sur iOS Safari et Chrome Android (bouton, partage natif, appui long, 2480 × 3508 et 300 DPI conservés) | ✅ | Appareils réels ([#7](https://github.com/thiryyan/city-map-studio/issues/7)). |
