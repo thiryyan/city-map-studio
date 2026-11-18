@@ -119,8 +119,8 @@ function applySnap(s){
 /** Fige tout de suite l'étape en cours (action ponctuelle : réinitialisation, changement de moteur), puis ignore
  *  pendant un instant les petits recentrages de la carte qui suivent, pour ne pas créer de fausses étapes. */
 function commitHistory(quietMs=1500){ clearTimeout(saveT); try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} hist.quietUntil=0; recordHistory(); hist.quietUntil=Date.now()+quietMs; }
-function undo(){ if(!hist.past.length) return; clearTimeout(saveT); recordHistory(); if(!hist.past.length) return; hist.future.push(hist.cur); applySnap(hist.past.pop()); toast('Modification annulée'); }
-function redo(){ if(!hist.future.length) return; hist.past.push(hist.cur); applySnap(hist.future.pop()); toast('Modification rétablie'); }
+function undo(){ compareTheme(false); if(!hist.past.length) return; clearTimeout(saveT); recordHistory(); if(!hist.past.length) return; hist.future.push(hist.cur); applySnap(hist.past.pop()); toast('Modification annulée'); }
+function redo(){ compareTheme(false); if(!hist.future.length) return; hist.past.push(hist.cur); applySnap(hist.future.pop()); toast('Modification rétablie'); }
 
 function buildUI(){
   // onglets
@@ -221,7 +221,9 @@ function buildUI(){
   Object.entries(THEMES).forEach(([k,t])=>{
     const d=h('button',{type:'button',className:'theme',dataset:{v:k,cat:t.cat}},
       h('span',{className:'sw'},...['paper','land','water','roadMajor','marker'].map(c=>h('i',{style:{background:t.c[c]}}))),h('span',{className:'n'},t.name));
-    d.onclick=()=>{ st.theme=k; st.colors={...t.c}; refreshColors(); changed({all:true,cards:true}); }; th.appendChild(d); });
+    d.onclick=()=>{ const before={theme:st.theme,colors:{...st.colors}};
+      st.theme=k; st.colors={...t.c}; noteThemeChange(before); refreshColors(); changed({all:true,cards:true}); }; th.appendChild(d); });
+  initCompare();
   // couleurs
   const co=$('colors');
   Object.entries(COLOR_LABELS).forEach(([k,n])=>{ const l=h('label',{},h('input',{type:'color',dataset:{c:k}}),h('span',{},n));
@@ -314,7 +316,7 @@ function syncOutputs(){
  *  vignettes) est regroupé en un seul passage par image. */
 const colorQueue=new Set(); let rafColor=0;
 function colorChanged(k){
-  updateContrast();   // léger : immédiat
+  updateContrast(); updateCompare();   // légers : immédiats
   colorQueue.add(k); if(rafColor) return;
   rafColor=requestAnimationFrame(()=>{ rafColor=0; const ks=[...colorQueue]; colorQueue.clear();
     redrawAll(true); if(ks.includes('paper')) drawTexture();
@@ -346,6 +348,7 @@ function refreshCards(){
     d.classList.toggle('land',st.orient==='landscape');
     pressed(d,st.theme===p.theme && st.layout===p.layout && st.font===p.font && (st.fontTitle||'')===p.fontTitle && st.markerStyle===p.markerStyle); });
   document.querySelectorAll('#themes .theme').forEach(d=>pressed(d,d.dataset.v===st.theme));
+  updateCompare();
   document.querySelectorAll('#marks .card').forEach(d=>pressed(d,d.dataset.v===st.markerStyle));
   cardsDirty.add('style'); cardsDirty.add('repere');
   if(!rafCards) rafCards=requestAnimationFrame(()=>{ rafCards=0; drawCards(ui.tab); });
@@ -434,3 +437,40 @@ async function loadFonts(){
 }
 /** true si toutes les variantes de la famille active sont chargées (sinon l'export utiliserait une police de secours) */
 function fontsReady(){ try{ return [fontOf('title'),fontOf('','dedication'),fontOf('','date')].flatMap(f=>f.load).every(f=>document.fonts.check(f)); }catch(e){ return true; } }
+
+// ---------- Comparer avant / après un changement de thème ----------
+/** Dernier changement de thème : couleurs d'avant, et couleurs appliquées (le bouton disparaît dès qu'elles changent :
+ *  autre thème, couleur retouchée, annulation). Un appui maintenu sur « Comparer » montre l'affiche avec le thème
+ *  précédent ; le relâcher rétablit le thème choisi. Ni l'état enregistré ni l'historique ne voient l'aperçu. */
+let themeCmp=null;
+function noteThemeChange(before){
+  const after=JSON.stringify(st.colors);
+  if(JSON.stringify(before.colors)===after) return;   // même thème reconfirmé : la comparaison précédente reste valable
+  themeCmp={before,after};
+}
+const compareAvailable=()=>!!themeCmp && themeCmp.after===JSON.stringify(ui.comparing?ui.cmpKeep.colors:st.colors);
+const themeName=t=>THEMES[t.theme] && JSON.stringify(THEMES[t.theme].c)===JSON.stringify(t.colors) ? THEMES[t.theme].name : 'couleurs précédentes';
+function updateCompare(){
+  const b=$('bCompare'), ok=compareAvailable();
+  b.hidden=!ok; if(!ok){ themeCmp=null; return; }   // couleurs modifiées depuis : comparaison périmée
+  b.querySelector('span').textContent=`Maintenir pour comparer avec « ${themeName(themeCmp.before)} »`;
+}
+function compareTheme(on){
+  if(on===!!ui.comparing) return;
+  if(on && !compareAvailable()) return;
+  if(on){ commitHistory(0); ui.cmpKeep={theme:st.theme,colors:st.colors}; st.theme=themeCmp.before.theme; st.colors={...themeCmp.before.colors}; }
+  else { st.theme=ui.cmpKeep.theme; st.colors=ui.cmpKeep.colors; ui.cmpKeep=null; }
+  ui.comparing=on;
+  const b=$('bCompare'); b.setAttribute('aria-pressed',String(on)); b.classList.toggle('on',on);
+  const badge=$('cmpBadge'); badge.hidden=!on; if(on) badge.textContent='Avant · '+themeName(themeCmp.before);
+  drawUnder(); drawTexture(); mlRestyle(); renderMap(false); scheduleOver();   // rendu seulement : rien n'est enregistré
+}
+function initCompare(){
+  const b=$('bCompare'), stop=()=>compareTheme(false);
+  b.addEventListener('pointerdown',e=>{ if(e.button) return; e.preventDefault(); b.setPointerCapture(e.pointerId); compareTheme(true); });
+  b.addEventListener('pointerup',stop); b.addEventListener('pointercancel',stop); b.addEventListener('lostpointercapture',stop);
+  b.addEventListener('keydown',e=>{ if((e.key===' '||e.key==='Enter') && !e.repeat){ e.preventDefault(); compareTheme(true); } });
+  b.addEventListener('keyup',e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); stop(); } });
+  b.addEventListener('blur',stop); b.addEventListener('contextmenu',e=>e.preventDefault());   // appui long sur mobile : pas de menu
+  addEventListener('blur',stop); document.addEventListener('visibilitychange',stop);
+}

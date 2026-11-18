@@ -234,3 +234,6 @@ details.adv>h3:first-of-type{margin-top:6px}
 #bUiLarger{font-size:1.15em}
 .diag .note{margin-top:6px}.diag .diagOp{margin-top:4px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
+/* Comparer avant / après un changement de thème */
+.btn.compare{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.cmpbadge{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;white-space:nowrap;background:#1e1e23e6;color:var(--txt);border:1px solid var(--acc);border-radius:999px;padding:5px 12px;font-size:.8125rem;font-weight:600}

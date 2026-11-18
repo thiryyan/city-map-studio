@@ -173,6 +173,8 @@ Papier · Terre · Eau · Parcs · Bâtiments · Rues principales · Rues second
 
 Les thèmes se filtrent par catégorie (**Clairs**, **Sombres**, **Couleurs**). Un **contrôle de contraste à l'impression** avertit quand les rues principales ressortent mal sur la terre (contraste < 3), quand le texte manque de contraste avec le papier (< 4,5) ou quand le repère se distingue mal de la carte (< 1,8). Aucun thème fourni ne déclenche l'avertissement ; il sert pour les couleurs personnalisées.
 
+**Comparer avant / après** : après un changement de thème, un bouton « Maintenir pour comparer avec « *thème précédent* » » apparaît sous les thèmes. Tant qu'il est maintenu (souris, toucher, ou Espace / Entrée au clavier), l'affiche montre le thème précédent, avec un badge « Avant · *thème* » ; relâché, le thème choisi revient. C'est un aperçu seulement : rien n'est enregistré (`saveState` est suspendu) ni ajouté à l'historique. Le bouton disparaît dès que les couleurs ne sont plus celles du thème appliqué (autre thème, couleur retouchée, « Annuler »). Reconfirmer le même thème ne crée pas de comparaison.
+
 Chaque variable reste modifiable individuellement. Les actions rapides **« Touche d'or »** appliquent `#C5A059` à l'eau, aux rues principales, au repère ou aux filets.
 
 ### 4.3. Repère (10 styles vectoriels), lieux multiples, itinéraire
@@ -273,6 +275,14 @@ Trois effets cumulables (onglet Style), rendus de la même façon par les deux m
 
 Les ambiances fixent leurs effets : Encre de Chine (eau hachurée), Plan d'architecte (bâtiments en contour), Carnet de voyage (trait crayon) ; les autres les désactivent.
 
+### 4.10. Fluidité du moteur Fichier (cache de tracés)
+
+`drawVectors` ne reprojette plus les géométries à chaque image. `vecPaths` construit, pour une taille de monde $S$ donnée (zoom et largeur du cadre), des `Path2D` en pixels « monde » relatifs au centre des données ; un déplacement n'applique qu'une translation.
+* **Regroupement** : les surfaces (parcs, eau) gardent un tracé par objet, rempli en `evenodd` (îles) ; les classes nombreuses (bâtiments, voies par classe et par tunnel, cours d'eau, voies ferrées) sont regroupées par carreau de 256 px (`VEC_CELL`). Seuls les carreaux visibles sont tracés, réunis en un seul tracé par appel : un croisement n'est pas peint deux fois avec les tracés transparents (tunnels, trait crayon).
+* **Validité** : le cache est rattaché aux données (`WeakMap`) et à $S$ ; un import le remplace, un changement de zoom en construit un autre. Trois tailles au plus sont gardées (aperçu, seconde vue, export).
+* **Mesures** (ville synthétique de 30 000 bâtiments, cadre de 1 019 × 1 253 px, Chromium sans GPU) : déplacement au zoom 14 de 173 à 21 ms par image, au zoom 16 de 5,3 à 3,4 ms ; construction du cache, une fois par zoom, 23 à 30 ms.
+* **Rendu** : identique à l'ancien tracé au pixel près, pour tous les effets et à la taille de l'export (au plus 1 pixel d'écart d'anticrénelage sur 5,8 Mpx).
+
 ## 5. Export haute définition
 
 * **Format** : 2480 × 3508 px en portrait, 3508 × 2480 px en paysage (A4 à 300 DPI ; 212 DPI en A3 par mise à l'échelle chez l'imprimeur). L'export est un **recalcul intégral** à pleine résolution, jamais un agrandissement de l'aperçu.
@@ -281,7 +291,7 @@ Les ambiances fixent leurs effets : Encre de Chine (eau hachurée), Plan d'archi
   2. Création d'un canvas 2480 × 3508 et dessin de la couche basse.
   3. Carte :
      * **MapLibre** : instance hors écran de 800 px CSS de large, `pixelRatio` = largeur du cadre / 800 (environ 2,7), `preserveDrawingBuffer`, `maxCanvasSize` 8192, attente de l'événement `idle` (45 s au plus), puis `drawImage` dans le cadre ;
-     * **Fichier** : re-projection directe des géométries dans le cadre, à pleine résolution.
+     * **Fichier** : re-projection directe des géométries dans le cadre, à pleine résolution (cache de tracés propre à cette taille, cf. § 4.10).
   4. Couche haute (repère, filets, textes) à la même échelle.
   5. `toBlob('image/png')`, injection d'un chunk **`pHYs`** (11 811 px/m = 300 DPI) pour que les logiciels ouvrent le fichier à la bonne résolution, puis téléchargement de `affiche-carte-[ville]-300dpi.png`. Sur mobile, le partage natif (`navigator.share`) est proposé quand il est disponible ; si le téléchargement est bloqué, l'image reste enregistrable par appui long.
 * **Mémoire** : 8,7 Mpx, sous la limite de 16,7 Mpx de Safari iOS ; le canvas WebGL (environ 2160 × 2500 px) reste sous la limite de 4096 px.
@@ -397,6 +407,8 @@ city-map-studio/
     ├── mobile.py           # panneau coulissant, mode Cadrer, paysage, A− / A+
     ├── ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
     ├── design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel
+    ├── vectors.py          # cache de tracés du moteur Fichier : réutilisation, invalidation, rendu identique, carreaux
+    ├── compare.py          # comparer avant / après un changement de thème (souris, toucher, clavier)
     ├── welcome.py          # ambiance proposée au premier lancement
     ├── security.py         # lien forgé ou piégé, état corrompu, crochets de test, libellé d'export
     ├── a11y.py             # fenêtres modales, clavier, aria-pressed, cibles tactiles, noms accessibles
@@ -419,10 +431,10 @@ d'un fichier ne peut utiliser que les fichiers précédents** (les fonctions, el
 | `state.js` | Validation (`normState`), état `st`, fenêtres modales (`openDialog`, `closeDialog`, `setBusy`), accord préalable, enregistrement. |
 | `geo.js` | Mercator, `geom` (géométrie des gabarits), formes. |
 | `render.js` | Typographie, cartouche, repères, ciel, `drawPoster`. |
-| `engines.js` | Données OSM et tracé Canvas (moteur Fichier), effets de tracé, moteur MapLibre. |
+| `engines.js` | Données OSM, cache de tracés et tracé Canvas (moteur Fichier), effets de tracé, moteur MapLibre. |
 | `preview.js` | `$`, `h` (création d'éléments sans `innerHTML`), aperçu, deux lieux, gestes, papier, `composePoster`, aperçu au mur. |
 | `features.js` | Lieux multiples, GPX, partage par lien, ambiances, panneau coulissant. |
-| `ui.js` | Taille de l'interface, coordonnées, historique, `buildUI`, `changed`, vignettes, recherche, polices. |
+| `ui.js` | Taille de l'interface, coordonnées, historique, `buildUI`, `changed`, vignettes, recherche, polices, comparaison avant / après un changement de thème. |
 | `export.js` | Export PNG 300 DPI, contexte d'exécution, diagnostic, import de fichier. |
 | `main.js` | `boot`, application installable (`installPwa`), crochets de test. |
 
@@ -436,7 +448,7 @@ Principales sections :
 | Mathématiques | `merc`, `project`, `unproject`, `viewBounds`, `dms` | Web Mercator 512 px, zoom de référence pour un cadre de 800 px. |
 | Gabarits | `geom` | Rectangle ou cercle de la carte selon le gabarit. |
 | Rendu de l'affiche | `drawPoster`, `drawCartouche`, `drawMarker`, `drawText` | **Fonction unique pour l'aperçu et l'export** (passes `under` / `over` / `all`). |
-| Moteur 2 : données | `normalizeElements`, `stitch`, `parseOsm`, `drawVectors`, `checkDataBanner` | Données OSM → Canvas 2D. |
+| Moteur 2 : données | `normalizeElements`, `stitch`, `parseOsm`, `vecPaths`, `drawVectors`, `checkDataBanner` | Données OSM → cache de `Path2D` → Canvas 2D. |
 | Moteur 1 | `loadMaplibre`, `buildStyle`, `initMaplibre`, `renderMaplibreOffscreen`, `mlFail` | MapLibre + OpenFreeMap ; export hors écran. |
 | Interface | `parseCoords`, `placeMarkerFromInput`, `setMarker`, `goTo`, `setEngine`, `askReset`, `resetAll` | Commandes de l'atelier. |
 | Contexte et diagnostic | `ENV`, `showEnvWarning`, `runDiagnostics`, `netMsg` | Détection d'iframe ou de blocage réseau, tests des services. |
@@ -462,6 +474,8 @@ Principales sections :
 | Polices | Les 5 familles (normale et italique) se chargent depuis `lib/fonts/`, y compris hors ligne et en `file://` ; elles s'appliquent à l'aperçu et à l'export ; le choix est conservé ; aucune requête vers Google. |
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
 | Taille des textes | Chaque curseur (par ligne et global) modifie l'affiche dans les 4 gabarits ; retour à 100 % = rendu d'origine ; réduction automatique signalée ; tailles persistées et remises à 100 % par « Réinitialiser » ; export 2480 × 3508. |
+| Fluidité du moteur Fichier | Déplacement sans reconstruction du cache ; nouveau cache au changement de zoom ou de données ; rendu identique avec un cache neuf, pour chaque effet ; carreaux visibles seuls ; croisement de tracés transparents non repeint ; export 2480 × 3508. |
+| Comparer avant / après | Bouton absent sans changement de thème ; nommé d'après le thème précédent ; maintenu (souris, toucher, clavier) : affiche identique à l'avant, badge ; relâché : thème choisi à l'identique ; rien d'enregistré ni d'ajouté à l'historique ; bouton retiré après « Annuler » ou une retouche de couleur. |
 | Effets de tracé | Eau hachurée, bâtiments en contour et trait crayon : rendus distincts, retour exact au rendu d'origine, export aux bonnes dimensions ; moteur GPU : motif fourni, couche en contour, deux passes décalées, hachures présentes à l'export ; effets fixés par les ambiances et annulables. |
 | Premier lancement | Accord d'abord, puis choix d'une ambiance ; ambiance appliquée et annulable ; proposition unique (après un choix ou « Commencer sans ambiance ») ; rien pour une affiche existante ni pour un lien partagé. |
 | Évolutions graphiques | 11 polices et duos, police manuscrite limitée à la dédicace et aux noms ; 15 thèmes, filtres, contraste ; gabarits distincts, cœur découpé dans l'aperçu ; ambiances et modèles annulables ; 10 repères distincts ; 3 lieux numérotés et reliés ; 4 textures ; aperçu au mur téléchargeable ; lien reconstituant l'affiche ; paysage 3508 × 2480 ; deux vues conservées ; GPX simplifié et cadré ; Polaire à la hauteur de la latitude ; exports aux bonnes dimensions. Gabarits d'origine identiques au pixel près. |
@@ -502,6 +516,8 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Lignes de texte optionnelles | ✅ | `tests/texts.py` |
 | Taille des textes de l'affiche | ✅ | `tests/textsize.py` |
 | Polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel | ✅ | `tests/design.py` (moteur Fichier, sans réseau) ; ⏳ Deux lieux et aperçu au mur avec les vraies tuiles OpenFreeMap. |
+| Cache de tracés du moteur Fichier | ✅ | `tests/vectors.py` ; ⏳ fluidité des gestes sur un téléphone réel. |
+| Comparer avant / après un changement de thème | ✅ | `tests/compare.py` (émulation du toucher) ; ⏳ appui long sur iOS Safari et Chrome Android. |
 | Parcours guidé, accessibilité, historique, date, géolocalisation, recherche | ✅ | `tests/ux.py` (émulation) ; ⏳ géolocalisation et calendrier natif à valider sur iOS et Android. |
 | Panneau coulissant, mode Cadrer, paysage, A− / A+ | ✅ | `tests/mobile.py` (émulation) ; ⏳ gestes à valider sur iOS Safari et Chrome Android. |
 | MapLibre avec les vraies tuiles OpenFreeMap (aperçu, déplacement et zoom, export, rendu Souvenir) | ✅ | Sur l'URL GitHub Pages, dans un vrai navigateur ([#5](https://github.com/thiryyan/city-map-studio/issues/5)). |

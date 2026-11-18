@@ -70,48 +70,79 @@ function dataExtent(d){
     if(f.bb[0]<x0)x0=f.bb[0]; if(f.bb[1]<y0)y0=f.bb[1]; if(f.bb[2]>x1)x1=f.bb[2]; if(f.bb[3]>y1)y1=f.bb[3]; }
   return x0>x1?null:{w:x0,e:x1,s:imerc(y0),n:imerc(y1)};
 }
+/** Cache des tracés : des Path2D par classe, en pixels « monde » relatifs au centre des données, pour une taille
+ *  de monde S donnée (zoom et largeur du cadre). Pendant un déplacement, seule la translation change : les
+ *  géométries ne sont plus reprojetées à chaque image. Reconstruit si S ou les données changent ; quelques tailles
+ *  sont gardées (aperçu, seconde vue, export) pour ne pas reconstruire à chaque alternance.
+ *  Les classes nombreuses (bâtiments, voies) sont regroupées par carreau de VEC_CELL px : seuls les carreaux
+ *  visibles sont tracés, comme l'élagage objet par objet d'avant. */
+const vecCache=new WeakMap(), VEC_CACHE_MAX=3, VEC_CELL=256;
+function vecPaths(data,S){
+  let byS=vecCache.get(data); if(!byS){ byS=new Map(); vecCache.set(data,byS); }
+  const key=S.toPrecision(12); let P=byS.get(key);
+  if(P){ byS.delete(key); byS.set(key,P); return P; }   // le plus récent en dernier
+  const e=data.extent, ox=e?(e.w+e.e)/2:0, oy=e?merc((e.s+e.n)/2):0, kx=S/360, ky=S/(2*Math.PI);
+  const trace=(path,ring,close)=>{ for(let i=0;i<ring.length;i++){ const q=ring[i], x=(q[0]-ox)*kx, y=(oy-q[1])*ky; i?path.lineTo(x,y):path.moveTo(x,y); } if(close) path.closePath(); };
+  // regroupement par carreau (case de la grille contenant le coin bas-gauche de l'objet) ; bb du carreau = union des bb
+  const cw=VEC_CELL/kx, ch=VEC_CELL/ky;
+  const merged=(arr,close)=>{ const cells=new Map();
+    for(const f of arr){ const id=Math.floor(f.bb[0]/cw)+':'+Math.floor(f.bb[1]/ch); let cell=cells.get(id);
+      if(!cell) cells.set(id,cell={bb:[...f.bb],path:new Path2D()});
+      else { const b=cell.bb; if(f.bb[0]<b[0])b[0]=f.bb[0]; if(f.bb[1]<b[1])b[1]=f.bb[1]; if(f.bb[2]>b[2])b[2]=f.bb[2]; if(f.bb[3]>b[3])b[3]=f.bb[3]; }
+      trace(cell.path,f.rings[0],close); }
+    return [...cells.values()]; };
+  // surfaces remplies feature par feature (règle evenodd propre à chaque objet : îles, clairières) ; bb gardé pour l'élagage
+  const each=arr=>arr.map(f=>{ const path=new Path2D(); for(const rg of f.rings) trace(path,rg,true); return {bb:f.bb,path}; });
+  P={ox,oy,
+    parks:each(data.parks), water:each(data.water),
+    waterLines:Object.keys(WATERWAY_W).map(cls=>[cls,merged(data.waterLines.filter(f=>f.cls===cls),false)]),
+    buildings:merged(data.buildings,true), rails:merged(data.rails,false),
+    roads:Object.fromEntries(ROADS.map(([cls])=>[cls,{tun:merged(data.roads[cls].filter(f=>f.tunnel),false),open:merged(data.roads[cls].filter(f=>!f.tunnel),false)}]))};
+  byS.set(key,P); if(byS.size>VEC_CACHE_MAX) byS.delete(byS.keys().next().value);
+  return P;
+}
 /** Vecteurs du moteur Fichier dans le cadre r, pour une vue {center, zoom} (par défaut la vue éditée) */
 function drawVectors(ctx, r, data, view=st){
   const c=st.colors, S=worldSize(r.w,view.zoom), cx=r.x+r.w/2, cy=r.y+r.h/2, lon0=view.center.lon, m0=merc(view.center.lat);
   const kx=S/360, ky=S/(2*Math.PI);
   const k=r.w/REF_W*st.stroke*zoomFactor(view.zoom);
-  // fenêtre visible en coordonnées (lon, merc) pour l'élagage
+  const P=vecPaths(data,S), tx=cx+(P.ox-lon0)*kx, ty=cy+(m0-P.oy)*ky;   // position de l'origine du cache dans le cadre
+  // fenêtre visible en coordonnées (lon, merc) pour l'élagage des surfaces
   const vx0=lon0-(r.w/2)/kx, vx1=lon0+(r.w/2)/kx, vy0=m0-(r.h/2)/ky, vy1=m0+(r.h/2)/ky;
   const vis=f=>!(f.bb[2]<vx0||f.bb[0]>vx1||f.bb[3]<vy0||f.bb[1]>vy1);
-  const trace=(ring,close)=>{for(let i=0;i<ring.length;i++){const p=ring[i],x=cx+(p[0]-lon0)*kx,y=cy-(p[1]-m0)*ky;i?ctx.lineTo(x,y):ctx.moveTo(x,y)} if(close)ctx.closePath()};
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  if(st.layers.parks){ ctx.fillStyle=c.park; for(const f of data.parks){ if(!vis(f))continue; ctx.beginPath(); f.rings.forEach(rg=>trace(rg,true)); ctx.fill('evenodd'); } }
-  ctx.strokeStyle=c.water;
-  for(const f of data.waterLines){ if(!vis(f))continue; ctx.lineWidth=WATERWAY_W[f.cls]*k/st.stroke*st.waterMult; ctx.beginPath(); trace(f.rings[0],false); ctx.stroke(); }
+  // carreaux visibles réunis en un seul tracé : un croisement entre deux carreaux n'est pas peint deux fois (passes transparentes)
+  const visPath=cells=>{ const path=new Path2D(); for(const f of cells) if(vis(f)) path.addPath(f.path); return path; };
+  const strokeCells=cells=>ctx.stroke(visPath(cells));
   const fx=st.fx||{}, scale=r.w/REF_W;
+  ctx.save(); ctx.translate(tx,ty);
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  if(st.layers.parks){ ctx.fillStyle=c.park; for(const f of P.parks) if(vis(f)) ctx.fill(f.path,'evenodd'); }
+  ctx.strokeStyle=c.water;
+  for(const [cls,cells] of P.waterLines){ ctx.lineWidth=WATERWAY_W[cls]*k/st.stroke*st.waterMult; strokeCells(cells); }
   if(fx.hatch){ const N=FX_HATCH*scale, tile=hatchTile(N*2,c.water,c.land), pat=ctx.createPattern(tile,'repeat');
-    pat.setTransform(new DOMMatrix().translate(r.x,r.y).scale(N/tile.width)); ctx.fillStyle=pat; }
+    pat.setTransform(new DOMMatrix().translate(r.x-tx,r.y-ty).scale(N/tile.width)); ctx.fillStyle=pat; }   // motif fixé au cadre, pas aux données
   else ctx.fillStyle=c.water;
-  for(const f of data.water){ if(!vis(f))continue; ctx.beginPath(); f.rings.forEach(rg=>trace(rg,true)); ctx.fill('evenodd'); }
+  for(const f of P.water) if(vis(f)) ctx.fill(f.path,'evenodd');
   if(st.layers.buildings && data.buildings.length){
-    ctx.beginPath(); for(const f of data.buildings){ if(vis(f)) trace(f.rings[0],true); }
-    if(fx.outline){ ctx.save(); ctx.strokeStyle=c.roadMinor; ctx.lineWidth=OUTLINE_W*k; ctx.globalAlpha=0.8; ctx.stroke(); ctx.restore(); }
-    else { ctx.fillStyle=c.building; ctx.fill(); }
+    if(fx.outline){ ctx.save(); ctx.strokeStyle=c.roadMinor; ctx.lineWidth=OUTLINE_W*k; ctx.globalAlpha=0.8; strokeCells(P.buildings); ctx.restore(); }
+    else { ctx.fillStyle=c.building; ctx.fill(visPath(P.buildings)); }
   }
   if(st.layers.rail && data.rails.length){
     ctx.strokeStyle=c.rail; ctx.lineWidth=0.8*k; ctx.setLineDash([3*k,2*k]); ctx.lineCap='butt';
-    ctx.beginPath(); for(const f of data.rails){ if(vis(f)) trace(f.rings[0],false); } ctx.stroke(); ctx.setLineDash([]); ctx.lineCap='round';
+    strokeCells(P.rails); ctx.setLineDash([]); ctx.lineCap='round';
   }
   const passes = fx.pencil ? PENCIL.map(([dx,dy])=>[dx*k,dy*k,PENCIL_ALPHA,PENCIL_W]) : [[0,0,1,1]];
   for(const [cls,w,col] of ROADS){
-    const arr=data.roads[cls]; if(!arr.length) continue;
+    if(!data.roads[cls].length) continue;
     ctx.strokeStyle=c[col];
     for(const [dx,dy,a,wf] of passes){
       ctx.save(); ctx.translate(dx,dy); ctx.lineWidth=w*k*wf;
-      for(const tun of [true,false]){
-        ctx.globalAlpha = (tun?0.4:1)*a; ctx.beginPath(); let any=false;
-        for(const f of arr){ if(!!f.tunnel===tun && vis(f)){ trace(f.rings[0],false); any=true; } }
-        if(any) ctx.stroke();
-      }
+      ctx.globalAlpha=0.4*a; strokeCells(P.roads[cls].tun);
+      ctx.globalAlpha=a; strokeCells(P.roads[cls].open);
       ctx.restore();
     }
-    ctx.globalAlpha=1;
   }
+  ctx.restore();
 }
 /** Bandeau du moteur Fichier : invite à importer tant qu'aucune donnée n'est chargée */
 function checkDataBanner(){

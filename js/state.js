@@ -59,7 +59,7 @@ function normState(src){
   };
 }
 let st = loadState();
-const ui = {placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
+const ui = {comparing:false, cmpKeep:null, placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
 let mlMap = null, osmData = null;
 let mlLib = 'loading', mlCdn = '', mlFailMsg = '';   // état de la librairie MapLibre
 
@@ -145,6 +145,6 @@ function loadState(){
   return structuredClone(DEFAULT_STATE);
 }
 let saveT=0;
-function saveState(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} if(typeof recordHistory==='function') recordHistory();},300)}
+function saveState(){if(ui.comparing) return; clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} if(typeof recordHistory==='function') recordHistory();},300)}
 function getPath(o,p){return p.split('.').reduce((a,k)=>a?.[k],o)}
 function setPath(o,p,v){const ks=p.split('.');const last=ks.pop();ks.reduce((a,k)=>a[k],o)[last]=v}
