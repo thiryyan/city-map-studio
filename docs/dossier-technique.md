@@ -17,11 +17,14 @@
 | E7 | Libellés | Aucun libellé sur la carte : le tracé est purement graphique. |
 | E8 | Ville au lancement | Blois et la Loire. |
 | E9 | Export | PNG A4 300 DPI (2480 × 3508 px). |
-| E10 | Livraison | Un seul fichier `index.html` (HTML, CSS et JavaScript natifs), **sans étape de build**. MapLibre et les polices sont fournis dans `lib/`. |
+| E10 | Livraison | Fichiers statiques **sans étape de build**, servis tels quels : `index.html` (balisage), `css/app.css`, `js/*.js` (scripts classiques chargés dans l'ordre, sans module ES, pour que l'ouverture en `file://` reste possible). MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
 | E11 | Écrans | Mobile en priorité, ordinateur en second. Interface en français. |
 | E12 | Hébergement | **GitHub Pages** (dépôt public, `index.html` à la racine, branche `main`). Les plateformes de déploiement d'applications générées automatiquement sont exclues : la politique d'usage d'Overpass demande de ne pas les utiliser. |
 | E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU. Active par défaut, désactivable sous la responsabilité de l'utilisateur. |
 | E14 | Vie privée | Aucune ressource de présentation (librairie, polices, styles) n'est chargée depuis un tiers : l'adresse IP du visiteur n'est transmise qu'aux services de données cartographiques nécessaires au fonctionnement, et **seulement après son accord explicite** (§ 2.4). Les polices sont auto-hébergées, conformément à la jurisprudence RGPD sur Google Fonts (LG München, 20/01/2022, 3 O 17493/20). |
+| E15 | Sécurité | Politique de sécurité du contenu (CSP) en balise meta : aucun script ni style en ligne, réseau limité aux services cartographiques. Tout état venu de l'extérieur (lien partagé, `localStorage`) est validé champ par champ (`normState`). CDN de secours chargés avec empreinte SRI. |
+| E16 | Accessibilité | Fenêtres en `<dialog>` modal (focus retenu, Échap), commandes au clavier, cibles tactiles de 44 px, noms accessibles pour tous les champs, texte de remplacement de l'aperçu. |
+| E17 | Hors ligne | Application installable (manifeste) ; en http(s), un service worker garde l'application en cache (réseau d'abord) : démarrage et export du moteur Fichier sans réseau. Aucune ressource tierce mise en cache. |
 
 ---
 
@@ -408,7 +411,15 @@ Les trois services distants (tuiles OpenFreeMap, Overpass, Nominatim) et, en sec
 
 ```
 city-map-studio/
-├── index.html              # application complète (HTML + CSS + JS, sans build)
+├── index.html              # balisage, CSP, métadonnées ; charge css/ et js/ (sans build)
+├── css/app.css             # feuille de styles de l'application
+├── js/                     # scripts classiques, chargés dans cet ordre (cf. § 8.2)
+│   ├── config.js  state.js  geo.js  render.js  engines.js
+│   └── preview.js  features.js  ui.js  export.js  main.js
+├── sw.js                   # service worker (cache de l'application, http(s) seulement)
+├── manifest.webmanifest    # application installable
+├── icons/                  # icône SVG, PNG 192 / 512 / maskable / apple-touch, image d'aperçu des liens
+├── .github/workflows/      # tests.yml : suite de bout en bout à chaque push et pull request
 ├── lib/                    # dépendances embarquées
 │   ├── maplibre-gl.js/.css # MapLibre GL JS 4.7.1 (licence BSD-3)
 │   ├── fonts/              # polices woff2 + fonts.css + OFL.txt par famille (11 familles)
@@ -438,12 +449,35 @@ city-map-studio/
     ├── ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
     ├── design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel
     ├── welcome.py          # ambiance proposée au premier lancement
+    ├── security.py         # lien forgé ou piégé, état corrompu, crochets de test, libellé d'export
+    ├── a11y.py             # fenêtres modales, clavier, aria-pressed, cibles tactiles, noms accessibles
+    ├── csp.py              # aucune violation de la CSP (file:// et HTTP), aucun style ni script en ligne
+    ├── pwa.py              # sous-chemin GitHub Pages, manifeste, service worker, démarrage hors ligne
+    ├── run_all.py          # génère les données puis lance toute la suite (utilisé par la CI)
+    ├── jswait.py           # attente d'une condition sans eval (compatible avec la CSP)
     └── seed.py             # préparation du localStorage sans script injecté (tests qui rechargent la page)
 ```
 
-### 8.2. Sections de `index.html`
+### 8.2. Fichiers et sections du script
 
-Le script est découpé en sections balisées `// ---------- Titre ----------`.
+Le script est découpé en dix fichiers `js/*.js`, eux-mêmes organisés en sections balisées `// ---------- Titre ----------`.
+Ce sont des scripts classiques : leurs déclarations de premier niveau sont partagées et le **code exécuté au chargement
+d'un fichier ne peut utiliser que les fichiers précédents** (les fonctions, elles, peuvent s'appeler d'un fichier à l'autre).
+
+| Fichier | Contenu |
+| :--- | :--- |
+| `config.js` | Constantes : polices, thèmes, gabarits, repères, ambiances, villes, hiérarchie routière, `DEFAULT_STATE`. |
+| `state.js` | Validation (`normState`), état `st`, fenêtres modales (`openDialog`, `closeDialog`, `setBusy`), accord préalable, politique Overpass, enregistrement. |
+| `geo.js` | Mercator, `geom` (géométrie des gabarits), formes. |
+| `render.js` | Typographie, cartouche, repères, ciel, `drawPoster`. |
+| `engines.js` | Moteur Overpass, effets de tracé, moteur MapLibre. |
+| `preview.js` | `$`, `h` (création d'éléments sans `innerHTML`), aperçu, deux lieux, gestes, papier, `composePoster`, aperçu au mur. |
+| `features.js` | Lieux multiples, GPX, partage par lien, ambiances, panneau coulissant. |
+| `ui.js` | Taille de l'interface, coordonnées, historique, `buildUI`, `changed`, vignettes, recherche, polices. |
+| `export.js` | Export PNG 300 DPI, contexte d'exécution, diagnostic, import de fichier. |
+| `main.js` | `boot`, application installable (`installPwa`), crochets de test. |
+
+Principales sections :
 
 | Section | Fonctions clés | Rôle |
 | :--- | :--- | :--- |
@@ -460,7 +494,7 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Contexte et diagnostic | `ENV`, `showEnvWarning`, `runDiagnostics`, `netMsg` | Détection d'iframe ou de blocage réseau, tests des services. |
 | Moteur 3 | `osmXmlToElements`, `geojsonToElements`, `importText`, `importFile` | Import de fichier, avec recadrage automatique. |
 | Export | `exportPoster`, `withDpi`, `crc32` | PNG 2480 × 3508 px à 300 DPI. |
-| Débogage | `window.__cms` | Accès à l'état et aux fonctions depuis la console et les tests. |
+| Débogage | `window.__cms` | Accès à l'état et aux fonctions depuis la console et les tests ; exposé seulement avec `?test` dans l'adresse ou `localStorage['cityMapStudio.debug']='1'`. |
 
 ---
 
@@ -490,6 +524,9 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 | Licence | Aucune dépendance propriétaire ; attribution OSM présente par défaut. |
 | Hors ligne | Réseau coupé : diagnostic en échec, import `.json` / `.osm` / `.geojson` réussi, export PNG 2480 × 3508. |
 | Aperçu intégré | Page dans une iframe : avertissement explicite dans l'onglet Lieu. |
+| Sécurité | Lien forgé (types faux, valeurs hors bornes, champs inconnus) : application intacte, valeurs invalides remplacées, rien d'invalide enregistré ; lien piégé (contenu décompressé > 512 Ko) refusé ; aucune violation de la CSP en `file://` ni en HTTP. |
+| Accessibilité | Fenêtres modales : focus placé et retenu, Échap, focus rendu ; vignettes utilisables au clavier ; cibles de 44 px ; tous les champs nommés. |
+| GitHub Pages et hors ligne | Servi sous `/city-map-studio/` sans ressource manquante ; manifeste et icônes valides ; après une visite, démarrage et export (moteur Fichier) sans réseau. |
 
 ### 9.2. Tests automatisés
 
@@ -497,7 +534,11 @@ Le script est découpé en sections balisées `// ---------- Titre ----------`.
 
 **Persistance et rechargement** : un script injecté par Playwright (`add_init_script`) qui accède à `localStorage` au démarrage de chaque document fait perdre, au rechargement suivant, les écritures récentes de la page. Mesuré sur une page minimale, sans l'application : 0 perte sur 25 rechargements sans script injecté, 3 à 4 sur 25 avec. C'était la cause des échecs intermittents de `overpass_policy.py`, et un risque pour tous les tests qui rechargent la page. Ces tests préparent désormais le stockage avec `tests/seed.py` (écriture par la page elle-même, puis rechargement), et attendent que l'état soit enregistré avant de recharger. Un utilisateur réel n'est pas concerné.
 
-Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et OpenFreeMap sont simulés, tout autre accès externe est coupé. Les commandes figurent dans `CONTRIBUTING.md`.
+**CSP et attentes** : `page.wait_for_function()` évalue sa condition avec `eval()` dans la page, ce que la CSP refuse. Les tests utilisent `tests/jswait.py`, qui interroge la condition avec `page.evaluate()` (protocole DevTools, non soumis à la CSP). La CSP n'est jamais désactivée dans les tests.
+
+**Crochets de test** : les tests ouvrent la page avec `?test` (sinon `window.__cms` n'existe pas). Le service worker n'est pas enregistré pendant les tests, sauf avec `?test&sw` (`tests/pwa.py`).
+
+Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et OpenFreeMap sont simulés, tout autre accès externe est coupé. `python tests/run_all.py` lance toute la suite ; le workflow `.github/workflows/tests.yml` l'exécute à chaque push et à chaque pull request. Les commandes figurent dans `CONTRIBUTING.md`.
 
 ### 9.3. État de validation
 
@@ -523,4 +564,9 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : Overpass et
 | Polices auto-hébergées dans l'aperçu et l'export, contrôle `document.fonts.check` | ✅ | `tests/fonts.py` |
 | Accord préalable aux services tiers | ✅ | `tests/consent.py` |
 | Réinitialisation des réglages | ✅ | `tests/reset.py` |
+| Lien forgé ou piégé, état corrompu, crochets de test | ✅ | `tests/security.py` |
+| Accessibilité au clavier et aux lecteurs d'écran | ✅ | `tests/a11y.py` (Chromium) ; ⏳ VoiceOver (iOS) et TalkBack (Android) à valider sur appareil. |
+| Politique de sécurité du contenu | ✅ | `tests/csp.py`, `tests/maplibre.py` |
+| Sous-chemin GitHub Pages, application installable, hors ligne | ✅ | `tests/pwa.py` (serveur local) ; ⏳ installation et hors ligne sur l'URL publiée, iOS et Android. |
+| Image d'aperçu des liens partagés | ⏳ à valider | L'adresse `https://thiryyan.github.io/city-map-studio/icons/og-image.jpg` suppose la publication à cette adresse ; à adapter en cas de domaine personnalisé. |
 | Téléchargement sur iOS Safari et Chrome Android | ⏳ à valider | Appareils réels ([#7](https://github.com/thiryyan/city-map-studio/issues/7)). |
