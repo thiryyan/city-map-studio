@@ -6,3 +6,4 @@ tests/frame.html
 __pycache__/
 tests/city.json
 tests/city.meta.json
+tests/saves-*.json

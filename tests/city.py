@@ -1,7 +1,7 @@
 """e2e : moteur Fichier sur une ville réaliste (tests/city.json, généré par tests/make_city.py).
 
 Une ville fictive de 6,4 × 5,2 km (fleuve en multipolygone à assembler avec deux îles, affluent, canal, étang ;
-vieille ville organique, damiers, quais, ponts, rocade, voie ferrée et tunnels ; parcs, forêt ; ~22 000 bâtiments)
+vieille ville organique et château, faubourgs, grand ensemble, pavillons, port, gare, quais, ponts, rocade, campagne ; ~18 500 bâtiments)
 au format « nœuds + chemins à références », comme un export Overpass. Vérifie :
 - import JSON et XML (.osm reconstitué) : mêmes objets, toutes les classes de voies, fleuve assemblé (1 + 2 anneaux) ;
 - points de contrôle : eau au milieu du fleuve, chaussée au milieu du pont principal ;
@@ -47,7 +47,7 @@ async def main():
             rails:d.rails.length, railTunnel:d.rails.some(f=>f.tunnel), roadTunnel:Object.values(R).flat().some(f=>f.tunnel),
             classes:Object.fromEntries(Object.entries(R).map(([k,v])=>[k,v.length])), rings:river.rings.length, closed:river.rings.every(closed)}; }""")
         print('  import JSON', round(t), 'ms ·', s)
-        check(s['buildings'] > 15000 and s['count'] > 20000, f'ville importée : {s["buildings"]} bâtiments, {s["count"]} objets ({round(t)} ms)')
+        check(s['buildings'] > 15000 and s['count'] > 18000, f'ville importée : {s["buildings"]} bâtiments, {s["count"]} objets ({round(t)} ms)')
         check(all(v > 0 for v in s['classes'].values()), f'toutes les classes de voies présentes {s["classes"]}')
         check(s['rings'] == 3 and s['closed'], f'fleuve : membres assemblés en un anneau extérieur et deux îles ({s["rings"]} anneaux fermés : {s["closed"]})')
         check(s['water'] >= 2 and s['lines'] == ['canal', 'river', 'stream'] and s['parks'] >= 5, f'eau (fleuve, étang), cours d\'eau {s["lines"]}, parcs ({s["parks"]})')

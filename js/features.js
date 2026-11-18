@@ -100,18 +100,23 @@ async function shareLink(){
 }
 async function loadFromHash(){
   const m=/^#a=([zj][A-Za-z0-9_-]+)$/.exec(location.hash); if(!m) return;
+  try{ applyConfig(await decodeShare(m[1]),'Affiche chargée depuis le lien · « Annuler » pour retrouver la vôtre'); }
+  catch(e){ toast('Lien d\'affiche illisible : '+e.message,true); }
+  finally{ history.replaceState(null,'',location.pathname+location.search); }
+}
+/** Applique une configuration venue de l'extérieur (lien, fichier, sauvegarde) : validée champ par champ (normState),
+ *  le moteur courant est gardé, étape d'historique annulable ; en cas d'erreur, l'affiche précédente revient intacte. */
+function applyConfig(o,msg){
   let before=null;
   try{
-    const o=await decodeShare(m[1]); commitHistory(0);
+    commitHistory(0);
     const eng=st.engine, fresh=normState(o); before=structuredClone(st);
     replaceState(fresh,{engine:eng});
-    setPlacing(false); syncInputs(); layoutPreview(); loadFonts().then(()=>scheduleOver()); goTo(st.center.lat,st.center.lon,st.zoom); redrawAll(true);
-    commitHistory(); history.replaceState(null,'',location.pathname+location.search);
-    toast('Affiche chargée depuis le lien · « Annuler » pour retrouver la vôtre');
+    setPlacing(false); syncInputs(); renderPlaces(); renderRoute(); layoutPreview(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); goTo(st.center.lat,st.center.lon,st.zoom); redrawAll(true); drawTexture();
+    commitHistory(); if(msg) toast(msg);
   }catch(e){
     if(before){ replaceState(before); try{ syncInputs(); layoutPreview(); }catch(_){} commitHistory(); }   // jamais d'état à moitié appliqué
-    history.replaceState(null,'',location.pathname+location.search);
-    toast('Lien d\'affiche illisible : '+e.message,true);
+    throw e;
   }
 }
 /** Remplace le contenu de l'état (l'objet `st` garde son identité : __cms.st et les fermetures restent valides) */
@@ -310,4 +315,122 @@ function applyPhotoPalette(v){
   st.colors=photoTheme(photoPal,v==='dark'); setSeg('photoSeg',v);
   noteThemeChange(before); refreshColors(); changed({all:true,cards:true});
   toast('Palette de la photo appliquée · « Annuler » pour revenir');
+}
+
+// ---------- Mes affiches : sauvegarde et restauration de la configuration ----------
+// Sauvegardes nommées dans ce navigateur (localStorage, avec une vignette), fichier de configuration d'une affiche,
+// fichier de sauvegarde de toutes les affiches. Tout ce qui est relu (navigateur ou fichier) est validé comme un lien
+// partagé : champs connus seulement, normState, tailles bornées ; une restauration est une étape annulable.
+// Ne sont pas inclus : le moteur cartographique (choix de l'appareil) et les données importées (fichier OSM).
+const SAVES_KEY='cityMapStudio.saves', SAVES_MAX=40, CFG_FORMAT='city-map-studio/configuration', BAK_FORMAT='city-map-studio/sauvegardes', CFG_VERSION=1;
+const CFG_MAX_BYTES=1024*1024, BAK_MAX_BYTES=16*1024*1024, THUMB_MAX=120*1024;
+const THUMB_RE=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;
+const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+/** État à sauvegarder : copie sans le moteur */
+function savedState(){ const o=JSON.parse(JSON.stringify(st)); delete o.engine; return o; }
+/** Une sauvegarde relue : chaque champ vérifié, l'état normalisé ; null si inexploitable */
+function normSave(o){
+  if(!o || typeof o!=='object' || Array.isArray(o) || !o.state || typeof o.state!=='object') return null;
+  const t=Date.parse(o.savedAt), state=normState(o.state); delete state.engine;
+  return {id:typeof o.id==='string' && /^[a-z0-9]{6,24}$/.test(o.id) ? o.id : newId(),
+    name:(V.str(o.name,'',80).trim()||'Sans titre'), savedAt:Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString(), state,
+    thumb:typeof o.thumb==='string' && o.thumb.length<=THUMB_MAX && THUMB_RE.test(o.thumb) ? o.thumb : ''};
+}
+function loadSaves(){
+  try{ const a=JSON.parse(localStorage.getItem(SAVES_KEY)||'[]'); return Array.isArray(a) ? a.map(normSave).filter(Boolean).slice(0,SAVES_MAX) : []; }
+  catch(e){ return []; }
+}
+function storeSaves(list){
+  try{ localStorage.setItem(SAVES_KEY,JSON.stringify(list.slice(0,SAVES_MAX))); }
+  catch(e){ throw new Error('espace du navigateur plein : supprimez des affiches ou téléchargez la sauvegarde complète'); }
+}
+/** Vignette de l'affiche courante (JPEG, ~150 px) : carte réelle avec le moteur Fichier, schématique sinon */
+function saveThumb(){
+  const land=st.orient==='landscape', cv=document.createElement('canvas'); cv.width=land?212:150; cv.height=land?150:212; const ctx=cv.getContext('2d');
+  const mapFn=(c,r,view)=> st.engine==='file' && osmData ? drawVectors(c,r,osmData,view) : thumbMap(c,r);
+  ui.thumb=true; try{ drawPoster(ctx,cv.width,cv.height,'all',mapFn); applyTexture(ctx,cv.width,cv.height); } finally{ ui.thumb=false; }
+  return cv.toDataURL('image/jpeg',0.8);
+}
+const defaultSaveName=()=>[st.texts.title,st.texts.names].map(s=>(s||'').trim()).filter(Boolean).join(' · ')||'Mon affiche';
+/** Enregistre l'affiche courante ; une sauvegarde du même nom est mise à jour (elle remonte en tête de liste) */
+function saveCurrent(name){
+  name=(name||'').trim().slice(0,80)||defaultSaveName();
+  const list=loadSaves(), i=list.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());
+  const entry={id:i>=0?list[i].id:newId(), name, savedAt:new Date().toISOString(), state:savedState(), thumb:saveThumb()};
+  if(i>=0) list.splice(i,1);
+  if(i<0 && list.length>=SAVES_MAX){ toast(`${SAVES_MAX} affiches au plus : supprimez-en une d'abord`,true); return false; }
+  try{ storeSaves([entry,...list]); }catch(e){ toast('Enregistrement impossible : '+e.message,true); return false; }
+  renderSaves(); toast(i>=0 ? `« ${name} » mise à jour` : `« ${name} » enregistrée dans Mes affiches`); return true;
+}
+function restoreSave(id){
+  const e=loadSaves().find(x=>x.id===id); if(!e) return;
+  closeDialog('saves');
+  try{ applyConfig(e.state,`« ${e.name} » restaurée · « Annuler » pour revenir`); }catch(err){ toast('Restauration impossible : '+err.message,true); }
+}
+function deleteSave(id){ const l=loadSaves(), e=l.find(x=>x.id===id); if(!e) return;
+  try{ storeSaves(l.filter(x=>x.id!==id)); }catch(err){ toast(err.message,true); return; }
+  renderSaves(); toast(`« ${e.name} » supprimée`); }
+/** Téléchargement d'un fichier JSON (aucun envoi : lien local vers un Blob) */
+function downloadJson(obj,file){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,1)],{type:'application/json'})); a.download=file;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+const configOf=(name,state,savedAt)=>({format:CFG_FORMAT, version:CFG_VERSION, app:'City Map Studio', name, savedAt:savedAt||new Date().toISOString(), state});
+function downloadConfig(entry){
+  const c = entry ? configOf(entry.name,entry.state,entry.savedAt) : configOf(defaultSaveName(),savedState());
+  downloadJson(c,`affiche-${slug(c.name)}.json`); toast('Configuration téléchargée');
+}
+function downloadBackup(){
+  const saves=loadSaves(); if(!saves.length){ toast('Aucune affiche enregistrée à sauvegarder',true); return; }
+  downloadJson({format:BAK_FORMAT, version:CFG_VERSION, app:'City Map Studio', savedAt:new Date().toISOString(), saves}, `mes-affiches-${new Date().toISOString().slice(0,10)}.json`);
+  toast(`${saves.length} affiche${saves.length>1?'s':''} sauvegardée${saves.length>1?'s':''} dans un fichier`);
+}
+/** Ouvre un fichier : configuration d'une affiche (appliquée), sauvegarde complète (fusionnée dans Mes affiches),
+ *  ou état brut (ancien format). Tout le reste est refusé sans rien modifier. */
+async function importConfigFile(file){
+  try{
+    if(file.size>BAK_MAX_BYTES) throw new Error('fichier trop volumineux');
+    let o; try{ o=JSON.parse(await file.text()); }catch(e){ throw new Error('ce n\'est pas un fichier JSON'); }
+    if(!o || typeof o!=='object' || Array.isArray(o)) throw new Error('contenu invalide');
+    const newer=typeof o.version==='number' && o.version>CFG_VERSION ? ' (créé par une version plus récente : réglages inconnus ignorés)' : '';
+    if(o.format===BAK_FORMAT){
+      if(!Array.isArray(o.saves)) throw new Error('sauvegarde sans affiches');
+      const list=loadSaves(), seen=new Set(list.map(x=>x.id+'|'+x.savedAt)); let added=0, full=false;
+      for(const raw of o.saves.slice(0,1000)){ const e=normSave(raw); if(!e || seen.has(e.id+'|'+e.savedAt)) continue;
+        if(list.length>=SAVES_MAX){ full=true; break; }
+        if(list.some(x=>x.id===e.id)) e.id=newId();
+        list.push(e); seen.add(e.id+'|'+e.savedAt); added++; }
+      list.sort((a,b)=>b.savedAt.localeCompare(a.savedAt)); storeSaves(list); renderSaves();
+      toast(`${added} affiche${added>1?'s':''} ajoutée${added>1?'s':''} à Mes affiches`+(full?` · limite de ${SAVES_MAX} atteinte`:'')+newer);
+      return;
+    }
+    if(file.size>CFG_MAX_BYTES) throw new Error('fichier trop volumineux');
+    const state = o.format===CFG_FORMAT ? o.state : (o.texts && o.layout ? o : null);   // état brut : ancien format
+    if(!state || typeof state!=='object' || Array.isArray(state)) throw new Error('fichier non reconnu (ni configuration, ni sauvegarde City Map Studio)');
+    closeDialog('saves');
+    applyConfig(state,`Configuration « ${V.str(o.name,'',80).trim()||file.name} » ouverte · « Annuler » pour revenir`+newer);
+  }catch(e){ toast('Ouverture impossible : '+e.message,true); }
+}
+const LAYOUT_NAME=k=>(LAYOUTS.find(l=>l[0]===k)||[,''])[1];
+function renderSaves(){
+  const box=$('savesList'); if(!box) return; box.textContent='';
+  const list=loadSaves(); $('savesEmpty').hidden=list.length>0; $('bSavesBackup').disabled=!list.length;
+  const fmt=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'});
+  for(const e of list){
+    const del=h('button',{type:'button',className:'btn sm','aria-label':`Supprimer « ${e.name} »`,title:'Supprimer'},'✕');
+    del.onclick=()=>{ if(!del.classList.contains('confirm')){ del.classList.add('confirm'); del.textContent='Supprimer ?'; setTimeout(()=>{ if(del.isConnected){ del.classList.remove('confirm'); del.textContent='✕'; } },4000); return; } deleteSave(e.id); };
+    const res=h('button',{type:'button',className:'btn sm pri','aria-label':`Restaurer « ${e.name} »`},'Restaurer'); res.onclick=()=>restoreSave(e.id);
+    const dl=h('button',{type:'button',className:'btn sm','aria-label':`Télécharger « ${e.name} »`,title:'Télécharger le fichier'},'⤓'); dl.onclick=()=>downloadConfig(e);
+    const th=e.thumb ? h('img',{src:e.thumb,alt:'',width:56,height:79}) : h('span',{className:'nothumb','aria-hidden':'true'});
+    box.append(h('li',{className:'save'},th,h('div',{className:'meta'},h('b',{},e.name),h('small',{},`${fmt.format(new Date(e.savedAt))} · ${LAYOUT_NAME(e.state.layout)} · ${THEMES[e.state.theme]?.name||''}`)),h('div',{className:'acts'},res,dl,del)));
+  }
+}
+function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); openDialog('saves'); setTimeout(()=>$('saveName').focus(),50); }
+function initSaves(){
+  $('bSaves').onclick=openSaves; $('savesClose').onclick=()=>closeDialog('saves');
+  $('saveForm').onsubmit=e=>{ e.preventDefault(); saveCurrent($('saveName').value); };
+  $('bCfgExport').onclick=()=>downloadConfig(null); $('bSavesBackup').onclick=downloadBackup;
+  $('cfgIn').onchange=e=>{ const f=e.target.files[0]; if(f) importConfigFile(f); e.target.value=''; };
+  addEventListener('storage',e=>{ if(e.key===SAVES_KEY && $('saves').open) renderSaves(); });   // autre onglet
+  addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase()==='s'){ e.preventDefault(); saveCurrent(defaultSaveName()); } });
 }

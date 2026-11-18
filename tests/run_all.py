@@ -10,7 +10,7 @@ si sa sortie contient une erreur de page (PAGEERROR), une trace Python, ou une v
 import pathlib, re, subprocess, sys, time
 
 T = pathlib.Path(__file__).resolve().parent
-TESTS = ['run', 'offline', 'maplibre', 'coords', 'texts', 'textsize', 'art', 'city',
+TESTS = ['run', 'offline', 'maplibre', 'coords', 'texts', 'textsize', 'art', 'city', 'saves',
          'mobile', 'ux', 'design', 'vectors', 'compare', 'welcome', 'fonts', 'consent', 'reset', 'security', 'a11y', 'csp', 'pwa']
 # « ✗ » suivi d'un texte : vérification en échec (un « ✗ » seul est une ligne du diagnostic réseau affiché, attendue hors ligne)
 BAD = re.compile(r'^✗ \S|PAGEERROR|Traceback \(most recent call last\)', re.M)

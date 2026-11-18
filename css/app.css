@@ -241,3 +241,17 @@ details.adv>h3:first-of-type{margin-top:6px}
 #photoPal{margin-top:8px;display:grid;gap:8px}
 .pal{display:flex;gap:4px;height:28px}
 .pal i{flex:1;border-radius:6px;border:1px solid var(--line)}
+/* Mes affiches */
+#saves .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;max-width:520px;width:100%;max-height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+#saves h2{margin:0;font-size:1.125rem}
+#saveForm input{min-width:0}
+.saves{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.saves .save{display:grid;grid-template-columns:56px 1fr;gap:4px 10px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.saves img,.saves .nothumb{width:56px;height:79px;object-fit:contain;border-radius:3px;background:#0003;grid-row:span 2}
+.saves .meta{min-width:0;display:flex;flex-direction:column;gap:2px}
+.saves .meta b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saves .meta small{color:var(--mut)}
+.saves .acts{display:flex;gap:6px;flex-wrap:wrap}
+.saves .btn.confirm{border-color:#D0312D;color:#F2A3A0}
+#saveForm .btn.pri,.saves .btn.pri{width:auto;flex:none}
+.saves .btn.pri{min-height:44px;font-size:.875rem;padding:6px 12px}
