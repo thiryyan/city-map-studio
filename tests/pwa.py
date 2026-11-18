@@ -16,7 +16,7 @@ from jswait import wait_js
 T = pathlib.Path(__file__).resolve().parent
 ROOT = T.parent
 CHROME = os.environ.get('CHROME') or None
-FIX = (T / 'overpass.json').read_text()
+FIX = (T / 'osm.json').read_text()
 SEED = "localStorage.setItem('cityMapStudio.consent','1'); localStorage.setItem('cityMapStudio.welcomed','1')"
 
 
@@ -77,7 +77,7 @@ async def main():
         await page.reload(); await page.wait_for_timeout(2000)
         ok = await page.evaluate("typeof __cms==='object' && document.title.startsWith('City Map Studio')")
         check(ok, 'hors ligne : l\'application démarre depuis le cache')
-        await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'overpass.json')}", FIX); await page.wait_for_timeout(500)
+        await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
         async with page.expect_download() as dl:
             await page.click('#bExport')
         d = await dl.value

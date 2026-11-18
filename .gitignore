@@ -1,5 +1,5 @@
 tests/*.png
-tests/overpass.json
+tests/osm.json
 tests/data.osm
 tests/data.geojson
 tests/frame.html

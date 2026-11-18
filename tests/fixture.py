@@ -35,5 +35,5 @@ for k in range(300):
     a=lat0+random.uniform(-0.015,0.015); b=lon0+random.uniform(-0.02,0.02)
     if abs(a-(lat0-0.0058))<0.003: continue
     W({"building":"yes"},[(a,b),(a+0.0003,b),(a+0.0003,b+0.0004),(a,b+0.0004),(a,b)])
-json.dump({"elements":els},open(str(T/'overpass.json'),"w"))
+json.dump({"elements":els},open(str(T/'osm.json'),"w"))
 print(len(els))

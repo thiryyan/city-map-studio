@@ -11,7 +11,7 @@ from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
-FIX = open(T / 'overpass.json').read()
+FIX = open(T / 'osm.json').read()
 NOMI = json.dumps([{'lat': '48.8584', 'lon': '2.2945', 'name': 'Tour Eiffel',
                     'display_name': 'Tour Eiffel, Avenue Gustave Eiffel, Paris, France'}])
 
@@ -47,8 +47,7 @@ async def main():
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):
             u = r.request.url
-            if 'interpreter' in u: await r.fulfill(status=200, content_type='application/json', body=FIX)
-            elif 'nominatim' in u:
+            if 'nominatim' in u:
                 nomi.append(u); await asyncio.sleep(0.6); await r.fulfill(status=200, content_type='application/json', body=NOMI)
             elif u.startswith('file:'): await r.continue_()
             else: await r.abort()
@@ -101,7 +100,8 @@ async def main():
         await page.evaluate("__cms.setEngine('file')"); await page.wait_for_timeout(200)
         check(await page.evaluate("document.getElementById('adv').open") and await page.is_visible('#fileIn + *, #fileBlock'),
               'moteur Fichier : « Avancé » ouvert d\'office (import)')
-        await page.evaluate("__cms.setEngine('overpass')"); await page.wait_for_timeout(800)
+        # Données du moteur Fichier ; on laisse passer la fenêtre de 1,5 s pendant laquelle un changement de moteur n'entre pas dans l'historique
+        await page.evaluate("f=>__cms.importText(f,'osm.json')", FIX); await page.wait_for_timeout(1600)
 
         # ---------- Cibles tactiles ----------
         await page.evaluate("__cms.setSheet('full'); document.getElementById('colorsBox').open=true")

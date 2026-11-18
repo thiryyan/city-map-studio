@@ -13,7 +13,7 @@ function h(tag,props={},...kids){
   }
   e.append(...kids.filter(x=>x!=null)); return e;
 }
-const cvU=$('cvUnder'), cvO=$('cvOver'), cvT=$('cvTex'), opC=$('opCanvas'), slot=$('slot'), poster=$('poster'), stage=$('stage');
+const cvU=$('cvUnder'), cvO=$('cvOver'), cvT=$('cvTex'), vecC=$('vecCanvas'), slot=$('slot'), poster=$('poster'), stage=$('stage');
 function layoutPreview(){
   const SW=stage.clientWidth, SH=stage.clientHeight, small=innerWidth<900;
   const pad = small ? (SH<260 ? 8 : 14) : 36, FAB=54;
@@ -41,7 +41,7 @@ function layoutPreview(){
   ps.hidden=!other; if(other){ Object.assign(ps.style,{left:other.x+'px',top:other.y+'px',width:other.w+'px',height:other.h+'px'}); ps.querySelector('span').textContent=`Modifier le lieu ${2-(st.active||0)}`; ps.classList.toggle('mini',other.w<170); }
   if(G.sky) ensureSky();
   drawTexture();
-  opC.width=Math.round(g.w*ui.dpr); opC.height=Math.round(g.h*ui.dpr);
+  vecC.width=Math.round(g.w*ui.dpr); vecC.height=Math.round(g.h*ui.dpr);
   drawUnder(); renderMap(true);
 }
 function drawUnder(){
@@ -55,7 +55,7 @@ function drawUnder(){
 }
 // ---------- Deux lieux : image de la vue non éditée ----------
 function otherView(){ return st.place2 || {center:{...st.center},zoom:st.zoom,marker:{...st.marker}}; }
-function snapKey(){ const r=ui.geomCss?.rects?.[1-(st.active||0)]; return JSON.stringify([st.engine,otherView(),st.colors,st.stroke,st.waterMult,st.layers,r&&Math.round(r.w),r&&Math.round(r.h),!!opData]); }
+function snapKey(){ const r=ui.geomCss?.rects?.[1-(st.active||0)]; return JSON.stringify([st.engine,otherView(),st.colors,st.stroke,st.waterMult,st.layers,r&&Math.round(r.w),r&&Math.round(r.h),!!osmData]); }
 let snapT=0, snapBusy=false;
 function scheduleSnap(){ clearTimeout(snapT); snapT=setTimeout(makeSnap,250); }
 async function makeSnap(){
@@ -65,21 +65,20 @@ async function makeSnap(){
   try{ const canvas=await renderView(otherView(),w,h); if(canvas){ ui.snap={canvas,key}; drawUnder(); } }
   catch(e){ console.warn('vue figée',e); } finally{ snapBusy=false; }
 }
-/** Carte d'une vue quelconque, à la taille demandée (px) : MapLibre hors écran, ou vecteurs Overpass / Fichier */
+/** Carte d'une vue quelconque, à la taille demandée (px) : MapLibre hors écran, ou vecteurs du moteur Fichier */
 async function renderView(view,wPx,hPx){
   if(st.engine==='maplibre'){ if(mlLib!=='ok' || !consent) return null; return (await renderMaplibreOffscreen(wPx,hPx,view)).canvas; }
-  if(!opData) return null;
+  if(!osmData) return null;
   const cv=document.createElement('canvas'); cv.width=wPx; cv.height=hPx; const c=cv.getContext('2d');
-  c.fillStyle=st.colors.land; c.fillRect(0,0,wPx,hPx); drawVectors(c,{x:0,y:0,w:wPx,h:hPx},opData,view); return cv;
+  c.fillStyle=st.colors.land; c.fillRect(0,0,wPx,hPx); drawVectors(c,{x:0,y:0,w:wPx,h:hPx},osmData,view); return cv;
 }
 /** Change le lieu édité (gabarit Deux lieux) : la carte interactive passe sur l'autre cadre */
 function setActivePlace(i){
   if(st.layout!=='diptych' || i===(st.active||0)) return;
   const cur={center:st.center,zoom:st.zoom,marker:st.marker}, o=otherView();
   st.center=o.center; st.zoom=o.zoom; st.marker=o.marker; st.place2=cur; st.active=i; ui.snap=null;
-  setSeg('placeSeg',String(i)); syncZoomUI(); updateMarkerTxt(); opData && st.engine==='overpass' && (opData=null);
+  setSeg('placeSeg',String(i)); syncZoomUI(); updateMarkerTxt();
   layoutPreview(); if(mlMap) mlRestyle(); saveState();
-  if(st.engine==='overpass') fetchOverpass();
   toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
 }
 function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); describePoster(); }
@@ -106,17 +105,17 @@ function scheduleOver(){ if(!rafO) rafO=requestAnimationFrame(()=>{rafO=0;drawOv
 function renderMap(viewChanged){
   const isML = st.engine==='maplibre';
   $('mlMap').hidden = !isML;
-  opC.hidden = isML;
+  vecC.hidden = isML;
   if(isML){ if(!mlMap) initMaplibre(); if(viewChanged) mlUpdateView(); if(mlLib==='loading') setStatus('Chargement de la librairie MapLibre…','busy'); }
   else scheduleOp();
   scheduleOver();
 }
 function scheduleOp(){ if(!rafM) rafM=requestAnimationFrame(()=>{rafM=0;drawOp()}); }
 function drawOp(){
-  const ctx=opC.getContext('2d'), r={x:0,y:0,w:opC.width,h:opC.height};
+  const ctx=vecC.getContext('2d'), r={x:0,y:0,w:vecC.width,h:vecC.height};
   ctx.fillStyle=st.colors.land; ctx.fillRect(0,0,r.w,r.h);
-  if(opData) drawVectors(ctx,r,opData);
-  checkOpCoverage();
+  if(osmData) drawVectors(ctx,r,osmData);
+  checkDataBanner();
 }
 function redrawAll(restyle){ drawUnder(); if(restyle) mlRestyle(); renderMap(false); saveState(); }
 /** Après une modification de l'état : redessine ce qui en dépend, puis enregistre (différé, cf. saveState).
@@ -127,12 +126,12 @@ function changed(o={}){
   else { scheduleOver(); saveState(); }
 }
 
-// Gestes Overpass (glisser, pincer, molette, toucher)
+// Gestes du canvas vectoriel (glisser, pincer, molette, toucher)
 (function(){
   const pts=new Map(); let moved=false, startD=0, startZ=0, last=null, start=null;
-  opC.addEventListener('pointerdown',e=>{ opC.setPointerCapture(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(pts.size===1){moved=false; start={x:e.clientX,y:e.clientY};} last={x:e.clientX,y:e.clientY};
+  vecC.addEventListener('pointerdown',e=>{ vecC.setPointerCapture(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(pts.size===1){moved=false; start={x:e.clientX,y:e.clientY};} last={x:e.clientX,y:e.clientY};
     if(pts.size===2){ const [a,b]=[...pts.values()]; startD=Math.hypot(a.x-b.x,a.y-b.y); startZ=st.zoom; } });
-  opC.addEventListener('pointermove',e=>{
+  vecC.addEventListener('pointermove',e=>{
     if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===2){ const [a,b]=[...pts.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); if(startD>0){ st.zoom=clamp(startZ+Math.log2(d/startD),10,18); moved=true; syncZoomUI(); renderMap(); } return; }
     const dx=e.clientX-last.x, dy=e.clientY-last.y; if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>4) moved=true;
@@ -142,10 +141,10 @@ function changed(o={}){
     renderMap();
   });
   const up=e=>{ const wasTap=!moved && pts.size===1; pts.delete(e.pointerId); if(pts.size<2) startD=0; if(pts.size===1){ const q=[...pts.values()][0]; last={x:q.x,y:q.y}; moved=true; }
-    if(wasTap && ui.placing){ const rc=opC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); placeAt(ll.lat,ll.lon); }
+    if(wasTap && ui.placing){ const rc=vecC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); placeAt(ll.lat,ll.lon); }
     if(pts.size===0) saveState(); };
-  opC.addEventListener('pointerup',up); opC.addEventListener('pointercancel',up);
-  opC.addEventListener('wheel',e=>{ e.preventDefault(); st.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18); syncZoomUI(); renderMap(); saveState(); },{passive:false});
+  vecC.addEventListener('pointerup',up); vecC.addEventListener('pointercancel',up);
+  vecC.addEventListener('wheel',e=>{ e.preventDefault(); st.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18); syncZoomUI(); renderMap(); saveState(); },{passive:false});
 })();
 
 // ---------- Papier : textures générées (aucune image) ----------
@@ -206,7 +205,7 @@ async function composePoster(W,H,step=()=>{}){
     step('Rendu vectoriel haute définition…');
     for(const [i,p] of g.places.entries()){ const r=await renderMaplibreOffscreen(Math.round(p.rect.w),Math.round(p.rect.h),p.view); imgs[i]=r.canvas; warn=warn||r.warn; }
   } else step('Re-projection des vecteurs…');
-  const mapFn=(c,rect,view,i)=> st.engine==='maplibre' ? c.drawImage(imgs[i],rect.x,rect.y,rect.w,rect.h) : drawVectors(c,rect,opData,view);
+  const mapFn=(c,rect,view,i)=> st.engine==='maplibre' ? c.drawImage(imgs[i],rect.x,rect.y,rect.w,rect.h) : drawVectors(c,rect,osmData,view);
   drawPoster(ctx,W,H,'all',mapFn); applyTexture(ctx,W,H);
   for(const c of imgs) if(c){ c.width=c.height=0; }   // rendus MapLibre intermédiaires : mémoire rendue tout de suite (iOS)
   return {canvas:cv,warn,fontWarn};
@@ -218,7 +217,7 @@ const FRAMES=[['Chêne','oak'],['Noir','#1B1B1B'],['Blanc','#F4F4F2'],['Doré','
 const mock={wall:0,frame:0,mat:true,poster:null};
 async function openMockup(){
   if(st.engine==='maplibre' && !needConsent(()=>openMockup())) return;
-  if(st.engine!=='maplibre' && !opData){ toast('Chargez d\'abord la carte (onglet Lieu, section Avancé).',true); return; }
+  if(st.engine!=='maplibre' && !osmData){ toast('Chargez d\'abord la carte (onglet Lieu, section Avancé).',true); return; }
   setBusy(true,'Préparation de l\'aperçu…'); let ok=false;
   try{ const d=posterDims(), k=1100/Math.max(d.W,d.H); mock.poster=(await composePoster(Math.round(d.W*k),Math.round(d.H*k),t=>$('busyTxt').textContent=t)).canvas;
     drawMockup(); ok=true; }

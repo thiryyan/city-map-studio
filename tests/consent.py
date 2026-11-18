@@ -1,7 +1,7 @@
 """e2e : accord préalable aux services tiers (RGPD).
 
 Sans accord : aucune requête externe au démarrage, ni à la recherche, ni en
-passant au moteur Overpass, ni au diagnostic ; la demande d'accord s'affiche.
+au diagnostic ; la demande d'accord s'affiche.
 Après « Afficher la carte » : l'action en attente s'exécute et l'accord est
 mémorisé. « Retirer l'accord » revient à l'état initial. « Travailler hors
 ligne » passe au moteur Fichier sans aucune requête.
@@ -52,17 +52,15 @@ async def main():
         reshown = []
         await page.fill('#q', 'Blois'); await page.press('#q', 'Enter'); await page.wait_for_timeout(800)
         reshown.append(await visible()); await page.click('#bConsentFile'); await page.wait_for_timeout(300)
-        await page.click('#engineSeg [data-v=overpass]'); await page.wait_for_timeout(800)
-        reshown.append(await visible()); await page.click('#bConsentFile'); await page.wait_for_timeout(300)
         await page.click('#bDiag'); await page.wait_for_timeout(800)
         reshown.append(await visible())
-        check(all(reshown), f'recherche, Overpass et diagnostic redemandent l\'accord {reshown}')
-        check(not ext, f'recherche, Overpass et diagnostic bloqués sans accord {sorted(set(ext))}')
+        check(all(reshown), f'recherche et diagnostic redemandent l\'accord {reshown}')
+        check(not ext, f'recherche et diagnostic bloqués sans accord {sorted(set(ext))}')
 
         await page.click('#bConsentYes'); await page.wait_for_timeout(2500)
         hosts = sorted(set(ext))
         check(await page.evaluate('__cms.consent') and not await visible(), 'accord donné, demande masquée')
-        check(any('overpass' in h or 'mail.ru' in h for h in hosts) and 'nominatim.openstreetmap.org' in hosts,
+        check('tiles.openfreemap.org' in hosts and 'nominatim.openstreetmap.org' in hosts,
               f'action en attente (diagnostic) exécutée après accord {hosts}')
 
         ext.clear(); await page.reload(); await page.wait_for_timeout(1500)

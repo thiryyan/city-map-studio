@@ -6,7 +6,6 @@ import os
 CHROME=os.environ.get('CHROME') or None  # Chrome/Chromium ; vide = Chromium de Playwright
 import asyncio, base64
 from playwright.async_api import async_playwright
-FIX=open(T/'overpass.json').read()
 async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(executable_path=CHROME,args=['--no-sandbox'])
@@ -14,8 +13,7 @@ async def main():
         await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
         async def route(r):
             u=r.request.url
-            if 'interpreter' in u: await r.fulfill(status=200,content_type='application/json',body=FIX)
-            elif u.startswith('file:'): await r.continue_()
+            if u.startswith('file:'): await r.continue_()
             else: await r.abort()
         await page.route('**/*',route)
         await page.goto(APP_URL); await page.wait_for_timeout(1200)

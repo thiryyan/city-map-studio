@@ -3,7 +3,7 @@
 Sert l'application en HTTP local, comme GitHub Pages, et simule OpenFreeMap :
 la TileJSON https://tiles.openfreemap.org/planet est interceptée et pointe vers
 des tuiles vectorielles (schéma OpenMapTiles) générées à la volée à partir de
-tests/overpass.json. Tout autre accès réseau externe est coupé : on vérifie
+tests/osm.json. Tout autre accès réseau externe est coupé : on vérifie
 donc aussi que MapLibre se charge depuis lib/ sans CDN.
 
 Vérifie : chargement local de la librairie, validité du style (filtres
@@ -34,7 +34,7 @@ HW = {'motorway': 'motorway', 'trunk': 'trunk', 'primary': 'primary', 'secondary
       'footway': 'path', 'path': 'path', 'cycleway': 'path', 'steps': 'path', 'pedestrian': 'path', 'track': 'track'}
 
 def load_features():
-    d = json.load(open(T / 'overpass.json'))
+    d = json.load(open(T / 'osm.json'))
     L = {k: [] for k in ['water', 'waterway', 'transportation', 'building', 'park']}
     ll = lambda g: [(p['lon'], p['lat']) for p in g]
     for e in d['elements']:

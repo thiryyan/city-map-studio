@@ -1,28 +1,9 @@
-/* City Map Studio — Moteurs cartographiques : Overpass + Canvas, effets de tracé, MapLibre + OpenFreeMap.
+/* City Map Studio — Moteurs cartographiques : données OSM + Canvas (moteur Fichier), effets de tracé, MapLibre + OpenFreeMap.
  * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
 'use strict';
-// ---------- Moteur 2 : Overpass + Canvas ----------
-/** Requête Overpass, allégée pour les serveurs publics :
- *  - chemins : géométrie complète (ils sont courts) ;
- *  - relations (Loire, grands parcs…) : géométrie découpée au cadre, out geom(bbox) — sans cela, une relation
- *    de plusieurs centaines de kilomètres est renvoyée en entier ;
- *  - bâtiments (≈ 70 % du volume) : contour seul, sans étiquettes (out skel geom) ; reconnus à la réception. */
-function buildQuery(b){
-  const bb=`(${b.s.toFixed(5)},${b.w.toFixed(5)},${b.n.toFixed(5)},${b.e.toFixed(5)})`;
-  return `[out:json][timeout:${OP_SERVER_TIMEOUT}];(
-way["natural"="water"]${bb};way["waterway"="riverbank"]${bb};
-way["waterway"~"^(river|canal|stream)$"]${bb};
-way["leisure"~"^(park|garden)$"]${bb};
-way["landuse"~"^(grass|forest|meadow|recreation_ground)$"]${bb};way["natural"="wood"]${bb};
-way["highway"~"^(motorway|trunk|primary|secondary|tertiary)(_link)?$"]${bb};
-way["highway"~"^(unclassified|residential|living_street|pedestrian|service|footway|path|cycleway|steps|track)$"]${bb};
-${st.layers.rail?`way["railway"="rail"]${bb};`:''}
-);out tags geom qt;
-(relation["natural"="water"]${bb};relation["waterway"="riverbank"]${bb};relation["leisure"="park"]${bb};);out tags geom${bb} qt;
-${st.layers.buildings && st.zoom>=12.5?`way["building"]${bb};out skel geom qt;`:''}`;
-}
+// ---------- Données OSM + Canvas (moteur Fichier) ----------
 function toPts(geo){const a=[];for(const p of geo) if(p) a.push([p.lon,merc(p.lat)]);return a}   // points null (hors cadre) ignorés
-/** Coupe une géométrie aux points null (out geom(bbox) : points hors du cadre) */
+/** Coupe une géométrie aux points null (points hors de la zone extraite) */
 function splitNull(geo){ const out=[]; let cur=[]; for(const p of geo){ if(p) cur.push(p); else { if(cur.length>1) out.push(cur); cur=[]; } } if(cur.length>1) out.push(cur); return out; }
 function bboxOf(rings){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const r of rings)for(const p of r){if(p[0]<x0)x0=p[0];if(p[0]>x1)x1=p[0];if(p[1]<y0)y0=p[1];if(p[1]>y1)y1=p[1]}return [x0,y0,x1,y1]}
 /** Assemble des segments de ways (membres de relation) en anneaux fermés */
@@ -41,7 +22,7 @@ function stitch(segs){
   }
   return rings;
 }
-/** Complète la géométrie quand les données viennent en « out body; >; out skel » ou d'un fichier .osm */
+/** Complète la géométrie des chemins et des membres de relation décrits par des références de nœuds (fichier .osm, JSON OSM) */
 function normalizeElements(els){
   const nodes=new Map(), ways=new Map();
   for(const e of els){ if(e.type==='node') nodes.set(e.id,{lat:e.lat,lon:e.lon}); }
@@ -56,10 +37,7 @@ function normalizeElements(els){
   }
   return els;
 }
-function parseOverpass(json){
-  // Bâtiments demandés sans étiquettes (out skel geom) : chemin sans étiquette, géométrie fournie par le serveur.
-  // Testé avant normalizeElements, qui ajoute une géométrie aux chemins des fichiers importés (nœuds séparés).
-  for(const e of json.elements||[]) if(e.type==='way' && !e.tags && Array.isArray(e.geometry)) e.tags={building:'yes'};
+function parseOsm(json){
   normalizeElements(json.elements||[]);
   const d={water:[],waterLines:[],parks:[],buildings:[],rails:[],roads:{}};
   ROADS.forEach(([k])=>d.roads[k]=[]);
@@ -92,7 +70,7 @@ function dataExtent(d){
     if(f.bb[0]<x0)x0=f.bb[0]; if(f.bb[1]<y0)y0=f.bb[1]; if(f.bb[2]>x1)x1=f.bb[2]; if(f.bb[3]>y1)y1=f.bb[3]; }
   return x0>x1?null:{w:x0,e:x1,s:imerc(y0),n:imerc(y1)};
 }
-/** Vecteurs Overpass / Fichier dans le cadre r, pour une vue {center, zoom} (par défaut la vue éditée) */
+/** Vecteurs du moteur Fichier dans le cadre r, pour une vue {center, zoom} (par défaut la vue éditée) */
 function drawVectors(ctx, r, data, view=st){
   const c=st.colors, S=worldSize(r.w,view.zoom), cx=r.x+r.w/2, cy=r.y+r.h/2, lon0=view.center.lon, m0=merc(view.center.lat);
   const kx=S/360, ky=S/(2*Math.PI);
@@ -135,59 +113,9 @@ function drawVectors(ctx, r, data, view=st){
     ctx.globalAlpha=1;
   }
 }
-async function fetchOverpass(){
-  if(opLoading) return;
-  if(!needConsent(()=>fetchOverpass())) return;
-  const g=geom(st,posterDims().W,posterDims().H), aspect=g.map.h/g.map.w;
-  if(st.zoom<11.5){ toast('Zone trop vaste pour Overpass : zoomez au-delà de 11,5 ou utilisez le moteur Vectoriel GPU.',true); return; }
-  const b=viewBounds(st,aspect,OP_PAD);
-  const q=buildQuery(b);
-  opLoading=true; setStatus('Requête Overpass en cours…','busy'); showBanner(false);
-  const mirrors=opAvailable();
-  if(!mirrors.length){
-    const next=Math.min(...OVERPASS.map(u=>opBlockInfo(u)?.until||Infinity));
-    setStatus('Tous les serveurs Overpass sont suspendus (406/429) jusqu\'à '+hhmm(next),'err');
-    showBanner(true,'Overpass suspendu','Fichier',()=>setEngine('file'));
-    toast('Tous les serveurs Overpass ont refusé l\'accès (406/429). Par respect de leur politique d\'usage, aucun nouvel essai avant '+hhmm(next)+'. Utilisez le moteur Vectoriel GPU ou « Fichier ».',true);
-    return;
-  }
-  const fails=[];
-  // Sondage rapide et parallèle des pages d'état : les miroirs qui répondent passent devant (aucun n'est écarté)
-  const order=await opProbeOrder(mirrors);
-  const t0=performance.now(); let cur='';
-  const tick=setInterval(()=>setStatus(`Requête Overpass en cours · ${cur} · ${Math.round((performance.now()-t0)/1000)} s`,'busy'),1000);
-  try{
-    for(const url of order){
-      const host=new URL(url).host; cur=host;
-      for(let attempt=1; attempt<=2; attempt++){
-        const r=await opQuery(url,q);
-        if(r.json){
-          opData=parseOverpass(r.json); opData.bounds=b; opData.layers=JSON.stringify(st.layers); opData.source='overpass';
-          opLoading=false; setStatus(`Vecteurs chargés · ${r.json.elements.length.toLocaleString('fr-FR')} objets · ${host} · ${Math.round((performance.now()-t0)/1000)} s`);
-          renderMap(); return;
-        }
-        if(r.status===406||r.status===429){ opSuspend(url,r.status,r.retryAfter); fails.push({host,status:r.status,kind:'http'}); console.warn('Overpass',url,r.status,'→ suspendu'); break; }
-        // Erreur serveur ou absence de réponse immédiate (passerelle surchargée) : un second essai, une seule fois
-        if(attempt===1 && r.fast && r.kind!=='heavy'){ console.warn('Overpass',url,r.status||r.kind,'→ nouvel essai'); await new Promise(z=>setTimeout(z,OP_TIMEOUT.retry)); continue; }
-        fails.push({host,status:r.status,kind:r.kind}); console.warn('Overpass',url,r.status||r.kind); break;
-      }
-    }
-  } finally { clearInterval(tick); }
-  opLoading=false;
-  const server=opServerSide(fails);
-  const detail=fails.map(f=>f.host+' : '+opFailText(f,server)).join(' · ');
-  setStatus(server ? `Overpass : serveurs en panne ou surchargés (${fails.length}/${mirrors.length} en échec)` : 'Overpass injoignable : pas de réponse des serveurs','err',detail);
-  showBanner(true,server?'Serveurs Overpass en panne':'Overpass injoignable','Diagnostiquer',runDiagnostics);
-  toast(ENV.blocked ? 'Cette page est ouverte dans un aperçu qui bloque le réseau. Ouvrez-la dans Chrome, ou utilisez le moteur « Fichier ».'
-    : server ? 'Les serveurs Overpass publics sont en panne ou surchargés ('+detail+'). Votre connexion n\'est pas en cause : réessayez plus tard, ou utilisez le moteur Vectoriel GPU ou « Fichier ».'
-    : 'Aucun serveur Overpass n\'a répondu. Lancez le diagnostic ou utilisez le moteur « Fichier ».',true);
-}
-function checkOpCoverage(){
-  if(st.engine!=='overpass'||opLoading){ if(st.engine==='file') showBanner(!opData,'Aucun fichier importé','Importer',()=>$('fileIn').click()); return; }
-  if(!opData){ showBanner(true,'Aucune donnée chargée'); return; }
-  const g=geom(st,posterDims().W,posterDims().H), v=viewBounds(st,g.map.h/g.map.w,0), b=opData.bounds;
-  const out = v.w<b.w||v.e>b.e||v.s<b.s||v.n>b.n || opData.layers!==JSON.stringify(st.layers);
-  showBanner(out,'Zone modifiée');
+/** Bandeau du moteur Fichier : invite à importer tant qu'aucune donnée n'est chargée */
+function checkDataBanner(){
+  if(st.engine==='file') showBanner(!osmData,'Aucun fichier importé','Importer',()=>$('fileIn').click());
 }
 function netMsg(e){
   const m=(e&&e.message)||String(e);
@@ -291,7 +219,7 @@ function initMaplibre(){
   mlMap.on('styleimagemissing',e=>onImageMissing(mlMap,e));
   mlMap.on('moveend',()=>{ mlMap.setStyle(buildStyle(mlK(ui.slotCss.w),ui.slotCss.w/REF_W)); saveState(); });
   mlMap.on('click',e=>{ if(ui.placing){ placeAt(e.lngLat.lat,e.lngLat.lng); } });
-  // Messages du moteur GPU seulement quand il est actif : sinon ils écraseraient l'état d'Overpass ou du moteur Fichier
+  // Messages du moteur GPU seulement quand il est actif : sinon ils écraseraient l'état du moteur Fichier
   mlMap.on('dataloading',()=>{ if(st.engine==='maplibre') setStatus('Chargement des tuiles…','busy'); });
   mlMap.on('idle',()=>{ if(st.engine==='maplibre') setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'); });
   let gotTiles=false;

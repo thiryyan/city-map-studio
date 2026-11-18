@@ -7,7 +7,7 @@ CHROME=os.environ.get('CHROME') or None  # Chrome/Chromium ; vide = Chromium de 
 import asyncio, json, struct, sys
 from playwright.async_api import async_playwright
 APP=APP_URL
-FIX=open(T/'overpass.json').read()
+FIX=open(T/'osm.json').read()
 async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(executable_path=CHROME,args=['--no-sandbox','--use-gl=swiftshader','--enable-unsafe-swiftshader'])
@@ -20,16 +20,15 @@ async def main():
             page.on('pageerror',lambda e: logs.append(f'PAGEERROR: {e}'))
             async def route(r):
                 u=r.request.url
-                if 'interpreter' in u: await r.fulfill(status=200,content_type='application/json',body=FIX)
-                elif u.startswith('file:'): await r.continue_()
+                if u.startswith('file:'): await r.continue_()
                 else: await r.abort()
             await page.route('**/*',route)
-            await page.goto(APP); await page.wait_for_timeout(1500); await page.click('#engineSeg [data-v=overpass]'); await page.wait_for_timeout(800)
+            await page.goto(APP); await page.wait_for_timeout(1500); await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
             await page.screenshot(path=str(T/f'{name}.png'))
-            print(name,'engine=',await page.evaluate('__cms.st.engine'),'data=',await page.evaluate('!!__cms.opData'))
+            print(name,'engine=',await page.evaluate('__cms.st.engine'),'data=',await page.evaluate('!!__cms.osmData'))
             if name=='mobile':
                 print('dms',await page.evaluate("[__cms.dms(47.5861,'N','S'),__cms.dms(1.3359,'E','W'),__cms.dms(1.99999,'E','W'),__cms.dms(-73.9855,'E','W')]"))
-                print('rings',await page.evaluate("__cms.opData.water.map(f=>f.rings.length+':'+f.rings.map(r=>r.length).join('/'))"))
+                print('rings',await page.evaluate("__cms.osmData.water.map(f=>f.rings.length+':'+f.rings.map(r=>r.length).join('/'))"))
             async with page.expect_download() as dl:
                 await page.click('#bExport')
             d=await dl.value; path=str(T/f'export-{name}.png'); await d.save_as(path)

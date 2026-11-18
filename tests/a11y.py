@@ -10,7 +10,7 @@ from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None
-FIX = (T / 'overpass.json').read_text()
+FIX = (T / 'osm.json').read_text()
 
 
 async def main():
@@ -42,7 +42,7 @@ async def main():
         check(not await ev("document.getElementById('welcome').open"), 'bienvenue : Échap la ferme')
 
         # 2. Vignettes au clavier
-        await ev("f=>__cms.importText(f,'overpass.json')", FIX); await page.wait_for_timeout(400)
+        await ev("f=>__cms.importText(f,'osm.json')", FIX); await page.wait_for_timeout(400)
         await ev("__cms.showTab('style')")
         kinds = await ev("['#layouts .card','#themes .theme','#marks .card','#ambiances button'].map(s=>[...document.querySelectorAll(s)].every(e=>e.tagName==='BUTTON' && e.type==='button' && e.hasAttribute('aria-pressed')))")
         check(all(kinds), f'gabarits, thèmes, repères, ambiances : boutons avec aria-pressed {kinds}')

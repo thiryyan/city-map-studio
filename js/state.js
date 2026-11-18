@@ -1,4 +1,4 @@
-/* City Map Studio — État de l'affiche : validation, chargement, enregistrement ; fenêtres modales ; accord préalable ; politique Overpass.
+/* City Map Studio — État de l'affiche : validation, chargement, enregistrement ; fenêtres modales ; accord préalable.
  * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
 'use strict';
 // ---------- Validation de l'état (lien partagé, localStorage) ----------
@@ -27,7 +27,7 @@ function normState(src){
     const pts=o.pts.slice(0,ROUTE_MAX_PTS).filter(p=>Array.isArray(p) && V.ll({lat:p[0],lon:p[1]})).map(p=>[p[0],p[1]]);
     return pts.length>=2 ? {name:V.str(o.name,''), pts, show:V.bool(o.show,true)} : null; };
   return {
-    engine:V.oneOf(s.engine,['maplibre','overpass','file'],D.engine),
+    engine:V.oneOf(s.engine,['maplibre','file'],D.engine),
     layout:V.oneOf(s.layout,keys(LAYOUTS),D.layout),
     theme:V.oneOf(s.theme,Object.keys(THEMES),D.theme),
     colors:V.each(s.colors,D.colors,V.hex),
@@ -60,7 +60,7 @@ function normState(src){
 }
 let st = loadState();
 const ui = {placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
-let mlMap = null, opData = null, opLoading = false;
+let mlMap = null, osmData = null;
 let mlLib = 'loading', mlCdn = '', mlFailMsg = '';   // état de la librairie MapLibre
 
 // ---------- Fenêtres modales ----------
@@ -96,7 +96,7 @@ function setBusy(on,txt){
 }
 
 // ---------- Accord préalable aux services tiers (RGPD) ----------
-// Aucune requête vers un service tiers (tuiles, Overpass, Nominatim, CDN) avant l'accord explicite de l'utilisateur.
+// Aucune requête vers un service tiers (tuiles, Nominatim, CDN) avant l'accord explicite de l'utilisateur.
 const CONSENT_KEY = 'cityMapStudio.consent';
 let consent = (()=>{ try{ return localStorage.getItem(CONSENT_KEY)==='1'; }catch(e){ return false; } })();
 let consentNext = null;
@@ -117,13 +117,12 @@ function giveConsent(){
     if(next) next();
     maybeWelcome();
     if(st.engine==='maplibre') renderMap(true);                              // la carte s'affiche dans tous les cas
-    else if(st.engine==='overpass' && !opData && !next) fetchOverpass();    // une seule requête Overpass à la fois
   })();
 }
 function declineConsent(){
   consentNext=null; closeDialog('consent');
   setEngine('file',true); openAdvanced(true); maybeWelcome();   // consigne d'import : ligne d'état et section Avancé (la bulle masquerait le choix d'ambiance)
-  if(!opData) setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
+  if(!osmData) setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
 }
 function withdrawConsent(){
   try{ localStorage.removeItem(CONSENT_KEY); }catch(e){}
@@ -131,65 +130,15 @@ function withdrawConsent(){
 }
 function updateConsentInfo(){
   const el=document.getElementById('consentInfo'); el.textContent='';
-  el.append(consent ? 'Services cartographiques autorisés (OpenFreeMap, Overpass, Nominatim). ' : 'Aucun service tiers n\'est contacté sans votre accord. ');
+  el.append(consent ? 'Services cartographiques autorisés (OpenFreeMap, Nominatim). ' : 'Aucun service tiers n\'est contacté sans votre accord. ');
   const b=document.createElement('button'); b.className='btn sm'; b.type='button';
   b.textContent = consent ? 'Retirer l\'accord' : 'Autoriser la carte';
   b.onclick = consent ? withdrawConsent : ()=>needConsent();
   el.append(b);
 }
 
-// ---------- Politique Overpass : suspension après 406 / 429 ----------
-// Un serveur qui répond 406 (client refusé) ou 429 (quota) n'est plus jamais réessayé
-// automatiquement pendant la durée de suspension, y compris après un rechargement (localStorage).
-const OP_BLOCK_KEY = 'cityMapStudio.opBlocked';
-const OP_BLOCK_MS = {406: 24*3600e3, 429: 3600e3};
-let opBlock = (()=>{ try{ return JSON.parse(localStorage.getItem(OP_BLOCK_KEY)||'{}')||{}; }catch(e){ return {}; } })();
-function opBlockInfo(url){
-  const b=opBlock[url]; if(!b) return null;
-  if(b.until<=Date.now()){ delete opBlock[url]; try{localStorage.setItem(OP_BLOCK_KEY,JSON.stringify(opBlock))}catch(e){} return null; }
-  return b;
-}
-function opSuspend(url,status,retryAfter){
-  const ra=parseInt(retryAfter,10), ms=Math.max(OP_BLOCK_MS[status]||3600e3, isFinite(ra)?ra*1000:0);
-  opBlock[url]={status,until:Date.now()+ms};
-  try{ localStorage.setItem(OP_BLOCK_KEY,JSON.stringify(opBlock)); }catch(e){}
-}
-// Page servie en http(s) (GitHub Pages) : overpass-api.de, l'instance de référence, en premier ; en file:// il refuse les requêtes sans Referer (406).
-const OP_ORDER = /^https?:/.test(location.protocol) ? [OVERPASS[3],OVERPASS[2],OVERPASS[1],OVERPASS[0]] : OVERPASS;
-const opAvailable = () => OP_ORDER.filter(u=>!opBlockInfo(u));
-const hhmm = t => new Date(t).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'});
-const opBlockMsg = b => `suspendu après HTTP ${b.status} · nouvel essai possible ${hhmm(b.until)}`;
-// Échec d'un miroir : {host, status?, kind:'http'|'timeout'|'nores'}.
-// Un « TypeError: Failed to fetch » ne dit pas si le réseau est coupé ou si le serveur a répondu
-// une page d'erreur sans en-tête CORS (cas fréquent des 502/504 de passerelle). Si un autre miroir
-// a répondu en HTTP ou a dépassé le délai, le réseau fonctionne : la panne vient des serveurs.
-function opFailText(f,serverSide){
-  return f.kind==='http' ? 'HTTP '+f.status : f.kind==='timeout' ? 'délai dépassé'
-    : f.kind==='heavy' ? 'calcul interrompu par le serveur (surcharge)'
-    : serverSide ? 'réponse illisible (erreur serveur sans CORS)' : 'pas de réponse (connexion ou serveur)';
-}
-/** Une requête vers un miroir : {json} en cas de succès, sinon {kind:'http'|'timeout'|'nores'|'heavy', status, fast, retryAfter} */
-async function opQuery(url,q){
-  const ctl=new AbortController(), timer=setTimeout(()=>ctl.abort(),OP_TIMEOUT.fetch), t=performance.now();
-  const fast=()=>performance.now()-t<4000;
-  try{
-    const res=await fetch(url,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ctl.signal});
-    if(!res.ok){ clearTimeout(timer); return {kind:'http',status:res.status,fast:fast(),retryAfter:res.headers.get('Retry-After')}; }
-    const json=await res.json(); clearTimeout(timer);
-    // Calcul arrêté par le serveur (délai ou mémoire) : réponse 200, données partielles ou vides, « remark » explicite
-    if(/runtime error|timed out|out of memory|rate_limited/i.test(json.remark||'')) return {kind:'heavy',fast:fast()};
-    return {json};
-  }catch(e){ clearTimeout(timer); const to=e.name==='AbortError'; return {kind:to?'timeout':'nores',fast:!to && fast()}; }   // délai dépassé : jamais de second essai
-}
-/** Ordre d'essai : miroirs dont la page d'état répond en quelques secondes d'abord (requête légère, « no-cors » :
- *  seule l'existence d'une réponse compte), puis les autres, dans l'ordre de préférence. */
-async function opProbeOrder(mirrors){
-  if(mirrors.length<2) return mirrors;
-  const alive=await Promise.all(mirrors.map(async u=>{ const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),OP_TIMEOUT.probe);
-    try{ await fetch(u.replace(/interpreter$/,'status'),{mode:'no-cors',cache:'no-store',signal:ctl.signal}); return true; }catch(e){ return false; } finally{ clearTimeout(t); } }));
-  return [...mirrors.filter((u,i)=>alive[i]), ...mirrors.filter((u,i)=>!alive[i])];
-}
-const opServerSide = fails => fails.some(f=>f.kind!=='nores');
+// Clé d'un ancien moteur réseau retiré (suspensions de serveurs) : effacée pour ne pas laisser de donnée orpheline.
+try{ localStorage.removeItem('cityMapStudio.opBlocked'); }catch(e){}
 
 function loadState(){
   try{ const s=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(s && typeof s==='object') return normState(s); }catch(e){}

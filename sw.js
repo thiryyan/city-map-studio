@@ -1,6 +1,6 @@
 /* City Map Studio — service worker (mode hors ligne, GitHub Pages)
  *
- * - Ne touche qu'aux requêtes GET de la même origine : tuiles, Overpass et Nominatim (services tiers, soumis à
+ * - Ne touche qu'aux requêtes GET de la même origine : tuiles et Nominatim (services tiers, soumis à
  *   l'accord de l'utilisateur) passent directement au réseau, sans jamais être mis en cache ici.
  * - Application (HTML, CSS, JS, manifeste, icônes) : réseau d'abord, copie en cache si le réseau manque.
  *   En ligne, la version publiée est toujours servie : pas de mélange d'anciens et de nouveaux fichiers après une mise à jour.
@@ -9,7 +9,7 @@
  * Changer VERSION à chaque modification de la liste APP ci-dessous ou de ce fichier.
  */
 'use strict';
-const VERSION = 'cms-2026-11-18';
+const VERSION = 'cms-2026-11-18b';
 const APP = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png',
   'css/app.css',
