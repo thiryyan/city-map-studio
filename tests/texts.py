@@ -6,9 +6,10 @@ conservé, que l'état est persisté, et que l'export fonctionne sans aucune lig
 """
 import pathlib, os, asyncio, struct
 from playwright.async_api import async_playwright
+from jswait import wait_js
 from seed import seed
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri()
+APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'overpass.json').read()
 KEYS = ['title', 'subtitle', 'coords', 'dedication', 'names', 'date']
@@ -49,7 +50,7 @@ async def main():
         for k in KEYS: await page.click(f'input[data-k="show.{k}"]')
         await page.wait_for_timeout(500)
         kept = await page.evaluate("__cms.st.texts.title")
-        await page.wait_for_function("Object.values(JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').show||{}).every(v=>v===false)")   # lignes masquées enregistrées
+        await wait_js(page, "Object.values(JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').show||{}).every(v=>v===false)")   # lignes masquées enregistrées
         await page.reload(); await page.wait_for_timeout(1500)
         show = await page.evaluate("__cms.st.show")
         print('après rechargement :', show, '| titre conservé :', kept)
@@ -64,7 +65,7 @@ async def main():
         snaps = set()
         for f in ['serif', 'sans', 'mono', 'garamond', 'deco']:
             await page.click(f'#fontSeg [data-v={f}]'); await page.wait_for_timeout(300); snaps.add(await page.evaluate(SNAP))
-        await page.wait_for_function("JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').font==='deco'")   # choix enregistré avant de recharger
+        await wait_js(page, "JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').font==='deco'")   # choix enregistré avant de recharger
         await page.reload(); await page.wait_for_timeout(1200)
         font = await page.evaluate('__cms.st.font'); print('polices : rendus distincts', len(snaps), '| après rechargement', font)
         if len(snaps) != 5 or font != 'deco': fails.append('polices')

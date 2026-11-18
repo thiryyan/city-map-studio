@@ -9,7 +9,7 @@ compris après « Réinitialiser ») ; calendrier pour la date ; « Ma position 
 import pathlib, os, asyncio, json
 from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri()
+APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'overpass.json').read()
 NOMI = json.dumps([{'lat': '48.8584', 'lon': '2.2945', 'name': 'Tour Eiffel',

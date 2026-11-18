@@ -6,14 +6,15 @@ Atelier web de création d'affiches cartographiques souvenir : tracé minimalist
 - **Trois moteurs** : Vectoriel GPU (par défaut), Overpass (tracé artistique) et Fichier (hors ligne : JSON Overpass, `.osm`, GeoJSON).
 - **Dix gabarits** (Souvenir, Cadre, Fondu, Médaillon, Cœur, Arche, Voyage, Polaroid, Deux lieux, Ciel) en portrait ou paysage, quinze thèmes, huit ambiances, dix repères, onze polices en duos, quatre papiers.
 - **Plus que la carte** : jusqu'à trois lieux, itinéraire GPX, carte du ciel du jour J, aperçu au mur, partage par lien.
-- **Un seul fichier** `index.html`, sans build, pensé d'abord pour le mobile.
+- **Sans build** : HTML, CSS et JavaScript natifs (`index.html`, `css/`, `js/`) servis tels quels, pensés d'abord pour le mobile.
+- **Sûre, accessible, hors ligne** : politique de sécurité du contenu stricte, liens partagés validés, fenêtres et commandes accessibles au clavier ; installable, et utilisable sans réseau après une première visite (moteur Fichier).
 
 ## Utilisation
 Ouvrir la version publiée sur GitHub Pages, ou servir le dépôt localement :
 ```bash
 python3 -m http.server 8000   # puis http://localhost:8000
 ```
-Ouvrir directement `index.html` en `file://` fonctionne aussi, mais certains serveurs Overpass refusent alors les requêtes.
+Ouvrir directement `index.html` en `file://` fonctionne aussi (scripts classiques, sans module ES), mais certains serveurs Overpass refusent alors les requêtes, et l'application n'est alors ni installable ni mise en cache.
 
 ## Documentation
 - [Dossier technique](docs/dossier-technique.md) : exigences, architecture, rendu, export et tests.

@@ -37,7 +37,7 @@ async def main():
         await page.route('**/*', route)
         visible = lambda: page.evaluate("document.getElementById('consent').classList.contains('show')")
 
-        await page.goto(base + '/index.html'); await page.wait_for_timeout(2500)
+        await page.goto(base + '/index.html?test'); await page.wait_for_timeout(2500)
         check(not ext, f'démarrage sans requête tierce {sorted(set(ext))}')
         check(await visible(), 'demande d\'accord affichée au démarrage')
         await page.screenshot(path=str(T / 'consent.png'))

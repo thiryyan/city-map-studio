@@ -14,7 +14,7 @@ import pathlib, os, asyncio, collections
 from playwright.async_api import async_playwright
 from seed import seed
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri()
+APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'overpass.json').read()
 BLOCKED = ('overpass.private.coffee', 'overpass.kumi.systems')

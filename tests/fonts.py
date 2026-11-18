@@ -56,8 +56,8 @@ async def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
-        fails = await check(b, (ROOT / 'index.html').as_uri(), 'file://')
-        fails += await check(b, f'http://127.0.0.1:{srv.server_address[1]}/index.html', 'http')
+        fails = await check(b, (ROOT / 'index.html').as_uri()+'?test', 'file://')
+        fails += await check(b, f'http://127.0.0.1:{srv.server_address[1]}/index.html?test', 'http')
         await b.close()
     srv.shutdown(); print('échecs', fails); assert not fails
     print('OK')

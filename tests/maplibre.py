@@ -20,6 +20,7 @@ import mapbox_vector_tile
 from shapely.geometry import LineString, Polygon, box
 from shapely.ops import polygonize, unary_union, transform
 from playwright.async_api import async_playwright
+from jswait import wait_js
 
 T = pathlib.Path(__file__).resolve().parent
 ROOT = T.parent
@@ -140,9 +141,9 @@ async def main():
                 else: ext.append(u); await r.abort()
             await page.route('**/*', route)
             STATS['tiles'] = 0
-            await page.goto(base + '/index.html')
-            await page.wait_for_function("__cms && __cms.mlLib==='ok'", timeout=15000)
-            await page.wait_for_function("document.querySelector('#stTxt').textContent.startsWith('Prêt')", timeout=30000)
+            await page.goto(base + '/index.html?test')
+            await wait_js(page, "__cms && __cms.mlLib==='ok'", timeout=15000)
+            await wait_js(page, "document.querySelector('#stTxt').textContent.startsWith('Prêt')", timeout=30000)
             await page.screenshot(path=str(T / f'ml-{name}.png'))
             print(name, '| engine', await page.evaluate('__cms.st.engine'), '| status', await page.inner_text('#stTxt'), '| tuiles servies', STATS['tiles'])
             await page.click('#bDiag'); await page.wait_for_timeout(2500)
@@ -160,10 +161,12 @@ async def main():
             errs = [l for l in logs if 'PAGEERROR' in l or ('MapLibre' in l and 'warn' in l)]
             print('  erreurs :', errs[:10])
             assert w == 2480 and h == 3508 and water > 1000 and dark > 200 and not ml_ext and not [l for l in logs if 'PAGEERROR' in l]
+            csp = [l for l in logs if 'Content Security Policy' in l]
+            print('  violations CSP :', csp[:3]); assert not csp, csp
             if name == 'desktop':
                 # Effets de tracé avec le moteur Vectoriel GPU : style, motif de hachures fourni à la demande, export
                 await page.evaluate("['hatch','outline','pencil'].forEach(k=>{ const i=document.querySelector(`[data-k=\"fx.${k}\"]`); i.checked=true; i.dispatchEvent(new Event('input')); })")
-                await page.wait_for_function("__cms.mlMap.isStyleLoaded() && __cms.mlMap.areTilesLoaded()", timeout=30000); await page.wait_for_timeout(1500)
+                await wait_js(page, "__cms.mlMap.isStyleLoaded() && __cms.mlMap.areTilesLoaded()", timeout=30000); await page.wait_for_timeout(1500)
                 fx = await page.evaluate("""(()=>{ const m=__cms.mlMap, L=m.getStyle().layers, w=L.find(l=>l.id==='water'), b=L.find(l=>l.id==='building');
                     const pat=w.paint['fill-pattern']; return {pat:!!pat, img:!!pat && m.hasImage(pat), building:b&&b.type,
                     passes:L.filter(l=>/^road-minor-\\d$/.test(l.id)).map(l=>l.paint['line-translate'])}; })()""")

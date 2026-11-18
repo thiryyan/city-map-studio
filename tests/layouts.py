@@ -1,7 +1,7 @@
 import pathlib
 T=pathlib.Path(__file__).resolve().parent
 ROOT=T.parent
-APP_URL=(ROOT/'index.html').as_uri()
+APP_URL=(ROOT/'index.html').as_uri()+'?test'
 import os
 CHROME=os.environ.get('CHROME') or None  # Chrome/Chromium ; vide = Chromium de Playwright
 import asyncio, base64

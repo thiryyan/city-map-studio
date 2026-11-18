@@ -10,8 +10,9 @@ explicitement sur Overpass ; aucun serveur n'est suspendu (5xx et délai ≠ 406
 """
 import pathlib, os, asyncio, collections
 from playwright.async_api import async_playwright
+from jswait import wait_js
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri()
+APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 CORS = {'Access-Control-Allow-Origin': '*'}
 
@@ -45,7 +46,7 @@ async def main():
         await page.evaluate("__cms.OP_TIMEOUT.fetch=600; __cms.OP_TIMEOUT.diag=600; __cms.OP_TIMEOUT.probe=300; __cms.OP_TIMEOUT.retry=100")
 
         await page.click('#engineSeg [data-v=overpass]')
-        await page.wait_for_function("!document.getElementById('stTxt').textContent.includes('en cours')", timeout=30000); await page.wait_for_timeout(300)
+        await wait_js(page, "!document.getElementById('stTxt').textContent.includes('en cours')", timeout=30000); await page.wait_for_timeout(300)
         st = await page.inner_text('#stTxt'); tip = await page.get_attribute('#stTxt', 'title')
         toast = await page.inner_text('#toast'); banner = await page.inner_text('#bannerTxt')
         print('état :', st); print('infobulle :', tip); print('notification :', toast); print('bandeau :', banner)

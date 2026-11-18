@@ -4,7 +4,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 
 ## Règles non négociables
 - **100 % open source** : aucune clé API, aucun service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps).
-- **Un seul `index.html`** (HTML + CSS + JavaScript natifs), **sans étape de build**, servi par GitHub Pages depuis `main`. Seule exception : les dépendances embarquées dans `lib/` (MapLibre, polices), chacune avec sa licence.
+- **HTML, CSS et JavaScript natifs, sans étape de build**, servis tels quels par GitHub Pages depuis `main` : `index.html`, `css/app.css`, `js/*.js`. Chemins toujours relatifs (le site est servi sous `/city-map-studio/`). Scripts **classiques**, pas de module ES : l'application doit rester utilisable en `file://`. Dépendances embarquées dans `lib/` (MapLibre, polices), chacune avec sa licence.
 - **Mobile en priorité**, puis ordinateur. Interface en français.
 - `drawPoster(ctx, W, H, pass, mapFn)` est la **seule** fonction de rendu de l'affiche : l'aperçu et l'export doivent rester identiques.
 - Attribution « © contributeurs OpenStreetMap » active par défaut (licence ODbL).
@@ -12,8 +12,19 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - **Accord préalable** : tout nouvel appel à un service tiers passe par `needConsent()` ; aucune requête externe avant l'accord de l'utilisateur (`tests/consent.py`).
 - **Overpass et Nominatim** : requêtes uniquement à la demande, une seule à la fois ; un serveur qui répond 406 ou 429 n'est plus rappelé pendant sa suspension (risque de bannissement d'IP).
 
+## Sécurité, accessibilité
+- **Aucun script ni style en ligne** (ni `<script>` sans `src`, ni `style="…"`, ni `onclick="…"`, ni `innerHTML` avec des styles) : la CSP les bloque. Créer les éléments avec `h(tag, props, …enfants)`, les styles par le CSSOM (`el.style.x = …`) ou des classes.
+- **Nouveau service réseau** : l'ajouter à `connect-src` dans la CSP de `index.html`, en plus de `needConsent()`.
+- **Nouveau champ d'état** : l'ajouter à `DEFAULT_STATE` **et** à `normState()` (`js/state.js`), avec sa vérification ; sinon il est ignoré au chargement.
+- **Nouvelle version de MapLibre** : remplacer `lib/`, mettre à jour `ML_VERSION` et les empreintes `ML_SRI` (`openssl dgst -sha384 -binary lib/maplibre-gl.js | base64`).
+- **Nouveau fichier de l'application** (`js/`, `css/`) : l'ajouter à la liste `APP` de `sw.js` ; changer `VERSION` dans `sw.js` à chaque modification de cette liste ou de `sw.js`.
+- **Fenêtre modale** : un `<dialog class="modal">` ouvert par `openDialog(id)` et fermé par `closeDialog(id)` (focus rendu) ; action de la touche Échap dans `dlgCancel`.
+- Tout bouton de sélection (vignette, carte) est un `<button type="button">` avec `aria-pressed` (`pressed(b, on)`) ; tout champ a un nom accessible (`<label for>` ou `aria-label`).
+
 ## Organisation
-- `index.html` : sections balisées `// ---------- Titre ----------` (dossier, § 8.2). `window.__cms` expose l'état et les fonctions pour la console et les tests.
+- `index.html` : balisage, CSP et métadonnées seulement. `css/app.css` : styles. `js/*.js` : dix scripts chargés dans l'ordre (dossier, § 8.2), organisés en sections `// ---------- Titre ----------`. Le code exécuté au chargement d'un fichier ne doit utiliser que les fichiers précédents.
+- `window.__cms` expose l'état et les fonctions pour la console et les tests, seulement avec `?test` dans l'adresse (ou `localStorage['cityMapStudio.debug']='1'`).
+- `sw.js`, `manifest.webmanifest`, `icons/` : application installable et cache hors ligne.
 - `lib/` : MapLibre GL JS 4.7.1 et sa licence BSD-3. `lib/sky/` : données du ciel (d3-celestial, BSD-3), chargées seulement par le gabarit Ciel. Pour changer de version, remplacer les fichiers et mettre à jour `ML_VERSION`.
 - `lib/fonts/` : polices woff2 (paquets npm `@fontsource/*`, sous-ensembles latin et latin-ext), déclarées dans `lib/fonts/fonts.css`. Pour ajouter une famille : copier ses fichiers woff2 et sa licence `OFL.txt`, ajouter ses `@font-face` (avec `unicode-range`), puis l'entrée correspondante dans `FONTS`.
 - `tests/` : tests de bout en bout Playwright (Python) avec un réseau simulé. Un test qui recharge la page prépare le `localStorage` avec `tests/seed.py`, pas avec `add_init_script` (perte d'écritures au rechargement, cf. dossier § 9.2), et attend que l'état soit enregistré avant de recharger.
@@ -22,6 +33,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 ```bash
 pip install playwright mapbox-vector-tile && python -m playwright install chromium   # une fois
 python tests/fixture.py && python tests/make_formats.py   # génère les données de test
+python tests/run_all.py          # toute la suite (génère les données, résume les échecs) — lancée aussi par la CI
 python tests/run.py              # moteur Overpass simulé + export PNG 2480×3508 / pHYs 300 DPI
 python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
 python tests/layouts.py          # captures des gabarits
@@ -38,12 +50,17 @@ python tests/welcome.py          # ambiance proposée au premier lancement
 python tests/fonts.py            # polices auto-hébergées, aucun appel tiers
 python tests/consent.py          # accord préalable : aucune requête tierce sans accord
 python tests/reset.py            # réinitialisation des réglages par défaut
+python tests/security.py         # lien forgé ou piégé, état corrompu, crochets de test
+python tests/a11y.py             # fenêtres modales, clavier, cibles tactiles, noms accessibles
+python tests/csp.py              # aucune violation de la politique de sécurité du contenu
+python tests/pwa.py              # sous-chemin GitHub Pages, manifeste, service worker, hors ligne
 python -m http.server 8000       # aperçu local : http://localhost:8000
 ```
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.
 
 ## Avant chaque commit
-- Lancer `run.py`, `offline.py`, `maplibre.py`, `overpass_policy.py`, `overpass_outage.py`, `coords.py`, `texts.py`, `textsize.py`, `mobile.py`, `ux.py`, `design.py`, `welcome.py`, `fonts.py`, `consent.py` et `reset.py` : ils doivent finir sans `PAGEERROR`, et les exports doivent mesurer 2480 × 3508 px.
+- Lancer `python tests/run_all.py` : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports de 2480 × 3508 px). La même suite tourne dans GitHub Actions à chaque push et pull request.
+- Les tests ouvrent la page avec `?test` ; pour attendre une condition, utiliser `wait_js` (`tests/jswait.py`), jamais `page.wait_for_function` (refusé par la CSP).
 - Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
 - Mettre à jour le dossier technique quand un comportement change.
 
