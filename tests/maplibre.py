@@ -140,7 +140,7 @@ async def main():
                 else: ext.append(u); await r.abort()
             await page.route('**/*', route)
             STATS['tiles'] = 0
-            await page.goto(base + '/index.html')
+            await page.goto(base + '/index.html?test')
             await page.wait_for_function("__cms && __cms.mlLib==='ok'", timeout=15000)
             await page.wait_for_function("document.querySelector('#stTxt').textContent.startsWith('Prêt')", timeout=30000)
             await page.screenshot(path=str(T / f'ml-{name}.png'))

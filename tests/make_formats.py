@@ -31,5 +31,5 @@ for e in d['elements']:
         polys=[[[ [g['lon'],g['lat']] for g in m['geometry']] for m in e['members']]]
         feats.append({"type":"Feature","properties":e['tags'],"geometry":{"type":"MultiLineString","coordinates":polys[0]}})
 json.dump({"type":"FeatureCollection","features":feats},open(T/'data.geojson','w'))
-(T/'frame.html').write_text('<iframe src="'+(T.parent/'index.html').as_uri()+'" style="width:420px;height:900px"></iframe>')
+(T/'frame.html').write_text('<iframe src="'+(T.parent/'index.html').as_uri()+'?test'+'" style="width:420px;height:900px"></iframe>')
 print('ok')

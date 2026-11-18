@@ -8,7 +8,7 @@ import pathlib, os, asyncio, struct
 from playwright.async_api import async_playwright
 from seed import seed
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri()
+APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'overpass.json').read()
 KEYS = ['title', 'subtitle', 'coords', 'dedication', 'names', 'date']

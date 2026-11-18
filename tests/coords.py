@@ -2,7 +2,7 @@
 import pathlib, os, asyncio, json
 from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri()
+APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 
 OK = {

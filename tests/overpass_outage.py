@@ -11,7 +11,7 @@ explicitement sur Overpass ; aucun serveur n'est suspendu (5xx et délai ≠ 406
 import pathlib, os, asyncio, collections
 from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri()
+APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 CORS = {'Access-Control-Allow-Origin': '*'}
 
