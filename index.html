@@ -10,6 +10,21 @@
      et aux CDN de secours de MapLibre (chargés avec SRI). À tenir à jour avec OVERPASS, NOMINATIM, OFM_URL et ML_CDNS (js/config.js). -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org https://nominatim.openstreetmap.org https://overpass-api.de https://overpass.private.coffee https://overpass.kumi.systems https://maps.mail.ru; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <title>City Map Studio — Atelier d'affiches cartographiques</title>
+<meta name="description" content="Créez une affiche cartographique souvenir : rues et cours d'eau d'une ville, repère sur le lieu d'une rencontre, textes et thèmes, export PNG A4 à 300 DPI. Gratuit, open source, sans compte.">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- Aperçu des liens partagés (messageries, réseaux) : l'image doit avoir une adresse absolue, celle de la version publiée -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="City Map Studio">
+<meta property="og:title" content="City Map Studio — Atelier d'affiches cartographiques">
+<meta property="og:description" content="Rues, cours d'eau et repère sur le lieu d'une rencontre : une affiche souvenir à imprimer en A4, 300 DPI. Open source, sans compte.">
+<meta property="og:image" content="https://thiryyan.github.io/city-map-studio/icons/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Trois affiches cartographiques de Blois : cœur doré, médaillon à l'encre, néon de nuit">
+<meta name="twitter:card" content="summary_large_image">
 <!-- Polices auto-hébergées (SIL OFL 1.1) : aucun appel à un service tiers, fonctionne hors ligne -->
 <link rel="stylesheet" href="lib/fonts/fonts.css">
 <!-- MapLibre (copie locale, aucun tiers) : téléchargé pendant l'analyse de la page, exécuté au démarrage -->
