@@ -146,6 +146,7 @@ Les variantes `*_link` suivent la classe de leur axe.
 7. **Voyage** : carte pleine largeur, ville en très grand alignée à gauche, informations en dessous ; pensé pour une police d'affiche condensée.
 8. **Polaroid** : carte carrée, large marge basse, dédicace en tête du texte et lieu en petit.
 9. **Deux lieux** (§ 4.7) et 10. **Ciel** (§ 4.8).
+11. **Lettres** : le nom de la ville, en capitales géantes, est découpé dans la carte (§ 4.11) ; cartouche dessous, sans le titre.
 
 **Orientation** : portrait (2480 × 3508) ou paysage (3508 × 2480) pour tous les gabarits. En paysage, la carte (ou le ciel) occupe la gauche et le texte une colonne à droite, centrée verticalement ; Deux lieux place les cartes côte à côte. Les tailles s'expriment en fraction du petit côté (`U`), si bien qu'un texte garde la même taille physique dans les deux orientations. En portrait, les gabarits d'origine sont rendus au pixel près comme avant cette évolution.
 
@@ -170,8 +171,11 @@ Papier · Terre · Eau · Parcs · Bâtiments · Rues principales · Rues second
 | **Encre de Chine** | `#FFFFFF` | `#FFFFFF` | `#111111` | `#000000` / `#1A1A1A` | `#D0312D` | Noir et blanc graphique, eau en aplat noir |
 | **Plan d'architecte** | `#1F3A5F` | `#1F3A5F` | `#2C4F7C` | `#E8F1FA` / `#A9C1DA` | `#FFD166` | Technique, avec la police Mono |
 | **Néon** | `#120B24` | `#120B24` | `#1E1440` | `#FF4FD8` / `#9B5DE5` | `#36E3FF` | Urbain, nocturne |
+| **Risographie** | `#F3EEE3` | `#F3EEE3` | `#FF6C9C` | `#0078BF` / `#3A8FCB` | `#FF6C9C` | Deux encres d'imprimerie (bleu, rose fluo), pensé pour la surimpression |
 
 Les thèmes se filtrent par catégorie (**Clairs**, **Sombres**, **Couleurs**). Un **contrôle de contraste à l'impression** avertit quand les rues principales ressortent mal sur la terre (contraste < 3), quand le texte manque de contraste avec le papier (< 4,5) ou quand le repère se distingue mal de la carte (< 1,8). Aucun thème fourni ne déclenche l'avertissement ; il sert pour les couleurs personnalisées.
+
+**Palette tirée d'une photo** : l'image choisie est lue et réduite sur l'appareil (`createImageBitmap`, 80 px au plus grand côté ; ni adresse, ni envoi, ni enregistrement), puis ramenée à six couleurs dominantes par k-moyennes (départ aux quantiles de luminance : même image, même palette). Version **claire** : papier tiré de la couleur la plus claire (fondue à 75 % vers le blanc), encre de la plus sombre ; version **sombre** : l'inverse. L'eau et les parcs prennent les deux couleurs les plus saturées et les plus présentes, fondues dans le papier ; le repère, la plus saturée, assombrie si elle contraste trop peu avec le papier (< 2,6). Seules les 12 couleurs sont gardées ; le changement est annulable et comparable comme un thème.
 
 **Comparer avant / après** : après un changement de thème, un bouton « Maintenir pour comparer avec « *thème précédent* » » apparaît sous les thèmes. Tant qu'il est maintenu (souris, toucher, ou Espace / Entrée au clavier), l'affiche montre le thème précédent, avec un badge « Avant · *thème* » ; relâché, le thème choisi revient. C'est un aperçu seulement : rien n'est enregistré (`saveState` est suspendu) ni ajouté à l'historique. Le bouton disparaît dès que les couleurs ne sont plus celles du thème appliqué (autre thème, couleur retouchée, « Annuler »). Reconfirmer le même thème ne crée pas de comparaison.
 
@@ -235,7 +239,7 @@ Sont conservés : l'accord aux services tiers et les données déjà importées.
 
 ### 4.6. Ambiances et papier
 
-**Au premier lancement**, une fenêtre propose de choisir une ambiance (vignettes des 8 ambiances) ou de « Commencer sans ambiance » (aussi avec Échap). Elle s'affiche après la demande d'accord, jamais en même temps, et une seule fois (`cityMapStudio.welcomed`). Elle ne s'affiche pas si une affiche est déjà enregistrée, ni à l'ouverture d'un lien partagé. Après le choix, l'onglet Lieu invite à chercher son lieu ; l'ambiance est une étape d'historique annulable.
+**Au premier lancement**, une fenêtre propose de choisir une ambiance (vignettes des 13 ambiances) ou de « Commencer sans ambiance » (aussi avec Échap). Elle s'affiche après la demande d'accord, jamais en même temps, et une seule fois (`cityMapStudio.welcomed`). Elle ne s'affiche pas si une affiche est déjà enregistrée, ni à l'ouverture d'un lien partagé. Après le choix, l'onglet Lieu invite à chercher son lieu ; l'ambiance est une étape d'historique annulable.
 
 **Ambiances** (en tête de l'onglet Style) : un toucher applique un ensemble assorti de thème, duo de polices, gabarit, repère et papier, en gardant le lieu et les textes. Vignettes rendues avec chaque ambiance ; l'ambiance active est signalée ; « Annuler » revient en arrière.
 
@@ -248,9 +252,18 @@ Sont conservés : l'accord aux services tiers et les données déjà importées.
 | Nuit en ville | Néon | Bebas / Jost | Fondu | Anneau | Lisse |
 | Bord de mer | Marine | Italiana / Jost | Polaroid | Ancre | Toile |
 | Encre de Chine | Encre de Chine | Bodoni / Garamond | Médaillon | Cœur géométrique | Aquarelle |
+| Carte ancienne | Sépia vintage | Garamond | Cadre | Étoile | Ancien, plis |
+| Soirée de gala | Prestige Onyx & Or | Italiana / Garamond | Médaillon | Alliances | Lisse |
+| Risographie | Risographie | Bebas / Jost | Voyage | Épingle | Grain |
+| Lettres de ville | Crème & Encre | Bebas / Jost | Lettres | Point | Grain |
+| Notre quartier | Souvenir | Garamond | Cadre | Cœur | Lisse |
 | Souvenir | Souvenir | Playfair | Souvenir | Cœur | Lisse |
 
-**Papier** : Lisse, Grain, Aquarelle, Kraft, Toile. Les textures sont générées par le code (bruit pseudo-aléatoire à graine fixe), sans image. La base mesure 1 240 px de large et s'agrandit à la taille voulue : le grain est le même à l'aperçu et à l'export. Fusion `multiply` sur papier clair, `screen` sur papier sombre (texture inversée et désaturée). Dans l'aperçu, un calque `#cvTex` posé au-dessus de l'affiche reproduit la fusion avec `mix-blend-mode` ; à l'export, elle est appliquée au canvas final.
+Une ambiance fixe aussi ses effets de tracé (§ 4.9), ses ornements et les plis du papier (§ 4.11) ; ceux qu'elle ne cite pas sont désactivés.
+
+**Papier** : Lisse, Grain, Aquarelle, Kraft, Toile, Ancien. Les textures sont générées par le code (bruit pseudo-aléatoire à graine fixe), sans image. La base mesure 1 240 px de large et s'agrandit à la taille voulue : le grain est le même à l'aperçu et à l'export. Fusion `multiply` sur papier clair, `screen` sur papier sombre (texture inversée et désaturée). Dans l'aperçu, un calque `#cvTex` posé au-dessus de l'affiche reproduit la fusion avec `mix-blend-mode` ; à l'export, elle est appliquée au canvas final.
+* **Ancien** : papier jauni, bords roussis (dégradé radial), salissures diffuses et rousseurs (petites taches brunes, isolées ou en grappes).
+* **Plis d'une carte dépliée** (case à cocher, avec n'importe quel papier, même Lisse) : trois volets sur la largeur et deux sur la hauteur en portrait (l'inverse en paysage) ; chaque pli est une ombre douce d'un côté, un fin trait de cassure irrégulier, et une usure plus marquée aux croisements. Ils font partie de la texture (même rendu à l'aperçu et à l'export).
 
 ### 4.7. Deux lieux
 
@@ -263,17 +276,30 @@ Gabarit **Ciel** : disque des étoiles visibles au-dessus du repère principal �
 * **Projection** : stéréographique centrée sur le zénith, l'horizon au bord du disque, nord en haut et est à gauche (vue du ciel en levant les yeux), points cardinaux autour.
 * **Réglages** : date et heure locales du lieu (proposées depuis la date du texte, à 22 h), fuseau horaire (celui de l'appareil à cette date, ou de UTC−12 à UTC+14 par demi-heure), constellations, grille.
 * **Couleurs** : sur papier clair, disque à l'encre du texte et étoiles couleur papier ; sur papier sombre, disque couleur terre et étoiles couleur texte. L'attribution mentionne la source des données du ciel.
+* **Lune** (activée par défaut) : position et phase approchées (longitude moyenne, anomalie et argument de latitude, terme principal de chaque série ; précision de l'ordre du degré, suffisante à cette échelle). Disque grossi pour rester lisible, partie éclairée tournée vers le Soleil, terminateur elliptique selon la fraction éclairée. Dessinée seulement au-dessus de l'horizon.
+* **Planètes** (activées par défaut) : Mercure, Vénus, Mars, Jupiter et Saturne, d'après les éléments képlériens moyens du JPL (E. M. Standish, valables de 1800 à 2050 ; équation de Kepler résolue par Newton, puis passage géocentrique et équatorial). Point cerclé et nom en italique, au-dessus de l'horizon.
+* **Voie lactée** (désactivée par défaut) : `lib/sky/milkyway.js`, cinq niveaux de densité issus de d3-celestial (`mw.json`, BSD-3, simplifié à 0,35°, 24 Ko), chargé seulement quand l'option est cochée ; chaque niveau est un voile léger qui s'ajoute aux précédents.
 
 ### 4.9. Effets de tracé
 
-Trois effets cumulables (onglet Style), rendus de la même façon par les deux moteurs, à l'aperçu comme à l'export. Toutes les mesures sont exprimées pour un cadre de 800 px, puis mises à l'échelle du cadre.
-* **Eau hachurée** : hachures à 45°, au pas de 6 px, sur fond couleur terre ; les traits prennent la couleur de l'eau assombrie de 28 %, pour rester lisibles sur une eau pâle.
-  * Moteur Vectoriel GPU : motif `fill-pattern` fourni à la demande (événement `styleimagemissing`). Son identifiant contient le pas, la densité de pixels et les deux couleurs, ce qui permet de le recréer sans état.
+Effets cumulables (onglet Style), rendus de la même façon par les deux moteurs, à l'aperçu comme à l'export. Toutes les mesures sont exprimées pour un cadre de 800 px, puis mises à l'échelle du cadre.
+* **Eau hachurée** : hachures à 45°, au pas de 6 px, sur fond couleur terre ; les traits prennent la couleur de l'eau assombrie de 28 %, pour rester lisibles sur une eau pâle. Sur une eau presque noire (Encre de Chine), les traits sont deux fois plus fins : les hachures ne dominent plus la composition.
+  * Moteur Vectoriel GPU : motif `fill-pattern` fourni à la demande (événement `styleimagemissing`). Son identifiant (`pat:<motif>:…`) contient le motif, le pas, la densité de pixels et les deux couleurs, ce qui permet de le recréer sans état. Les trois motifs (hachures, points, hachures croisées) passent par `patTile`.
   * Vecteurs : motif de canvas (`createPattern`) à la même échelle.
 * **Bâtiments en contour** : un trait fin (0,35 × l'épaisseur de référence) dans la couleur des rues secondaires, à la place de l'aplat.
 * **Trait crayon** : chaque classe de rue est tracée deux fois, décalée de (1,2 ; −0,9) puis (−0,9 ; 1,0) × l'épaisseur de référence, à 72 % de sa largeur et 62 % d'opacité, comme une esquisse reprise au crayon. Côté GPU, deux couches par classe avec `line-translate`. Un tracé « tremblé » a été écarté : le moteur GPU ne peut pas le produire, et l'export ne correspondrait plus à l'aperçu.
 
-Les ambiances fixent leurs effets : Encre de Chine (eau hachurée), Plan d'architecte (bâtiments en contour), Carnet de voyage (trait crayon) ; les autres les désactivent.
+* **Lueur** : sous les rues, trois halos de la même couleur, de plus en plus serrés (6 ; 3,4 ; 2 × la largeur du trait, opacités 7, 12 et 20 %). Côté GPU, trois couches par classe avec `line-blur` ; côté vecteurs, trois traits larges et pâles (un `filter: blur()` du canvas aurait été plus doux, mais Safari ne le gère que depuis peu). Pensée pour les thèmes sombres (Néon, Onyx).
+* **Lignes d'eau gravées** : cinq contours parallèles autour des rives et des cours d'eau, au pas de 2,4 px, de plus en plus pâles en s'éloignant de l'eau, comme sur les cartes gravées du XIXᵉ siècle. Encre : l'eau assombrie de 32 % (éclaircie sur papier sombre). Côté GPU, chaque ligne est une couche `line` sur le contour de l'eau avec `line-gap-width` : deux traits parallèles, celui côté eau étant recouvert par l'aplat ; côté vecteurs, un trait large à l'encre puis un trait un peu moins large couleur terre, du plus éloigné au plus proche. Elles sont tracées avant les parcs, qui les recouvrent.
+* **Bâtiments pointillés** : points en quinconce (pas de 5 px) sur un fond mi-chemin entre bâtiment et terre.
+* **Parcs hachurés** : hachures croisées (pas de 7 px) un peu plus sombres que les parcs.
+* **Surimpression riso** : l'eau est imprimée comme une plaque à part, décalée de (2,6 ; −1,6) px et posée par-dessus les rues. Vecteurs : fusion `multiply` (`screen` sur papier sombre) à 90 % ; GPU : couches finales `fill-translate` / `line-translate` à 90 % d'opacité (le style MapLibre ne connaît pas les modes de fusion : rendu approché).
+
+**Autour du repère** (rayon réglable de 10 à 60 % de la largeur de la carte, 30 % par défaut) :
+* **Halo du souvenir** : dégradé radial couleur papier, transparent jusqu'à 0,8 × le rayon puis presque opaque à 2,6 × ; la ville se dissout en s'éloignant du lieu. Dessiné dans la couche du dessus (`drawPoster`, sous les repères) : identique avec les deux moteurs.
+* **Quartier en relief** : les rues du rayon reprennent la couleur du repère, 25 % plus épaisses. Vecteurs : rues retracées dans un disque de découpe, bord net ; GPU : couches filtrées par `within` sur un polygone de 64 côtés autour du repère (seules les rues entièrement dans le disque sont colorées, d'où un bord en escalier). Le style est recalculé quand le repère bouge.
+
+Les ambiances fixent leurs effets : Encre de Chine (eau hachurée), Plan d'architecte (bâtiments en contour), Carnet de voyage (trait crayon), Nuit en ville (lueur), Carte ancienne (lignes d'eau, parcs hachurés), Soirée de gala (lueur, dorure), Risographie (surimpression, bâtiments pointillés), Notre quartier (halo, quartier en relief) ; les autres les désactivent.
 
 ### 4.10. Fluidité du moteur Fichier (cache de tracés)
 
@@ -282,6 +308,16 @@ Les ambiances fixent leurs effets : Encre de Chine (eau hachurée), Plan d'archi
 * **Validité** : le cache est rattaché aux données (`WeakMap`) et à $S$ ; un import le remplace, un changement de zoom en construit un autre. Trois tailles au plus sont gardées (aperçu, seconde vue, export).
 * **Mesures** (ville synthétique de 30 000 bâtiments, cadre de 1 019 × 1 253 px, Chromium sans GPU) : déplacement au zoom 14 de 173 à 21 ms par image, au zoom 16 de 5,3 à 3,4 ms ; construction du cache, une fois par zoom, 23 à 30 ms.
 * **Rendu** : identique à l'ancien tracé au pixel près, pour tous les effets et à la taille de l'export (au plus 1 pixel d'écart d'anticrénelage sur 5,8 Mpx).
+
+### 4.11. Finitions : dorure, ornements, gabarit Lettres
+
+Tous trois sont dessinés par `drawPoster` dans la couche du dessus : même rendu avec les deux moteurs, à l'aperçu et à l'export.
+* **Dorure** : les textes, filets, contours et repères prennent un dégradé métallique tiré de leur propre couleur (ombre à −45 %, reflet à +62 %, en bandes diagonales sur toute l'affiche) ; l'or devient feuille d'or, le blanc argent, le terracotta cuivre. Les dégradés sont calculés à chaque rendu (`paint`, `foilGradient`) puis abandonnés : hors de `drawPoster` (vignettes des repères), la couleur reste unie. À l'impression, c'est une illusion de dorure ; un calque séparé pour la dorure à chaud reste à faire.
+* **Ornements** (cases à cocher, sur chaque carte de l'affiche) :
+  * **Échelle graphique** : longueur ronde (10 m à 50 km) la plus proche de 20 % de la largeur de la carte (26 % dans une forme), calculée au centre de la vue ($40\,075\,017 \cos\varphi / S$ m/px) ; quatre segments alternés sur une plaque de papier, en bas à gauche (centrée en bas dans un médaillon ou un cœur).
+  * **Rose des vents** : huit pointes, couronne graduée, nord marqué ; en haut à droite (placée dans la forme pour le médaillon, le cœur et l'arche). Une seule, sur la première carte.
+  * **Graduations** : méridiens et parallèles à pas rond (de 15″ à 2°, au plus cinq dans la largeur) en tirets pâles ; dans un cadre rectangulaire, repères au bord et valeurs en degrés et minutes (`1°19,5′E`, `47°35′N`).
+* **Gabarit Lettres** : la carte occupe le haut de l'affiche ; un voile couleur papier (90 %) la recouvre, sauf dans les lettres du titre, découpées en `destination-out` sur un canvas intermédiaire de la taille de la carte (libéré aussitôt). Les lettres, en capitales de la police du titre, prennent la plus grande taille possible : sur une ligne, ou un mot par ligne si c'est plus grand ; un filet fin les détoure. La carte reste interactive dans l'aperçu : on la déplace sous les lettres. Le cartouche dessous reprend les autres lignes.
 
 ## 5. Export haute définition
 
@@ -384,7 +420,7 @@ city-map-studio/
 ├── lib/                    # dépendances embarquées
 │   ├── maplibre-gl.js/.css # MapLibre GL JS 4.7.1 (licence BSD-3)
 │   ├── fonts/              # polices woff2 + fonts.css + OFL.txt par famille (11 familles)
-│   └── sky/                # données du ciel (sky-data.js) + licence BSD-3 de d3-celestial
+│   └── sky/                # données du ciel (sky-data.js, milkyway.js) + licence BSD-3 de d3-celestial
 ├── .nojekyll               # GitHub Pages : fichiers servis tels quels
 ├── LICENSE                 # MIT (code de l'application) + rappel des licences tierces
 ├── README.md
@@ -408,6 +444,9 @@ city-map-studio/
     ├── ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
     ├── design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel
     ├── vectors.py          # cache de tracés du moteur Fichier : réutilisation, invalidation, rendu identique, carreaux
+    ├── art.py              # pistes artistiques : effets, halo, dorure, ornements, Lettres, papiers, ciel, palette d'une photo
+    ├── make_city.py        # génère city.json : ville fictive réaliste (fleuve à îles, vieille ville, damiers, ponts, ~22 000 bâtiments)
+    ├── city.py             # moteur Fichier sur city.json : import JSON et XML, fleuve assemblé, points de contrôle, fluidité, exports
     ├── compare.py          # comparer avant / après un changement de thème (souris, toucher, clavier)
     ├── welcome.py          # ambiance proposée au premier lancement
     ├── security.py         # lien forgé ou piégé, état corrompu, crochets de test, libellé d'export
@@ -478,7 +517,7 @@ Principales sections :
 | Comparer avant / après | Bouton absent sans changement de thème ; nommé d'après le thème précédent ; maintenu (souris, toucher, clavier) : affiche identique à l'avant, badge ; relâché : thème choisi à l'identique ; rien d'enregistré ni d'ajouté à l'historique ; bouton retiré après « Annuler » ou une retouche de couleur. |
 | Effets de tracé | Eau hachurée, bâtiments en contour et trait crayon : rendus distincts, retour exact au rendu d'origine, export aux bonnes dimensions ; moteur GPU : motif fourni, couche en contour, deux passes décalées, hachures présentes à l'export ; effets fixés par les ambiances et annulables. |
 | Premier lancement | Accord d'abord, puis choix d'une ambiance ; ambiance appliquée et annulable ; proposition unique (après un choix ou « Commencer sans ambiance ») ; rien pour une affiche existante ni pour un lien partagé. |
-| Évolutions graphiques | 11 polices et duos, police manuscrite limitée à la dédicace et aux noms ; 15 thèmes, filtres, contraste ; gabarits distincts, cœur découpé dans l'aperçu ; ambiances et modèles annulables ; 10 repères distincts ; 3 lieux numérotés et reliés ; 4 textures ; aperçu au mur téléchargeable ; lien reconstituant l'affiche ; paysage 3508 × 2480 ; deux vues conservées ; GPX simplifié et cadré ; Polaire à la hauteur de la latitude ; exports aux bonnes dimensions. Gabarits d'origine identiques au pixel près. |
+| Évolutions graphiques | 11 polices et duos, police manuscrite limitée à la dédicace et aux noms ; 16 thèmes, palette tirée d'une photo, filtres, contraste ; gabarits distincts, cœur découpé dans l'aperçu ; ambiances et modèles annulables ; 10 repères distincts ; 3 lieux numérotés et reliés ; 5 textures et plis ; aperçu au mur téléchargeable ; lien reconstituant l'affiche ; paysage 3508 × 2480 ; deux vues conservées ; GPX simplifié et cadré ; Polaire à la hauteur de la latitude ; exports aux bonnes dimensions. Gabarits d'origine identiques au pixel près. |
 | Lisibilité et confort | Onglets dans l'ordre du parcours, rôles ARIA et navigation au clavier ; « Étape suivante » ; « Avancé » et couleurs repliés, « Avancé » rouvert d'office et mémorisé ; cibles tactiles ; annuler / rétablir (boutons, clavier, après réinitialisation, moteur exclu) ; calendrier (« 1er », lecture inverse) ; aperçu des polices ; « Ma position » ; recherche unique, sans requête pendant la frappe. |
 | Mobile | iPhone 13 (390 × 664) : au moins 180 px de réglages à mi-hauteur ; poignée (toucher, glisser) ; dépliage à la saisie ; carte verrouillée hors du mode Cadrer ; placement du repère ; bulle au-dessus du panneau ; A− / A+ persistant, sans défilement horizontal ; paysage en deux colonnes ; ordinateur inchangé. |
 | Saisie du repère | Formats du § 3.3 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
@@ -517,6 +556,8 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Taille des textes de l'affiche | ✅ | `tests/textsize.py` |
 | Polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel | ✅ | `tests/design.py` (moteur Fichier, sans réseau) ; ⏳ Deux lieux et aperçu au mur avec les vraies tuiles OpenFreeMap. |
 | Cache de tracés du moteur Fichier | ✅ | `tests/vectors.py` ; ⏳ fluidité des gestes sur un téléphone réel. |
+| Moteur Fichier sur une ville réaliste (6,4 × 5,2 km, ~22 000 bâtiments, 8,6 Mo) | ✅ | `tests/city.py` : import JSON (≈ 0,15 s) et XML, fleuve assemblé depuis 7 membres avec 2 îles, eau et pont aux points de contrôle, cache en ≈ 0,2 s, déplacement ≈ 2 ms par image (Chromium, ordinateur) ; ⏳ mêmes mesures sur un téléphone réel et sur un vrai extrait OSM. |
+| Pistes artistiques (effets, autour du repère, dorure, ornements, Lettres, papier Ancien et plis, Lune, planètes, Voie lactée, palette d'une photo) | ✅ | `tests/art.py` (moteur Fichier) et `tests/maplibre.py` (couches GPU, tuiles simulées) ; ⏳ rendu avec les vraies tuiles OpenFreeMap, impression réelle de la dorure et du riso. |
 | Comparer avant / après un changement de thème | ✅ | `tests/compare.py` (émulation du toucher) ; ⏳ appui long sur iOS Safari et Chrome Android. |
 | Parcours guidé, accessibilité, historique, date, géolocalisation, recherche | ✅ | `tests/ux.py` (émulation) ; ⏳ géolocalisation et calendrier natif à valider sur iOS et Android. |
 | Panneau coulissant, mode Cadrer, paysage, A− / A+ | ✅ | `tests/mobile.py` (émulation) ; ⏳ gestes à valider sur iOS Safari et Chrome Android. |

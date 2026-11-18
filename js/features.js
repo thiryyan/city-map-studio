@@ -147,7 +147,7 @@ function applyAmbiance(k){
   const a=AMBIANCES.find(x=>x[0]===k); if(!a) return; const p=a[2];
   commitHistory(0);   // étape d'historique explicite : un choix fait juste après le démarrage reste annulable
   st.theme=p.theme; st.colors={...THEMES[p.theme].c}; st.font=p.font; st.fontTitle=p.fontTitle; st.markerStyle=p.markerStyle; st.texture=p.texture;
-  st.fx={...DEFAULT_STATE.fx,...(p.fx||{})};
+  st.fx={...DEFAULT_STATE.fx,...(p.fx||{})}; st.orn={...DEFAULT_STATE.orn,...(p.orn||{})}; st.folds=!!p.folds;
   setLayout(p.layout,true);
   syncInputs(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); redrawAll(true); drawTexture(); commitHistory();
   toast(`Ambiance « ${a[1]} » appliquée · tout reste personnalisable`);
@@ -263,4 +263,51 @@ function initSheet(){
   $('bFrameDone').onclick=()=>setFraming(false);
   TWO_COL.addEventListener('change',()=>{ setFraming(false); setPlacing(false); ui.sheetBefore=null; setSheet(ui.sheet); stageMode(); });
   setSheet('half'); stageMode();
+}
+
+// ---------- Palette tirée d'une photo ----------
+// La photo est lue et réduite sur l'appareil (createImageBitmap, aucune adresse ni envoi) ; seules ses couleurs sont gardées.
+let photoPal=null;
+async function importPhotoPalette(file){
+  let bmp;
+  try{ bmp=await createImageBitmap(file); }catch(e){ toast('Image illisible : choisissez une photo JPEG, PNG ou WebP.',true); return; }
+  const n=80, k=Math.min(1,n/Math.max(bmp.width,bmp.height)), w=Math.max(1,Math.round(bmp.width*k)), hh=Math.max(1,Math.round(bmp.height*k));
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=hh; const c=cv.getContext('2d'); c.drawImage(bmp,0,0,w,hh); if(bmp.close) bmp.close();
+  photoPal=paletteOf(c.getImageData(0,0,w,hh).data);
+  if(!photoPal.length){ toast('Aucune couleur exploitable dans cette image.',true); return; }
+  const sw=$('photoSw'); sw.textContent=''; photoPal.forEach(p=>sw.append(h('i',{style:{background:p.hex}})));
+  $('photoPal').hidden=false; applyPhotoPalette('light');
+}
+/** Couleurs dominantes (k-moyennes, 6 groupes, départ aux quantiles de luminance : résultat reproductible) : [{hex, n}] */
+function paletteOf(D, K=6){
+  const px=[]; for(let i=0;i<D.length;i+=4) if(D[i+3]>=128) px.push([D[i],D[i+1],D[i+2]]);
+  if(px.length<K) return [];
+  const Y=p=>0.299*p[0]+0.587*p[1]+0.114*p[2]; px.sort((a,b)=>Y(a)-Y(b));
+  let C=Array.from({length:K},(_,i)=>[...px[Math.floor((i+0.5)/K*px.length)]]), cnt=[];
+  for(let it=0;it<12;it++){
+    const S=C.map(()=>[0,0,0]); cnt=C.map(()=>0);
+    for(const p of px){ let b=0, bd=1e9; C.forEach((q,j)=>{ const d=(p[0]-q[0])**2+(p[1]-q[1])**2+(p[2]-q[2])**2; if(d<bd){ bd=d; b=j; } }); S[b][0]+=p[0]; S[b][1]+=p[1]; S[b][2]+=p[2]; cnt[b]++; }
+    C=C.map((q,j)=>cnt[j]?S[j].map(v=>v/cnt[j]):q);
+  }
+  const hex=q=>'#'+q.map(v=>Math.round(v).toString(16).padStart(2,'0')).join('').toUpperCase();
+  return C.map((q,j)=>({hex:hex(q),n:cnt[j]})).filter(p=>p.n>0).sort((a,b)=>b.n-a.n);
+}
+/** Thème tiré d'une palette : papier (couleur la plus claire, ou la plus sombre), encre opposée, accents saturés pour l'eau, les parcs et le repère */
+function photoTheme(pal, dark){
+  const sat=x=>{ const v=[1,3,5].map(i=>parseInt(x.slice(i,i+2),16)), M=Math.max(...v), m=Math.min(...v); return M?(M-m)/M:0; };
+  const byL=[...pal].sort((a,b)=>lum(a.hex)-lum(b.hex)), lo=byL[0].hex, hi=byL[byL.length-1].hex;
+  const acc=[...pal].sort((a,b)=>sat(b.hex)*Math.sqrt(b.n)-sat(a.hex)*Math.sqrt(a.n)), a1=acc[0].hex, a2=(acc[1]||acc[0]).hex;
+  const paper = dark ? mix(lo,'#000000',0.55) : mix(hi,'#FFFFFF',0.75), ink = dark ? mix(hi,'#FFFFFF',0.5) : mix(lo,'#000000',0.35);
+  let marker=a1; for(let i=0;i<4 && contrast(marker,paper)<2.6;i++) marker=mix(marker,ink,0.3);
+  const c={paper, land:paper, water:mix(a1,paper,0.5), park:mix(a2,paper,0.72), building:mix(ink,paper,0.88),
+    roadMajor:ink, roadMinor:mix(ink,paper,0.35), path:mix(ink,paper,0.62), rail:mix(ink,paper,0.62), text:ink, frame:mix(marker,ink,0.2), marker};
+  for(const k of Object.keys(c)) c[k]=c[k].toUpperCase();
+  return c;
+}
+function applyPhotoPalette(v){
+  if(!photoPal) return;
+  const before={theme:st.theme,colors:{...st.colors}};
+  st.colors=photoTheme(photoPal,v==='dark'); setSeg('photoSeg',v);
+  noteThemeChange(before); refreshColors(); changed({all:true,cards:true});
+  toast('Palette de la photo appliquée · « Annuler » pour revenir');
 }

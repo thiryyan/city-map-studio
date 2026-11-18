@@ -1,7 +1,7 @@
 """e2e : évolutions graphiques (phases A, B et C).
 
 A : 11 polices et duos (police manuscrite réservée à la dédicace et aux noms), filtres,
-    15 thèmes avec filtres et contrôle de contraste, gabarits Cœur / Arche / Voyage,
+    16 thèmes avec filtres et contrôle de contraste, gabarits Cœur / Arche / Voyage,
     ambiances, modèles de texte.
 B : aperçu au mur, plusieurs lieux numérotés et reliés, textures de papier,
     5 nouveaux repères, gabarit Polaroid, partage par lien.
@@ -78,7 +78,7 @@ async def main():
         themes = await ev("Object.keys(__cms.THEMES).length")
         await page.click('#themeCats .chip:has-text("Sombres")')
         dark = await ev("[...document.querySelectorAll('#themes .theme')].filter(t=>t.offsetParent!==null).map(t=>t.dataset.v)")
-        check(themes == 15 and sorted(dark) == ['neon', 'nuit', 'onyx', 'plan'], f'15 thèmes, filtre « Sombres » {dark}')
+        check(themes == 16 and sorted(dark) == ['neon', 'nuit', 'onyx', 'plan'], f'16 thèmes, filtre « Sombres » {dark}')
         await page.click('#themeCats .chip:has-text("Tous")')
         bad = []
         for k in await ev("Object.keys(__cms.THEMES)"):

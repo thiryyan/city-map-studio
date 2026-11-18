@@ -152,12 +152,21 @@ function changed(o={}){
 // Papier clair : fusion « multiply » (assombrit légèrement) ; papier sombre : « screen » sur la texture inversée.
 const TEX_BASE=1240, texCache=new Map();
 function rng(seed){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
-function textureBase(kind, land, dark){
-  const key=kind+land+dark; if(texCache.has(key)) return texCache.get(key);
+function textureBase(kind, land, dark, folds=false){
+  const key=[kind,land,dark,folds].join(); if(texCache.has(key)) return texCache.get(key);
   const w=land?Math.round(TEX_BASE*1.4145):TEX_BASE, h=land?TEX_BASE:Math.round(TEX_BASE*1.4145);
   const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const c=cv.getContext('2d');
-  const R=rng({grain:11,aquarelle:23,kraft:37,toile:53}[kind]||1);
-  c.fillStyle=kind==='kraft'?'#E3CFAE':'#fff'; c.fillRect(0,0,w,h);
+  const R=rng({grain:11,aquarelle:23,kraft:37,toile:53,ancien:71}[kind]||1);
+  c.fillStyle=kind==='kraft'?'#E3CFAE':kind==='ancien'?'#F5EAD2':'#fff'; c.fillRect(0,0,w,h);
+  if(kind==='ancien'){   // papier jauni : bords roussis, rousseurs (taches brunes éparses), quelques salissures diffuses
+    let gr=c.createRadialGradient(w/2,h/2,Math.min(w,h)*0.3,w/2,h/2,Math.hypot(w,h)*0.55);
+    gr.addColorStop(0,'rgba(120,80,30,0)'); gr.addColorStop(0.75,'rgba(120,80,30,0.10)'); gr.addColorStop(1,'rgba(110,70,25,0.32)'); c.fillStyle=gr; c.fillRect(0,0,w,h);
+    for(let i=0;i<14;i++){ const x=R()*w, y=R()*h, rr=40+R()*160; gr=c.createRadialGradient(x,y,0,x,y,rr);
+      gr.addColorStop(0,`rgba(140,100,50,${0.04+R()*0.05})`); gr.addColorStop(1,'rgba(140,100,50,0)'); c.fillStyle=gr; c.fillRect(x-rr,y-rr,2*rr,2*rr); }
+    for(let i=0;i<260;i++){ const cl=R()<0.3, x0=R()*w, y0=R()*h, n=cl?3+(R()*6|0):1;
+      for(let j=0;j<n;j++){ const x=x0+(cl?(R()-0.5)*60:0), y=y0+(cl?(R()-0.5)*60:0), rr=0.6+R()*R()*5.5;
+        c.fillStyle=`rgba(${120+R()*30|0},${78+R()*20|0},${35+R()*15|0},${0.08+R()*0.22})`; c.beginPath(); c.ellipse(x,y,rr,rr*(0.7+R()*0.5),R()*3,0,7); c.fill(); } }
+  }
   if(kind==='aquarelle'){   // taches douces : bruit de valeur à basse résolution, agrandi avec lissage
     for(const [n,a] of [[9,0.10],[23,0.06],[60,0.035]]){
       const sm=document.createElement('canvas'); sm.width=n; sm.height=Math.round(n*h/w); const sc=sm.getContext('2d'), d=sc.createImageData(sm.width,sm.height);
@@ -175,24 +184,39 @@ function textureBase(kind, land, dark){
     for(let y=0;y<h;y+=3){ c.fillStyle=`rgba(0,0,0,${0.025+R()*0.03})`; c.fillRect(0,y,w,1); }
     for(let x=0;x<w;x+=3){ c.fillStyle=`rgba(0,0,0,${0.02+R()*0.03})`; c.fillRect(x,0,1,h); }
   }
-  // grain fin, commun à toutes les textures
-  const d=c.getImageData(0,0,w,h), D=d.data, amp={grain:34,aquarelle:14,kraft:22,toile:12}[kind]||20;
-  for(let i=0;i<D.length;i+=4){ const n=R()*R()*amp; D[i]-=n; D[i+1]-=n; D[i+2]-=n; }
-  c.putImageData(d,0,0);
+  // grain fin, commun à toutes les textures (pas au papier lisse, qui peut ne porter que des plis)
+  if(kind!=='none'){ const d=c.getImageData(0,0,w,h), D=d.data, amp={grain:34,aquarelle:14,kraft:22,toile:12,ancien:18}[kind]||20;
+    for(let i=0;i<D.length;i+=4){ const n=R()*R()*amp; D[i]-=n; D[i+1]-=n; D[i+2]-=n; }
+    c.putImageData(d,0,0); }
+  if(folds) drawFolds(c,w,h);
   if(dark){ c.globalCompositeOperation='difference'; c.fillStyle='#fff'; c.fillRect(0,0,w,h); c.globalCompositeOperation='saturation'; c.fillStyle='#808080'; c.fillRect(0,0,w,h); c.globalCompositeOperation='source-over'; }
   texCache.set(key,cv); return cv;
 }
+/** Plis d'une carte dépliée : trois volets dans la largeur, deux dans la hauteur (selon l'orientation),
+ *  chaque pli = une ombre douce d'un côté et un fin trait de cassure ; usure plus marquée aux croisements */
+function drawFolds(c,w,h){
+  const R=rng(97), port=h>w, xs=port?[w/2]:[w/3,2*w/3], ys=port?[h/3,2*h/3]:[h/2], band=Math.min(w,h)*0.035;
+  const fold=(x,y,vert)=>{ const gr=vert?c.createLinearGradient(x-band,0,x+band,0):c.createLinearGradient(0,y-band,0,y+band);
+    gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(0.47,'rgba(60,45,30,0.10)'); gr.addColorStop(0.5,'rgba(60,45,30,0.16)'); gr.addColorStop(0.53,'rgba(60,45,30,0.03)'); gr.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=gr; vert?c.fillRect(x-band,0,2*band,h):c.fillRect(0,y-band,w,2*band);
+    c.strokeStyle='rgba(50,35,20,0.22)'; c.lineWidth=1; c.beginPath();
+    if(vert){ c.moveTo(x,0); for(let t=0;t<=h;t+=40) c.lineTo(x+(R()-0.5)*1.4,t); } else { c.moveTo(0,y); for(let t=0;t<=w;t+=40) c.lineTo(t,y+(R()-0.5)*1.4); }
+    c.stroke(); };
+  for(const x of xs) fold(x,0,true); for(const y of ys) fold(0,y,false);
+  for(const x of xs) for(const y of ys){ const gr=c.createRadialGradient(x,y,0,x,y,band*2.2); gr.addColorStop(0,'rgba(80,60,35,0.16)'); gr.addColorStop(1,'rgba(80,60,35,0)'); c.fillStyle=gr; c.fillRect(x-band*2.2,y-band*2.2,band*4.4,band*4.4); }
+}
+const hasPaper=()=>(st.texture && st.texture!=='none') || !!st.folds;
 function texMode(){ return lum(st.colors.paper)<0.3 ? 'screen' : 'multiply'; }
 /** Applique le papier à un rendu complet (export, aperçu au mur) */
 function applyTexture(ctx,W,H){
-  if(!st.texture || st.texture==='none') return;
-  ctx.save(); ctx.globalCompositeOperation=texMode(); ctx.drawImage(textureBase(st.texture,W>H,texMode()==='screen'),0,0,W,H); ctx.restore();
+  if(!hasPaper()) return;
+  ctx.save(); ctx.globalCompositeOperation=texMode(); ctx.drawImage(textureBase(st.texture||'none',W>H,texMode()==='screen',!!st.folds),0,0,W,H); ctx.restore();
 }
 /** Aperçu : calque de texture au-dessus de l'affiche, fondu par CSS (mix-blend-mode) comme à l'export */
 function drawTexture(){
-  const on=st.texture && st.texture!=='none'; cvT.hidden=!on; if(!on) return;
+  const on=hasPaper(); cvT.hidden=!on; if(!on) return;
   cvT.style.mixBlendMode=texMode();
-  const c=cvT.getContext('2d'); c.clearRect(0,0,cvT.width,cvT.height); c.drawImage(textureBase(st.texture,cvT.width>cvT.height,texMode()==='screen'),0,0,cvT.width,cvT.height);
+  const c=cvT.getContext('2d'); c.clearRect(0,0,cvT.width,cvT.height); c.drawImage(textureBase(st.texture||'none',cvT.width>cvT.height,texMode()==='screen',!!st.folds),0,0,cvT.width,cvT.height);
 }
 
 // ---------- Composition complète (export et aperçu au mur) ----------

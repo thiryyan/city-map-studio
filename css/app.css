@@ -237,3 +237,7 @@ details.adv>h3:first-of-type{margin-top:6px}
 /* Comparer avant / après un changement de thème */
 .btn.compare{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .cmpbadge{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;white-space:nowrap;background:#1e1e23e6;color:var(--txt);border:1px solid var(--acc);border-radius:999px;padding:5px 12px;font-size:.8125rem;font-weight:600}
+/* Palette tirée d'une photo */
+#photoPal{margin-top:8px;display:grid;gap:8px}
+.pal{display:flex;gap:4px;height:28px}
+.pal i{flex:1;border-radius:6px;border:1px solid var(--line)}

@@ -4,3 +4,5 @@ tests/data.osm
 tests/data.geojson
 tests/frame.html
 __pycache__/
+tests/city.json
+tests/city.meta.json

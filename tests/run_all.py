@@ -1,6 +1,6 @@
 """Lance toute la suite de tests de bout en bout et résume le résultat (utilisé aussi par l'intégration continue).
 
-Génère d'abord les données de test (osm.json, data.osm, data.geojson, frame.html : non versionnées),
+Génère d'abord les données de test (osm.json, data.osm, data.geojson, frame.html, city.json : non versionnées),
 puis lance chaque test dans un processus séparé. Un test échoue si son code de sortie n'est pas nul,
 si sa sortie contient une erreur de page (PAGEERROR), une trace Python, ou une vérification « ✗ … ».
 
@@ -10,14 +10,14 @@ si sa sortie contient une erreur de page (PAGEERROR), une trace Python, ou une v
 import pathlib, re, subprocess, sys, time
 
 T = pathlib.Path(__file__).resolve().parent
-TESTS = ['run', 'offline', 'maplibre', 'coords', 'texts', 'textsize',
+TESTS = ['run', 'offline', 'maplibre', 'coords', 'texts', 'textsize', 'art', 'city',
          'mobile', 'ux', 'design', 'vectors', 'compare', 'welcome', 'fonts', 'consent', 'reset', 'security', 'a11y', 'csp', 'pwa']
 # « ✗ » suivi d'un texte : vérification en échec (un « ✗ » seul est une ligne du diagnostic réseau affiché, attendue hors ligne)
 BAD = re.compile(r'^✗ \S|PAGEERROR|Traceback \(most recent call last\)', re.M)
 
 
 def main(names):
-    for gen in ('fixture', 'make_formats'):
+    for gen in ('fixture', 'make_formats', 'make_city'):
         subprocess.run([sys.executable, str(T / f'{gen}.py')], check=True, stdout=subprocess.DEVNULL)
     failed = []
     for name in names or TESTS:

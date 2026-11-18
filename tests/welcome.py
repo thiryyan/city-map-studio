@@ -35,7 +35,7 @@ async def main():
         check(await shown(page, 'welcome'), 'après l\'accord : choix d\'une ambiance')
         n = await page.evaluate("document.querySelectorAll('#welAmb button').length")
         drawn = await page.evaluate("[...document.querySelectorAll('#welAmb canvas')].map(c=>c.toDataURL()).filter((v,i,a)=>a.indexOf(v)===i).length")
-        check(n == 8 and drawn == 8, f'8 ambiances avec leur vignette ({n}, {drawn} distinctes)')
+        check(n == 13 and drawn == 13, f'13 ambiances avec leur vignette ({n}, {drawn} distinctes)')
         await page.screenshot(path=str(T / 'welcome.png'))
         await page.click('#welAmb [data-v=naissance]'); await page.wait_for_timeout(600)
         st = await page.evaluate("[__cms.st.theme, __cms.st.layout, __cms.st.markerStyle, document.querySelector('#tabs .on').dataset.tab]")

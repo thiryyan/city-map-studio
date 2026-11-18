@@ -36,7 +36,7 @@ function drawText(ctx, t, x, y, o){
   ctx.font=fontStr(size,o);
   let w=textW(ctx,t,sp,size);
   if(o.maxW && w>o.maxW){ noteFit(o.key,o.maxW/w); size*=o.maxW/w; ctx.font=fontStr(size,o); w=textW(ctx,t,sp,size); }
-  ctx.fillStyle=o.color; ctx.textBaseline='alphabetic';
+  ctx.fillStyle=paint(o.color); ctx.textBaseline='alphabetic';
   let sx = o.align==='center' ? x-w/2 : o.align==='right' ? x-w : x;
   if(!sp){ ctx.textAlign='left'; ctx.fillText(t,sx,y); return w; }
   ctx.textAlign='left';
@@ -51,11 +51,11 @@ function drawRun(ctx, parts, x, y, o){
   let tot=ws.reduce((a,b)=>a+b,0), f=1;
   if(o.maxW && tot>o.maxW){ f=o.maxW/tot; parts.forEach(p=>(p.keys||[p.key]).forEach(k=>noteFit(k,f))); }
   let sx = o.align==='right' ? x-tot*f : o.align==='center' ? x-tot*f/2 : x;
-  ctx.fillStyle=o.color; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+  ctx.fillStyle=paint(o.color); ctx.textBaseline='alphabetic'; ctx.textAlign='left';
   parts.forEach((p,i)=>{ ctx.font=fontStr(p.size*f,p); ctx.fillText(p.t,sx,y); sx+=ws[i]*f; });
   return tot*f;
 }
-function hline(ctx,x1,x2,y,lw,color){ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke()}
+function hline(ctx,x1,x2,y,lw,color){ctx.strokeStyle=paint(color);ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke()}
 
 // Lignes du cartouche : [clé, écart avant la ligne (× U), options de texte (tailles × U)]
 const CART_ROWS=[
@@ -144,7 +144,8 @@ function drawMarker(ctx, x, y, size, o){
   ctx.save(); ctx.translate(x,y); ctx.scale(r,r); ctx.globalAlpha=o.opacity;
   ctx.lineJoin='round'; ctx.lineCap='round';
   const st_=o.style;
-  ctx.fillStyle=col; ctx.strokeStyle=col;
+  const ink=foilCtx ? foilGradient(ctx,col,-1.1,-1.1,1.1,1.1,2) : col;
+  ctx.fillStyle=ink; ctx.strokeStyle=ink;
   if(st_==='dot'){
     ctx.beginPath(); ctx.arc(0,0,0.26,0,7); fill?ctx.fill():(ctx.lineWidth=0.08,ctx.stroke());
     ctx.lineWidth=0.06; ctx.beginPath(); ctx.arc(0,0,0.68,0,7); ctx.stroke();
@@ -182,7 +183,7 @@ function drawMarker(ctx, x, y, size, o){
     if(st_==='heartGeo'){ // facettes
       const F=[[[0,-0.42],[0,0.92]],[[0,-0.42],[-0.5,-0.32]],[[-0.32,-0.86],[-0.5,-0.32]],[[-0.78,-0.8],[-0.5,-0.32]],[[-1,-0.36],[-0.5,-0.32]],[[-0.8,0.12],[-0.5,-0.32]],[[-0.5,-0.32],[0,0.92]],
                [[0,-0.42],[0.5,-0.32]],[[0.32,-0.86],[0.5,-0.32]],[[0.78,-0.8],[0.5,-0.32]],[[1,-0.36],[0.5,-0.32]],[[0.8,0.12],[0.5,-0.32]],[[0.5,-0.32],[0,0.92]]];
-      ctx.strokeStyle = fill ? (o.facet||'#ffffff') : col; ctx.globalAlpha = o.opacity*(fill?0.55:0.8); ctx.lineWidth=fill?0.035:0.045;
+      ctx.strokeStyle = fill ? (o.facet||'#ffffff') : ink; ctx.globalAlpha = o.opacity*(fill?0.55:0.8); ctx.lineWidth=fill?0.035:0.045;
       ctx.beginPath(); F.forEach(([a,b])=>{ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1])}); ctx.stroke();
     }
     if(st_==='pin' && fill){ ctx.globalAlpha=o.opacity; ctx.fillStyle=o.facet||'#fff'; ctx.beginPath(); ctx.arc(0,-1.3,0.26,0,7); ctx.fill(); }
@@ -238,6 +239,57 @@ function altAz(ra, dec, lat, lon, ms){
   const az=Math.atan2(-Math.sin(H)*Math.cos(d), Math.cos(p)*Math.sin(d)-Math.sin(p)*Math.cos(d)*Math.cos(H));
   return {alt:alt/D2R, az:(az/D2R+360)%360};
 }
+// ---------- Ciel : Voie lactée, planètes, Lune ----------
+let mwLoading=null;
+function ensureMilkyWay(){ if(window.SKY_MW) return Promise.resolve(true);
+  if(!mwLoading) mwLoading=loadScript('lib/sky/milkyway.js',15000).then(()=>{ drawUnder(); return true; }).catch(e=>{ mwLoading=null; toast('Voie lactée indisponible : '+e.message,true); return false; });
+  return mwLoading; }
+const OBLIQ=23.43928*D2R;
+/** Coordonnées écliptiques (degrés) → équatoriales {ra, dec} (degrés) */
+function eclToEq(lon,lat){ const l=lon*D2R, b=lat*D2R;
+  const ra=Math.atan2(Math.sin(l)*Math.cos(OBLIQ)-Math.tan(b)*Math.sin(OBLIQ),Math.cos(l)), dec=Math.asin(Math.sin(b)*Math.cos(OBLIQ)+Math.cos(b)*Math.sin(OBLIQ)*Math.sin(l));
+  return {ra:(ra/D2R+360)%360, dec:dec/D2R}; }
+// Éléments képlériens moyens (JPL, E. M. Standish, valables de 1800 à 2050) : a, e, I, L, ϖ, Ω et leurs variations par siècle
+const PLANETS=[
+  ['Mercure',[0.38709927,0.20563593,7.00497902,252.25032350,77.45779628,48.33076593],[0.00000037,0.00001906,-0.00594749,149472.67411175,0.16047689,-0.12534081],-0.4],
+  ['Vénus',[0.72333566,0.00677672,3.39467605,181.97909950,131.60246718,76.67984255],[0.00000390,-0.00004107,-0.00078890,58517.81538729,0.00268329,-0.27769418],-4.2],
+  ['Terre',[1.00000261,0.01671123,-0.00001531,100.46457166,102.93768193,0],[0.00000562,-0.00004392,-0.01294668,35999.37244981,0.32327364,0],0],
+  ['Mars',[1.52371034,0.09339410,1.84969142,-4.55343205,-23.94362959,49.55953891],[0.00001847,0.00007882,-0.00813131,19140.30268499,0.44441088,-0.29257343],0.5],
+  ['Jupiter',[5.20288700,0.04838624,1.30439695,34.39644051,14.72847983,100.47390909],[-0.00011607,-0.00013253,-0.00183714,3034.74612775,0.21252668,0.20469106],-2.2],
+  ['Saturne',[9.53667594,0.05386179,2.48599187,49.95424423,92.59887831,113.66242448],[-0.00125060,-0.00050991,0.00193609,1222.49362201,-0.41897216,-0.28867794],0.6]
+];
+/** Position héliocentrique écliptique (UA) d'une planète, T en siècles juliens depuis J2000 */
+function helio(p,T){
+  const [a,e,I,L,w,O]=p[1].map((v,i)=>v+p[2][i]*T), M=((L-w)%360+540)%360-180, om=w-O;
+  let E=M*D2R+e*Math.sin(M*D2R); for(let k=0;k<6;k++) E-=(E-e*Math.sin(E)-M*D2R)/(1-e*Math.cos(E));
+  const x=a*(Math.cos(E)-e), y=a*Math.sqrt(1-e*e)*Math.sin(E), co=Math.cos(om*D2R), so=Math.sin(om*D2R), cO=Math.cos(O*D2R), sO=Math.sin(O*D2R), cI=Math.cos(I*D2R), sI=Math.sin(I*D2R);
+  return [(co*cO-so*sO*cI)*x+(-so*cO-co*sO*cI)*y, (co*sO+so*cO*cI)*x+(-so*sO+co*cO*cI)*y, so*sI*x+co*sI*y];
+}
+/** Planètes visibles à l'œil nu : nom, {ra, dec}, magnitude indicative */
+function planetsAt(ms){
+  const T=(ms/86400000+2440587.5-2451545)/36525, E=helio(PLANETS[2],T);
+  return PLANETS.filter(p=>p[0]!=='Terre').map(p=>{ const h=helio(p,T), x=h[0]-E[0], y=h[1]-E[1], z=h[2]-E[2];
+    return {name:p[0], mag:p[3], ...eclToEq(Math.atan2(y,x)/D2R, Math.atan2(z,Math.hypot(x,y))/D2R)}; });
+}
+/** Lune et Soleil (précision de l'ordre du degré) : positions, fraction éclairée, croissante ou non */
+function moonSun(ms){
+  const d=ms/86400000+2440587.5-2451545, r=x=>x*D2R;
+  const L=218.316+13.176396*d, M=134.963+13.064993*d, F=93.272+13.229350*d;
+  const lm=L+6.289*Math.sin(r(M)), bm=5.128*Math.sin(r(F));
+  const g=357.528+0.9856003*d, ls=280.460+0.9856474*d+1.915*Math.sin(r(g))+0.020*Math.sin(r(2*g));
+  const el=Math.acos(Math.cos(r(bm))*Math.cos(r(lm-ls)));
+  return {moon:eclToEq(lm,bm), sun:eclToEq(ls,0), frac:(1-Math.cos(el))/2, waxing:((lm-ls)%360+360)%360<180};
+}
+/** Lune en phase : partie éclairée tournée vers le Soleil (angle `toSun` dans le plan du dessin) */
+function drawMoon(ctx,x,y,rad,frac,toSun,ink,bg){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(toSun);
+  ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(0,0,rad,0,7); ctx.fill();
+  ctx.strokeStyle=ink; ctx.globalAlpha=0.35; ctx.lineWidth=rad*0.08; ctx.stroke(); ctx.globalAlpha=1;
+  const rx=rad*Math.abs(2*frac-1);
+  ctx.fillStyle=ink; ctx.beginPath(); ctx.arc(0,0,rad,-Math.PI/2,Math.PI/2);
+  if(frac>=0.5) ctx.ellipse(0,0,rx,rad,0,Math.PI/2,3*Math.PI/2,false); else ctx.ellipse(0,0,rx,rad,0,Math.PI/2,-Math.PI/2,true);
+  ctx.fill(); ctx.restore();
+}
 function drawSky(ctx, r, U){
   const c=st.colors, dark=lum(c.paper)<0.3, R=r.w/2, cx=r.x+R, cy=r.y+R;
   const bg=dark?c.land:c.text, ink=dark?c.text:c.paper;
@@ -246,7 +298,13 @@ function drawSky(ctx, r, U){
   if(ms!=null && S){
     const {lat,lon}=st.marker;
     // projection stéréographique centrée sur le zénith : horizon = bord du disque, nord en haut, est à gauche
-    const P=(ra,dec)=>{ const a=altAz(ra,dec,lat,lon,ms), q=Math.tan((90-a.alt)*D2R/2)*R, z=a.az*D2R; return {x:cx-q*Math.sin(z), y:cy-q*Math.cos(z), alt:a.alt}; };
+    const P=(ra,dec)=>{ const a=altAz(ra,dec,lat,lon,ms), q=Math.tan((90-Math.max(a.alt,-75))*D2R/2)*R, z=a.az*D2R; return {x:cx-q*Math.sin(z), y:cy-q*Math.cos(z), alt:a.alt}; };
+    if(st.sky.milky){   // Voie lactée : cinq niveaux superposés, du plus diffus au plus dense
+      if(window.SKY_MW){ ctx.save(); ctx.fillStyle=ink; ctx.globalAlpha=0.055;
+        for(const lvl of SKY_MW){ ctx.beginPath(); for(const ring of lvl){ for(let i=0;i<ring.length;i+=2){ const p=P(ring[i],ring[i+1]); i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y); } ctx.closePath(); } ctx.fill('evenodd'); }
+        ctx.restore(); }
+      else if(!ui.thumb) ensureMilkyWay();
+    }
     ctx.strokeStyle=ink;
     if(st.sky.grid){ ctx.globalAlpha=0.18; ctx.lineWidth=U*0.0008;
       for(const a of [30,60]){ const q=Math.tan((90-a)*D2R/2)*R; ctx.beginPath(); ctx.arc(cx,cy,q,0,7); ctx.stroke(); }
@@ -257,10 +315,16 @@ function drawSky(ctx, r, U){
     ctx.globalAlpha=1; ctx.fillStyle=ink;
     for(const [ra,dec,mag] of S.stars){ const p=P(ra,dec); if(p.alt<0) continue;
       const rr=U*0.0016*Math.max(0.6,(6.2-mag)*0.75); ctx.beginPath(); ctx.arc(p.x,p.y,rr,0,7); ctx.fill(); }
+    if(st.sky.planets) for(const pl of planetsAt(ms)){ const p=P(pl.ra,pl.dec); if(p.alt<0) continue;
+      const rr=U*0.0016*Math.max(0.6,(6.2-pl.mag)*0.75);
+      ctx.beginPath(); ctx.arc(p.x,p.y,rr,0,7); ctx.fill(); ctx.save(); ctx.strokeStyle=ink; ctx.lineWidth=U*0.0007; ctx.beginPath(); ctx.arc(p.x,p.y,rr*2.1,0,7); ctx.stroke(); ctx.restore();
+      drawText(ctx,pl.name,p.x+rr*2.6,p.y+U*0.003,{size:U*0.0095,italic:true,align:'left',color:ink}); }
+    if(st.sky.moon){ const ml=moonSun(ms), p=P(ml.moon.ra,ml.moon.dec);
+      if(p.alt>-1){ const s=P(ml.sun.ra,ml.sun.dec); drawMoon(ctx,p.x,p.y,U*0.014,ml.frac,Math.atan2(s.y-p.y,s.x-p.x),ink,bg); } }
   } else if(!S && !ui.thumb) ensureSky();
   ctx.restore();
   // horizon, points cardinaux
-  ctx.strokeStyle=c.frame; ctx.lineWidth=0.0022*U; ctx.beginPath(); ctx.arc(cx,cy,R+0.012*U,0,7); ctx.stroke();
+  ctx.strokeStyle=paint(c.frame); ctx.lineWidth=0.0022*U; ctx.beginPath(); ctx.arc(cx,cy,R+0.012*U,0,7); ctx.stroke();
   ctx.lineWidth=0.0008*U; ctx.beginPath(); ctx.arc(cx,cy,R+0.004*U,0,7); ctx.stroke();
   const cs=0.016*U, o=R+0.032*U;
   [['N',0,-1],['E',-1,0],['S',0,1],['O',1,0]].forEach(([t,dx,dy])=>drawText(ctx,t,cx+dx*o,cy+dy*o+cs*0.36,{size:cs,align:'center',color:c.text}));
@@ -268,17 +332,161 @@ function drawSky(ctx, r, U){
 function lum(hex){ const n=parseInt(hex.slice(1),16), f=v=>{ v/=255; return v<=0.03928?v/12.92:((v+0.055)/1.055)**2.4; }; return 0.2126*f(n>>16&255)+0.7152*f(n>>8&255)+0.0722*f(n&255); }
 function contrast(a,b){ const x=lum(a), y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); }
 
+// ---------- Couleurs dérivées ----------
+/** Teinte assombrie (f : part de noir) ou éclaircie (f : part de blanc) */
+const shade=(hex,f)=>'#'+[1,3,5].map(i=>Math.round(parseInt(hex.slice(i,i+2),16)*(1-f)).toString(16).padStart(2,'0')).join('');
+const tint=(hex,f)=>'#'+[1,3,5].map(i=>{ const v=parseInt(hex.slice(i,i+2),16); return Math.round(v+(255-v)*f).toString(16).padStart(2,'0'); }).join('');
+/** Mélange de deux teintes (t : part de b) */
+const mix=(a,b,t)=>'#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-t)+parseInt(b.slice(i,i+2),16)*t).toString(16).padStart(2,'0')).join('');
+
+// ---------- Dorure ----------
+// Textes, filets et repères en dégradé métallique tiré de leur propre couleur (or, argent, cuivre…) :
+// bandes de reflets en diagonale, calculées sur toute l'affiche (même rendu à l'aperçu et à l'export).
+let foilCtx=null;
+function foilGradient(ctx, hex, x0, y0, x1, y1, bands){
+  const g=ctx.createLinearGradient(x0,y0,x1,y1), lo=shade(hex,0.45), hi=tint(hex,0.62), seq=[lo,hex,hi,hex];
+  const n=bands*4; for(let i=0;i<=n;i++) g.addColorStop(i/n,seq[i%4]);
+  return g;
+}
+/** Peinture d'un élément d'encre : la couleur, ou son dégradé doré pendant un rendu avec dorure */
+function paint(color){
+  if(!foilCtx || typeof color!=='string' || !/^#[0-9A-Fa-f]{6}$/.test(color)) return color;
+  let g=foilCtx.cache.get(color);
+  if(!g){ const {W,H}=foilCtx; g=foilGradient(document.createElement('canvas').getContext('2d'),color,0,0,W*0.7,H,6); foilCtx.cache.set(color,g); }
+  return g;
+}
+
+// ---------- Autour du repère ----------
+/** Rayon du halo et du quartier en relief, en px pour un cadre de largeur w */
+const focusRadius=w=>(st.focusR??30)/100*w;
+/** Halo du souvenir : la ville se dissout dans le papier en s'éloignant du lieu */
+function drawHalo(ctx, r, view){
+  const q=project(view.marker.lat,view.marker.lon,r,view), R=focusRadius(r.w), pc=hexA(st.colors.paper);
+  const g=ctx.createRadialGradient(q.x,q.y,R*0.8,q.x,q.y,R*2.6);
+  g.addColorStop(0,pc(0)); g.addColorStop(0.45,pc(0.6)); g.addColorStop(1,pc(0.95));
+  ctx.fillStyle=g; ctx.fillRect(r.x,r.y,r.w,r.h);
+}
+
+// ---------- Ornements cartographiques ----------
+const NICE_M=[10,20,25,50,100,200,250,500,1000,2000,2500,5000,10000,20000,50000];
+const NICE_MIN=[0.25,0.5,1,2,5,10,15,30,60,120];   // pas des graduations, en minutes d'arc
+/** Mètres par pixel au centre d'une vue (cadre de largeur w) */
+const metersPerPx=(view,w)=>40075016.686*Math.cos(view.center.lat*D2R)/worldSize(w,view.zoom);
+/** Plaque de papier semi-opaque sous un ornement (lisible sur la carte) */
+function plate(ctx,x,y,w,h){ ctx.save(); ctx.fillStyle=hexA(st.colors.paper)(0.86); ctx.fillRect(x,y,w,h); ctx.restore(); }
+function drawOrnaments(ctx, r, view, U, first){
+  const o=st.orn||{}, c=st.colors, ink=paint(c.text); if(!o.scale && !o.compass && !o.grid) return;
+  const sh=r.shape, cx=r.x+r.w/2;
+  if(o.grid) drawGraticule(ctx,r,view,U,!sh);
+  if(o.scale){
+    const mpp=metersPerPx(view,r.w), want=r.w*(sh?0.26:0.2)*mpp, len=NICE_M.reduce((a,b)=>Math.abs(b-want)<Math.abs(a-want)?b:a), px=len/mpp, h=0.0055*U;
+    const x0 = sh==='circle' ? cx-px/2 : sh==='heart' ? cx-px/2 : r.x+0.04*U;
+    const y0 = sh==='circle' ? r.y+r.h*0.85 : sh==='heart' ? r.y+r.h*0.6 : r.y+r.h-0.042*U;
+    plate(ctx,x0-0.016*U,y0-0.03*U,px+0.032*U,0.046*U);
+    ctx.save(); ctx.strokeStyle=ink; ctx.lineWidth=0.001*U;
+    for(let i=0;i<4;i++){ ctx.fillStyle=i%2?c.paper:ink; ctx.fillRect(x0+i*px/4,y0,px/4,h); } ctx.strokeRect(x0,y0,px,h); ctx.restore();
+    const fs=0.0115*U, lab=len>=1000?`${len/1000} km`.replace('.',','):`${len} m`;
+    drawText(ctx,'0',x0,y0-0.008*U,{size:fs,align:'center',color:c.text});
+    drawText(ctx,lab,x0+px,y0-0.008*U,{size:fs,align:'center',color:c.text});
+  }
+  if(o.compass && first){
+    const R=0.034*U, x = sh==='circle' ? cx : sh==='heart' ? r.x+r.w*0.74 : sh==='arch' ? cx : r.x+r.w-0.065*U,
+          y = sh==='circle' ? r.y+r.h*0.15 : sh==='heart' ? r.y+r.h*0.27 : sh==='arch' ? r.y+r.w*0.16 : r.y+0.075*U;
+    drawCompass(ctx,x,y,R,U);
+  }
+}
+/** Rose des vents à huit pointes, nord marqué */
+function drawCompass(ctx,x,y,R,U){
+  const c=st.colors, ink=paint(c.text);
+  ctx.save(); ctx.fillStyle=hexA(c.paper)(0.86); ctx.beginPath(); ctx.arc(x,y,R*1.42,0,7); ctx.fill();
+  ctx.strokeStyle=ink; ctx.lineWidth=0.0008*U; ctx.lineJoin='round';
+  ctx.beginPath(); ctx.arc(x,y,R*0.62,0,7); ctx.stroke(); ctx.beginPath(); ctx.arc(x,y,R*1.12,0,7); ctx.stroke();
+  for(let k=0;k<16;k++){ const a=k*Math.PI/8; ctx.beginPath(); ctx.moveTo(x+Math.sin(a)*R*1.12,y-Math.cos(a)*R*1.12); ctx.lineTo(x+Math.sin(a)*R*(k%2?1.04:1.0),y-Math.cos(a)*R*(k%2?1.04:1.0)); ctx.stroke(); }
+  for(const k of [1,3,5,7,0,2,4,6]){   // pointes intermédiaires d'abord, cardinales par-dessus
+    const a=k*Math.PI/4, l=k%2?R*0.6:R, w=R*(k%2?0.12:0.16);
+    for(const s of [-1,1]){ ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+Math.sin(a)*l,y-Math.cos(a)*l); ctx.lineTo(x+Math.sin(a+s*Math.PI/2)*w,y-Math.cos(a+s*Math.PI/2)*w); ctx.closePath();
+      ctx.fillStyle=s>0?ink:c.paper; ctx.fill(); ctx.stroke(); } }
+  ctx.restore();
+  drawText(ctx,'N',x,y-R*1.2,{size:0.013*U,align:'center',color:c.text});
+}
+const dmsShort=(v,pos,neg)=>{ const a=Math.abs(v), d=Math.floor(a+1e-9), mm=Math.round((a-d)*60*4)/4; const m=mm>=60?0:mm, dd=mm>=60?d+1:d;
+  return `${dd}°${m?String(m%1?m.toFixed(2).replace(/0$/,''):m).replace('.',',').padStart(2,'0')+'′':''}${v>=0?pos:neg}`; };
+/** Graduations : méridiens et parallèles à pas rond, fins et pâles ; repères et valeurs au bord d'un cadre rectangulaire */
+function drawGraticule(ctx,r,view,U,ticks){
+  const nw=unproject(r.x,r.y,r,view), se=unproject(r.x+r.w,r.y+r.h,r,view), span=(se.lon-nw.lon)*60;
+  const step=NICE_MIN.find(s=>span/s<=5)||120, deg=step/60, c=st.colors, fs=0.0095*U, tl=0.012*U;
+  const lons=[], lats=[];
+  for(let v=Math.ceil(nw.lon/deg)*deg; v<se.lon; v+=deg) lons.push(v);
+  for(let v=Math.ceil(se.lat/deg)*deg; v<nw.lat; v+=deg) lats.push(v);
+  ctx.save(); ctx.strokeStyle=paint(c.text); ctx.lineWidth=0.0006*U; ctx.globalAlpha=0.35; ctx.setLineDash([0.006*U,0.004*U]);
+  ctx.beginPath();
+  for(const v of lons){ const x=project(view.center.lat,v,r,view).x; ctx.moveTo(x,r.y); ctx.lineTo(x,r.y+r.h); }
+  for(const v of lats){ const y=project(v,view.center.lon,r,view).y; ctx.moveTo(r.x,y); ctx.lineTo(r.x+r.w,y); }
+  ctx.stroke(); ctx.restore();
+  if(!ticks) return;
+  ctx.save(); ctx.strokeStyle=paint(c.text); ctx.lineWidth=0.0012*U; ctx.beginPath();
+  for(const v of lons){ const x=project(view.center.lat,v,r,view).x; ctx.moveTo(x,r.y); ctx.lineTo(x,r.y+tl); ctx.moveTo(x,r.y+r.h); ctx.lineTo(x,r.y+r.h-tl); }
+  for(const v of lats){ const y=project(v,view.center.lon,r,view).y; ctx.moveTo(r.x,y); ctx.lineTo(r.x+tl,y); ctx.moveTo(r.x+r.w,y); ctx.lineTo(r.x+r.w-tl,y); }
+  ctx.stroke(); ctx.restore();
+  for(const v of lons){ const x=project(view.center.lat,v,r,view).x; drawText(ctx,dmsShort(v,'E','O'),x+0.004*U,r.y+tl+fs*1.1,{size:fs,align:'left',color:c.text}); }
+  for(const v of lats){ const y=project(v,view.center.lon,r,view).y; drawText(ctx,dmsShort(v,'N','S'),r.x+tl+0.004*U,y-0.004*U,{size:fs,align:'left',color:c.text}); }
+}
+
+// ---------- Gabarit « Lettres » : le nom de la ville découpé dans la carte ----------
+// La carte n'apparaît pleinement qu'à travers les lettres du titre ; ailleurs, un voile de papier la laisse deviner.
+const TYPO_ROWS=['subtitle','coords','dedication','names','date','legend'];
+const TYPO_VEIL=0.9;
+/** Lignes et taille des lettres : une ligne, ou un mot par ligne si les lettres y gagnent en taille */
+function typoFit(ctx, title, r){
+  const F=fontOf('title'), sp=0.03, words=title.split(/\s+/).filter(Boolean);
+  const opts=[[title]]; if(words.length>1) opts.push(words);
+  let best=null;
+  for(const lines of opts){
+    ctx.font=fontStr(100,{role:'title',key:'title'});
+    const wMax=Math.max(...lines.map(l=>textW(ctx,l,sp,100)));
+    const size=Math.min(r.w*0.92/wMax*100, r.h*0.86/(lines.length*0.86)/(F.scale||1));
+    if(!best || size>best.size) best={lines,size};
+  }
+  return {...best,sp};
+}
+function drawLetters(ctx, g){
+  const r=g.map, U=g.U, c=st.colors, t=(textLine('title')||'').toUpperCase();
+  const w=Math.max(1,Math.ceil(r.w)), h=Math.max(1,Math.ceil(r.h));
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const m=cv.getContext('2d');
+  m.fillStyle=hexA(c.paper)(TYPO_VEIL); m.fillRect(0,0,w,h);
+  if(t){
+    const f=typoFit(m,t,r), F=fontOf('title'), lh=f.size*(F.scale||1)*0.86, n=f.lines.length;
+    const font=fontStr(f.size,{role:'title',key:'title'});
+    m.font=font; m.textBaseline='alphabetic'; m.textAlign='left';
+    const cap=lh*0.82, y0=h/2-(n*lh)/2+cap;   // lignes centrées sur la hauteur des capitales
+    const lines=f.lines.map((l,i)=>{ const lw=textW(m,l,f.sp,f.size); return {l,x:(w-lw)/2,y:y0+i*lh}; });
+    m.globalCompositeOperation='destination-out';
+    const each=(fn)=>{ for(const L of lines){ let x=L.x; for(const ch of L.l){ fn(ch,x,L.y); x+=m.measureText(ch).width+f.sp*f.size; } } };
+    each((ch,x,y)=>m.fillText(ch,x,y));
+    ctx.drawImage(cv,r.x,r.y,w,h);
+    ctx.save(); ctx.font=font; ctx.textBaseline='alphabetic'; ctx.textAlign='left'; ctx.strokeStyle=paint(c.frame); ctx.lineWidth=0.0014*U; ctx.lineJoin='round';
+    for(const L of lines){ let x=L.x; for(const ch of L.l){ ctx.strokeText(ch,r.x+x,r.y+L.y); x+=m.measureText(ch).width+f.sp*f.size; } }
+    ctx.restore();
+  } else ctx.drawImage(cv,r.x,r.y,w,h);
+  cv.width=cv.height=0;
+}
+
 // ---------- Rendu de l'affiche (aperçu ET export) ----------
 /** pass: 'under' (papier, ciel) | 'over' (tout ce qui est au-dessus de la carte) | 'all'.
  *  mapFn(ctx, rect, view, index) dessine la carte d'une vue (export : une ou deux vues). */
 function drawPoster(ctx, W, H, pass, mapFn){
+  foilCtx = st.fx?.foil ? {W,H,cache:new Map()} : null;   // dorure : dégradés propres à ce rendu
+  try{ return drawPosterAt(ctx,W,H,pass,mapFn); } finally{ foilCtx=null; }
+}
+function drawPosterAt(ctx, W, H, pass, mapFn){
   const c=st.colors, g=geom(st,W,H), m=g.m, U=g.U, r=g.map;
   if(pass!=='over'){ ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H); if(g.sky) drawSky(ctx,g.sky,U); }
   if(pass==='all' && mapFn) g.places.forEach((p,i)=>{ ctx.save(); clipMap(ctx,p.rect); ctx.fillStyle=c.land; ctx.fillRect(p.rect.x,p.rect.y,p.rect.w,p.rect.h); mapFn(ctx,p.rect,p.view,i); ctx.restore(); });
   if(pass==='under') return g;
 
+  const lay=st.layout;
   // Fondu
-  if(st.layout==='fade'){
+  if(lay==='fade'){
     const pc=hexA(c.paper);
     if(!g.land){
       let gr=ctx.createLinearGradient(0,r.h*0.62,0,r.h); gr.addColorStop(0,pc(0)); gr.addColorStop(1,pc(1));
@@ -295,11 +503,14 @@ function drawPoster(ctx, W, H, pass, mapFn){
         gr=ctx.createLinearGradient(x0,y0,x1,y1); gr.addColorStop(0,pc(1)); gr.addColorStop(1,pc(0)); ctx.fillStyle=gr; ctx.fillRect(rx,ry,rw,rh); }
     }
   }
+  // Autour du repère et ornements, sous les repères
+  if(st.fx?.halo) for(const p of g.places){ ctx.save(); clipMap(ctx,p.rect); drawHalo(ctx,p.rect,p.view); ctx.restore(); }
+  if(lay==='typo') drawLetters(ctx,g);
+  g.places.forEach((p,i)=>{ ctx.save(); clipMap(ctx,p.rect); drawOrnaments(ctx,p.rect,p.view,U,i===0); ctx.restore(); });
   // Repères (et itinéraires) de chaque vue
   for(const p of g.places){ ctx.save(); clipMap(ctx,p.rect); drawMarkers(ctx,p.rect,p.view,U,W,p.main); ctx.restore(); }
 
   // Filets & textes
-  const lay=st.layout;
   if(lay==='souvenir' && !g.land){
     const yH=m+0.061*U, inner=W-2*m;
     const title=textLine('title'), date=textLine('date'), coords=textLine('coords'), hs=0.031*U;
@@ -318,7 +529,7 @@ function drawPoster(ctx, W, H, pass, mapFn){
       const f=Math.min(1,(inner-gap)/(wd+wn)); noteFit('dedication',f); noteFit('names',f);
       drawText(ctx,ded,m,yF,{size:ds*f,align:'left',color:c.text,key:'dedication'});
       const bx=m+wd*f+0.032*U;
-      ctx.strokeStyle=c.frame; ctx.lineWidth=0.0018*U; ctx.beginPath(); ctx.moveTo(bx,yF-0.04*U); ctx.lineTo(bx,yF+0.004*U); ctx.stroke();
+      ctx.strokeStyle=paint(c.frame); ctx.lineWidth=0.0018*U; ctx.beginPath(); ctx.moveTo(bx,yF-0.04*U); ctx.lineTo(bx,yF+0.004*U); ctx.stroke();
       drawText(ctx,names,bx+0.03*U,yF-0.008*U,{size:nsz*f,italic:true,align:'left',color:c.text,key:'names'});
     } else if(ded){
       drawText(ctx,ded,m,yF,{size:ds,key:'dedication',align:'left',color:c.text,maxW:inner});
@@ -328,7 +539,7 @@ function drawPoster(ctx, W, H, pass, mapFn){
   } else if(lay==='diptych'){
     drawText(ctx,textLine('title'),W/2,g.title.y,{size:0.06*U*tScale('title'),spacing:0.15,upper:true,role:'title',key:'title',align:'center',color:c.text,maxW:W-2*m});
     const views=[], A=st.active||0; views[A]=st; views[1-A]=st.place2||st;
-    g.rects.forEach((rc,i)=>{ ctx.strokeStyle=c.frame; ctx.lineWidth=0.0018*U; ctx.strokeRect(rc.x,rc.y,rc.w,rc.h);
+    g.rects.forEach((rc,i)=>{ ctx.strokeStyle=paint(c.frame); ctx.lineWidth=0.0018*U; ctx.strokeRect(rc.x,rc.y,rc.w,rc.h);
       const lab=textLine('label'+(i+1)), co=placeCoordText(views[i].marker);
       drawText(ctx,lab,rc.x,g.labels[i],{size:0.03*U*tScale('dedication'),italic:true,key:'label'+(i+1),align:'left',color:c.text,maxW:rc.w*(co?0.6:1)});
       if(st.show.coords!==false) drawText(ctx,co,rc.x+rc.w,g.labels[i],{size:0.015*U*tScale('coords'),spacing:0.08,align:'right',color:c.text,maxW:rc.w*(lab?0.38:1)}); });
@@ -337,18 +548,18 @@ function drawPoster(ctx, W, H, pass, mapFn){
     drawTravelText(ctx,U,g.box);
   } else {
     if(lay==='classic'){
-      ctx.strokeStyle=c.frame;
+      ctx.strokeStyle=paint(c.frame);
       ctx.lineWidth=0.0025*U; const o1=0.014*U; ctx.strokeRect(r.x-o1,r.y-o1,r.w+2*o1,r.h+2*o1);
       ctx.lineWidth=0.0009*U; const o2=0.006*U; ctx.strokeRect(r.x-o2,r.y-o2,r.w+2*o2,r.h+2*o2);
     } else if(['medallion','heart','arch'].includes(lay) && st.ring){
-      ctx.strokeStyle=c.frame; ctx.lineWidth=0.0022*U; strokeShape(ctx,r,0.014*U);
+      ctx.strokeStyle=paint(c.frame); ctx.lineWidth=0.0022*U; strokeShape(ctx,r,0.014*U);
       ctx.lineWidth=0.0008*U; strokeShape(ctx,r,0.006*U);
     } else if(lay==='polaroid'){
       ctx.strokeStyle=hexA(c.text)(0.18); ctx.lineWidth=0.0012*U; ctx.strokeRect(r.x,r.y,r.w,r.h);
     } else if(lay==='sky'){
-      ctx.strokeStyle=c.frame; ctx.lineWidth=0.0012*U; ctx.strokeRect(r.x,r.y,r.w,r.h);
+      ctx.strokeStyle=paint(c.frame); ctx.lineWidth=0.0012*U; ctx.strokeRect(r.x,r.y,r.w,r.h);
     }
-    drawCartouche(ctx,U,{...g.text,rows:lay==='polaroid'?POLA_ROWS:CART_ROWS});
+    drawCartouche(ctx,U,{...g.text,rows:lay==='polaroid'?POLA_ROWS:CART_ROWS,only:lay==='typo'?TYPO_ROWS:null});
   }
   // Attribution OSM (ODbL)
   if(st.attribution){

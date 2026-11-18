@@ -32,7 +32,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 ## Commandes
 ```bash
 pip install playwright mapbox-vector-tile && python -m playwright install chromium   # une fois
-python tests/fixture.py && python tests/make_formats.py   # génère les données de test
+python tests/fixture.py && python tests/make_formats.py && python tests/make_city.py   # génère les données de test
 python tests/run_all.py          # toute la suite (génère les données, résume les échecs) — lancée aussi par la CI
 python tests/run.py              # moteur Fichier + export PNG 2480×3508 / pHYs 300 DPI
 python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
@@ -45,6 +45,8 @@ python tests/mobile.py           # panneau coulissant, mode Cadrer, paysage, A�
 python tests/ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
 python tests/design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, mur, lien, paysage, GPX, ciel
 python tests/vectors.py          # cache de tracés du moteur Fichier
+python tests/city.py             # ville réaliste (tests/city.json) : import JSON et XML, fleuve, ponts, fluidité, exports
+python tests/art.py              # pistes artistiques : effets, dorure, ornements, Lettres, papiers, ciel, palette d'une photo
 python tests/compare.py          # comparer avant / après un changement de thème
 python tests/welcome.py          # ambiance proposée au premier lancement
 python tests/fonts.py            # polices auto-hébergées, aucun appel tiers
@@ -57,6 +59,8 @@ python tests/pwa.py              # sous-chemin GitHub Pages, manifeste, service 
 python -m http.server 8000       # aperçu local : http://localhost:8000
 ```
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.
+
+`tests/city.json` (généré par `tests/make_city.py`) est une ville fictive mais réaliste — fleuve à îles, vieille ville, damiers, ponts, rocade, ~22 000 bâtiments — à importer aussi dans l'application (onglet Lieu, section Avancé, moteur Fichier) pour juger un rendu sans réseau ; elle est centrée sur la vue par défaut.
 
 ## Avant chaque commit
 - Lancer `python tests/run_all.py` : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports de 2480 × 3508 px). La même suite tourne dans GitHub Actions à chaque push et pull request.
