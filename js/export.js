@@ -17,7 +17,7 @@ const slug=s=>(s||'ville').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
 let lastUrl=null;
 async function exportPoster(){
   if(st.engine==='maplibre' && !needConsent(()=>exportPoster())) return;
-  if(st.engine!=='maplibre' && !opData){ toast(st.engine==='file'?'Importez d\'abord un fichier de données.':'Chargez d\'abord les vecteurs Overpass.',true); return; }
+  if(st.engine!=='maplibre' && !osmData){ toast('Importez d\'abord un fichier de données.',true); return; }
   setBusy(true,'Chargement des polices…'); let show=false;
   try{
     const {W:EW,H:EH}=posterDims();
@@ -61,7 +61,7 @@ function showEnvWarning(){
 // ---------- Diagnostic réseau ----------
 async function probe(fn,ms=10000){
   const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),ms), t0=performance.now();
-  try{ const r=await fn(ctl.signal); clearTimeout(t); return {ok:r.ok, status:r.status, op:r.op, info:r.info||('HTTP '+r.status), ms:Math.round(performance.now()-t0)}; }
+  try{ const r=await fn(ctl.signal); clearTimeout(t); return {ok:r.ok, status:r.status, info:r.info||('HTTP '+r.status), ms:Math.round(performance.now()-t0)}; }
   catch(e){ clearTimeout(t); return {ok:false, info:e.name==='AbortError'?'délai dépassé':netMsg(e)}; }
 }
 async function runDiagnostics(){
@@ -74,13 +74,6 @@ async function runDiagnostics(){
   const lib=line('Librairie MapLibre'); set(lib,{ok:mlLib==='ok', info: mlLib==='ok'?('chargée'+(mlCdn?' via '+mlCdn:'')):mlLib==='loading'?'chargement en cours':'aucun CDN joignable'});
   const tests=[
     ['Tuiles OpenFreeMap', s=>fetch(OFM_URL,{signal:s}).then(async r=>({ok:r.ok&&!!(await r.json()).tiles,status:r.status}))],
-    ...OVERPASS.map(u=>['Overpass · '+new URL(u).host, async s=>{
-      const b=opBlockInfo(u); if(b) return {ok:false,status:b.status,info:opBlockMsg(b),op:'suspended'};   // pas de nouvel essai
-      let r;
-      try{ r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent('[out:json][timeout:5];node(1);out;'),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:s}); }
-      catch(e){ if(e.name==='AbortError') throw e; return {ok:false,status:0,info:'pas de réponse (connexion, ou erreur serveur sans CORS)',op:'nores'}; }
-      if(r.status===406||r.status===429){ opSuspend(u,r.status,r.headers.get('Retry-After')); return {ok:false,status:r.status,info:'HTTP '+r.status+' · '+opBlockMsg(opBlockInfo(u)),op:'suspended'}; }
-      return {ok:r.ok,status:r.status,op:r.ok?'ok':'http'}; }, OP_TIMEOUT.diag]),
     ['Géocodage Nominatim', s=>fetch(NOMINATIM+'?format=json&limit=1&q=Blois',{signal:s}).then(r=>({ok:r.ok,status:r.status}))]
   ];
   const results=await Promise.all(tests.map(async([label,fn,ms])=>{ const d=line(label); const r=await probe(fn,ms); set(d,r); return r; }));
@@ -89,25 +82,12 @@ async function runDiagnostics(){
   const c=document.createElement('div'); c.className='note';
   c.textContent = !anyOk ? '→ Aucun service n\'est joignable depuis cette page. Ouvrez le fichier dans Chrome (pas dans un aperçu), vérifiez la connexion, ou utilisez le moteur « Fichier ».'
     : results[0].ok && mlLib==='ok' ? '→ Le moteur Vectoriel GPU devrait fonctionner.'
-    : results.slice(1,1+OVERPASS.length).some(r=>r.ok) ? '→ Utilisez le moteur Overpass.' : '→ Utilisez le moteur « Fichier ».';
+    : '→ Utilisez le moteur « Fichier ».';
   box.appendChild(c);
-  // Overpass : tous les miroirs en échec alors que d'autres services répondent → panne côté serveurs
-  const op=results.slice(1,1+OVERPASS.length);
-  if(anyOk && !op.some(r=>r.ok)){
-    const o=document.createElement('div'); o.className='diagOp';
-    o.textContent = op.every(r=>r.op==='suspended')
-      ? '→ Overpass : tous les serveurs sont suspendus après un refus (406/429). Utilisez le moteur Vectoriel GPU ou « Fichier » en attendant la reprise.'
-      : '→ Overpass : aucun serveur public ne répond correctement (erreurs 5xx ou délai dépassé), alors que votre connexion fonctionne. La panne vient des serveurs Overpass : réessayez plus tard, ou utilisez le moteur Vectoriel GPU ou « Fichier ».';
-    box.appendChild(o);
-  }
   $('bDiag').disabled=false;
 }
 
 // ---------- Moteur 3 : import de fichier (hors ligne) ----------
-function currentQuery(){
-  const g=geom(st,posterDims().W,posterDims().H); return buildQuery(viewBounds(st,g.map.h/g.map.w,0.15));
-}
-function overpassGetUrl(){ return (opAvailable()[0]||OVERPASS[0])+'?data='+encodeURIComponent(currentQuery()); }
 function osmXmlToElements(txt){
   const doc=new DOMParser().parseFromString(txt,'application/xml');
   if(doc.querySelector('parsererror')) throw new Error('XML illisible');
@@ -141,10 +121,10 @@ function importText(txt,name=''){
   if(t.startsWith('<')) els=osmXmlToElements(t);
   else { const j=JSON.parse(t); els = Array.isArray(j.elements) ? j.elements : (j.type ? geojsonToElements(j) : null); }
   if(!els) throw new Error('format non reconnu');
-  const d=parseOverpass({elements:els});
+  const d=parseOsm({elements:els});
   if(!d.count || !d.extent) throw new Error('aucun objet cartographique exploitable');
   d.source='file'; d.bounds=d.extent; d.layers=JSON.stringify(st.layers);
-  opData=d;
+  osmData=d;
   // recadrage si la vue courante ne recoupe pas les données
   const e=d.extent, inside=(st.center.lat>e.s&&st.center.lat<e.n&&st.center.lon>e.w&&st.center.lon<e.e);
   if(!inside){

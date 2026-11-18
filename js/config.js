@@ -4,7 +4,7 @@
 /* =========================================================================
    City Map Studio — 100 % open source
    Licence MIT © Contributeurs de City Map Studio (cf. LICENSE)
-   MapLibre GL JS (BSD-3) · OpenFreeMap (données OSM ODbL, schéma © OpenMapTiles CC-BY 4.0) · Overpass API · Nominatim
+   MapLibre GL JS (BSD-3) · OpenFreeMap (données OSM ODbL, schéma © OpenMapTiles CC-BY 4.0) · Nominatim
    ========================================================================= */
 
 // ---------- Constantes ----------
@@ -13,12 +13,6 @@ const REF_W = 800;               // largeur de référence du cadre carte (zoom 
 const MARKER_BASE = 0.055;       // 100 % = 5,5 % de la largeur de l'affiche
 const GOLD = '#C5A059';
 const OFM_URL = 'https://tiles.openfreemap.org/planet';
-// overpass-api.de en dernier : depuis juin 2026 il renvoie 406 aux clients sans Referer (fichier local, aperçus)
-const OVERPASS = ['https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass-api.de/api/interpreter'];
-// Délais côté client (ms) : requête de données et sonde du diagnostic. Objet modifiable par les tests (__cms.OP_TIMEOUT).
-// fetch : attente d'une réponse (le serveur calcule jusqu'à OP_SERVER_TIMEOUT s) ; probe : sondage de la page d'état ; retry : délai avant un 2e essai après une erreur serveur immédiate
-const OP_TIMEOUT = {fetch: 100000, diag: 20000, probe: 5000, retry: 1500};
-const OP_SERVER_TIMEOUT = 90, OP_PAD = 0.2;
 const ML_VERSION = '4.7.1';
 // lib/ : copie embarquée dans le dépôt (BSD-3, cf. lib/LICENSE-maplibre-gl.txt) ; les CDN restent en secours
 // Empreintes SRI des fichiers 4.7.1 (identiques au paquet npm et à lib/) : un CDN qui servirait un autre contenu est refusé.

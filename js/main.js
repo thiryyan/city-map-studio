@@ -20,7 +20,6 @@ async function boot(){
   loadFromHash();
   setTimeout(maybeWelcome,300);   // après l'éventuelle demande d'accord (affichée au démarrage)
   document.fonts && document.fonts.ready.then(()=>{ scheduleOver(); refreshCards(); });
-  if(st.engine==='overpass' && !opData) fetchOverpass();
   const ok=await loadMaplibre();
   updateEngineUI();
   if(ok){ if(st.engine==='maplibre') renderMap(true); }
@@ -31,7 +30,7 @@ async function boot(){
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
   installPwa();
-  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildQuery,get OP_ORDER(){return OP_ORDER},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOverpass,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,OP_TIMEOUT,get opData(){return opData},get mlLib(){return mlLib},get opBlock(){return opBlock},opAvailable,fetchOverpass,parseCoords,get consent(){return consent},resetAll};
+  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll};
 }
 /** Application installable et utilisable hors ligne : manifeste et service worker (sw.js), seulement en http(s).
  *  En file://, le navigateur refuse les deux (simple bruit dans la console) : rien n'est déclaré.

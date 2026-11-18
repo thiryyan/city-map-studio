@@ -52,7 +52,7 @@ function placeMarkerFromInput(){
   const out=c.lat<v.s||c.lat>v.n||c.lon<v.w||c.lon>v.e;
   if(out) goTo(c.lat,c.lon);
   $('markerIn').value=''; $('markerIn').blur();
-  toast('Repère placé'+(out?' · carte recentrée':'')+(st.engine==='overpass'&&out?' : actualisez les vecteurs':''));
+  toast('Repère placé'+(out?' · carte recentrée':''));
 }
 function setMarker(lat,lon){ st.marker={lat,lon}; setPlacing(false); updateMarkerTxt(); changed(); }
 function updateMarkerTxt(){ $('markerTxt').textContent=`${dms(st.marker.lat,'N','S')}  ·  ${dms(st.marker.lon,'E','W')}`; $('coordsManual').placeholder=coordText(); }
@@ -162,7 +162,7 @@ function buildUI(){
   // presets
   const pr=$('presets');
   PRESETS.forEach(([lbl,lat,lon,z,title,sub])=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=lbl;
-    b.onclick=()=>{ st.marker={lat,lon}; st.texts.title=title; st.texts.subtitle=sub; syncInputs(); updateMarkerTxt(); opData=null; goTo(lat,lon,z); redrawAll(); };
+    b.onclick=()=>{ st.marker={lat,lon}; st.texts.title=title; st.texts.subtitle=sub; syncInputs(); updateMarkerTxt(); osmData=null; goTo(lat,lon,z); redrawAll(); };
     pr.appendChild(b); });
   // gabarits
   const lay=$('layouts');
@@ -259,14 +259,11 @@ function buildUI(){
   $('markerForm').onsubmit=e=>{ e.preventDefault(); placeMarkerFromInput(); };
   $('bMarkerCenter').onclick=()=>setMarker(st.center.lat,st.center.lon);
   $('bToMarker').onclick=()=>goTo(st.marker.lat,st.marker.lon);
-  $('bRefresh2').onclick=()=>fetchOverpass();
   $('bDiag').onclick=runDiagnostics;
   $('bReset').onclick=askReset;
   $('bUiSmaller').onclick=()=>stepUiScale(-1); $('bUiLarger').onclick=()=>stepUiScale(1);
   $('bTsReset').onclick=()=>{ st.textScale={...DEFAULT_STATE.textScale}; st.textScaleAll=DEFAULT_STATE.textScaleAll; syncInputs(); changed(); toast('Tailles des textes rétablies'); };
   $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
-  $('lnkApi').onclick=e=>{ e.currentTarget.href=overpassGetUrl(); };
-  $('lnkTurbo').onclick=e=>{ e.currentTarget.href='https://overpass-turbo.eu/?R&Q='+encodeURIComponent(currentQuery()); };
   $('searchForm').onsubmit=e=>{ e.preventDefault(); search($('q').value); };
   $('bExport').onclick=exportPoster;
   $('resClose').onclick=()=>closeDialog('result');
@@ -284,7 +281,7 @@ function askReset(){
   resetAll();
 }
 /** Rétablit tous les réglages par défaut (lieu, cadrage, gabarit, thème, couleurs, repère, textes, calques).
- *  Sont conservés : l'accord aux services tiers, les suspensions Overpass et les données déjà chargées. */
+ *  Sont conservés : l'accord aux services tiers et les données déjà importées. */
 function resetAll(){
   clearTimeout(saveT); recordHistory();   // modification en attente : étape distincte
   const fresh=structuredClone(DEFAULT_STATE);
@@ -368,21 +365,18 @@ function drawCards(tab){
 }
 function updateEngineUI(){
   document.querySelector('#engineSeg [data-v=maplibre]').disabled = mlLib==='fail';
-  $('opBlock').hidden=st.engine!=='overpass';
   $('fileBlock').hidden=st.engine!=='file';
   $('engineHint').textContent = {
     maplibre: mlLib==='fail' ? 'Librairie MapLibre impossible à charger (aucun CDN joignable).' : 'Tuiles vectorielles OpenFreeMap : instantané, mers et côtes correctes, idéal sur mobile.',
-    overpass:'Géométrie OSM brute, détail maximal, chargée à la demande. Ne trace pas le littoral marin.',
-    file:'Aucun accès réseau requis : importez un fichier de données OSM. Le rendu et l\'export sont identiques au moteur Overpass.'
+    file:'Aucun accès réseau requis : importez un fichier de données OSM. Tracé vectoriel au détail maximal, aperçu et export identiques.'
   }[st.engine];
 }
 function setEngine(v,quiet){
   if(v==='maplibre' && mlLib==='fail'){ toast('MapLibre n\'a pas pu être chargé : aucun CDN joignable depuis cette page.',true); return; }
   st.engine=v; setSeg('engineSeg',v); updateEngineUI(); setPlacing(false); showBanner(false);
   if(v!=='maplibre') openAdvanced();
-  hist.quietUntil=Date.now()+1500;   // le moteur n'entre pas dans l'historique ; ses recentrages non plus   // import de fichier ou actualisation Overpass : réglages à portée de main
-  if(v==='overpass'){ renderMap(true); if(!opData||opData.source!=='overpass') fetchOverpass(); else checkOpCoverage(); }
-  else if(v==='file'){ renderMap(true); if(!opData && !quiet) toast('Importez un fichier de données (onglet Lieu).'); }
+  hist.quietUntil=Date.now()+1500;   // le moteur n'entre pas dans l'historique ; ses recentrages non plus
+  if(v==='file'){ renderMap(true); if(!osmData && !quiet) toast('Importez un fichier de données (onglet Lieu).'); }
   else { mlFailMsg=''; renderMap(true); mlRestyle(); }
   saveState();
 }

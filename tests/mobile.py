@@ -10,7 +10,7 @@ from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
-FIX = open(T / 'overpass.json').read()
+FIX = open(T / 'osm.json').read()
 JS_RECT = "s=>{const r=document.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,b:r.bottom,r:r.right}}"
 
 async def main():
@@ -27,8 +27,7 @@ async def main():
             page.on('pageerror', lambda e: errs.append(str(e)))
             async def route(r):
                 u = r.request.url
-                if 'interpreter' in u: await r.fulfill(status=200, content_type='application/json', body=FIX)
-                elif u.startswith('file:'): await r.continue_()
+                if u.startswith('file:'): await r.continue_()
                 else: await r.abort()
             await page.route('**/*', route)
             await page.goto(APP); await page.wait_for_timeout(1200)
@@ -39,7 +38,7 @@ async def main():
 
         # ---------- Téléphone portrait (iPhone 13 : 390 × 664 utiles) ----------
         ctx, page, errs = await open_page({'width': 390, 'height': 664})
-        await page.click('#engineSeg [data-v=overpass]'); await page.wait_for_timeout(800)
+        await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
         await page.evaluate("document.getElementById('banner').classList.remove('show')")
         await page.evaluate("__cms.setSheet('half')"); await page.wait_for_timeout(200)
         half = {k: await rect(page, s) for k, s in [('body', '.tabbody'), ('poster', '#poster'), ('panel', '#panel')]}

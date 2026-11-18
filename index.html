@@ -7,8 +7,8 @@
 <meta name="color-scheme" content="dark">
 <!-- Politique de sécurité du contenu (GitHub Pages ne permet pas d'en-têtes HTTP : balise meta).
      Aucun script ni style en ligne ; réseau limité aux services cartographiques (tous soumis à l'accord préalable)
-     et aux CDN de secours de MapLibre (chargés avec SRI). À tenir à jour avec OVERPASS, NOMINATIM, OFM_URL et ML_CDNS (js/config.js). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org https://nominatim.openstreetmap.org https://overpass-api.de https://overpass.private.coffee https://overpass.kumi.systems https://maps.mail.ru; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+     et aux CDN de secours de MapLibre (chargés avec SRI). À tenir à jour avec NOMINATIM, OFM_URL et ML_CDNS (js/config.js). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org https://nominatim.openstreetmap.org; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <title>City Map Studio — Atelier d'affiches cartographiques</title>
 <meta name="description" content="Créez une affiche cartographique souvenir : rues et cours d'eau d'une ville, repère sur le lieu d'une rencontre, textes et thèmes, export PNG A4 à 300 DPI. Gratuit, open source, sans compte.">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -36,7 +36,7 @@
   <section id="stage">
     <div id="poster">
       <canvas id="cvUnder" aria-hidden="true"></canvas>
-      <div id="slot"><div id="mlMap"></div><canvas id="opCanvas"></canvas></div>
+      <div id="slot"><div id="mlMap"></div><canvas id="vecCanvas"></canvas></div>
       <canvas id="cvOver" role="img" aria-label="Aperçu de l'affiche"></canvas>
       <canvas id="cvTex" hidden aria-hidden="true"></canvas>
       <button class="shield placeSwitch" id="placeSwitch" type="button" hidden><span>Modifier le lieu 2</span></button>
@@ -58,7 +58,7 @@
   <aside id="panel">
     <button class="grab" id="grab" type="button" aria-label="Agrandir le panneau des réglages"><i></i></button>
     <div class="brand">City Map Studio<small>Atelier d'affiches cartographiques</small></div>
-    <div class="banner" id="banner" role="status"><span id="bannerTxt">Zone modifiée</span><button class="btn sm on" id="bRefresh">Actualiser les vecteurs</button></div>
+    <div class="banner" id="banner" role="status"><span id="bannerTxt"></span><button class="btn sm on" id="bBanner" type="button" hidden></button></div>
     <nav class="tabs" id="tabs" role="tablist" aria-label="Étapes de création">
       <button data-tab="lieu" class="on" role="tab" id="tb-lieu" aria-controls="tab-lieu" aria-selected="true">Lieu</button>
       <button data-tab="repere" role="tab" id="tb-repere" aria-controls="tab-repere" aria-selected="false" tabindex="-1">Repère</button>
@@ -101,17 +101,13 @@
           <h3>Moteur cartographique</h3>
           <div class="seg" id="engineSeg">
             <button data-v="maplibre">Vectoriel GPU</button>
-            <button data-v="overpass">Overpass</button>
             <button data-v="file">Fichier (hors ligne)</button>
           </div>
           <p class="hint" id="engineHint"></p>
-          <div id="opBlock" hidden>
-            <button class="btn wide" id="bRefresh2">Actualiser les vecteurs Overpass</button>
-          </div>
           <div id="fileBlock" hidden>
             <ol>
-              <li>Cadrez la zone voulue, puis ouvrez <a id="lnkApi" target="_blank" rel="noopener">la requête Overpass</a> (le navigateur affiche ou télécharge un fichier JSON). Alternative : <a id="lnkTurbo" target="_blank" rel="noopener">overpass-turbo</a> → Exporter → « données brutes », ou <a href="https://www.openstreetmap.org/export" target="_blank" rel="noopener">openstreetmap.org/export</a> (fichier .osm).</li>
-              <li>Enregistrez le fichier, puis importez-le ici. Formats acceptés : JSON Overpass, .osm (XML) ou GeoJSON.</li>
+              <li>Exportez la zone voulue depuis <a href="https://www.openstreetmap.org/export" target="_blank" rel="noopener">openstreetmap.org/export</a> (fichier .osm), ou utilisez un fichier OSM obtenu par un autre outil.</li>
+              <li>Enregistrez le fichier, puis importez-le ici. Formats acceptés : .osm (XML), JSON OSM ou GeoJSON.</li>
             </ol>
             <label class="btn wide">Importer un fichier de données<input type="file" id="fileIn" accept=".json,.geojson,.osm,.xml,application/json,application/geo+json,text/xml" hidden></label>
           </div>
@@ -262,7 +258,7 @@
 <dialog class="modal sheet" id="consent" aria-labelledby="consentTitle"><div class="box">
   <h2 id="consentTitle">Afficher la carte ?</h2>
   <p>Le fond de carte vient d'<b>OpenFreeMap</b> : l'afficher lui transmet votre adresse IP. Rien d'autre n'est envoyé, ni cookie ni mesure d'audience.</p>
-  <details><summary>En savoir plus</summary><p>La recherche d'adresse (<b>Nominatim</b>) et le moteur <b>Overpass</b>, utilisés seulement à votre demande, reçoivent aussi votre adresse IP. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p></details>
+  <details><summary>En savoir plus</summary><p>La recherche d'adresse (<b>Nominatim</b>), utilisée seulement à votre demande, reçoit aussi votre adresse IP. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p></details>
   <div class="row"><button class="btn pri" id="bConsentYes" type="button" autofocus>Afficher la carte</button><button class="btn" id="bConsentFile" type="button">Travailler hors ligne</button></div>
 </div></dialog>
 <dialog class="modal sheet" id="welcome" aria-labelledby="welTitle"><div class="box">

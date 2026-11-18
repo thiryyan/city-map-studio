@@ -14,7 +14,7 @@ from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
 ROOT = T.parent
 CHROME = os.environ.get('CHROME') or None
-FIX = (T / 'overpass.json').read_text()
+FIX = (T / 'osm.json').read_text()
 WATCH = "window.__csp=[]; document.addEventListener('securitypolicyviolation', e=>window.__csp.push(e.violatedDirective+' '+e.blockedURI));"
 
 
@@ -55,7 +55,7 @@ async def main():
             await page.click('#bConsentYes'); await page.wait_for_timeout(800)          # accord : MapLibre (worker blob:) démarre
             if await ev("document.getElementById('welcome').open"): await page.click('#welSkip')
             check(await ev("__cms.mlLib") == 'ok', f'{label} : MapLibre chargé depuis lib/')
-            await ev("f=>{__cms.setEngine('file'); __cms.importText(f,'overpass.json')}", FIX); await page.wait_for_timeout(400)
+            await ev("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(400)
             for tab in ['style', 'repere', 'textes', 'lieu']:
                 await ev(f"__cms.showTab('{tab}')"); await page.wait_for_timeout(150)
             async with page.expect_download():

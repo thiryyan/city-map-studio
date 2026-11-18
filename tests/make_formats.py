@@ -1,6 +1,6 @@
 import json, pathlib
 T=pathlib.Path(__file__).resolve().parent
-d=json.load(open(T/'overpass.json'))
+d=json.load(open(T/'osm.json'))
 nodes={}; xml=['<?xml version="1.0"?><osm version="0.6">']; ways=[]; rels=[]
 nid=[100000]; wid=[500000]
 def node(g):

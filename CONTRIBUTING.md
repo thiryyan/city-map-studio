@@ -10,7 +10,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - Attribution « © contributeurs OpenStreetMap » active par défaut (licence ODbL).
 - **Aucune ressource tierce pour la présentation** (CDN de polices, de styles ou de scripts) : tout est servi depuis le dépôt (RGPD, cf. dossier E14). Les CDN de MapLibre ne servent qu'en secours.
 - **Accord préalable** : tout nouvel appel à un service tiers passe par `needConsent()` ; aucune requête externe avant l'accord de l'utilisateur (`tests/consent.py`).
-- **Overpass et Nominatim** : requêtes uniquement à la demande, une seule à la fois ; un serveur qui répond 406 ou 429 n'est plus rappelé pendant sa suspension (risque de bannissement d'IP).
+- **Nominatim** : requêtes uniquement à la demande (jamais pendant la frappe), une seule à la fois.
 
 ## Sécurité, accessibilité
 - **Aucun script ni style en ligne** (ni `<script>` sans `src`, ni `style="…"`, ni `onclick="…"`, ni `innerHTML` avec des styles) : la CSP les bloque. Créer les éléments avec `h(tag, props, …enfants)`, les styles par le CSSOM (`el.style.x = …`) ou des classes.
@@ -34,12 +34,10 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 pip install playwright mapbox-vector-tile && python -m playwright install chromium   # une fois
 python tests/fixture.py && python tests/make_formats.py   # génère les données de test
 python tests/run_all.py          # toute la suite (génère les données, résume les échecs) — lancée aussi par la CI
-python tests/run.py              # moteur Overpass simulé + export PNG 2480×3508 / pHYs 300 DPI
+python tests/run.py              # moteur Fichier + export PNG 2480×3508 / pHYs 300 DPI
 python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
 python tests/layouts.py          # captures des gabarits
 python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap simulé, export hors écran
-python tests/overpass_policy.py  # 406/429 : suspension des miroirs, aucun nouvel essai
-python tests/overpass_outage.py  # panne des miroirs : message « serveurs en panne », diagnostic
 python tests/coords.py           # saisie des coordonnées du repère
 python tests/texts.py            # lignes de texte optionnelles
 python tests/textsize.py         # taille des textes de l'affiche (par ligne et globale)

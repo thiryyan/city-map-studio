@@ -13,7 +13,7 @@ from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
-FIX = open(T / 'overpass.json').read()
+FIX = open(T / 'osm.json').read()
 SNAP = "(()=>document.getElementById('cvOver').toDataURL())()"
 UNDER = "(()=>document.getElementById('cvUnder').toDataURL())()"
 
@@ -38,7 +38,7 @@ async def main():
             else: await r.abort()
         await page.route('**/*', route)
         await page.goto(APP); await page.wait_for_timeout(1300)
-        await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'overpass.json')}", FIX); await page.wait_for_timeout(500)
+        await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
         snap = lambda: page.evaluate(SNAP)
         ev = page.evaluate
 
@@ -112,7 +112,7 @@ async def main():
         await ev("__cms.st.texts.names='Alice & Tom'; __cms.applyOccasion('mariage')")
         check(await ev("__cms.st.texts.names") == 'Alice & Tom', 'modèle : des noms saisis ne sont pas remplacés')
         await ev("__cms.resetAll()"); await page.wait_for_timeout(500)
-        await ev("f=>{__cms.setEngine('file'); __cms.importText(f,'overpass.json')}", FIX); await page.wait_for_timeout(400)
+        await ev("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(400)
 
         # ================= Phase B =================
         print('— Phase B')
@@ -169,7 +169,7 @@ async def main():
         # ================= Phase C =================
         print('— Phase C')
         await ev("__cms.resetAll()"); await page.wait_for_timeout(500)
-        await ev("f=>{__cms.setEngine('file'); __cms.importText(f,'overpass.json')}", FIX); await page.wait_for_timeout(400)
+        await ev("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(400)
         await page.click('#orientSeg [data-v=landscape]'); await page.wait_for_timeout(300)
         bx = await page.locator('#poster').bounding_box()
         check(bx['width'] > bx['height'] * 1.3, 'paysage : aperçu horizontal')
@@ -233,7 +233,7 @@ async def main():
         print('— Effets de tracé')
         await page.click('#resClose')
         await ev("__cms.showTab('style')"); await page.click('#layouts .card[data-v=classic]'); await page.wait_for_timeout(400)
-        MAP = "(()=>document.getElementById('opCanvas').toDataURL())()"
+        MAP = "(()=>document.getElementById('vecCanvas').toDataURL())()"
         base = await ev(MAP); seen = {}
         for k in ['hatch', 'outline', 'pencil']:
             await page.click(f'label.tog:has(input[data-k="fx.{k}"])'); await page.wait_for_timeout(300)

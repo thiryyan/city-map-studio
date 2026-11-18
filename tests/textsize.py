@@ -11,7 +11,7 @@ from seed import seed
 T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
-FIX = open(T / 'overpass.json').read()
+FIX = open(T / 'osm.json').read()
 KEYS = ['title', 'subtitle', 'coords', 'dedication', 'names', 'date']
 SNAP = "(()=>document.getElementById('cvOver').toDataURL())()"
 SET = """([k,v])=>{const i=document.querySelector(`[data-k="${k}"]`); i.value=v; i.dispatchEvent(new Event('input'));}"""
@@ -28,12 +28,11 @@ async def main():
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):
             u = r.request.url
-            if 'interpreter' in u: await r.fulfill(status=200, content_type='application/json', body=FIX)
-            elif u.startswith('file:'): await r.continue_()
+            if u.startswith('file:'): await r.continue_()
             else: await r.abort()
         await page.route('**/*', route)
         await seed(page, APP, wait=1200)   # accord préalable et section Avancé, sans script injecté (cf. tests/seed.py)
-        await page.click('#engineSeg [data-v=overpass]'); await page.wait_for_timeout(800)
+        await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
         setv = lambda k, v: page.evaluate(SET, [k, v])
 
         for lay in ['souvenir', 'classic', 'fade', 'medallion']:
@@ -75,7 +74,7 @@ async def main():
         ts = await page.evaluate('[__cms.st.textScale.title, __cms.st.textScaleAll]')
         check(ts == [120, 110], f'tailles conservées après rechargement {ts}')
         check(await page.input_value('input[data-k="textScale.title"]') == '120', 'curseur resynchronisé')
-        await page.click('#engineSeg [data-v=overpass]'); await page.wait_for_timeout(800)
+        await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
         async with page.expect_download() as dl: await page.click('#bExport')
         d = await dl.value; path = str(T / 'textsize-export.png'); await d.save_as(path)
         w, h = struct.unpack('>II', open(path, 'rb').read()[16:24]); print('  export', d.suggested_filename, w, h)

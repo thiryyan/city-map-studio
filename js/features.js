@@ -195,7 +195,7 @@ function toast(msg,err){ const t=$('toast'); t.textContent=msg; t.className='sho
 function showBanner(show,txt,label,action){
   $('banner').classList.toggle('show',!!show); if(txt) $('bannerTxt').textContent=txt;
   if(ui.sheet==='peek') applySheet();
-  const b=$('bRefresh'); b.textContent=label||'Actualiser les vecteurs'; b.onclick=action||(()=>fetchOverpass());
+  const b=$('bBanner'); b.textContent=label||''; b.onclick=action||null; b.hidden=!action;
 }
 function setPlacing(on,idx=0){ ui.placing=on; ui.placeIdx=on?idx:0;
   $('placeHint').textContent = idx ? `Touchez la carte pour placer le lieu ${idx+1}` : 'Touchez la carte pour placer le repère';

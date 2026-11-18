@@ -12,7 +12,7 @@ from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
 ROOT = T.parent
 CHROME = os.environ.get('CHROME') or None
-FIX = open(T / 'overpass.json').read()
+FIX = open(T / 'osm.json').read()
 FAMILIES = ['serif', 'sans', 'mono', 'garamond', 'deco', 'bodoni', 'italiana', 'fraunces', 'jost', 'bebas', 'vibes']
 
 class Q(SimpleHTTPRequestHandler):
@@ -25,12 +25,11 @@ async def check(b, url, label):
     page.on('pageerror', lambda e: errs.append(str(e)))
     async def route(r):
         u = r.request.url
-        if 'interpreter' in u: return await r.fulfill(status=200, content_type='application/json', body=FIX)
         if u.startswith('file:') or u.startswith('http://127.0.0.1'): return await r.continue_()
         ext.append(u); await r.abort()
     await page.route('**/*', route)
     await page.goto(url); await page.wait_for_timeout(1200)
-    await page.click('#engineSeg [data-v=overpass]'); await page.wait_for_timeout(800)
+    await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
     await page.click('#tabs [data-tab=textes]')
     for f in FAMILIES:
         await page.click(f'#fontSeg [data-v={f}]'); await page.wait_for_timeout(300)
