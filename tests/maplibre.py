@@ -179,6 +179,24 @@ async def main():
                 print('  export avec effets', w2, h2, '| pixels eau', water2, f'(sans effet : {water})')
                 assert (w2, h2) == (2480, 3508) and water2 < water * 0.7, 'hachures absentes de l\'export'
                 assert not [l for l in logs if 'PAGEERROR' in l or 'could not be loaded' in l], logs[-5:]
+                # Pistes artistiques : lueur (line-blur), lignes d'eau (line-gap-width), motifs, plaque riso, quartier (within)
+                await page.evaluate("""['hatch','outline','pencil'].forEach(k=>{ const i=document.querySelector(`[data-k="fx.${k}"]`); i.checked=false; i.dispatchEvent(new Event('input')); });
+                    ['glow','waterlines','dots','parkHatch','riso','quarter','halo','foil'].forEach(k=>{ const i=document.querySelector(`[data-k="fx.${k}"]`); i.checked=true; i.dispatchEvent(new Event('input')); });""")
+                await wait_js(page, "__cms.mlMap.isStyleLoaded() && __cms.mlMap.areTilesLoaded()", timeout=30000); await page.wait_for_timeout(1500)
+                art = await page.evaluate("""(()=>{ const m=__cms.mlMap, L=m.getStyle().layers, ids=L.map(l=>l.id), b=L.find(l=>l.id==='building'), pk=L.find(l=>l.id==='park');
+                    return {glow:ids.filter(i=>i.startsWith('glow-')).length, wl:ids.filter(i=>i.startsWith('waterline-')).length, q:ids.filter(i=>i.startsWith('quarter-')).length,
+                      plate:ids.includes('water-plate'), dots:m.hasImage(b.paint['fill-pattern']), cross:!pk || m.hasImage(pk.paint['fill-pattern']),
+                      rendered:m.queryRenderedFeatures().length}; })()""")
+                print('  pistes artistiques (aperçu) :', art)
+                assert art['glow'] == 24 and art['wl'] == 5 and art['q'] == 8 and art['plate'] and art['dots'] and art['cross'] and art['rendered'] > 0, art
+                async with page.expect_download(timeout=90000) as dl:
+                    await page.click('#resClose'); await page.click('#bExport')
+                d = await dl.value; path = str(T / 'ml-export-art.png'); await d.save_as(path)
+                w3, h3, _, _ = png_stats(path)
+                print('  export avec les pistes artistiques', w3, h3)
+                assert (w3, h3) == (2480, 3508)
+                bad = [l for l in logs if 'PAGEERROR' in l or 'could not be loaded' in l or ('MapLibre' in l and 'warn' in l)]
+                assert not bad, bad[-5:]
             await ctx.close()
         await b.close()
     srv.shutdown(); print('OK')

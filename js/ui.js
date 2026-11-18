@@ -54,7 +54,7 @@ function placeMarkerFromInput(){
   $('markerIn').value=''; $('markerIn').blur();
   toast('Repère placé'+(out?' · carte recentrée':''));
 }
-function setMarker(lat,lon){ st.marker={lat,lon}; setPlacing(false); updateMarkerTxt(); changed(); }
+function setMarker(lat,lon){ st.marker={lat,lon}; setPlacing(false); updateMarkerTxt(); if(st.fx.quarter){ ui.snap=null; redrawAll(true); } else changed(); }
 function updateMarkerTxt(){ $('markerTxt').textContent=`${dms(st.marker.lat,'N','S')}  ·  ${dms(st.marker.lon,'E','W')}`; $('coordsManual').placeholder=coordText(); }
 function syncZoomUI(){ $('zoom').value=st.zoom.toFixed(1); $('oZoom').textContent=st.zoom.toFixed(1); }
 function setZoom(z){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
@@ -228,6 +228,8 @@ function buildUI(){
   const co=$('colors');
   Object.entries(COLOR_LABELS).forEach(([k,n])=>{ const l=h('label',{},h('input',{type:'color',dataset:{c:k}}),h('span',{},n));
     l.querySelector('input').oninput=e=>{ st.colors[k]=e.target.value.toUpperCase(); colorChanged(k); }; co.appendChild(l); });
+  $('photoIn').onchange=e=>{ const f=e.target.files[0]; if(f) importPhotoPalette(f); e.target.value=''; };
+  document.querySelectorAll('#photoSeg button').forEach(b=>b.onclick=()=>applyPhotoPalette(b.dataset.v));
   document.querySelectorAll('[data-gold]').forEach(b=>b.onclick=()=>{ st.colors[b.dataset.gold]=GOLD; refreshColors(); changed({all:true,cards:true}); toast('Touche d\'or appliquée'); });
   // repères
   const mk=$('marks');
@@ -248,6 +250,8 @@ function buildUI(){
       setPath(st,k,v); syncOutputs();
       if(k==='texts.title'||k==='texts.names'||k==='texts.dedication') updateFontSamples();
       if(k.startsWith('sky.')){ drawUnder(); saveState(); return; }
+      if(k==='folds'){ drawTexture(); saveState(); return; }
+      if(k==='focusR'){ if(st.fx.quarter) redrawAll(true); else changed(); return; }
       if(k==='numbered'||k==='linkMarkers'){ changed(); return; }
       if(k.startsWith('layers.')||k.startsWith('fx.')){ ui.snap=null; redrawAll(true); }
       else if(k==='margin'){ layoutPreview(); saveState(); }
@@ -308,6 +312,7 @@ function syncFonts(){
 }
 function syncOutputs(){
   $('oMargin').textContent=st.margin+' %'; $('oStroke').textContent='× '+st.stroke.toFixed(2); $('oWater').textContent='× '+st.waterMult.toFixed(1);
+  $('oFocus').textContent=st.focusR+' %';
   $('oMSize').textContent=st.markerSize+' %'; $('oMOp').textContent=Math.round(st.markerOpacity*100)+' %';
   $('oTsAll').textContent=st.textScaleAll+' %';
   for(const k of Object.keys(FIT_NAMES)){ const o=$('oTs-'+k); if(o) o.textContent=st.textScale[k]+' %'+(o.classList.contains('shrunk')?' ↘':''); }

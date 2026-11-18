@@ -54,8 +54,12 @@ function normState(src){
     active:V.oneOf(s.active,[0,1],0), place2:view(s.place2,D),
     sky:{when:typeof V.obj(s.sky).when==='string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(s.sky.when) ? s.sky.when : '',
       tz:V.obj(s.sky).tz==='auto' ? 'auto' : V.num(V.obj(s.sky).tz,'auto',-720,840),
-      lines:V.bool(V.obj(s.sky).lines,D.sky.lines), grid:V.bool(V.obj(s.sky).grid,D.sky.grid)},
-    fx:V.each(s.fx,D.fx,V.bool)
+      lines:V.bool(V.obj(s.sky).lines,D.sky.lines), grid:V.bool(V.obj(s.sky).grid,D.sky.grid),
+      moon:V.bool(V.obj(s.sky).moon,D.sky.moon), planets:V.bool(V.obj(s.sky).planets,D.sky.planets), milky:V.bool(V.obj(s.sky).milky,D.sky.milky)},
+    fx:V.each(s.fx,D.fx,V.bool),
+    focusR:V.num(s.focusR,D.focusR,10,60),
+    orn:V.each(s.orn,D.orn,V.bool),
+    folds:V.bool(s.folds,D.folds)
   };
 }
 let st = loadState();

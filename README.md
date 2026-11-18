@@ -4,8 +4,9 @@ Atelier web de création d'affiches cartographiques souvenir : tracé minimalist
 
 - **100 % open source** : MapLibre GL JS, tuiles OpenFreeMap, Nominatim, polices SIL OFL auto-hébergées. Aucune clé API, aucun appel à Google.
 - **Deux moteurs** : Vectoriel GPU (par défaut) et Fichier (hors ligne, tracé vectoriel au détail maximal : `.osm`, JSON OSM, GeoJSON).
-- **Dix gabarits** (Souvenir, Cadre, Fondu, Médaillon, Cœur, Arche, Voyage, Polaroid, Deux lieux, Ciel) en portrait ou paysage, quinze thèmes, huit ambiances, dix repères, onze polices en duos, quatre papiers.
-- **Plus que la carte** : jusqu'à trois lieux, itinéraire GPX, carte du ciel du jour J, aperçu au mur, partage par lien.
+- **Onze gabarits** (Souvenir, Cadre, Fondu, Médaillon, Cœur, Arche, Voyage, Polaroid, Deux lieux, Ciel, Lettres) en portrait ou paysage, seize thèmes et une palette tirée d'une photo, treize ambiances, dix repères, onze polices en duos, cinq papiers et des plis de carte dépliée.
+- **Effets artistiques** : lueur, lignes d'eau gravées, motifs (eau hachurée, bâtiments pointillés, parcs hachurés), surimpression riso, trait crayon ; halo du souvenir et quartier en relief autour du lieu ; dorure ; échelle, rose des vents et graduations.
+- **Plus que la carte** : jusqu'à trois lieux, itinéraire GPX, carte du ciel du jour J (Lune en phase, planètes, Voie lactée), aperçu au mur, partage par lien.
 - **Sans build** : HTML, CSS et JavaScript natifs (`index.html`, `css/`, `js/`) servis tels quels, pensés d'abord pour le mobile.
 - **Sûre, accessible, hors ligne** : politique de sécurité du contenu stricte, liens partagés validés, fenêtres et commandes accessibles au clavier ; installable, et utilisable sans réseau après une première visite (moteur Fichier).
 
@@ -27,6 +28,6 @@ Ouvrir directement `index.html` en `file://` fonctionne aussi (scripts classique
 - Données : © contributeurs OpenStreetMap, licence ODbL.
 - Schéma des tuiles vectorielles : © OpenMapTiles, CC-BY 4.0 (tuiles servies par OpenFreeMap).
 - Polices (`lib/fonts/`) : SIL Open Font License 1.1, auto-hébergées (`OFL.txt` dans chaque dossier). Aucun appel à Google Fonts.
-- Données du ciel (`lib/sky/`) : d3-celestial © Olaf Frohn, BSD-3-Clause (`lib/sky/LICENSE-d3-celestial.txt`), compilées depuis XHIP et les tracés de l'UAI.
+- Données du ciel (`lib/sky/`) : d3-celestial © Olaf Frohn, BSD-3-Clause (`lib/sky/LICENSE-d3-celestial.txt`), compilées depuis XHIP et les tracés de l'UAI ; Voie lactée d'après `mw.json` du même projet.
 
 Les affiches produites doivent porter l'attribution « © contributeurs OpenStreetMap », complétée de « OpenFreeMap © OpenMapTiles » avec le moteur Vectoriel GPU. L'application l'ajoute par défaut.

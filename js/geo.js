@@ -71,6 +71,7 @@ function geom(s, W, H){
       case 'polaroid': { const p=Math.max(m,0.07*U); g.map={x:p,y:p,w:W-2*p,h:W-2*p}; g.text=below(g.map,0.02); break; }
       case 'sky': { const d=0.62*U; g.sky={x:(W-d)/2,y:m+0.04*U,w:d,h:d,shape:'circle'};
         g.map={x:m,y:g.sky.y+d+0.045*U,w:W-2*m,h:0.20*U}; g.text=below(g.map,0.01); break; }
+      case 'typo': g.map={x:m,y:m,w:W-2*m,h:H-2*m-0.30*U}; g.text=below(g.map,0.012); break;
       case 'diptych': { const hM=(H-2*m-0.10*U-0.15*U-0.20*U)/2;
         const a={x:m,y:m+0.10*U,w:W-2*m,h:hM}, b={x:m,y:a.y+hM+0.075*U,w:W-2*m,h:hM};
         g.rects=[a,b]; g.title={y:m+0.07*U}; g.labels=[a.y+hM+0.045*U,b.y+hM+0.045*U]; g.text=below(b,0.07); break; }
@@ -87,6 +88,7 @@ function geom(s, W, H){
       case 'polaroid': { const p=Math.max(m,0.07*U), d=H-2*p; g.map={x:p,y:p,w:d,h:d}; break; }
       case 'sky': { const d=H-2*m; g.sky={x:m,y:m,w:d,h:d,shape:'circle'}; const t=col(g.sky.x+d);
         g.map={x:t.x,y:m,w:t.w,h:0.40*U}; g.text={...t,y0:g.map.y+g.map.h+0.01*U,avail:H-m-(g.map.y+g.map.h+0.01*U),mode:'top'}; break; }
+      case 'typo': g.map={x:m,y:m,w:W-2*m,h:H-2*m-0.30*U}; g.text=below(g.map,0.012); break;
       case 'diptych': { const gap=0.05*U, w=(W-2*m-gap)/2, h=H-2*m-0.10*U-0.22*U;
         const a={x:m,y:m+0.10*U,w,h}, b={x:m+w+gap,y:a.y,w,h};
         g.rects=[a,b]; g.title={y:m+0.07*U}; g.labels=[a.y+h+0.045*U,a.y+h+0.045*U];

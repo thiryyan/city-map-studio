@@ -45,6 +45,7 @@ python tests/mobile.py           # panneau coulissant, mode Cadrer, paysage, A�
 python tests/ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
 python tests/design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, mur, lien, paysage, GPX, ciel
 python tests/vectors.py          # cache de tracés du moteur Fichier
+python tests/art.py              # pistes artistiques : effets, dorure, ornements, Lettres, papiers, ciel, palette d'une photo
 python tests/compare.py          # comparer avant / après un changement de thème
 python tests/welcome.py          # ambiance proposée au premier lancement
 python tests/fonts.py            # polices auto-hébergées, aucun appel tiers

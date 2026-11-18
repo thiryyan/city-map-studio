@@ -70,23 +70,29 @@ Object.assign(THEMES,{
   marine:{cat:'clair',name:'Marine',c:{paper:'#F1ECE2',land:'#F1ECE2',water:'#D5DCE4',park:'#E6E2D6',building:'#E7E1D5',roadMajor:'#14284B',roadMinor:'#3E5274',path:'#98A3B4',rail:'#98A3B4',text:'#14284B',frame:'#14284B',marker:'#C0392B'}},
   encre:{cat:'clair',name:'Encre de Chine',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#111111',park:'#E5E5E5',building:'#EDEDED',roadMajor:'#000000',roadMinor:'#1A1A1A',path:'#6B6B6B',rail:'#6B6B6B',text:'#000000',frame:'#000000',marker:'#D0312D'}},
   plan:{cat:'sombre',name:'Plan d\'architecte',c:{paper:'#1F3A5F',land:'#1F3A5F',water:'#2C4F7C',park:'#24436B',building:'#284A73',roadMajor:'#E8F1FA',roadMinor:'#A9C1DA',path:'#6F8DB0',rail:'#6F8DB0',text:'#E8F1FA',frame:'#E8F1FA',marker:'#FFD166'}},
+  riso:{cat:'couleur',name:'Risographie',c:{paper:'#F3EEE3',land:'#F3EEE3',water:'#FF6C9C',park:'#E9E3D4',building:'#E7E0D1',roadMajor:'#0078BF',roadMinor:'#3A8FCB',path:'#8DB8DA',rail:'#8DB8DA',text:'#005A92',frame:'#FF6C9C',marker:'#FF6C9C'}},
   neon:{cat:'sombre',name:'Néon',c:{paper:'#120B24',land:'#120B24',water:'#1E1440',park:'#170F2E',building:'#1B1236',roadMajor:'#FF4FD8',roadMinor:'#9B5DE5',path:'#4B3A78',rail:'#4B3A78',text:'#F5E9FF',frame:'#36E3FF',marker:'#36E3FF'}}
 });
 const THEME_CATS=[['','Tous'],['clair','Clairs'],['sombre','Sombres'],['couleur','Couleurs']];
 
-const LAYOUTS = [['souvenir','Souvenir'],['classic','Cadre'],['fade','Fondu'],['medallion','Médaillon'],['heart','Cœur'],['arch','Arche'],['travel','Voyage'],['polaroid','Polaroid'],['diptych','Deux lieux'],['sky','Ciel']];
+const LAYOUTS = [['souvenir','Souvenir'],['classic','Cadre'],['fade','Fondu'],['medallion','Médaillon'],['heart','Cœur'],['arch','Arche'],['travel','Voyage'],['polaroid','Polaroid'],['diptych','Deux lieux'],['sky','Ciel'],['typo','Lettres']];
 const MARKERS = [['heartGeo','Cœur géo.'],['dot','Point'],['heart','Cœur'],['ring','Anneau'],['pin','Épingle'],['star','Étoile'],['house','Maison'],['rings','Alliances'],['anchor','Ancre'],['feet','Petits pieds']];
 // Papier : texture générée par le code (aucune image), appliquée à l'aperçu et à l'export
-const TEXTURES=[['none','Lisse'],['grain','Grain'],['aquarelle','Aquarelle'],['kraft','Kraft'],['toile','Toile']];
-// Ambiances : thème + duo de polices + gabarit + repère (+ papier) ; les textes et le lieu sont conservés
+const TEXTURES=[['none','Lisse'],['grain','Grain'],['aquarelle','Aquarelle'],['kraft','Kraft'],['toile','Toile'],['ancien','Ancien']];
+// Ambiances : thème + duo de polices + gabarit + repère (+ papier, effets fx, ornements orn, plis) ; les textes et le lieu sont conservés
 const AMBIANCES=[
   ['mariage','Mariage doré',{theme:'galerie',fontTitle:'italiana',font:'vibes',layout:'heart',markerStyle:'rings',texture:'none'}],
   ['naissance','Naissance sauge',{theme:'sauge',fontTitle:'fraunces',font:'fraunces',layout:'arch',markerStyle:'feet',texture:'grain'}],
   ['voyage','Carnet de voyage',{theme:'terracotta',fontTitle:'bebas',font:'jost',layout:'travel',markerStyle:'pin',texture:'kraft',fx:{pencil:true}}],
   ['plan','Plan d\'architecte',{theme:'plan',fontTitle:'mono',font:'mono',layout:'classic',markerStyle:'dot',texture:'none',fx:{outline:true}}],
-  ['nuit','Nuit en ville',{theme:'neon',fontTitle:'bebas',font:'jost',layout:'fade',markerStyle:'ring',texture:'none'}],
+  ['nuit','Nuit en ville',{theme:'neon',fontTitle:'bebas',font:'jost',layout:'fade',markerStyle:'ring',texture:'none',fx:{glow:true}}],
   ['mer','Bord de mer',{theme:'marine',fontTitle:'italiana',font:'jost',layout:'polaroid',markerStyle:'anchor',texture:'toile'}],
   ['encre','Encre de Chine',{theme:'encre',fontTitle:'bodoni',font:'garamond',layout:'medallion',markerStyle:'heartGeo',texture:'aquarelle',fx:{hatch:true}}],
+  ['ancienne','Carte ancienne',{theme:'sepia',fontTitle:'garamond',font:'garamond',layout:'classic',markerStyle:'star',texture:'ancien',folds:true,fx:{waterlines:true,parkHatch:true},orn:{scale:true,compass:true,grid:true}}],
+  ['gala','Soirée de gala',{theme:'onyx',fontTitle:'italiana',font:'garamond',layout:'medallion',markerStyle:'rings',texture:'none',fx:{foil:true,glow:true}}],
+  ['riso','Risographie',{theme:'riso',fontTitle:'bebas',font:'jost',layout:'travel',markerStyle:'pin',texture:'grain',fx:{riso:true,dots:true}}],
+  ['lettres','Lettres de ville',{theme:'creme',fontTitle:'bebas',font:'jost',layout:'typo',markerStyle:'dot',texture:'grain'}],
+  ['quartier','Notre quartier',{theme:'souvenir',fontTitle:'',font:'garamond',layout:'classic',markerStyle:'heart',texture:'none',fx:{halo:true,quarter:true}}],
   ['souvenir','Souvenir',{theme:'souvenir',fontTitle:'',font:'serif',layout:'souvenir',markerStyle:'heart',texture:'none'}]
 ];
 // Modèles de texte par occasion : la dédicace change ; les noms seulement s'ils sont encore ceux de l'exemple
@@ -139,6 +145,11 @@ const DEFAULT_STATE = {
   route:null,                   // itinéraire importé : {name, pts:[[lat,lon],…], show}
   routeStyle:{color:'marker',width:1,dash:false},
   active:0, place2:null,        // gabarit « Deux lieux » : vue éditée (0 ou 1) et l'autre vue {center, zoom, marker}
-  sky:{when:'',tz:'auto',lines:true,grid:true},  // gabarit « Ciel » : date et heure locales, fuseau (minutes ou 'auto')
-  fx:{hatch:false,outline:false,pencil:false}     // effets de tracé : eau hachurée, bâtiments en contour, trait crayon
+  sky:{when:'',tz:'auto',lines:true,grid:true,moon:true,planets:true,milky:false},  // gabarit « Ciel » : date et heure locales, fuseau (minutes ou 'auto'), Lune, planètes, Voie lactée
+  // effets de tracé : eau hachurée, bâtiments en contour, trait crayon ; lueur, lignes d'eau, bâtiments pointillés, parcs hachurés,
+  // surimpression riso ; autour du repère : halo et quartier en relief ; dorure des textes, filets et repères
+  fx:{hatch:false,outline:false,pencil:false,glow:false,waterlines:false,dots:false,parkHatch:false,riso:false,halo:false,quarter:false,foil:false},
+  focusR:30,                    // rayon du halo et du quartier en relief (% de la largeur de la carte)
+  orn:{scale:false,compass:false,grid:false},     // ornements : échelle graphique, rose des vents, graduations
+  folds:false                   // papier : plis d'une carte dépliée
 };

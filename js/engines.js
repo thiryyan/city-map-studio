@@ -113,34 +113,58 @@ function drawVectors(ctx, r, data, view=st){
   // carreaux visibles réunis en un seul tracé : un croisement entre deux carreaux n'est pas peint deux fois (passes transparentes)
   const visPath=cells=>{ const path=new Path2D(); for(const f of cells) if(vis(f)) path.addPath(f.path); return path; };
   const strokeCells=cells=>ctx.stroke(visPath(cells));
-  const fx=st.fx||{}, scale=r.w/REF_W;
+  const fx=st.fx||{}, scale=r.w/REF_W, wk=k/st.stroke*st.waterMult;
+  /** Motif fixé au cadre, pas aux données (pas N en px) */
+  const pattern=(kind,N,a,b)=>{ const tile=patTile(kind,N*2,a,b), pat=ctx.createPattern(tile,'repeat');
+    pat.setTransform(new DOMMatrix().translate(r.x-tx,r.y-ty).scale(N/tile.width)); return pat; };
+  const waterPaint = fx.hatch ? pattern('hatch',FX_HATCH*scale,c.water,c.land) : c.water;
   ctx.save(); ctx.translate(tx,ty);
   ctx.lineCap='round'; ctx.lineJoin='round';
-  if(st.layers.parks){ ctx.fillStyle=c.park; for(const f of P.parks) if(vis(f)) ctx.fill(f.path,'evenodd'); }
-  ctx.strokeStyle=c.water;
-  for(const [cls,cells] of P.waterLines){ ctx.lineWidth=WATERWAY_W[cls]*k/st.stroke*st.waterMult; strokeCells(cells); }
-  if(fx.hatch){ const N=FX_HATCH*scale, tile=hatchTile(N*2,c.water,c.land), pat=ctx.createPattern(tile,'repeat');
-    pat.setTransform(new DOMMatrix().translate(r.x-tx,r.y-ty).scale(N/tile.width)); ctx.fillStyle=pat; }   // motif fixé au cadre, pas aux données
-  else ctx.fillStyle=c.water;
-  for(const f of P.water) if(vis(f)) ctx.fill(f.path,'evenodd');
+  if(fx.waterlines){   // lignes d'eau : contours parallèles autour des rives, du plus lointain au plus proche
+    const g=WL_GAP*scale, lw=WL_W*scale, ink=fxInk(c.water,0.32), wp=visPath(P.water);
+    for(let i=WL_N;i>=1;i--){
+      const ring=w=>{ ctx.lineWidth=w; ctx.stroke(wp); for(const [cls,cells] of P.waterLines){ ctx.lineWidth=WATERWAY_W[cls]*wk+w; strokeCells(cells); } };
+      ctx.strokeStyle=ink; ctx.globalAlpha=wlAlpha(i); ring(2*i*g);
+      ctx.strokeStyle=c.land; ctx.globalAlpha=1; ring(2*i*g-2*lw);
+    }
+  }
+  if(st.layers.parks){ ctx.fillStyle=fx.parkHatch ? pattern('cross',FX_CROSS*scale,c.park,c.land) : c.park; for(const f of P.parks) if(vis(f)) ctx.fill(f.path,'evenodd'); }
+  const drawWater=()=>{
+    ctx.strokeStyle=c.water;
+    for(const [cls,cells] of P.waterLines){ ctx.lineWidth=WATERWAY_W[cls]*wk; strokeCells(cells); }
+    ctx.fillStyle=waterPaint; for(const f of P.water) if(vis(f)) ctx.fill(f.path,'evenodd');
+  };
+  if(!fx.riso) drawWater();
   if(st.layers.buildings && data.buildings.length){
     if(fx.outline){ ctx.save(); ctx.strokeStyle=c.roadMinor; ctx.lineWidth=OUTLINE_W*k; ctx.globalAlpha=0.8; strokeCells(P.buildings); ctx.restore(); }
-    else { ctx.fillStyle=c.building; ctx.fill(visPath(P.buildings)); }
+    else { ctx.fillStyle=fx.dots ? pattern('dots',FX_DOTS*scale,c.building,c.land) : c.building; ctx.fill(visPath(P.buildings)); }
   }
   if(st.layers.rail && data.rails.length){
     ctx.strokeStyle=c.rail; ctx.lineWidth=0.8*k; ctx.setLineDash([3*k,2*k]); ctx.lineCap='butt';
     strokeCells(P.rails); ctx.setLineDash([]); ctx.lineCap='round';
   }
-  const passes = fx.pencil ? PENCIL.map(([dx,dy])=>[dx*k,dy*k,PENCIL_ALPHA,PENCIL_W]) : [[0,0,1,1]];
-  for(const [cls,w,col] of ROADS){
-    if(!data.roads[cls].length) continue;
-    ctx.strokeStyle=c[col];
-    for(const [dx,dy,a,wf] of passes){
-      ctx.save(); ctx.translate(dx,dy); ctx.lineWidth=w*k*wf;
-      ctx.globalAlpha=0.4*a; strokeCells(P.roads[cls].tun);
-      ctx.globalAlpha=a; strokeCells(P.roads[cls].open);
-      ctx.restore();
+  const roads=(color,wMul,passes)=>{
+    for(const [cls,w,col] of ROADS){
+      if(!data.roads[cls].length) continue;
+      ctx.strokeStyle=color||c[col];
+      for(const [dx,dy,a,wf] of passes){
+        ctx.save(); ctx.translate(dx,dy); ctx.lineWidth=w*k*wf*wMul;
+        ctx.globalAlpha=0.4*a; strokeCells(P.roads[cls].tun);
+        ctx.globalAlpha=a; strokeCells(P.roads[cls].open);
+        ctx.restore();
+      }
     }
+  };
+  if(fx.glow) for(const [wf,a] of GLOW) roads(null,wf,[[0,0,a,1]]);   // lueur : halos larges et pâles sous les rues
+  const passes = fx.pencil ? PENCIL.map(([dx,dy])=>[dx*k,dy*k,PENCIL_ALPHA,PENCIL_W]) : [[0,0,1,1]];
+  roads(null,1,passes);
+  if(fx.quarter){   // quartier en relief : rues du rayon autour du repère, à la couleur du repère
+    const q=project(view.marker.lat,view.marker.lon,r,view);
+    ctx.save(); ctx.beginPath(); ctx.arc(q.x-tx,q.y-ty,focusRadius(r.w),0,7); ctx.clip(); roads(c.marker,QUARTER_W,passes); ctx.restore();
+  }
+  if(fx.riso){   // surimpression : l'eau, imprimée comme une plaque à part, décalée et fondue sur le reste
+    ctx.save(); ctx.translate(RISO[0]*scale,RISO[1]*scale); ctx.globalCompositeOperation=lum(c.land)<0.3?'screen':'multiply'; ctx.globalAlpha=RISO_ALPHA;
+    drawWater(); ctx.restore();
   }
   ctx.restore();
 }
@@ -155,52 +179,93 @@ function netMsg(e){
 
 // ---------- Effets de tracé (communs aux deux moteurs, aperçu et export) ----------
 // Toutes les mesures sont en px pour un cadre de 800 px (REF_W) puis mises à l'échelle du cadre : même rendu à toute taille.
-const FX_HATCH=6;                        // pas des hachures de l'eau
+const FX_HATCH=6, FX_DOTS=5, FX_CROSS=7;  // pas des motifs : eau hachurée, bâtiments pointillés, parcs hachurés
 const PENCIL=[[1.2,-0.9],[-0.9,1.0]];   // trait crayon : deux passes décalées (× k), transparentes
 const PENCIL_ALPHA=0.62, PENCIL_W=0.72, OUTLINE_W=0.35;
-/** Teinte assombrie (f : part de noir) : traits de hachure lisibles sur une eau pâle */
-const shade=(hex,f)=>'#'+[1,3,5].map(i=>Math.round(parseInt(hex.slice(i,i+2),16)*(1-f)).toString(16).padStart(2,'0')).join('');
-/** Tuile de hachures à 45° : fond couleur terre, traits couleur eau (opaque, raccord sans couture) */
-function hatchTile(T, water, land){
+const GLOW=[[6,0.07],[3.4,0.12],[2,0.2]];  // lueur : [largeur (× trait), opacité] des halos, du plus large au plus serré
+const WL_N=5, WL_GAP=2.4, WL_W=0.45;       // lignes d'eau : nombre, pas et épaisseur
+const wlAlpha=i=>0.85*(1-(i-1)/WL_N);      // opacité de la ligne de rang i (1 : la plus proche de la rive)
+const RISO=[2.6,-1.6], RISO_ALPHA=0.9;     // surimpression : décalage de la plaque « eau », opacité
+const QUARTER_W=1.25;                      // quartier en relief : rues un peu plus épaisses
+/** Encre d'un effet : la teinte assombrie sur papier clair, éclaircie sur papier sombre */
+const fxInk=(hex,f)=>lum(st.colors.land)<0.3 ? tint(hex,f) : shade(hex,f);
+/** Tuile de motif opaque, sans couture : 'hatch' (eau, traits à 45°), 'dots' (bâtiments), 'cross' (parcs, hachures croisées).
+ *  a : couleur de l'élément (son encre en est tirée), b : fond (eau et bâtiments sur la terre, parcs sur leur couleur). */
+function patTile(kind, T, a, b){
   T=Math.max(2,Math.round(T)); const cv=document.createElement('canvas'); cv.width=cv.height=T; const c=cv.getContext('2d');
-  c.fillStyle=land; c.fillRect(0,0,T,T); c.strokeStyle=shade(water,0.28); c.lineWidth=T*0.3; c.lineCap='square';
-  c.beginPath(); for(const o of [-T,0,T]){ c.moveTo(o,T); c.lineTo(o+T,0); } c.stroke(); return cv;
+  if(kind==='hatch'){
+    c.fillStyle=b; c.fillRect(0,0,T,T); c.strokeStyle=shade(a,0.28); c.lineWidth=T*(lum(a)<0.05?0.16:0.3); c.lineCap='square';   // eau très sombre (Encre) : traits plus fins
+    c.beginPath(); for(const o of [-T,0,T]){ c.moveTo(o,T); c.lineTo(o+T,0); } c.stroke();
+  } else if(kind==='dots'){
+    c.fillStyle=mix(a,b,0.55); c.fillRect(0,0,T,T); c.fillStyle=fxInk(a,0.3);
+    for(const [x,y] of [[0.25,0.25],[0.75,0.75]]){ c.beginPath(); c.arc(x*T,y*T,T*0.17,0,7); c.fill(); }
+  } else {
+    c.fillStyle=a; c.fillRect(0,0,T,T); c.strokeStyle=fxInk(a,0.22); c.lineWidth=T*0.09; c.lineCap='square';
+    c.beginPath(); for(const o of [-T,0,T]){ c.moveTo(o,T); c.lineTo(o+T,0); c.moveTo(o,0); c.lineTo(o+T,T); } c.stroke();
+  }
+  return cv;
 }
-/** Identifiant du motif MapLibre : contient tout ce qu'il faut pour le recréer à la demande (styleimagemissing) */
-const hatchId=(scale,pr)=>`hatch:${(FX_HATCH*scale).toFixed(3)}:${pr.toFixed(3)}:${st.colors.water}:${st.colors.land}`;
+/** Tuile de hachures de l'eau (conservée pour les tests et la console) */
+const hatchTile=(T,water,land)=>patTile('hatch',T,water,land);
+/** Identifiant d'un motif MapLibre : contient tout ce qu'il faut pour le recréer à la demande (styleimagemissing) */
+const patId=(kind,N,scale,pr,a,b)=>`pat:${kind}:${(N*scale).toFixed(3)}:${pr.toFixed(3)}:${a}:${b}`;
 function onImageMissing(map,e){
-  const m=/^hatch:([\d.]+):([\d.]+):(#[0-9A-Fa-f]{6}):(#[0-9A-Fa-f]{6})$/.exec(e.id); if(!m || map.hasImage(e.id)) return;
-  const css=+m[1], dev=Math.max(2,Math.round(css*+m[2])), d=hatchTile(dev,m[3],m[4]).getContext('2d').getImageData(0,0,dev,dev);
+  const m=/^pat:(hatch|dots|cross):([\d.]+):([\d.]+):(#[0-9A-Fa-f]{6}):(#[0-9A-Fa-f]{6})$/.exec(e.id); if(!m || map.hasImage(e.id)) return;
+  const css=+m[2], dev=Math.max(2,Math.round(css*+m[3])), d=patTile(m[1],dev,m[4],m[5]).getContext('2d').getImageData(0,0,dev,dev);
   map.addImage(e.id,{width:dev,height:dev,data:new Uint8Array(d.data.buffer)},{pixelRatio:dev/css});
+}
+/** Disque autour du repère d'une vue (polygone géographique, 64 côtés) : filtre `within` du quartier en relief */
+function focusPolygon(view){
+  const S=worldSize(REF_W,view.zoom), R=focusRadius(REF_W), m0=merc(view.marker.lat), ring=[];
+  for(let i=0;i<=64;i++){ const a=i/64*2*Math.PI; ring.push([view.marker.lon+Math.cos(a)*R/S*360, imerc(m0-Math.sin(a)*R*2*Math.PI/S)]); }
+  return {type:'Polygon',coordinates:[ring]};
 }
 
 // ---------- Moteur 1 : MapLibre + OpenFreeMap ----------
-/** k : facteur d'épaisseur ; scale : largeur du cadre / 800 ; pr : densité de pixels de la carte (motif de hachures) */
-function buildStyle(k, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=window.devicePixelRatio||1){
-  const c=st.colors, L=[], fx=st.fx||{};
+/** k : facteur d'épaisseur ; scale : largeur du cadre / 800 ; pr : densité de pixels de la carte (motifs) ; view : vue dessinée */
+function buildStyle(k, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=window.devicePixelRatio||1, view=st){
+  const c=st.colors, L=[], fx=st.fx||{}, wk=k/st.stroke*st.waterMult;
   const lineGeom=['in',['geometry-type'],['literal',['LineString','MultiLineString']]];
+  const wwFilter=['in',['get','class'],['literal',['river','canal','stream']]], wwWidth=(add=0)=>['match',['get','class'],'river',3*wk+add,'canal',2*wk+add,0.8*wk+add];
+  const waterFilter=['!=',['coalesce',['get','intermittent'],0],1];
   L.push({id:'bg',type:'background',paint:{'background-color':c.land}});
-  if(st.layers.parks){
-    L.push({id:'landcover',type:'fill',source:'omt','source-layer':'landcover',filter:['in',['get','class'],['literal',['grass','wood']]],paint:{'fill-color':c.park,'fill-antialias':false}});
-    L.push({id:'park',type:'fill',source:'omt','source-layer':'park',paint:{'fill-color':c.park,'fill-antialias':false}});
+  if(fx.waterlines){   // lignes d'eau : deux traits parallèles (line-gap-width) de part et d'autre du contour ; le côté eau est recouvert
+    const g=WL_GAP*scale, lw=WL_W*scale, ink=fxInk(c.water,0.32);
+    for(let i=WL_N;i>=1;i--){ const gap=2*i*g-lw, p={'line-color':ink,'line-width':lw,'line-opacity':wlAlpha(i)};
+      L.push({id:`waterline-${i}`,type:'line',source:'omt','source-layer':'water',filter:waterFilter,layout:{'line-join':'round'},paint:{...p,'line-gap-width':gap}});
+      L.push({id:`waterwayline-${i}`,type:'line',source:'omt','source-layer':'waterway',filter:wwFilter,layout:{'line-cap':'round','line-join':'round'},paint:{...p,'line-gap-width':wwWidth(gap)}}); }
   }
-  L.push({id:'waterway',type:'line',source:'omt','source-layer':'waterway',filter:['in',['get','class'],['literal',['river','canal','stream']]],
-    layout:{'line-cap':'round','line-join':'round'},
-    paint:{'line-color':c.water,'line-width':['match',['get','class'],'river',3*k/st.stroke*st.waterMult,'canal',2*k/st.stroke*st.waterMult,0.8*k/st.stroke*st.waterMult]}});
-  L.push({id:'water',type:'fill',source:'omt','source-layer':'water',filter:['!=',['coalesce',['get','intermittent'],0],1],
-    paint: fx.hatch ? {'fill-pattern':hatchId(scale,pr)} : {'fill-color':c.water}});
+  if(st.layers.parks){
+    const paint = fx.parkHatch ? {'fill-pattern':patId('cross',FX_CROSS,scale,pr,c.park,c.land)} : {'fill-color':c.park,'fill-antialias':false};
+    L.push({id:'landcover',type:'fill',source:'omt','source-layer':'landcover',filter:['in',['get','class'],['literal',['grass','wood']]],paint});
+    L.push({id:'park',type:'fill',source:'omt','source-layer':'park',paint});
+  }
+  const water=(id,tr)=>[
+    {id:'waterway'+id,type:'line',source:'omt','source-layer':'waterway',filter:wwFilter,layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':c.water,'line-width':wwWidth(),...(tr?{'line-translate':tr,'line-opacity':RISO_ALPHA}:{})}},
+    {id:'water'+id,type:'fill',source:'omt','source-layer':'water',filter:waterFilter,
+      paint:{...(fx.hatch ? {'fill-pattern':patId('hatch',FX_HATCH,scale,pr,c.water,c.land)} : {'fill-color':c.water}),...(tr?{'fill-translate':tr,'fill-opacity':RISO_ALPHA}:{})}}];
+  if(!fx.riso) L.push(...water(''));
   if(st.layers.buildings) L.push(fx.outline
     ? {id:'building',type:'line',source:'omt','source-layer':'building',paint:{'line-color':c.roadMinor,'line-width':OUTLINE_W*k,'line-opacity':0.8}}
-    : {id:'building',type:'fill',source:'omt','source-layer':'building',paint:{'fill-color':c.building,'fill-antialias':false}});
+    : {id:'building',type:'fill',source:'omt','source-layer':'building',paint:fx.dots ? {'fill-pattern':patId('dots',FX_DOTS,scale,pr,c.building,c.land)} : {'fill-color':c.building,'fill-antialias':false}});
   if(st.layers.rail) L.push({id:'rail',type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,['==',['get','class'],'rail']],
     paint:{'line-color':c.rail,'line-width':0.8*k,'line-dasharray':[3,2]}});
-  for(const [cls,w,col] of ROADS){
+  const tunnel=a=>['case',['==',['get','brunnel'],'tunnel'],0.4*a,a];
+  const roads=(pre,color,wMul,extra)=>{ for(const [cls,w,col] of ROADS){
     const f = cls==='path' ? ['in',['get','class'],['literal',['path','track']]] : ['==',['get','class'],cls];
-    const base={type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,f],layout:{'line-cap':'round','line-join':'round'}};
-    if(fx.pencil) PENCIL.forEach(([dx,dy],i)=>L.push({...base,id:`road-${cls}-${i}`,
-      paint:{'line-color':c[col],'line-width':w*k*PENCIL_W,'line-translate':[dx*k,dy*k],'line-opacity':['case',['==',['get','brunnel'],'tunnel'],0.4*PENCIL_ALPHA,PENCIL_ALPHA]}}));
-    else L.push({...base,id:'road-'+cls,paint:{'line-color':c[col],'line-width':w*k,'line-opacity':['case',['==',['get','brunnel'],'tunnel'],0.4,1]}});
-  }
+    const base={type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,f,...(extra||[])],layout:{'line-cap':'round','line-join':'round'}};
+    if(fx.pencil) PENCIL.forEach(([dx,dy],i)=>L.push({...base,id:`${pre}${cls}-${i}`,
+      paint:{'line-color':color||c[col],'line-width':w*k*PENCIL_W*wMul,'line-translate':[dx*k,dy*k],'line-opacity':tunnel(PENCIL_ALPHA)}}));
+    else L.push({...base,id:pre+cls,paint:{'line-color':color||c[col],'line-width':w*k*wMul,'line-opacity':tunnel(1)}});
+  } };
+  if(fx.glow) GLOW.forEach(([wf,a],i)=>{ for(const [cls,w,col] of ROADS){   // lueur : traits larges, flous et pâles sous les rues
+    const f = cls==='path' ? ['in',['get','class'],['literal',['path','track']]] : ['==',['get','class'],cls];
+    L.push({id:`glow-${i}-${cls}`,type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,f],layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':c[col],'line-width':w*k*wf,'line-blur':w*k*wf*0.5,'line-opacity':tunnel(a*1.3)}}); } });
+  roads('road-',null,1);
+  if(fx.quarter) roads('quarter-',c.marker,QUARTER_W,[['within',focusPolygon(view)]]);   // rues entièrement dans le rayon du repère
+  if(fx.riso) L.push(...water('-plate',[RISO[0]*scale,RISO[1]*scale]));   // plaque d'eau décalée, par-dessus (fondu approché par l'opacité)
   return {version:8,sources:{omt:{type:'vector',url:OFM_URL}},layers:L};
 }
 /** Charge un script ; `integrity` (SRI) pour un fichier servi par un tiers */
@@ -277,7 +342,7 @@ function renderMaplibreOffscreen(wPx,hPx,view=st){
       try{ const out=document.createElement('canvas'); out.width=wPx; out.height=hPx; out.getContext('2d').drawImage(map.getCanvas(),0,0,wPx,hPx); map.remove(); div.remove(); resolve({canvas:out,warn}); }
       catch(e){ try{map.remove()}catch(_){} div.remove(); reject(e); } };
     try{
-      map=new maplibregl.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom),1,pr),center:[view.center.lon,view.center.lat],zoom:view.zoom,
+      map=new maplibregl.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom),1,pr,view),center:[view.center.lon,view.center.lat],zoom:view.zoom,
         pixelRatio:pr,interactive:false,preserveDrawingBuffer:true,fadeDuration:0,attributionControl:false,renderWorldCopies:false,maxCanvasSize:[8192,8192]});
     }catch(e){ div.remove(); reject(e); return; }
     map.on('styleimagemissing',e=>onImageMissing(map,e));
