@@ -11,7 +11,7 @@ import pathlib, re, subprocess, sys, time
 
 T = pathlib.Path(__file__).resolve().parent
 TESTS = ['run', 'offline', 'maplibre', 'overpass_policy', 'overpass_outage', 'coords', 'texts', 'textsize',
-         'mobile', 'ux', 'design', 'welcome', 'fonts', 'consent', 'reset', 'security', 'a11y']
+         'mobile', 'ux', 'design', 'welcome', 'fonts', 'consent', 'reset', 'security', 'a11y', 'csp']
 # « ✗ » suivi d'un texte : vérification en échec (un « ✗ » seul est une ligne du diagnostic réseau affiché, attendue hors ligne)
 BAD = re.compile(r'^✗ \S|PAGEERROR|Traceback \(most recent call last\)', re.M)
 
