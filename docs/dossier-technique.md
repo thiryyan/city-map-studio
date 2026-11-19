@@ -319,6 +319,14 @@ Tous trois sont dessinés par `drawPoster` dans la couche du dessus : même rend
   * **Graduations** : méridiens et parallèles à pas rond (de 15″ à 2°, au plus cinq dans la largeur) en tirets pâles ; dans un cadre rectangulaire, repères au bord et valeurs en degrés et minutes (`1°19,5′E`, `47°35′N`).
 * **Gabarit Lettres** : la carte occupe le haut de l'affiche ; un voile couleur papier (90 %) la recouvre, sauf dans les lettres du titre, découpées en `destination-out` sur un canvas intermédiaire de la taille de la carte (libéré aussitôt). Les lettres, en capitales de la police du titre, prennent la plus grande taille possible : sur une ligne, ou un mot par ligne si c'est plus grand ; un filet fin les détoure. La carte reste interactive dans l'aperçu : on la déplace sous les lettres. Le cartouche dessous reprend les autres lignes.
 
+### 4.12. Mes affiches : sauvegarde et restauration de la configuration
+
+La fenêtre **Mes affiches** (onglet Style, « Avant d'imprimer ») garde la configuration complète d'une affiche : lieu, cadrage, repères et itinéraire, textes et tailles, gabarit, thème et couleurs, polices, effets, ornements, papier, ciel. Ne sont pas inclus le moteur cartographique (choix de l'appareil) ni les données importées du moteur Fichier, trop volumineuses : on les réimporte.
+* **Dans le navigateur** (`localStorage['cityMapStudio.saves']`, 40 affiches au plus) : nom (proposé : titre et noms), date, état, vignette JPEG d'environ 150 px (carte réelle avec le moteur Fichier, schématique avec le moteur GPU, dont le canvas n'est pas relisible). Enregistrer sous un nom existant, casse ignorée, met à jour cette affiche (sous le nom saisi) et la remonte en tête. **Ctrl + S** (⌘ + S) enregistre l'affiche en cours. Suppression en deux temps (« Supprimer ? »). La liste suit les modifications faites dans un autre onglet (événement `storage`). « Réinitialiser » ne touche pas aux sauvegardes.
+* **Restaurer** applique l'état par `applyConfig`, commun au lien partagé et aux fichiers : validation par `normState`, moteur courant conservé, étape d'historique (« Annuler » revient à l'affiche en cours) ; en cas d'échec, l'affiche précédente revient intacte.
+* **Fichier de configuration** (« Télécharger l'affiche en cours » ou ⤓ sur une sauvegarde) : `affiche-<nom>.json`, `{format: "city-map-studio/configuration", version: 1, app, name, savedAt, state}`. **Sauvegarde complète** : `mes-affiches-<date>.json`, `{format: "city-map-studio/sauvegardes", version: 1, saves: [...]}`. Les deux s'ouvrent avec « Ouvrir un fichier » : une configuration est appliquée, une sauvegarde complète est fusionnée dans la liste (sans doublon : même identifiant et même date ; limite de 40). Un état brut (ancien format, sans enveloppe) est aussi accepté.
+* **Sécurité** : tout ce qui est relu (navigateur ou fichier) est traité comme un lien partagé. Taille bornée (1 Mo pour une configuration, 16 Mo pour une sauvegarde complète, 1 000 entrées lues au plus), JSON vérifié, champs connus seulement, `normState` sur chaque état, nom tronqué à 80 caractères et toujours inséré comme texte, vignette acceptée seulement si c'est une image `data:` (JPEG, PNG ou WebP) de moins de 120 Ko. Un fichier non reconnu est refusé sans rien modifier. Un fichier d'une version plus récente est ouvert (réglages inconnus ignorés) avec un avertissement. Navigateur plein : message explicite, rien n'est perdu.
+
 ## 5. Export haute définition
 
 * **Format** : 2480 × 3508 px en portrait, 3508 × 2480 px en paysage (A4 à 300 DPI ; 212 DPI en A3 par mise à l'échelle chez l'imprimeur). L'export est un **recalcul intégral** à pleine résolution, jamais un agrandissement de l'aperçu.
@@ -445,8 +453,10 @@ city-map-studio/
     ├── design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel
     ├── vectors.py          # cache de tracés du moteur Fichier : réutilisation, invalidation, rendu identique, carreaux
     ├── art.py              # pistes artistiques : effets, halo, dorure, ornements, Lettres, papiers, ciel, palette d'une photo
-    ├── make_city.py        # génère city.json : ville fictive réaliste (fleuve à îles, vieille ville, damiers, ponts, ~22 000 bâtiments)
+    ├── make_city.py        # génère city.json : ville fictive réaliste (fleuve à îles, vieille ville, château, faubourgs, grand ensemble, pavillons, port, gare, ~18 500 bâtiments)
     ├── city.py             # moteur Fichier sur city.json : import JSON et XML, fleuve assemblé, points de contrôle, fluidité, exports
+    ├── saves.py            # Mes affiches : enregistrer, restaurer, persistance, fichiers de configuration et de sauvegarde, fichiers piégés
+    ├── make_og.py          # régénère icons/og-image.jpg avec le rendu actuel (ville de test, trois ambiances)
     ├── compare.py          # comparer avant / après un changement de thème (souris, toucher, clavier)
     ├── welcome.py          # ambiance proposée au premier lancement
     ├── security.py         # lien forgé ou piégé, état corrompu, crochets de test, libellé d'export
@@ -556,7 +566,8 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Taille des textes de l'affiche | ✅ | `tests/textsize.py` |
 | Polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel | ✅ | `tests/design.py` (moteur Fichier, sans réseau) ; ⏳ Deux lieux et aperçu au mur avec les vraies tuiles OpenFreeMap. |
 | Cache de tracés du moteur Fichier | ✅ | `tests/vectors.py` ; ⏳ fluidité des gestes sur un téléphone réel. |
-| Moteur Fichier sur une ville réaliste (6,4 × 5,2 km, ~22 000 bâtiments, 8,6 Mo) | ✅ | `tests/city.py` : import JSON (≈ 0,15 s) et XML, fleuve assemblé depuis 7 membres avec 2 îles, eau et pont aux points de contrôle, cache en ≈ 0,2 s, déplacement ≈ 2 ms par image (Chromium, ordinateur) ; ⏳ mêmes mesures sur un téléphone réel et sur un vrai extrait OSM. |
+| Moteur Fichier sur une ville réaliste (6,4 × 5,2 km, ~18 500 bâtiments, 7,8 Mo) | ✅ | `tests/city.py` : import JSON (≈ 0,15 s) et XML, fleuve assemblé depuis 7 membres avec 2 îles, eau et pont aux points de contrôle, cache en ≈ 0,2 s, déplacement ≈ 2 ms par image (Chromium, ordinateur) ; ⏳ mêmes mesures sur un téléphone réel et sur un vrai extrait OSM. |
+| Mes affiches (sauvegarde et restauration de la configuration) | ✅ | `tests/saves.py` : aller-retour exact de l'état, annulation, persistance, Ctrl + S, fichiers, fusion sans doublon, fichiers piégés, navigateur plein ; ⏳ Safari iOS (quota du stockage, téléchargement des fichiers). |
 | Pistes artistiques (effets, autour du repère, dorure, ornements, Lettres, papier Ancien et plis, Lune, planètes, Voie lactée, palette d'une photo) | ✅ | `tests/art.py` (moteur Fichier) et `tests/maplibre.py` (couches GPU, tuiles simulées) ; ⏳ rendu avec les vraies tuiles OpenFreeMap, impression réelle de la dorure et du riso. |
 | Comparer avant / après un changement de thème | ✅ | `tests/compare.py` (émulation du toucher) ; ⏳ appui long sur iOS Safari et Chrome Android. |
 | Parcours guidé, accessibilité, historique, date, géolocalisation, recherche | ✅ | `tests/ux.py` (émulation) ; ⏳ géolocalisation et calendrier natif à valider sur iOS et Android. |
@@ -570,5 +581,5 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Accessibilité au clavier et aux lecteurs d'écran | ✅ | `tests/a11y.py` (Chromium) ; ⏳ VoiceOver (iOS) et TalkBack (Android) à valider sur appareil. |
 | Politique de sécurité du contenu | ✅ | `tests/csp.py`, `tests/maplibre.py` |
 | Sous-chemin GitHub Pages, application installable, hors ligne | ✅ | `tests/pwa.py` (serveur local) ; ⏳ installation et hors ligne sur l'URL publiée, iOS et Android. |
-| Image d'aperçu des liens partagés | ⏳ à valider | L'adresse `https://thiryyan.github.io/city-map-studio/icons/og-image.jpg` suppose la publication à cette adresse ; à adapter en cas de domaine personnalisé. |
+| Image d'aperçu des liens partagés | ⏳ à valider | L'adresse `https://thiryyan.github.io/city-map-studio/icons/og-image.jpg` suppose la publication à cette adresse ; à adapter en cas de domaine personnalisé. Image régénérée par `tests/make_og.py` à partir du rendu actuel. |
 | Téléchargement sur iOS Safari et Chrome Android (bouton, partage natif, appui long, 2480 × 3508 et 300 DPI conservés) | ✅ | Appareils réels ([#7](https://github.com/thiryyan/city-map-studio/issues/7)). |

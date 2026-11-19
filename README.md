@@ -7,6 +7,7 @@ Atelier web de création d'affiches cartographiques souvenir : tracé minimalist
 - **Onze gabarits** (Souvenir, Cadre, Fondu, Médaillon, Cœur, Arche, Voyage, Polaroid, Deux lieux, Ciel, Lettres) en portrait ou paysage, seize thèmes et une palette tirée d'une photo, treize ambiances, dix repères, onze polices en duos, cinq papiers et des plis de carte dépliée.
 - **Effets artistiques** : lueur, lignes d'eau gravées, motifs (eau hachurée, bâtiments pointillés, parcs hachurés), surimpression riso, trait crayon ; halo du souvenir et quartier en relief autour du lieu ; dorure ; échelle, rose des vents et graduations.
 - **Plus que la carte** : jusqu'à trois lieux, itinéraire GPX, carte du ciel du jour J (Lune en phase, planètes, Voie lactée), aperçu au mur, partage par lien.
+- **Mes affiches** : configurations enregistrées dans le navigateur (avec vignette), restaurées en un toucher et annulables ; fichier de configuration d'une affiche et sauvegarde complète à garder ou à ouvrir sur un autre appareil ; Ctrl + S.
 - **Sans build** : HTML, CSS et JavaScript natifs (`index.html`, `css/`, `js/`) servis tels quels, pensés d'abord pour le mobile.
 - **Sûre, accessible, hors ligne** : politique de sécurité du contenu stricte, liens partagés validés, fenêtres et commandes accessibles au clavier ; installable, et utilisable sans réseau après une première visite (moteur Fichier).
 

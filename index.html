@@ -23,7 +23,7 @@
 <meta property="og:image" content="https://thiryyan.github.io/city-map-studio/icons/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Trois affiches cartographiques de Blois : cœur doré, médaillon à l'encre, néon de nuit">
+<meta property="og:image:alt" content="Trois affiches cartographiques de Blois : carte ancienne sur papier plié, médaillon doré de soirée de gala, nuit en ville au néon">
 <meta name="twitter:card" content="summary_large_image">
 <!-- Polices auto-hébergées (SIL OFL 1.1) : aucun appel à un service tiers, fonctionne hors ligne -->
 <link rel="stylesheet" href="lib/fonts/fonts.css">
@@ -196,6 +196,7 @@
         <label class="tog mt8">Mention © OpenStreetMap sur l'affiche<input type="checkbox" data-k="attribution"></label>
         <h3>Avant d'imprimer</h3>
         <div class="row"><button class="btn grow" type="button" id="bMockup">Voir l'affiche au mur</button><button class="btn grow" type="button" id="bShare">Copier le lien de l'affiche</button></div>
+        <button class="btn wide mt8" type="button" id="bSaves">Mes affiches : enregistrer, restaurer, fichier</button>
         <div id="shareBox" hidden><input type="text" id="shareOut" readonly aria-label="Lien de l'affiche"><p class="hint">Le lien contient le lieu, les textes et les réglages, encodés dans l'adresse : rien n'est envoyé à un serveur. Partagez-le seulement avec des personnes de confiance.</p></div>
         <button class="btn next pri2" type="button" id="bNextExport">Tout est prêt : exporter l'affiche<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v9M4 7l4 4 4-4M3 14h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
@@ -302,6 +303,16 @@
   <label class="tog">Passe-partout<input type="checkbox" id="mockMat"></label>
   <div class="row"><button class="btn pri" type="button" id="mockDl">Télécharger l'aperçu</button></div>
   <button class="btn" type="button" id="mockClose">Fermer</button>
+</div></dialog>
+<dialog class="modal" id="saves" aria-labelledby="savesTitle"><div class="box">
+  <h2 id="savesTitle">Mes affiches</h2>
+  <p class="hint">Enregistrez la configuration de l'affiche (lieu, cadrage, textes, style, effets) pour la retrouver plus tard. Les affiches restent dans ce navigateur ; téléchargez-les en fichier pour les garder ailleurs ou les ouvrir sur un autre appareil. Les données importées (moteur Fichier) ne sont pas incluses.</p>
+  <form id="saveForm" class="row"><input type="text" id="saveName" class="grow" maxlength="80" aria-label="Nom de l'affiche à enregistrer" placeholder="Nom de l'affiche" autocomplete="off"><button class="btn pri" type="submit">Enregistrer</button></form>
+  <ul class="saves" id="savesList" aria-label="Affiches enregistrées"></ul>
+  <p class="hint" id="savesEmpty">Aucune affiche enregistrée pour l'instant. Astuce : Ctrl + S (⌘ + S) enregistre l'affiche en cours.</p>
+  <div class="row"><button class="btn grow" type="button" id="bCfgExport">Télécharger l'affiche en cours</button><label class="btn grow">Ouvrir un fichier<input type="file" id="cfgIn" accept=".json,application/json" hidden></label></div>
+  <button class="btn wide" type="button" id="bSavesBackup">Sauvegarder toutes mes affiches dans un fichier</button>
+  <button class="btn" type="button" id="savesClose">Fermer</button>
 </div></dialog>
 <dialog class="modal" id="result" aria-label="Affiche exportée"><div class="box">
   <img id="resImg" alt="Aperçu de l'affiche exportée">

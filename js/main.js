@@ -6,7 +6,7 @@
 // ou localStorage['cityMapStudio.debug']='1'. En usage normal, rien n'est exposé.
 const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ return localStorage.getItem('cityMapStudio.debug')==='1'; }catch(e){ return false; } })();
 async function boot(){
-  buildUI(); initSheet(); applyUiScale();
+  buildUI(); initSaves(); initSheet(); applyUiScale();
   $('bConsentYes').onclick=giveConsent; $('bConsentFile').onclick=declineConsent; updateConsentInfo();
   dlgCancel.consent=declineConsent; dlgCancel.welcome=()=>$('welSkip').click(); initDialogs();
   showEnvWarning();
@@ -30,7 +30,7 @@ async function boot(){
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
   installPwa();
-  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll};
+  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll};
 }
 /** Application installable et utilisable hors ligne : manifeste et service worker (sw.js), seulement en http(s).
  *  En file://, le navigateur refuse les deux (simple bruit dans la console) : rien n'est déclaré.

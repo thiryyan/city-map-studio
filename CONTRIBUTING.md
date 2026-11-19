@@ -15,7 +15,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 ## Sécurité, accessibilité
 - **Aucun script ni style en ligne** (ni `<script>` sans `src`, ni `style="…"`, ni `onclick="…"`, ni `innerHTML` avec des styles) : la CSP les bloque. Créer les éléments avec `h(tag, props, …enfants)`, les styles par le CSSOM (`el.style.x = …`) ou des classes.
 - **Nouveau service réseau** : l'ajouter à `connect-src` dans la CSP de `index.html`, en plus de `needConsent()`.
-- **Nouveau champ d'état** : l'ajouter à `DEFAULT_STATE` **et** à `normState()` (`js/state.js`), avec sa vérification ; sinon il est ignoré au chargement.
+- **Nouveau champ d'état** : l'ajouter à `DEFAULT_STATE` **et** à `normState()` (`js/state.js`), avec sa vérification ; sinon il est ignoré au chargement (enregistrement local, lien partagé, Mes affiches et fichiers de configuration passent tous par `normState`).
 - **Nouvelle version de MapLibre** : remplacer `lib/`, mettre à jour `ML_VERSION` et les empreintes `ML_SRI` (`openssl dgst -sha384 -binary lib/maplibre-gl.js | base64`).
 - **Nouveau fichier de l'application** (`js/`, `css/`) : l'ajouter à la liste `APP` de `sw.js` ; changer `VERSION` dans `sw.js` à chaque modification de cette liste ou de `sw.js`.
 - **Fenêtre modale** : un `<dialog class="modal">` ouvert par `openDialog(id)` et fermé par `closeDialog(id)` (focus rendu) ; action de la touche Échap dans `dlgCancel`.
@@ -46,6 +46,8 @@ python tests/ux.py               # parcours guidé, accessibilité, annuler / r�
 python tests/design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, mur, lien, paysage, GPX, ciel
 python tests/vectors.py          # cache de tracés du moteur Fichier
 python tests/city.py             # ville réaliste (tests/city.json) : import JSON et XML, fleuve, ponts, fluidité, exports
+python tests/saves.py            # Mes affiches : enregistrer, restaurer, fichier de configuration, sauvegarde complète, fichiers piégés
+python tests/make_og.py          # régénère icons/og-image.jpg (aperçu des liens partagés) avec le rendu actuel
 python tests/art.py              # pistes artistiques : effets, dorure, ornements, Lettres, papiers, ciel, palette d'une photo
 python tests/compare.py          # comparer avant / après un changement de thème
 python tests/welcome.py          # ambiance proposée au premier lancement
@@ -60,7 +62,7 @@ python -m http.server 8000       # aperçu local : http://localhost:8000
 ```
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.
 
-`tests/city.json` (généré par `tests/make_city.py`) est une ville fictive mais réaliste — fleuve à îles, vieille ville, damiers, ponts, rocade, ~22 000 bâtiments — à importer aussi dans l'application (onglet Lieu, section Avancé, moteur Fichier) pour juger un rendu sans réseau ; elle est centrée sur la vue par défaut.
+`tests/city.json` (généré par `tests/make_city.py`) est une ville fictive mais réaliste — fleuve à îles, vieille ville et château, faubourgs, grand ensemble, pavillons, port, gare, rocade, campagne, ~18 500 bâtiments — à importer aussi dans l'application (onglet Lieu, section Avancé, moteur Fichier) pour juger un rendu sans réseau ; elle est centrée sur la vue par défaut.
 
 ## Avant chaque commit
 - Lancer `python tests/run_all.py` : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports de 2480 × 3508 px). La même suite tourne dans GitHub Actions à chaque push et pull request.
