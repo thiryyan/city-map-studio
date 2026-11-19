@@ -122,6 +122,7 @@ function renderMap(viewChanged){
   const isML = st.engine==='maplibre';
   $('mlMap').hidden = !isML;
   vecC.hidden = isML;
+  mlKeepAlive(isML);
   if(isML){ if(!mlMap) initMaplibre(); if(viewChanged) mlUpdateView(); if(mlLib==='loading') setStatus('Chargement de la librairie MapLibre…','busy'); }
   else scheduleOp();
   scheduleOver();

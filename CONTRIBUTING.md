@@ -21,7 +21,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - **Fenêtre modale** : un `<dialog class="modal">` ouvert par `openDialog(id)` et fermé par `closeDialog(id)` (focus rendu) ; action de la touche Échap dans `dlgCancel`.
 - Tout bouton de sélection (vignette, carte) est un `<button type="button">` avec `aria-pressed` (`pressed(b, on)`) ; tout champ a un nom accessible (`<label for>` ou `aria-label`).
 - **Couleurs de l'interface** : passer par les variables de `:root` (`css/app.css`) ; texte 4,5:1 et composants 3:1 au moins, états inactifs compris (`--off`), vérifiés par `tests/contrast.py`.
-- **Grands formats** : ne jamais créer de canevas d'export plus grand que `exportSpec()` (limite `CANVAS_MAX_PX`) ni de carte WebGL de plus de `glMax()` px de côté (`renderMaplibreOffscreen` découpe en tuiles).
+- **Grands formats** : ne jamais créer de canevas d'export plus grand que `exportSpec()` (limite `CANVAS_MAX_PX`) ni de carte WebGL de plus de `glMax()` px de côté (`renderMaplibreOffscreen` découpe en tuiles). Tout rendu MapLibre hors écran passe par `mlSnapshot` (file d'attente `gpuQueue` : un seul contexte hors écran à la fois).
 
 ## Organisation
 - `index.html` : balisage, CSP et métadonnées seulement. `css/app.css` : styles. `js/*.js` : scripts chargés dans l'ordre (dossier, § 8.2), organisés en sections `// ---------- Titre ----------`. Le code exécuté au chargement d'un fichier ne doit utiliser que les fichiers précédents.
@@ -41,6 +41,7 @@ python tests/run.py              # moteur Fichier + export PNG 2480×3508 / pHYs
 python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
 python tests/layouts.py          # captures des gabarits
 python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap simulé, export hors écran
+python tests/webgl.py            # WebGL : perte et restauration du contexte, rendus hors écran en file d'attente, carte libérée en moteur Fichier
 python tests/geocoder.py         # recherche Nominatim : délai, quota, relance 5xx, cache, réponses piégées
 python tests/mlloader.py         # chargement de MapLibre : CDN de secours, copie tardive, version, CSS de secours
 python tests/coords.py           # saisie des coordonnées du repère

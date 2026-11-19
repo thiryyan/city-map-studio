@@ -48,6 +48,7 @@ let lastUrl=null, lastImgUrl=null;
 async function exportPoster(){
   if(st.engine==='maplibre' && !needConsent(()=>exportPoster())) return;
   if(st.engine!=='maplibre' && !osmData){ toast('Importez d\'abord un fichier de données.',true); return; }
+  if(st.engine==='maplibre' && ui.glLost){ toast('Carte GPU momentanément indisponible (mémoire graphique) : réessayez dans un instant.',true); return; }
   setBusy(true,'Chargement des polices…'); let show=false;
   try{
     const spec=exportSpec(), {W:EW,H:EH,dpi}=spec, pdf=st.fileType==='pdf';

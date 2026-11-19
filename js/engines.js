@@ -309,6 +309,10 @@ function initMaplibre(){
   mlMap.on('styleimagemissing',e=>onImageMissing(mlMap,e));
   mlMap.on('moveend',()=>{ mlMap.setStyle(buildStyle(mlK(ui.slotCss.w),ui.slotCss.w/REF_W)); saveState(); });
   mlMap.on('click',e=>{ if(ui.placing){ placeAt(e.lngLat.lat,e.lngLat.lng); } });
+  // Perte du contexte WebGL (mémoire graphique saturée, onglet en arrière-plan sur mobile) : MapLibre le rétablit seul,
+  // l'interface le signale et l'export attend
+  mlMap.on('webglcontextlost',()=>{ ui.glLost=true; if(st.engine==='maplibre') setStatus('Carte GPU suspendue (mémoire graphique) : rétablissement…','wait'); });
+  mlMap.on('webglcontextrestored',()=>{ ui.glLost=false; mlRestyle(); if(st.engine==='maplibre') setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'); });
   // Messages du moteur GPU seulement quand il est actif : sinon ils écraseraient l'état du moteur Fichier
   mlMap.on('dataloading',()=>{ if(st.engine==='maplibre') setStatus('Chargement des tuiles…','busy'); });
   mlMap.on('idle',()=>{ if(st.engine==='maplibre') setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'); });
@@ -318,6 +322,19 @@ function initMaplibre(){
     if(!gotTiles && /fetch|network|AJAX|status|blocked|Load failed|CORS/i.test(m)) mlFail('Tuiles OpenFreeMap inaccessibles ('+netMsg(e.error)+')'); });
   setTimeout(()=>{ if(!gotTiles && mlMap && st.engine==='maplibre') mlFail('Les tuiles OpenFreeMap ne se chargent pas (15 s).'); },15000);
   return true;
+}
+/** Moteur Fichier : la carte MapLibre (contexte WebGL, mémoire GPU) est libérée après ML_RELEASE_MS, recréée au retour */
+const ML_RELEASE_MS=30000;
+let mlReleaseT=0;
+function mlKeepAlive(active){
+  if(active){ clearTimeout(mlReleaseT); mlReleaseT=0; return; }
+  if(!mlMap || mlReleaseT) return;
+  const ms=(typeof TEST_HOOKS!=='undefined' && TEST_HOOKS && globalThis.__cmsTestConfig?.mlRelease) || ML_RELEASE_MS;
+  mlReleaseT=setTimeout(()=>{ mlReleaseT=0;
+    if(st.engine==='maplibre' || !mlMap) return;
+    try{ mlMap.remove(); }catch(e){ console.warn('MapLibre',e); }
+    mlMap=null; ui.glLost=false;
+  },ms);
 }
 function mlUpdateView(){
   if(!mlMap) return;
@@ -339,24 +356,33 @@ const mercX=(lon,ws)=>(lon+180)/360*ws;
 const mercY=(lat,ws)=>{ const s=Math.sin(lat*Math.PI/180); return (0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*ws; };
 const unmercX=(x,ws)=>x/ws*360-180;
 const unmercY=(y,ws)=>180/Math.PI*Math.atan(Math.sinh(Math.PI-2*Math.PI*y/ws));
-/** Une carte MapLibre hors écran (cssW × cssH px CSS, densité pr) ; draw(canevas WebGL) est appelé une fois la carte prête */
+/** File d'attente des rendus MapLibre hors écran (vue figée, export, tuiles) : un seul contexte WebGL hors écran à la fois */
+const gpuQueue=(()=>{ let tail=Promise.resolve(); return fn=>{ const run=tail.then(()=>fn()); tail=run.catch(()=>{}); return run; }; })();
+const SNAP_TIMEOUT=45000;
+/** Une carte MapLibre hors écran (cssW × cssH px CSS, densité pr) ; draw(canevas WebGL) est appelé une fois la carte prête.
+ *  Échec immédiat si le contexte WebGL est perdu ou si le rendu échoue ; au bout de SNAP_TIMEOUT, la carte est livrée telle quelle (warn). */
 function mlSnapshot(cssW,cssH,pr,center,view,draw){
-  return new Promise((resolve,reject)=>{
+  return gpuQueue(()=>new Promise((resolve,reject)=>{
     const div=document.createElement('div');
+    div.className='ml-offscreen';
     div.style.cssText=`position:fixed;left:-20000px;top:0;width:${cssW}px;height:${cssH}px;pointer-events:none`;
     document.body.appendChild(div);
-    let map, done=false;
-    const finish=(warn)=>{ if(done) return; done=true;
-      try{ draw(map.getCanvas()); map.remove(); div.remove(); resolve(warn); }
-      catch(e){ try{map.remove()}catch(_){} div.remove(); reject(e); } };
+    let map=null, done=false, timer=0;
+    const cleanup=()=>{ clearTimeout(timer); try{ map?.remove(); }catch(_){} div.remove(); };
+    const fail=e=>{ if(done) return; done=true; cleanup(); reject(e); };
+    const finish=warn=>{ if(done) return; done=true;
+      try{ draw(map.getCanvas()); cleanup(); resolve(warn); } catch(e){ cleanup(); reject(e); } };
     try{
       map=new CMS.maplibre.lib.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom),1,pr,view),center:[center.lon,center.lat],zoom:view.zoom,
         pixelRatio:pr,interactive:false,preserveDrawingBuffer:true,fadeDuration:0,attributionControl:false,renderWorldCopies:false,maxCanvasSize:[8192,8192]});
-    }catch(e){ div.remove(); reject(e); return; }
+    }catch(e){ fail(e); return; }
     map.on('styleimagemissing',e=>onImageMissing(map,e));
+    map.on('webglcontextlost',()=>fail(new Error('contexte WebGL perdu (mémoire graphique saturée) : réessayez')));
+    // Erreurs de rendu (pas celles d'une tuile ou d'une source : « idle » ou le délai tranchent)
+    map.on('error',e=>{ const m=e?.error?.message||''; if(!e?.sourceId && !e?.tile && /WebGL|context|shader/i.test(m)) fail(e.error); });
     map.once('idle',()=>finish(false));
-    setTimeout(()=>finish(true),45000);
-  });
+    timer=setTimeout(()=>finish(true),SNAP_TIMEOUT);
+  }));
 }
 /** Rendu MapLibre hors écran à pleine résolution pour l'export.
  *  Au-delà du côté maximal d'un canevas WebGL (glMax : 4096 px sur la plupart des mobiles), la carte serait rendue
