@@ -107,7 +107,7 @@ async function runDiagnostics(){
   const lib=line('Librairie MapLibre'); set(lib,{ok:mlLib==='ok', info: mlLib==='ok'?('chargée'+(mlCdn?' via '+mlCdn:'')):mlLib==='loading'?'chargement en cours':'aucun CDN joignable'});
   const tests=[
     ['Tuiles OpenFreeMap', s=>fetch(OFM_URL,{signal:s}).then(async r=>({ok:r.ok&&!!(await r.json()).tiles,status:r.status}))],
-    ['Géocodage Nominatim', s=>fetch(NOMINATIM+'?format=json&limit=1&q=Blois',{signal:s}).then(r=>({ok:r.ok,status:r.status}))]
+    ['Géocodage Nominatim', s=>fetch(CMS.geocoder.statusUrl(),{signal:s}).then(r=>({ok:r.ok,status:r.status}))]   // état du service : ne consomme pas de recherche
   ];
   const results=await Promise.all(tests.map(async([label,fn,ms])=>{ const d=line(label); const r=await probe(fn,ms); set(d,r); return r; }));
   const anyOk=results.some(r=>r.ok);

@@ -67,7 +67,7 @@ Une fonction unique, `drawPoster(ctx, W, H, pass, mapFn)`, dessine l'affiche à 
   * **Travailler hors ligne** : passage au moteur Fichier, sans aucune requête.
 
   Tant que l'accord n'est pas donné, chaque point d'accès au réseau (`initMaplibre`, `search`, `runDiagnostics`, `exportPoster` avec le moteur Vectoriel GPU, CDN de secours de MapLibre) affiche la demande au lieu d'appeler le service. L'onglet Lieu indique l'état de l'accord et permet de le retirer, ce qui recharge la page dans l'état initial.
-* **Nominatim** : appel uniquement à la validation de la recherche (jamais à la frappe), 5 résultats, `accept-language=fr`. Les résultats sont insérés via `textContent` (aucune injection HTML).
+* **Nominatim** : appel uniquement à la validation de la recherche (jamais à la frappe), 5 résultats, `accept-language=fr`, par `CMS.geocoder` (`js/geocoder.js`) : délai de 10 s, au plus une requête par seconde, la plus récente annule la précédente, validation répétée ignorée pendant 300 ms ; 429 / 403 → attente de 60 s (l'en-tête `Retry-After` n'est pas exposé par CORS) sans aucune requête ; 5xx → une relance ; cache des 50 dernières requêtes. Les réponses sont validées (coordonnées finies et dans les bornes Mercator, textes tronqués) puis insérées via `textContent` (aucune injection HTML). Le diagnostic interroge `/status` (aucune recherche consommée).
 * **Persistance** : l'état de l'atelier est sauvegardé dans `localStorage` (clé `cityMapStudio.v2`, sous `try/catch`). La clé `cityMapStudio.opBlocked`, laissée par une version antérieure, est effacée au démarrage.
 
 ### 2.5. Villes préréglées
@@ -490,6 +490,7 @@ d'un fichier ne peut utiliser que les fichiers précédents** (les fonctions, el
 | :--- | :--- |
 | `config.js` | Constantes : polices, thèmes, gabarits, repères, ambiances, villes, hiérarchie routière, `DEFAULT_STATE`. |
 | `maplibre-loader.js` | `CMS.maplibre` : chargement résilient de MapLibre (sources, délais, version, CSS de secours). |
+| `geocoder.js` | `CMS.geocoder` : client Nominatim (délai, annulation, une requête par seconde, quota 429 / 403, relance 5xx, cache, réponses validées). |
 | `state.js` | Validation (`normState`), état `st`, fenêtres modales (`openDialog`, `closeDialog`, `setBusy`), accord préalable, enregistrement. |
 | `geo.js` | Mercator, `geom` (géométrie des gabarits), formes. |
 | `render.js` | Typographie, cartouche, repères, ciel, `drawPoster`. |

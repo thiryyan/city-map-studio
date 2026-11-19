@@ -273,7 +273,8 @@ function buildUI(){
   $('bUiSmaller').onclick=()=>stepUiScale(-1); $('bUiLarger').onclick=()=>stepUiScale(1);
   $('bTsReset').onclick=()=>{ st.textScale={...DEFAULT_STATE.textScale}; st.textScaleAll=DEFAULT_STATE.textScaleAll; syncInputs(); changed(); toast('Tailles des textes rétablies'); };
   $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
-  $('searchForm').onsubmit=e=>{ e.preventDefault(); search($('q').value); };
+  const submitSearch=CMS.geocoder.debounceSubmit(q=>search(q),300);
+  $('searchForm').onsubmit=e=>{ e.preventDefault(); submitSearch($('q').value); };
   $('bExport').onclick=exportPoster;
   $('resClose').onclick=()=>closeDialog('result');
 }
@@ -408,36 +409,45 @@ function locateMe(){
 }
 
 // ---------- Géocodage Nominatim ----------
-// Recherche uniquement à la validation (pas d'autocomplétion : interdite par la politique d'usage de Nominatim), une seule à la fois.
+// Recherche uniquement à la validation (pas d'autocomplétion : interdite par la politique d'usage de Nominatim).
+// Délai, quota, relance, cache et validation des réponses : CMS.geocoder (js/geocoder.js).
+const GEO_MSG={
+  TIMEOUT:()=>'Le service de recherche ne répond pas.',
+  RATE_LIMITED:e=>`Trop de recherches : réessayez dans ${Math.ceil((e.retryInMs||60000)/1000)} s.`,
+  NETWORK:e=>`Recherche indisponible (${e.message}).`,
+  HTTP:e=>`Recherche indisponible (${e.message}).`,
+  BAD_RESPONSE:()=>'Réponse inattendue du service de recherche.'
+};
 let searching=false;
 async function search(q){
   q=(q||'').trim(); if(!q){ $('q').focus(); return; }
   if(searching) return;
   if(!needConsent(()=>search(q))) return;
   const box=$('results'), sb=document.querySelector('#searchForm [type=submit]');
-  searching=true; sb.disabled=true; box.textContent='Recherche…';
+  searching=true; sb.disabled=true; box.setAttribute('aria-busy','true'); box.textContent='Recherche…';
   try{
-    const res=await fetch(NOMINATIM+'?format=jsonv2&limit=5&accept-language=fr&q='+encodeURIComponent(q));
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const list=await res.json(); box.textContent='';
+    const list=await CMS.geocoder.search(q);
+    box.textContent='';
     if(!list.length){ box.textContent='Aucun résultat.'; return; }
-    for(const it of list){
-      const lat=parseFloat(it.lat), lon=parseFloat(it.lon);
-      const d=document.createElement('div'); d.className='res';
-      const t=document.createElement('div'); t.className='t';
-      const nm=(it.name||'').trim(), rest=nm && it.display_name.startsWith(nm) ? it.display_name.slice(nm.length).replace(/^,\s*/,'') : it.display_name;
-      if(nm && rest!==it.display_name){ const bb=document.createElement('b'); bb.textContent=nm; const sm=document.createElement('small'); sm.textContent=rest; t.append(bb,sm); }
-      else t.textContent=it.display_name;
-      d.appendChild(t);
-      const row=document.createElement('div'); row.className='row';
-      const b1=document.createElement('button'); b1.className='btn sm'; b1.textContent='Carte + repère';
-      b1.onclick=()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); box.textContent=''; };
-      const b2=document.createElement('button'); b2.className='btn sm'; b2.textContent='Repère seul';
-      b2.onclick=()=>{ setMarker(lat,lon); box.textContent=''; toast('Repère placé'); };
-      row.append(b1,b2); d.appendChild(row); box.appendChild(d);
-    }
-  }catch(e){ box.textContent='Recherche indisponible ('+netMsg(e)+'). Vous pouvez placer le repère en touchant la carte.'; }
-  finally{ searching=false; sb.disabled=false; }
+    for(const it of list) box.appendChild(resultItem(it));
+  }catch(e){
+    if(e.code==='ABORTED') return;
+    box.textContent=(GEO_MSG[e.code]?.(e) ?? 'Recherche indisponible.')+' Vous pouvez placer le repère en touchant la carte.';
+  }
+  finally{ searching=false; sb.disabled=false; box.removeAttribute('aria-busy'); }
+}
+/** Un résultat validé (CMS.geocoder) : nom en tête, adresse en dessous, deux actions */
+function resultItem(it){
+  const {lat,lon,name:nm,display}=it;
+  const rest=nm && display.startsWith(nm) ? display.slice(nm.length).replace(/^,\s*/,'') : display;
+  const t=h('div',{className:'t'});
+  if(nm && rest!==display) t.append(h('b',{},nm),h('small',{},rest)); else t.textContent=display;
+  const box=$('results');
+  const b1=h('button',{type:'button',className:'btn sm'},'Carte + repère');
+  b1.onclick=()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); box.textContent=''; };
+  const b2=h('button',{type:'button',className:'btn sm'},'Repère seul');
+  b2.onclick=()=>{ setMarker(lat,lon); box.textContent=''; toast('Repère placé'); };
+  return h('div',{className:'res'},t,h('div',{className:'row'},b1,b2));
 }
 
 // ---------- Polices ----------

@@ -10,7 +10,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - Attribution « © contributeurs OpenStreetMap » active par défaut (licence ODbL).
 - **Aucune ressource tierce pour la présentation** (CDN de polices, de styles ou de scripts) : tout est servi depuis le dépôt (RGPD, cf. dossier E14). Les CDN de MapLibre ne servent qu'en secours.
 - **Accord préalable** : tout nouvel appel à un service tiers passe par `needConsent()` ; aucune requête externe avant l'accord de l'utilisateur (`tests/consent.py`).
-- **Nominatim** : requêtes uniquement à la demande (jamais pendant la frappe), une seule à la fois.
+- **Nominatim** : requêtes uniquement à la demande (jamais pendant la frappe), une seule à la fois, toujours par `CMS.geocoder` (`js/geocoder.js` : délai, une requête par seconde au plus, quota 429 / 403, cache, réponses validées).
 
 ## Sécurité, accessibilité
 - **Aucun script ni style en ligne** (ni `<script>` sans `src`, ni `style="…"`, ni `onclick="…"`, ni `innerHTML` avec des styles) : la CSP les bloque. Créer les éléments avec `h(tag, props, …enfants)`, les styles par le CSSOM (`el.style.x = …`) ou des classes.
@@ -41,6 +41,7 @@ python tests/run.py              # moteur Fichier + export PNG 2480×3508 / pHYs
 python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
 python tests/layouts.py          # captures des gabarits
 python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap simulé, export hors écran
+python tests/geocoder.py         # recherche Nominatim : délai, quota, relance 5xx, cache, réponses piégées
 python tests/mlloader.py         # chargement de MapLibre : CDN de secours, copie tardive, version, CSS de secours
 python tests/coords.py           # saisie des coordonnées du repère
 python tests/texts.py            # lignes de texte optionnelles
