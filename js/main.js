@@ -15,6 +15,7 @@ async function boot(){
   hist.cur=histSnap(); hist.quietUntil=Date.now()+2500; updateHistUI();   // l'état chargé est le point de départ de l'historique
   let rafL=0; new ResizeObserver(()=>{ if(!rafL) rafL=requestAnimationFrame(()=>{ rafL=0; layoutPreview(); }); }).observe(stage);
   addEventListener('resize',()=>applySheet());
+  CMS.surface.watchDpr(()=>layoutPreview());   // densité changée sans redimensionnement : aperçu redessiné à la nouvelle densité
   layoutPreview();
   loadFonts().then(()=>{ scheduleOver(); refreshCards(); });
   loadFromHash();

@@ -15,8 +15,8 @@ def top_level_names(src):
     names, inside, prev = [], False, ''
     for line in src.splitlines():
         if line.startswith('CMS.define('): inside = True; continue
-        if inside:   # fin du module : « }); » juste après son « return {…}; »
-            if line.startswith('});') and prev.startswith('return {'): inside = False
+        if inside:   # fin du module : « }); » juste après son « return {…}; », ou « })); » (module écrit en objet littéral)
+            if (line.startswith('});') and prev.strip().startswith('return {')) or line.startswith('}));'): inside = False
             if line.strip(): prev = line
             continue
         m = re.match(r'(?:async\s+)?function\s*\*?\s*([\w$]+)', line)

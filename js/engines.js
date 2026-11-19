@@ -224,11 +224,18 @@ function focusPolygon(view){
 }
 
 // ---------- Moteur 1 : MapLibre + OpenFreeMap ----------
-/** k : facteur d'épaisseur ; scale : largeur du cadre / 800 ; pr : densité de pixels de la carte (motifs) ; view : vue dessinée */
-function buildStyle(k, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=window.devicePixelRatio||1, view=st){
-  const c=st.colors, L=[], fx=st.fx||{}, wk=k/st.stroke*st.waterMult;
+/** k : facteur d'épaisseur ; scale : largeur du cadre / 800 ; pr : densité de pixels de la carte (motifs) ; view : vue dessinée ;
+ *  live : carte interactive ({off : zoom de la carte − zoom de l'affiche}). Avec live, les épaisseurs suivent le zoom de la carte
+ *  par des expressions (interpolation exponentielle de base √2 entre les paliers 12 et 16 = zoomFactor, borné entre 0,5 et 2,
+ *  exact pour toute épaisseur affine en k) : les gestes ne reconstruisent plus le style. Sans live, valeurs figées (exports). */
+function buildStyle(k, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=window.devicePixelRatio||1, view=st, live=null){
+  const c=st.colors, L=[], fx=st.fx||{}, kz=k/zoomFactor(view.zoom);
+  /** Valeur dépendant de l'épaisseur K : f(K) figée, ou expression de zoom */
+  const Z=f=>live ? ['interpolate',['exponential',Math.SQRT2],['zoom'],12+live.off,f(kz*0.5),16+live.off,f(kz*2)] : f(k);
+  const ZA=f=>live ? Z(K=>['literal',f(K)]) : f(k);   // tableau de nombres (line-translate) : littéral dans une expression
+  const wkOf=K=>K/st.stroke*st.waterMult;
   const lineGeom=['in',['geometry-type'],['literal',['LineString','MultiLineString']]];
-  const wwFilter=['in',['get','class'],['literal',['river','canal','stream']]], wwWidth=(add=0)=>['match',['get','class'],'river',3*wk+add,'canal',2*wk+add,0.8*wk+add];
+  const wwFilter=['in',['get','class'],['literal',['river','canal','stream']]], wwWidth=(add=0)=>Z(K=>{ const wk=wkOf(K); return ['match',['get','class'],'river',3*wk+add,'canal',2*wk+add,0.8*wk+add]; });
   const waterFilter=['!=',['coalesce',['get','intermittent'],0],1];
   L.push({id:'bg',type:'background',paint:{'background-color':c.land}});
   if(fx.waterlines){   // lignes d'eau : deux traits parallèles (line-gap-width) de part et d'autre du contour ; le côté eau est recouvert
@@ -249,22 +256,22 @@ function buildStyle(k, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=window.device
       paint:{...(fx.hatch ? {'fill-pattern':patId('hatch',FX_HATCH,scale,pr,c.water,c.land)} : {'fill-color':c.water}),...(tr?{'fill-translate':tr,'fill-opacity':RISO_ALPHA}:{})}}];
   if(!fx.riso) L.push(...water(''));
   if(st.layers.buildings) L.push(fx.outline
-    ? {id:'building',type:'line',source:'omt','source-layer':'building',paint:{'line-color':c.roadMinor,'line-width':OUTLINE_W*k,'line-opacity':0.8}}
+    ? {id:'building',type:'line',source:'omt','source-layer':'building',paint:{'line-color':c.roadMinor,'line-width':Z(K=>OUTLINE_W*K),'line-opacity':0.8}}
     : {id:'building',type:'fill',source:'omt','source-layer':'building',paint:fx.dots ? {'fill-pattern':patId('dots',FX_DOTS,scale,pr,c.building,c.land)} : {'fill-color':c.building,'fill-antialias':false}});
   if(st.layers.rail) L.push({id:'rail',type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,['==',['get','class'],'rail']],
-    paint:{'line-color':c.rail,'line-width':0.8*k,'line-dasharray':[3,2]}});
+    paint:{'line-color':c.rail,'line-width':Z(K=>0.8*K),'line-dasharray':[3,2]}});
   const tunnel=a=>['case',['==',['get','brunnel'],'tunnel'],0.4*a,a];
   const roads=(pre,color,wMul,extra)=>{ for(const [cls,w,col] of ROADS){
     const f = cls==='path' ? ['in',['get','class'],['literal',['path','track']]] : ['==',['get','class'],cls];
     const base={type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,f,...(extra||[])],layout:{'line-cap':'round','line-join':'round'}};
     if(fx.pencil) PENCIL.forEach(([dx,dy],i)=>L.push({...base,id:`${pre}${cls}-${i}`,
-      paint:{'line-color':color||c[col],'line-width':w*k*PENCIL_W*wMul,'line-translate':[dx*k,dy*k],'line-opacity':tunnel(PENCIL_ALPHA)}}));
-    else L.push({...base,id:pre+cls,paint:{'line-color':color||c[col],'line-width':w*k*wMul,'line-opacity':tunnel(1)}});
+      paint:{'line-color':color||c[col],'line-width':Z(K=>w*K*PENCIL_W*wMul),'line-translate':ZA(K=>[dx*K,dy*K]),'line-opacity':tunnel(PENCIL_ALPHA)}}));
+    else L.push({...base,id:pre+cls,paint:{'line-color':color||c[col],'line-width':Z(K=>w*K*wMul),'line-opacity':tunnel(1)}});
   } };
   if(fx.glow) GLOW.forEach(([wf,a],i)=>{ for(const [cls,w,col] of ROADS){   // lueur : traits larges, flous et pâles sous les rues
     const f = cls==='path' ? ['in',['get','class'],['literal',['path','track']]] : ['==',['get','class'],cls];
     L.push({id:`glow-${i}-${cls}`,type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,f],layout:{'line-cap':'round','line-join':'round'},
-      paint:{'line-color':c[col],'line-width':w*k*wf,'line-blur':w*k*wf*0.5,'line-opacity':tunnel(a*1.3)}}); } });
+      paint:{'line-color':c[col],'line-width':Z(K=>w*K*wf),'line-blur':Z(K=>w*K*wf*0.5),'line-opacity':tunnel(a*1.3)}}); } });
   roads('road-',null,1);
   if(fx.quarter) roads('quarter-',c.marker,QUARTER_W,[['within',focusPolygon(view)]]);   // rues entièrement dans le rayon du repère
   if(fx.riso) L.push(...water('-plate',[RISO[0]*scale,RISO[1]*scale]));   // plaque d'eau décalée, par-dessus (fondu approché par l'opacité)
@@ -303,13 +310,15 @@ function initMaplibre(){
   if(!needConsent()){ setStatus('Carte en attente de votre accord','wait'); return false; }
   const w=ui.slotCss.w||300;
   try{
-    mlMap=new CMS.maplibre.lib.Map({container:'mlMap',style:buildStyle(mlK(w),w/REF_W),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
+    mlStyledW=w;
+    mlMap=new CMS.maplibre.lib.Map({container:'mlMap',style:liveStyle(w),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
       attributionControl:false,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,fadeDuration:0,renderWorldCopies:false});
   }catch(e){ console.error(e); mlMap=null; return false; }
   mlMap.touchZoomRotate.disableRotation(); mlMap.keyboard.disableRotation();
   mlMap.on('move',()=>{ if(mlSync) return; const cc=mlMap.getCenter(); st.center={lat:cc.lat,lon:cc.lng}; st.zoom=mlMap.getZoom()-Math.log2(ui.slotCss.w/REF_W); scheduleOver(); syncZoomUI(); });
   mlMap.on('styleimagemissing',e=>onImageMissing(mlMap,e));
-  mlMap.on('moveend',()=>{ mlMap.setStyle(buildStyle(mlK(ui.slotCss.w),ui.slotCss.w/REF_W)); saveState(); });
+  // Fin de geste : les épaisseurs suivent le zoom par expressions ; seul le disque du quartier (rayon en px de l'affiche) est recalculé
+  mlMap.on('moveend',()=>{ mlUpdateQuarter(); saveState(); });
   mlMap.on('click',e=>{ if(ui.placing){ placeAt(e.lngLat.lat,e.lngLat.lng); } });
   // Perte du contexte WebGL (mémoire graphique saturée, onglet en arrière-plan sur mobile) : MapLibre le rétablit seul,
   // l'interface le signale et l'export attend
@@ -341,8 +350,20 @@ function mlKeepAlive(active){
 function mlUpdateView(){
   if(!mlMap) return;
   mlSync=true; mlMap.resize(); mlMap.jumpTo({center:[st.center.lon,st.center.lat],zoom:mlZoom(ui.slotCss.w)}); mlSync=false;
+  if(Math.abs(ui.slotCss.w-mlStyledW)>0.5) mlRestyle();   // cadre redimensionné : l'écart de zoom des expressions a changé
+  else mlUpdateQuarter();
 }
-function mlRestyle(){ if(mlMap) mlMap.setStyle(buildStyle(mlK(ui.slotCss.w),ui.slotCss.w/REF_W)); }
+/** Style de la carte interactive pour un cadre de w px CSS (épaisseurs en expressions de zoom) */
+const liveStyle=w=>buildStyle(mlK(w),w/REF_W,undefined,st,{off:Math.log2(w/REF_W)});
+let mlStyledW=0, mlQuarterKey='';
+function mlRestyle(){ if(!mlMap) return; mlStyledW=ui.slotCss.w; mlQuarterKey=''; mlMap.setStyle(liveStyle(mlStyledW)); }
+/** Quartier en relief : filtre `within` mis à jour sur place quand le zoom ou le repère change (pas de setStyle) */
+function mlUpdateQuarter(){
+  if(!mlMap || !st.fx?.quarter) return;
+  const key=JSON.stringify([st.zoom.toFixed(4),st.marker,st.focusR]); if(key===mlQuarterKey) return; mlQuarterKey=key;
+  const poly=focusPolygon(st);
+  for(const l of mlMap.getStyle()?.layers||[]) if(l.id.startsWith('quarter-')) mlMap.setFilter(l.id,[...l.filter.slice(0,-1),['within',poly]]);
+}
 /** Côté maximal d'un canevas WebGL sur cet appareil (GL_TILE_MAX au plus : limite courante des mobiles) */
 let glMaxCache=0;
 const setGlMaxTest=v=>{ glMaxCache=v; };   // tests : côté maximal simulé

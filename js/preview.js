@@ -29,7 +29,7 @@ function layoutPreview(){
   if(mode==='side') poster.style.marginRight=FAB+'px'; else poster.style.marginRight='';
   ui.posterCss={w,h}; ui.dpr=Math.min(window.devicePixelRatio||1,3);
   poster.style.width=w+'px'; poster.style.height=h+'px';
-  for(const cv of [cvU,cvO,cvT]){ cv.width=Math.round(w*ui.dpr); cv.height=Math.round(h*ui.dpr); }
+  for(const cv of [cvU,cvO,cvT]) CMS.surface.fit(cv,w*ui.dpr,h*ui.dpr);   // chaque couche est entièrement redessinée ensuite
   const G=geom(st,w,h), g=G.map; ui.slotCss=g; ui.geomCss=G;
   const clip=g.shape && g.shape!=='circle' ? `path('${shapeD(g.shape,g.w,g.h)}')` : '';
   Object.assign(slot.style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px',clipPath:clip});
@@ -41,9 +41,26 @@ function layoutPreview(){
   ps.hidden=!other; if(other){ Object.assign(ps.style,{left:other.x+'px',top:other.y+'px',width:other.w+'px',height:other.h+'px'}); ps.querySelector('span').textContent=`Modifier le lieu ${2-(st.active||0)}`; ps.classList.toggle('mini',other.w<170); }
   if(G.sky) ensureSky();
   drawTexture();
-  vecC.width=Math.round(g.w*ui.dpr); vecC.height=Math.round(g.h*ui.dpr);
+  CMS.surface.fit(vecC,g.w*ui.dpr,g.h*ui.dpr);
   drawUnder(); renderMap(true);
 }
+/** Surfaces de l'aperçu : redimensionnement sans réallocation inutile, suivi de la densité de pixels */
+CMS.define('surface', () => ({
+  /** Redimensionne un canevas seulement si sa taille change : réaffecter width / height l'efface et réalloue sa mémoire */
+  fit(cv,w,h){
+    w=Math.max(1,Math.round(w)); h=Math.max(1,Math.round(h));
+    if(cv.width===w && cv.height===h) return false;
+    cv.width=w; cv.height=h; return true;
+  },
+  /** Prévient quand la densité de pixels change sans redimensionnement (fenêtre déplacée vers un autre écran, zoom du navigateur) */
+  watchDpr(onChange){
+    let mql=null;
+    const handler=()=>{ arm(); onChange(window.devicePixelRatio||1); };
+    const arm=()=>{ mql?.removeEventListener('change',handler); mql=matchMedia(`(resolution: ${window.devicePixelRatio||1}dppx)`); mql.addEventListener('change',handler); };
+    arm();
+    return ()=>mql?.removeEventListener('change',handler);
+  }
+}));
 function drawUnder(){
   const ctx=cvU.getContext('2d'), g=drawPoster(ctx,cvU.width,cvU.height,'under');
   if(g.rects){   // vue figée du lieu non édité

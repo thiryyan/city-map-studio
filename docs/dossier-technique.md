@@ -48,7 +48,7 @@
 | **1. Vectoriel GPU (défaut)** | MapLibre + OpenFreeMap | Instantané, monde entier, mers et côtes correctes, fluide sur mobile. | Généralisation des tuiles : certaines petites voies disparaissent aux zooms faibles. |
 | **2. Fichier (hors ligne)** | Fichier importé : `.osm` XML, JSON OSM (`{"elements":[…]}`) ou GeoJSON → Canvas 2D | Aucun accès réseau requis ; géométrie OSM brute au niveau de détail maximal, contrôle total du tracé. | L'utilisateur obtient le fichier lui-même (§ 7.3) ; le trait de côte marin n'est pas traité (villes continentales et fluviales). |
 
-**Chaîne de secours** : MapLibre est chargé par `js/maplibre-loader.js` (`CMS.maplibre`) depuis `lib/`, puis depuis 3 CDN (12 s par source, CDN seulement après l'accord). Une seule promesse de chargement à la fois ; la version (`getVersion() === ML_VERSION`) est vérifiée pour toutes les sources, copie locale comprise ; un script arrivé après son délai (qu'on ne peut pas annuler) est neutralisé si une autre source a gagné, ou adopté si toutes avaient échoué (événement `cms:maplibre-ready`, la carte est relancée). La feuille de style est chargée avec `onload`/`onerror`, depuis la même source puis les autres sources autorisées. Les tuiles sont surveillées pendant 15 s. **Contexte WebGL** : MapLibre rétablit seul un contexte perdu ; l'application l'affiche (« Carte GPU suspendue ») et refuse l'export pendant ce temps. Les rendus hors écran (`mlSnapshot` : vue figée, export, tuiles) passent par une file d'attente (`gpuQueue`, un seul contexte hors écran à la fois) et échouent immédiatement si leur contexte est perdu (au lieu d'attendre 45 s). En moteur Fichier, la carte MapLibre est libérée au bout de 30 s et recréée au retour. En cas d'échec, un bandeau « Diagnostiquer » oriente vers le moteur qui fonctionne, et en dernier recours vers le moteur Fichier.
+**Chaîne de secours** : MapLibre est chargé par `js/maplibre-loader.js` (`CMS.maplibre`) depuis `lib/`, puis depuis 3 CDN (12 s par source, CDN seulement après l'accord). Une seule promesse de chargement à la fois ; la version (`getVersion() === ML_VERSION`) est vérifiée pour toutes les sources, copie locale comprise ; un script arrivé après son délai (qu'on ne peut pas annuler) est neutralisé si une autre source a gagné, ou adopté si toutes avaient échoué (événement `cms:maplibre-ready`, la carte est relancée). La feuille de style est chargée avec `onload`/`onerror`, depuis la même source puis les autres sources autorisées. Les tuiles sont surveillées pendant 15 s. **Style de la carte interactive** : les épaisseurs suivent le zoom de la carte par des expressions (`interpolate` exponentielle de base √2 entre les paliers 12 et 16 du zoom de l'affiche, exactement `zoomFactor` borné entre 0,5 et 2) : un geste ne reconstruit pas le style ; seul le disque du quartier en relief est remis à jour par `setFilter`. Le style n'est reconstruit (`mlRestyle`) que si un réglage ou la largeur du cadre change. Les exports gardent des valeurs figées. **Contexte WebGL** : MapLibre rétablit seul un contexte perdu ; l'application l'affiche (« Carte GPU suspendue ») et refuse l'export pendant ce temps. Les rendus hors écran (`mlSnapshot` : vue figée, export, tuiles) passent par une file d'attente (`gpuQueue`, un seul contexte hors écran à la fois) et échouent immédiatement si leur contexte est perdu (au lieu d'attendre 45 s). En moteur Fichier, la carte MapLibre est libérée au bout de 30 s et recréée au retour. En cas d'échec, un bandeau « Diagnostiquer » oriente vers le moteur qui fonctionne, et en dernier recours vers le moteur Fichier.
 
 ### 2.3. Rendu en trois couches (WYSIWYG)
 
@@ -59,6 +59,8 @@ Une fonction unique, `drawPoster(ctx, W, H, pass, mapFn)`, dessine l'affiche à 
 3. **Couche haute** (canvas, `pointer-events: none`) : fondu, filets, repère, typographie et attribution.
 
 À l'export, les trois couches sont recomposées dans un canvas unique de 2480 × 3508 px.
+
+Les canevas de l'aperçu sont à la densité de l'écran (`devicePixelRatio`, 3 au plus), suivie aussi sans redimensionnement (fenêtre déplacée vers un autre écran : `CMS.surface.watchDpr`) ; ils ne sont réalloués que si leur taille change (`CMS.surface.fit`).
 
 ### 2.4. Réseau et politiques d'usage
 
@@ -197,6 +199,8 @@ Le repère (point de rencontre) est indépendant du centre de la carte. Il se pl
 **Itinéraire** : import d'un fichier GPX (traces `trkpt`, routes `rtept` ou, à défaut, points `wpt`), simplifié par Douglas-Peucker à 1 500 points au plus, puis cadrage automatique de la carte (zoom borné à 10–18). Couleur (repère, rues ou filets), épaisseur et pointillés réglables. L'itinéraire est conservé dans le navigateur avec les autres réglages.
 
 ### 4.4. Typographie (6 champs, 11 familles)
+
+Interlettrage : le texte est tracé **graphème par graphème** (`CMS.glyphs`, `Intl.Segmenter` ; repli NFC) : un « é » décomposé ou un émoji composé reste d'un bloc ; largeurs mises en cache par police.
 
 Champs : **Titre** (« Blois ») · **Sous-titre** (« Val de Loire • France ») · **Coordonnées** (automatiques ou saisies) · **Dédicace** (« Là où tout a commencé ») · **Noms** (« Prénom & Prénom ») · **Date** (« Le 14 juillet 2023 »).
 Familles :
