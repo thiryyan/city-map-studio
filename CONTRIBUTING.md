@@ -35,7 +35,8 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 ```bash
 pip install playwright mapbox-vector-tile && python -m playwright install chromium   # une fois
 python tests/fixture.py && python tests/make_formats.py && python tests/make_city.py   # génère les données de test
-python tests/run_all.py          # toute la suite (génère les données, résume les échecs) — lancée aussi par la CI
+python tests/run_all.py          # toute la suite, un test par cœur en parallèle (génère les données, résume les échecs) — lancée aussi par la CI
+python tests/run_all.py -j 1     # un test à la fois
 python tests/run.py              # moteur Fichier + export PNG 2480×3508 / pHYs 300 DPI
 python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
 python tests/layouts.py          # captures des gabarits
@@ -70,7 +71,7 @@ Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chr
 `tests/city.json` (généré par `tests/make_city.py`) est une ville fictive mais réaliste — fleuve à îles, vieille ville et château, faubourgs, grand ensemble, pavillons, port, gare, rocade, campagne, ~18 500 bâtiments — à importer aussi dans l'application (onglet Lieu, section Avancé, moteur Fichier) pour juger un rendu sans réseau ; elle est centrée sur la vue par défaut.
 
 ## Avant chaque commit
-- Lancer `python tests/run_all.py` : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports A4 de 2480 × 3508 px). La même suite tourne dans GitHub Actions à chaque push et pull request.
+- Lancer `python tests/run_all.py` : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports A4 de 2480 × 3508 px). La même suite tourne dans GitHub Actions à chaque pull request et à chaque push sur `main` (un nouveau push annule l'exécution en cours). Un test en échec est relancé seul une fois : s'il passe, il est signalé « INSTABLE » à corriger.
 - Les tests ouvrent la page avec `?test` ; pour attendre une condition, utiliser `wait_js` (`tests/jswait.py`), jamais `page.wait_for_function` (refusé par la CSP).
 - Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
 - Mettre à jour le dossier technique quand un comportement change.
