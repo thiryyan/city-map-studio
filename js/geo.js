@@ -48,12 +48,20 @@ function coordText(){
   return st.coordFormat==='dms' ? `${dms(lat,'N','S')}, ${dms(lon,'E','W')}` : `${lat.toFixed(7)}, ${lon.toFixed(7)}`;
 }
 
-/** Dimensions d'export (px) selon l'orientation */
-function posterDims(s=st){ return s.orient==='landscape' ? {W:EXPORT_H,H:EXPORT_W} : {W:EXPORT_W,H:EXPORT_H}; }
+/** Export d'un format : dimensions (px) selon l'orientation, résolution (DPI), taille d'impression (mm).
+ *  300 DPI si le canevas tient dans CANVAS_MAX_PX, sinon la plus haute résolution qui tient (multiple de 10). */
+function exportSpec(s=st){
+  const [key,name,a,b]=FORMATS.find(f=>f[0]===s.format)||FORMATS[0];
+  const dpi=Math.min(EXPORT_MAX_DPI, Math.floor(Math.sqrt(CANVAS_MAX_PX/(a*b/645.16))/10)*10);
+  const w=Math.round(a/25.4*dpi), h=Math.round(b/25.4*dpi);
+  return s.orient==='landscape' ? {key,name,dpi,W:h,H:w,mm:[b,a]} : {key,name,dpi,W:w,H:h,mm:[a,b]};
+}
+/** Dimensions d'export (px) selon le format et l'orientation (A4 : 2480 × 3508) */
+function posterDims(s=st){ const e=exportSpec(s); return {W:e.W,H:e.H}; }
 function ratio(s=st){ const d=posterDims(s); return d.H/d.W; }
 
 // ---------- Géométrie des gabarits ----------
-// U : unité de mise en page = petit côté de l'affiche (2480 px à l'export, en portrait comme en paysage).
+// U : unité de mise en page = petit côté de l'affiche (2480 px à l'export A4, en portrait comme en paysage).
 // Renvoie : map (cadre de la carte interactive), places (une ou deux vues : {rect, view}), sky (disque du ciel),
 // text (zone du cartouche : cx, maxW, y0, avail, mode 'top' | 'bottom' | 'center').
 function geom(s, W, H){
@@ -97,6 +105,10 @@ function geom(s, W, H){
     }
     if(!g.text && !g.box && lay!=='diptych'){ const t=col(g.map.x+g.map.w); if(lay==='travel'){ g.box={x:t.x,y:m,w:t.w,h:H-2*m}; } else g.text=t; }
   }
+  // Dédicace sur deux lignes : la carte cède la hauteur de la deuxième ligne quand le texte est sous la carte et que
+  // la place n'y est pas déjà (Souvenir : pied ; Cadre, Arche, Lettres : cartouche). Ailleurs, le cartouche a la marge nécessaire.
+  if(lay==='souvenir' && !land){ const ex=souvenirFoot(W,U,m).extra*U; g.map.h-=ex; }
+  else if(!land && ['classic','arch','typo'].includes(lay)){ const ex=cartDed(CART_ROWS,g.text.maxW/U).extra*U; g.map.h-=ex; g.text.y0-=ex; g.text.avail+=ex; }
   if(g.rects){ g.map=g.rects[s.active||0]; g.places=[{rect:g.rects[s.active||0],view:s,main:true},{rect:g.rects[1-(s.active||0)],view:s.place2||s}]; }
   else g.places=[{rect:g.map,view:s,main:true}];
   g.map.circle=g.map.shape==='circle';

@@ -45,6 +45,8 @@ function normState(src){
     layers:V.each(s.layers,D.layers,V.bool),
     fontTitle:V.oneOf(s.fontTitle,['',...Object.keys(FONTS)],D.fontTitle),
     orient:V.oneOf(s.orient,['portrait','landscape'],D.orient),
+    format:V.oneOf(s.format,keys(FORMATS),D.format), fileType:V.oneOf(s.fileType,['png','pdf'],D.fileType),
+    dedWrap:V.oneOf(s.dedWrap,['auto','one','two'],D.dedWrap),
     texture:V.oneOf(s.texture,keys(TEXTURES),D.texture),
     markers2:(Array.isArray(s.markers2)?s.markers2:[]).map(p=>{ const q=V.ll(p); return q && {...q,label:V.str(p.label,'')}; }).filter(Boolean).slice(0,2),
     markerLabel:V.str(s.markerLabel,''), numbered:V.bool(s.numbered,D.numbered), linkMarkers:V.bool(s.linkMarkers,D.linkMarkers),

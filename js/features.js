@@ -173,8 +173,20 @@ function setLayout(k,quiet){
   if(!quiet && k==='diptych') toast('Deux lieux : touchez la seconde carte pour la cadrer et y placer son repère');
 }
 function setOrient(v){ st.orient=v; setSeg('orientSeg',v); updateExportLabel(); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
-/** Dimensions affichées sur le bouton d'export : suivent l'orientation */
-function updateExportLabel(){ const d=posterDims(); $('exportDims').textContent=`\u00a0· ${d.W} × ${d.H} px`; }
+/** Format d'impression : le rapport de l'affiche peut changer (50 × 70 cm) ; aperçu et vignettes suivent */
+function setFormat(v){ st.format=v; setSeg('formatSeg',v); updateExportLabel(); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
+/** Retour à la ligne de la dédicace : la carte peut céder de la hauteur (geom), d'où la mise en page complète */
+function setDedWrap(v){ st.dedWrap=v; setSeg('dedWrapSeg',v); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
+function setFileType(v){ st.fileType=v; setSeg('fileSeg',v); updateExportLabel(); saveState(); }
+/** Dimensions affichées sur le bouton d'export et sous le choix du format : suivent le format et l'orientation */
+function updateExportLabel(){
+  const e=exportSpec(), pdf=st.fileType==='pdf', cm=v=>(v/10).toLocaleString('fr-FR');
+  $('exportDims').textContent=`\u00a0· ${e.W} × ${e.H} px`;
+  $('exportDpi').textContent=`\u00a0· ${e.key==='a4'?'':e.name+' · '}${e.dpi} DPI${pdf?' · PDF':''}`;
+  $('formatHint').textContent=`${e.key==='50x70'?e.name:`${e.name} (${cm(e.mm[0])} × ${cm(e.mm[1])} cm)`} : ${e.W} × ${e.H} px à ${e.dpi} DPI`
+    +(e.dpi<EXPORT_MAX_DPI?` — résolution abaissée pour rester dans la limite de mémoire des images de cet appareil ; amplement suffisante vue à distance.`:'.')
+    +(pdf?' Document PDF à la taille exacte d\'impression (image JPEG haute qualité).':' Image PNG sans perte.');
+}
 /** Sections visibles selon le gabarit */
 function updateLayoutUI(){
   const L=st.layout;

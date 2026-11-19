@@ -81,7 +81,11 @@ function setActivePlace(i){
   layoutPreview(); if(mlMap) mlRestyle(); saveState();
   toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
 }
-function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); describePoster(); }
+function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; const g=drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); describePoster();
+  // Un texte peut déplacer la carte (dédicace passée sur deux lignes, ou revenue sur une) : son cadre est replacé
+  // (comparaison en fraction de la hauteur : le canevas est arrondi au pixel, pas la taille CSS de l'affiche)
+  const s=ui.slotCss, H=ui.posterCss.h, Hc=cvO.height;
+  if(s && H && Hc && (Math.abs(g.map.h/Hc-s.h/H)>0.002 || Math.abs(g.map.y/Hc-s.y/H)>0.002)) layoutPreview(); }
 /** Texte de remplacement de l'aperçu (lecteurs d'écran) : gabarit, thème, orientation et textes affichés */
 function describePoster(){
   const lay=(LAYOUTS.find(l=>l[0]===st.layout)||[,''])[1], th=THEMES[st.theme]?.name||'personnalisé';
@@ -93,12 +97,24 @@ function describePoster(){
 const FIT_NAMES={title:'titre',subtitle:'sous-titre',coords:'coordonnées',dedication:'dédicace',names:'noms',date:'date'};
 let fitPrev='';
 function showFit(fit){
-  const key=JSON.stringify(fit); if(key===fitPrev) return; fitPrev=key;
+  const key=JSON.stringify([fit,st.dedWrap]); if(key===fitPrev) return; fitPrev=key;
   for(const k of Object.keys(FIT_NAMES)){ const o=$('oTs-'+k); if(!o) continue; const f=fit[k];
     o.classList.toggle('shrunk',!!f); o.title = f ? `Réduit à ${Math.round(f*100)} % pour tenir dans l'affiche` : ''; }
   syncOutputs();
   const ks=Object.keys(fit);
-  $('fitNote').textContent = ks.length ? '↘ Réduit pour tenir dans l\'affiche : '+ks.map(k=>`${FIT_NAMES[k]} (${Math.round(fit[k]*100)} %)`).join(', ')+'. Raccourcissez le texte ou baissez une autre taille.' : '';
+  const note=$('fitNote');
+  note.textContent = ks.length ? '↘ Réduit pour tenir dans l\'affiche : '+ks.map(k=>`${FIT_NAMES[k]} (${Math.round(fit[k]*100)} %)`).join(', ')+'. Raccourcissez le texte ou baissez une autre taille.' : '';
+  // Dédicace réduite sur une seule ligne : proposer de la passer sur deux lignes
+  if(fit.dedication && st.dedWrap!=='two' && textLine('dedication').includes(' ') && dedWrapsOnce()<2){
+    const b=h('button',{type:'button',className:'lnk'},'Passer la dédicace sur deux lignes');
+    b.onclick=()=>setDedWrap('two'); note.append(' ',b);
+  }
+}
+/** Nombre de lignes de la dédicace dans le rendu courant (gabarit Souvenir ou cartouche) */
+function dedWrapsOnce(){
+  const d=posterDims(), g=geom(st,d.W,d.H);
+  if(st.layout==='souvenir' && !g.land) return souvenirFoot(d.W,g.U,g.m).L.lines.length;
+  return g.text ? cartDed(st.layout==='polaroid'?POLA_ROWS:CART_ROWS,g.text.maxW/g.U).L.lines.length : 1;
 }
 let rafO=0, rafM=0;
 function scheduleOver(){ if(!rafO) rafO=requestAnimationFrame(()=>{rafO=0;drawOver()}); }

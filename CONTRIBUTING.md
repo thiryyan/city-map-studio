@@ -20,6 +20,8 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - **Nouveau fichier de l'application** (`js/`, `css/`) : l'ajouter à la liste `APP` de `sw.js` ; changer `VERSION` dans `sw.js` à chaque modification de cette liste ou de `sw.js`.
 - **Fenêtre modale** : un `<dialog class="modal">` ouvert par `openDialog(id)` et fermé par `closeDialog(id)` (focus rendu) ; action de la touche Échap dans `dlgCancel`.
 - Tout bouton de sélection (vignette, carte) est un `<button type="button">` avec `aria-pressed` (`pressed(b, on)`) ; tout champ a un nom accessible (`<label for>` ou `aria-label`).
+- **Couleurs de l'interface** : passer par les variables de `:root` (`css/app.css`) ; texte 4,5:1 et composants 3:1 au moins, états inactifs compris (`--off`), vérifiés par `tests/contrast.py`.
+- **Grands formats** : ne jamais créer de canevas d'export plus grand que `exportSpec()` (limite `CANVAS_MAX_PX`) ni de carte WebGL de plus de `glMax()` px de côté (`renderMaplibreOffscreen` découpe en tuiles).
 
 ## Organisation
 - `index.html` : balisage, CSP et métadonnées seulement. `css/app.css` : styles. `js/*.js` : dix scripts chargés dans l'ordre (dossier, § 8.2), organisés en sections `// ---------- Titre ----------`. Le code exécuté au chargement d'un fichier ne doit utiliser que les fichiers précédents.
@@ -41,6 +43,8 @@ python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap sim
 python tests/coords.py           # saisie des coordonnées du repère
 python tests/texts.py            # lignes de texte optionnelles
 python tests/textsize.py         # taille des textes de l'affiche (par ligne et globale)
+python tests/dedication.py       # dédicace sur deux lignes : Auto, Une ligne, Deux lignes ; la carte fait de la place
+python tests/formats.py          # formats A4, A3, 50 × 70 cm, limites des canevas (ordinateur, iPhone), export PDF
 python tests/mobile.py           # panneau coulissant, mode Cadrer, paysage, A− / A+
 python tests/ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
 python tests/design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, mur, lien, paysage, GPX, ciel
@@ -56,6 +60,7 @@ python tests/consent.py          # accord préalable : aucune requête tierce sa
 python tests/reset.py            # réinitialisation des réglages par défaut
 python tests/security.py         # lien forgé ou piégé, état corrompu, crochets de test
 python tests/a11y.py             # fenêtres modales, clavier, cibles tactiles, noms accessibles
+python tests/contrast.py         # contrastes de l'interface (WCAG 1.4.3 et 1.4.11), états inactifs compris
 python tests/csp.py              # aucune violation de la politique de sécurité du contenu
 python tests/pwa.py              # sous-chemin GitHub Pages, manifeste, service worker, hors ligne
 python -m http.server 8000       # aperçu local : http://localhost:8000
@@ -65,7 +70,7 @@ Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chr
 `tests/city.json` (généré par `tests/make_city.py`) est une ville fictive mais réaliste — fleuve à îles, vieille ville et château, faubourgs, grand ensemble, pavillons, port, gare, rocade, campagne, ~18 500 bâtiments — à importer aussi dans l'application (onglet Lieu, section Avancé, moteur Fichier) pour juger un rendu sans réseau ; elle est centrée sur la vue par défaut.
 
 ## Avant chaque commit
-- Lancer `python tests/run_all.py` : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports de 2480 × 3508 px). La même suite tourne dans GitHub Actions à chaque push et pull request.
+- Lancer `python tests/run_all.py` : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports A4 de 2480 × 3508 px). La même suite tourne dans GitHub Actions à chaque push et pull request.
 - Les tests ouvrent la page avec `?test` ; pour attendre une condition, utiliser `wait_js` (`tests/jswait.py`), jamais `page.wait_for_function` (refusé par la CSP).
 - Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
 - Mettre à jour le dossier technique quand un comportement change.

@@ -1,6 +1,6 @@
 # City Map Studio
 
-Atelier web de création d'affiches cartographiques souvenir : tracé minimaliste des rues et des cours d'eau, repère discret sur le lieu d'une rencontre, export PNG A4 à 300 DPI (2480 × 3508 px).
+Atelier web de création d'affiches cartographiques souvenir : tracé minimaliste des rues et des cours d'eau, repère discret sur le lieu d'une rencontre, export PNG ou PDF en A4 à 300 DPI (2480 × 3508 px), A3 ou 50 × 70 cm.
 
 - **100 % open source** : MapLibre GL JS, tuiles OpenFreeMap, Nominatim, polices SIL OFL auto-hébergées. Aucune clé API, aucun appel à Google.
 - **Deux moteurs** : Vectoriel GPU (par défaut) et Fichier (hors ligne, tracé vectoriel au détail maximal : `.osm`, JSON OSM, GeoJSON).

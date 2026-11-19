@@ -330,23 +330,64 @@ function mlUpdateView(){
   mlSync=true; mlMap.resize(); mlMap.jumpTo({center:[st.center.lon,st.center.lat],zoom:mlZoom(ui.slotCss.w)}); mlSync=false;
 }
 function mlRestyle(){ if(mlMap) mlMap.setStyle(buildStyle(mlK(ui.slotCss.w),ui.slotCss.w/REF_W)); }
-/** Rendu MapLibre hors écran à pleine résolution pour l'export */
-function renderMaplibreOffscreen(wPx,hPx,view=st){
+/** Côté maximal d'un canevas WebGL sur cet appareil (GL_TILE_MAX au plus : limite courante des mobiles) */
+let glMaxCache=0;
+function glMax(){
+  if(glMaxCache) return glMaxCache;
+  let m=GL_TILE_MAX;
+  try{ const gl=document.createElement('canvas').getContext('webgl');
+    if(gl){ const v=gl.getParameter(gl.MAX_VIEWPORT_DIMS); m=Math.min(m,gl.getParameter(gl.MAX_RENDERBUFFER_SIZE),gl.getParameter(gl.MAX_TEXTURE_SIZE),v[0],v[1]);
+      const lose=gl.getExtension('WEBGL_lose_context'); if(lose) lose.loseContext(); } }catch(e){}
+  return glMaxCache=Math.max(1024,m||GL_TILE_MAX);
+}
+// Projection de Mercator en pixels CSS au zoom de la carte (tuiles de 512 px, comme MapLibre)
+const mercX=(lon,ws)=>(lon+180)/360*ws;
+const mercY=(lat,ws)=>{ const s=Math.sin(lat*Math.PI/180); return (0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*ws; };
+const unmercX=(x,ws)=>x/ws*360-180;
+const unmercY=(y,ws)=>180/Math.PI*Math.atan(Math.sinh(Math.PI-2*Math.PI*y/ws));
+/** Une carte MapLibre hors écran (cssW × cssH px CSS, densité pr) ; draw(canevas WebGL) est appelé une fois la carte prête */
+function mlSnapshot(cssW,cssH,pr,center,view,draw){
   return new Promise((resolve,reject)=>{
-    const cssW=REF_W, cssH=Math.round(REF_W*hPx/wPx), pr=wPx/REF_W;
     const div=document.createElement('div');
     div.style.cssText=`position:fixed;left:-20000px;top:0;width:${cssW}px;height:${cssH}px;pointer-events:none`;
     document.body.appendChild(div);
     let map, done=false;
     const finish=(warn)=>{ if(done) return; done=true;
-      try{ const out=document.createElement('canvas'); out.width=wPx; out.height=hPx; out.getContext('2d').drawImage(map.getCanvas(),0,0,wPx,hPx); map.remove(); div.remove(); resolve({canvas:out,warn}); }
+      try{ draw(map.getCanvas()); map.remove(); div.remove(); resolve(warn); }
       catch(e){ try{map.remove()}catch(_){} div.remove(); reject(e); } };
     try{
-      map=new maplibregl.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom),1,pr,view),center:[view.center.lon,view.center.lat],zoom:view.zoom,
+      map=new maplibregl.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom),1,pr,view),center:[center.lon,center.lat],zoom:view.zoom,
         pixelRatio:pr,interactive:false,preserveDrawingBuffer:true,fadeDuration:0,attributionControl:false,renderWorldCopies:false,maxCanvasSize:[8192,8192]});
     }catch(e){ div.remove(); reject(e); return; }
     map.on('styleimagemissing',e=>onImageMissing(map,e));
     map.once('idle',()=>finish(false));
     setTimeout(()=>finish(true),45000);
   });
+}
+/** Rendu MapLibre hors écran à pleine résolution pour l'export.
+ *  Au-delà du côté maximal d'un canevas WebGL (glMax : 4096 px sur la plupart des mobiles), la carte serait rendue
+ *  en basse définition puis agrandie : elle est alors rendue en tuiles (même zoom, centres décalés en Mercator),
+ *  chacune débordant un peu sur ses voisines (pas d'effet de bord sur les traits), puis recollées sans raccord. */
+async function renderMaplibreOffscreen(wPx,hPx,view=st){
+  const pr=wPx/REF_W, out=document.createElement('canvas'); out.width=wPx; out.height=hPx; const o=out.getContext('2d');
+  const max=glMax(), B=Math.ceil(8*pr), nx=Math.ceil(wPx/(max-2*B-4*pr)), ny=Math.ceil(hPx/(max-2*B-4*pr));
+  if(nx*ny===1){   // cas courant (A4) : une seule carte, étirée au pixel près
+    const warn=await mlSnapshot(REF_W,Math.round(REF_W*hPx/wPx),pr,view.center,view,c=>o.drawImage(c,0,0,wPx,hPx));
+    return {canvas:out,warn};
+  }
+  const ws=512*2**view.zoom, cx=mercX(view.center.lon,ws), cy=mercY(view.center.lat,ws);
+  let warn=false;
+  try{
+    for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){
+      const x0=Math.round(i*wPx/nx), x1=Math.round((i+1)*wPx/nx), y0=Math.round(j*hPx/ny), y1=Math.round((j+1)*hPx/ny);
+      const cw=Math.ceil((x1-x0+2*B)/pr), ch=Math.ceil((y1-y0+2*B)/pr);   // taille CSS entière de la tuile (débord compris)
+      const mx=(x0+x1)/2, my=(y0+y1)/2;                                    // centre de la tuile (px de sortie)
+      const center={lon:unmercX(cx+(mx-wPx/2)/pr,ws), lat:unmercY(cy+(my-hPx/2)/pr,ws)};
+      warn = await mlSnapshot(cw,ch,pr,center,view,c=>{
+        o.save(); o.beginPath(); o.rect(x0,y0,x1-x0,y1-y0); o.clip();
+        o.drawImage(c,0,0,c.width,c.height,mx-cw*pr/2,my-ch*pr/2,cw*pr,ch*pr); o.restore();
+      }) || warn;
+    }
+  }catch(e){ out.width=out.height=0; throw e; }
+  return {canvas:out,warn};
 }
