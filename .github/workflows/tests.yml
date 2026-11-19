@@ -1,28 +1,38 @@
 name: Tests
 
-# Suite de bout en bout (Playwright, réseau simulé) : à chaque push et à chaque pull request.
+# Suite de bout en bout (Playwright, réseau simulé) : à chaque pull request, à chaque push sur main
+# (un push sur une autre branche est testé par sa pull request : pas de double exécution).
 # Le site lui-même reste publié tel quel par GitHub Pages (aucune étape de build).
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# Un nouveau push annule l'exécution encore en cours sur la même branche ou pull request
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      # Pas de « playwright install --with-deps » (plusieurs minutes d'apt-get) : on pilote le Google Chrome
+      # déjà présent sur l'image ubuntu-latest, via la variable CHROME lue par chaque test.
       - name: Dépendances
         run: |
           pip install playwright mapbox-vector-tile
-          python -m playwright install --with-deps chromium
+          echo "CHROME=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          google-chrome --version
       - name: Tests de bout en bout
         run: python tests/run_all.py
       - name: Captures d'écran (en cas d'échec)

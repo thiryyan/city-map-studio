@@ -436,7 +436,7 @@ city-map-studio/
 ├── sw.js                   # service worker (cache de l'application, http(s) seulement)
 ├── manifest.webmanifest    # application installable
 ├── icons/                  # icône SVG, PNG 192 / 512 / maskable / apple-touch, image d'aperçu des liens
-├── .github/workflows/      # tests.yml : suite de bout en bout à chaque push et pull request
+├── .github/workflows/      # tests.yml : suite de bout en bout à chaque pull request et push sur main
 ├── lib/                    # dépendances embarquées
 │   ├── maplibre-gl.js/.css # MapLibre GL JS 4.7.1 (licence BSD-3)
 │   ├── fonts/              # polices woff2 + fonts.css + OFL.txt par famille (11 familles)
@@ -561,7 +561,7 @@ Principales sections :
 
 **Crochets de test** : les tests ouvrent la page avec `?test` (sinon `window.__cms` n'existe pas). Le service worker n'est pas enregistré pendant les tests, sauf avec `?test&sw` (`tests/pwa.py`).
 
-Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap et Nominatim sont simulés, tout autre accès externe est coupé. `python tests/run_all.py` lance toute la suite ; le workflow `.github/workflows/tests.yml` l'exécute à chaque push et à chaque pull request. Les commandes figurent dans `CONTRIBUTING.md`.
+Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap et Nominatim sont simulés, tout autre accès externe est coupé. `python tests/run_all.py` lance toute la suite ; le workflow `.github/workflows/tests.yml` l'exécute à chaque pull request et à chaque push sur `main`, plusieurs tests à la fois, avec le Google Chrome de l'image du runner. Les commandes figurent dans `CONTRIBUTING.md`.
 
 ### 9.3. État de validation
 
