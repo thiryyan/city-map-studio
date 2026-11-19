@@ -1,6 +1,6 @@
 # City Map Studio — Dossier technique de référence
 
-> **Objet** : atelier web de création d'affiches cartographiques souvenir. L'application trace de façon minimaliste les rues et les cours d'eau d'une ville, marque d'un repère discret le lieu exact d'une rencontre, et exporte une affiche d'impression A4 à 300 DPI.
+> **Objet** : atelier web de création d'affiches cartographiques souvenir. L'application trace de façon minimaliste les rues et les cours d'eau d'une ville, marque d'un repère discret le lieu exact d'une rencontre, et exporte une affiche d'impression A4 à 300 DPI, A3 ou 50 × 70 cm, en PNG ou en PDF.
 
 ---
 
@@ -16,7 +16,7 @@
 | E6 | Coordonnées | Affichage au choix en décimal (par défaut) ou en DMS. |
 | E7 | Libellés | Aucun libellé sur la carte : le tracé est purement graphique. |
 | E8 | Ville au lancement | Blois et la Loire. |
-| E9 | Export | PNG A4 300 DPI (2480 × 3508 px). |
+| E9 | Export | PNG A4 300 DPI (2480 × 3508 px) par défaut ; A3 et 50 × 70 cm ; PDF à la taille d'impression (§ 5). |
 | E10 | Livraison | Fichiers statiques **sans étape de build**, servis tels quels : `index.html` (balisage), `css/app.css`, `js/*.js` (scripts classiques chargés dans l'ordre, sans module ES, pour que l'ouverture en `file://` reste possible). MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
 | E11 | Écrans | Mobile en priorité, ordinateur en second. Interface en français. |
 | E12 | Hébergement | **GitHub Pages** (dépôt public, `index.html` à la racine, branche `main`). |
@@ -228,7 +228,8 @@ Les textes trop longs sont réduits automatiquement pour tenir dans leur zone.
 **Taille des textes.** Chaque ligne a son curseur de taille (60 à 150 %, état `textScale`), complété d'un curseur global « Tous les textes » (70 à 140 %, `textScaleAll`) ; les deux se multiplient (`tScale(k)`). Le lien « Tailles par défaut » les remet à 100 %, comme « Réinitialiser ». À 100 %, le rendu est identique à celui d'avant les curseurs.
 * **Gabarits à cartouche** : quand une ligne grandit, les interlignes suivent (0,8 × l'écart de corps de la ligne, 0,25 × celui de la précédente). Si le bloc dépasse la hauteur disponible, il est réduit en entier pour tenir. Le gabarit Fondu garde le bloc calé en bas et le fait grandir vers le haut, sur la zone en fondu.
 * **Gabarit Souvenir** : le titre et la date de l'en-tête gardent chacun leur taille, sur la même ligne de base (`drawRun`). En pied de page, si la dédicace et les noms dépassent la largeur, ils sont réduits du même facteur, ce qui garde le rapport entre les tailles choisies. Avant, la dédicace était plafonnée à 72 % de la largeur et les noms prenaient le reste.
-* **Réduction signalée** : pendant le rendu de l'aperçu, `drawText`, `drawRun` et `drawCartouche` relèvent les réductions automatiques (`noteFit`). Au-delà de 10 %, l'onglet Textes l'indique (« ↘ Réduit pour tenir dans l'affiche : dédicace (67 %) ») et le curseur de la ligne passe en orange.
+* **Réduction signalée** : pendant le rendu de l'aperçu, `drawText`, `drawRun` et `drawCartouche` relèvent les réductions automatiques (`noteFit`). Au-delà de 10 %, l'onglet Textes l'indique (« ↘ Réduit pour tenir dans l'affiche : dédicace (67 %) ») et le curseur de la ligne passe en orange. Si la dédicace réduite tient sur une ligne, l'avertissement propose « Passer la dédicace sur deux lignes ».
+* **Dédicace sur deux lignes** (état `dedWrap`, sous le champ : Auto, Une ligne, Deux lignes) : en **Auto**, la dédicace passe sur deux lignes dès que, sur une seule, elle serait réduite de plus de 20 % (`WRAP_AT`, en tenant compte des noms à côté dans le gabarit Souvenir). La coupure se fait à l'espace qui rend la plus longue ligne la plus courte (`splitBalanced`) ; un mot seul n'est jamais coupé. Les mesures se font en unités `U`, à une taille de référence (`dedLines`, mises en cache, recalculées au chargement des polices) : la décision est la même dans l'aperçu, les vignettes et l'export. **La carte fait de la place** : dans le gabarit Souvenir, elle cède la hauteur de la deuxième ligne au pied (`souvenirFoot`), et le filet entre dédicace et noms s'allonge ; dans les cartouches sous une carte qui dépend de la hauteur (Cadre, Arche, Lettres), la carte raccourcit d'autant et le cartouche descend (`cartDed`). Les autres cartouches (Fondu, Médaillon, Cœur, Polaroid, Ciel, Deux lieux, paysage) ont déjà la place et ajoutent simplement la ligne ; le gabarit Voyage garde sa dédicace sur une ligne, à côté de la date. Quand la hauteur de la carte change, l'aperçu replace son cadre (`drawOver` → `layoutPreview`).
 
 ### 4.5. Réinitialisation
 
@@ -329,16 +330,26 @@ La fenêtre **Mes affiches** (onglet Style, « Avant d'imprimer ») garde la con
 
 ## 5. Export haute définition
 
-* **Format** : 2480 × 3508 px en portrait, 3508 × 2480 px en paysage (A4 à 300 DPI ; 212 DPI en A3 par mise à l'échelle chez l'imprimeur). L'export est un **recalcul intégral** à pleine résolution, jamais un agrandissement de l'aperçu.
+* **Formats** (onglet Style, « Format d'impression », état `format`, table `FORMATS`) : A4 (2480 × 3508 px à 300 DPI, par défaut), A3 et 50 × 70 cm, en portrait ou en paysage. A4 et A3 ont le rapport √2 ; 50 × 70 cm, le rapport 7/5 : l'aperçu, les vignettes et la mise en page suivent (tailles en `U`). Le format ne change pas le contenu de la carte : une affiche plus grande montre la même zone, plus détaillée. L'export est un **recalcul intégral** à pleine résolution, jamais un agrandissement de l'aperçu.
+* **Résolution et limites des canevas** (`exportSpec`) : 300 DPI si le canevas tient dans `CANVAS_MAX_PX`, sinon la plus haute résolution qui tient, par pas de 10 DPI. La limite est de 16,7 Mpx sur iPhone, iPad et Android (au-delà, Safari iOS rend un canevas vide) et de 40 Mpx ailleurs (mémoire). La résolution abaissée est annoncée sous le choix du format, sur le bouton d'export et dans la fenêtre de résultat.
+
+  | Format | Ordinateur | iPhone, iPad, Android |
+  | :--- | :--- | :--- |
+  | A4 | 2480 × 3508 px, 300 DPI (8,7 Mpx) | identique |
+  | A3 | 3508 × 4961 px, 300 DPI (17,4 Mpx) | 3391 × 4795 px, 290 DPI (16,3 Mpx) |
+  | 50 × 70 cm | 5315 × 7441 px, 270 DPI (39,5 Mpx) | 3346 × 4685 px, 170 DPI (15,7 Mpx) |
+
+  170 DPI suffisent pour une affiche de 50 × 70 cm regardée à plus d'un mètre.
+* **Fichier** (« Image PNG » ou « Document PDF », état `fileType`) : le PNG est sans perte et porte sa résolution (`pHYs`). Le PDF (`pdfFromJpeg`, écrit sans bibliothèque : six objets, table `xref` exacte) contient une page à la taille exacte d'impression (mm → points PostScript, `MediaBox` et `TrimBox`), où l'affiche est une image JPEG qualité 0,95 (`DCTDecode`) aux dimensions de l'export, sans rééchantillonnage ; titre en UTF-16 (accents). jsPDF n'a pas été retenu : 350 Ko à embarquer pour une seule image par page. Noms : `affiche-carte-[ville]-300dpi.png` en A4, `affiche-carte-[ville]-a3-300dpi.png`, `affiche-carte-[ville]-50x70-270dpi.pdf`…
 * **Étapes** :
   1. Attente du chargement des polices (`document.fonts.load`), puis contrôle par `document.fonts.check` : si une variante manque, l'export se fait avec une police de secours et le signale dans la fenêtre de résultat.
-  2. Création d'un canvas 2480 × 3508 et dessin de la couche basse.
+  2. Création d'un canvas aux dimensions du format (2480 × 3508 en A4) et dessin de la couche basse.
   3. Carte :
-     * **MapLibre** : instance hors écran de 800 px CSS de large, `pixelRatio` = largeur du cadre / 800 (environ 2,7), `preserveDrawingBuffer`, `maxCanvasSize` 8192, attente de l'événement `idle` (45 s au plus), puis `drawImage` dans le cadre ;
+     * **MapLibre** : instance hors écran de 800 px CSS de large, `pixelRatio` = largeur du cadre / 800 (environ 2,7 en A4), `preserveDrawingBuffer`, `maxCanvasSize` 8192, attente de l'événement `idle` (45 s au plus), puis `drawImage` dans le cadre. Au-delà du côté maximal d'un canevas WebGL (`glMax` : 4096 px au plus, moins si l'appareil l'impose), la carte est rendue **en tuiles** : même zoom, centres décalés en Mercator (tuiles de 512 px), chaque tuile débordant de 8 px CSS sur ses voisines puis découpée au recollage, ce qui évite tout effet de bord sur les traits et les motifs. Le rendu en 2 × 3 tuiles est identique au rendu d'un seul tenant (`tests/maplibre.py`) ;
      * **Fichier** : re-projection directe des géométries dans le cadre, à pleine résolution (cache de tracés propre à cette taille, cf. § 4.10).
   4. Couche haute (repère, filets, textes) à la même échelle.
-  5. `toBlob('image/png')`, injection d'un chunk **`pHYs`** (11 811 px/m = 300 DPI) pour que les logiciels ouvrent le fichier à la bonne résolution, puis téléchargement de `affiche-carte-[ville]-300dpi.png`. Sur mobile, le partage natif (`navigator.share`) est proposé quand il est disponible ; si le téléchargement est bloqué, l'image reste enregistrable par appui long.
-* **Mémoire** : 8,7 Mpx, sous la limite de 16,7 Mpx de Safari iOS ; le canvas WebGL (environ 2160 × 2500 px) reste sous la limite de 4096 px.
+  5. `toBlob('image/png')`, injection d'un chunk **`pHYs`** (11 811 px/m = 300 DPI) pour que les logiciels ouvrent le fichier à la bonne résolution, puis téléchargement de `affiche-carte-[ville]-300dpi.png` (en PDF : `toBlob('image/jpeg', 0.95)` puis `pdfFromJpeg`). Sur mobile, le partage natif (`navigator.share`) est proposé quand il est disponible ; si le téléchargement est bloqué, l'image reste enregistrable par appui long.
+* **Mémoire** : en A4, 8,7 Mpx, sous la limite de 16,7 Mpx de Safari iOS, et un canvas WebGL d'environ 2160 × 2500 px, sous la limite de 4096 px. Les grands formats restent sous ces limites grâce à `exportSpec` et au rendu en tuiles ; le canevas de l'affiche est libéré dès l'image encodée, avant d'assembler le fichier final.
 
 ---
 
@@ -366,6 +377,7 @@ La fenêtre **Mes affiches** (onglet Style, « Avant d'imprimer ») garde la con
 * **Polices** : cartes à défilement horizontal, chacune montrant le titre saisi dans sa police.
 * **Annuler / Rétablir** : jusqu'à 50 étapes, regroupées comme l'enregistrement (300 ms de calme), avec les boutons ou Ctrl/Cmd+Z et Ctrl/Cmd+Maj+Z (ou Ctrl+Y) hors des champs de texte, qui gardent leur annulation native. « Réinitialiser » peut être annulé. Le moteur cartographique n'entre pas dans l'historique, et les petits recentrages de la carte qui suivent un retour arrière, une réinitialisation ou un changement de moteur sont ignorés. L'historique n'est pas conservé après un rechargement.
 * **Accessibilité** : onglets selon le motif ARIA (`tablist`, `tab`, `tabpanel`, `aria-selected`, flèches, Début, Fin) ; segments en `aria-pressed` et polices en `radio` ; focus clavier visible ; cibles tactiles d'au moins 44 px (36 px dans la barre du bas, poignée de 28 px sur toute la largeur) ; transitions courtes, coupées si `prefers-reduced-motion`.
+* **Contrastes de l'interface** (WCAG 2.2, critères 1.4.3 et 1.4.11 ; `tests/contrast.py` les mesure sur le rendu réel, mobile et ordinateur, à l'agrandissement A+ compris) : textes 4,5:1 au moins (`--txt` 13:1, texte secondaire `--mut` 5,4:1 sur les panneaux, avertissement de réduction 9,7:1, texte d'erreur `--danger` 4,8:1) ; composants 3:1 (bordure des champs `--field` 3,3:1, pastilles d'état 5,3 à 10,8:1, icônes des boutons). L'audit a corrigé la bordure des champs (1,35:1), Annuler / Rétablir et A− / A+ inactifs (2,5 et 1,9:1), le texte d'erreur du diagnostic et la pastille d'erreur (3,8 et 4,2:1) et le réglage de taille d'une ligne masquée (2,2:1). Les boutons inactifs, exemptés par les WCAG, sont tenus à 3:1 (opacité `--off` .65) : lisibles, et nettement plus pâles que les boutons actifs. Une ligne masquée sur l'affiche garde un champ modifiable : sa bordure reste à 3:1, et seul son texte passe en couleur secondaire. La case « Date » atténue désormais aussi sa ligne (le champ est dans une rangée, que le sélecteur ne visait pas).
 * **Taille du texte de l'interface** : les tailles sont en `rem`. L'interface suit le réglage du système (taille de police d'Android ; Dynamic Type d'iOS via `font: -apple-system-body`). A− / A+ propose 87,5 à 137,5 %. Ce réglage est mémorisé dans l'appareil (`cityMapStudio.uiScale`), hors de l'état de l'affiche, et « Réinitialiser » ne le modifie pas. Les champs de saisie font au moins 16 px pour éviter le zoom automatique d'iOS.
 * **Superpositions** : la demande d'accord aux services tiers est un panneau modal en bas d'écran, avec un texte court et un repli « En savoir plus ». Le bandeau d'action (« Carte indisponible → Diagnostiquer », « Aucun fichier importé → Importer ») s'affiche en tête du panneau, plus sur l'affiche. Les bulles d'information apparaissent au-dessus du panneau, sans masquer les réglages.
 * **États visibles** : moteur actif, chargement, attente d'accord et mode hors ligne (pastille orange), erreurs réseau en clair.
@@ -484,7 +496,7 @@ d'un fichier ne peut utiliser que les fichiers précédents** (les fonctions, el
 | `preview.js` | `$`, `h` (création d'éléments sans `innerHTML`), aperçu, deux lieux, gestes, papier, `composePoster`, aperçu au mur. |
 | `features.js` | Lieux multiples, GPX, partage par lien, ambiances, panneau coulissant. |
 | `ui.js` | Taille de l'interface, coordonnées, historique, `buildUI`, `changed`, vignettes, recherche, polices, comparaison avant / après un changement de thème. |
-| `export.js` | Export PNG 300 DPI, contexte d'exécution, diagnostic, import de fichier. |
+| `export.js` | Export PNG et PDF, contexte d'exécution, diagnostic, import de fichier. |
 | `main.js` | `boot`, application installable (`installPwa`), crochets de test. |
 
 Principales sections :
@@ -502,7 +514,7 @@ Principales sections :
 | Interface | `parseCoords`, `placeMarkerFromInput`, `setMarker`, `goTo`, `setEngine`, `askReset`, `resetAll` | Commandes de l'atelier. |
 | Contexte et diagnostic | `ENV`, `showEnvWarning`, `runDiagnostics`, `netMsg` | Détection d'iframe ou de blocage réseau, tests des services. |
 | Moteur 2 : import | `osmXmlToElements`, `geojsonToElements`, `importText`, `importFile` | Import de fichier, avec recadrage automatique. |
-| Export | `exportPoster`, `withDpi`, `crc32` | PNG 2480 × 3508 px à 300 DPI. |
+| Export | `exportPoster`, `withDpi`, `crc32`, `pdfFromJpeg` | PNG ou PDF au format choisi (`exportSpec`) ; A4 : 2480 × 3508 px à 300 DPI. |
 | Débogage | `window.__cms` | Accès à l'état et aux fonctions depuis la console et les tests ; exposé seulement avec `?test` dans l'adresse ou `localStorage['cityMapStudio.debug']='1'`. |
 
 ---
@@ -564,6 +576,9 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Saisie des coordonnées du repère | ✅ | `tests/coords.py` |
 | Lignes de texte optionnelles | ✅ | `tests/texts.py` |
 | Taille des textes de l'affiche | ✅ | `tests/textsize.py` |
+| Dédicace sur deux lignes (Auto, Une ligne, Deux lignes ; la carte fait de la place ; avertissement) | ✅ | `tests/dedication.py` |
+| Formats A3 et 50 × 70 cm, limites des canevas (ordinateur, iPhone), export PDF | ✅ | `tests/formats.py` (structure du PDF, dimensions de l'image) ; rendu MapLibre en tuiles : `tests/maplibre.py` ; ⏳ export A3 et 50 × 70 sur un iPhone réel, impression du PDF chez un imprimeur. |
+| Contrastes de l'interface (textes, composants, états inactifs) | ✅ | `tests/contrast.py` |
 | Polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel | ✅ | `tests/design.py` (moteur Fichier, sans réseau) ; ⏳ Deux lieux et aperçu au mur avec les vraies tuiles OpenFreeMap. |
 | Cache de tracés du moteur Fichier | ✅ | `tests/vectors.py` ; ⏳ fluidité des gestes sur un téléphone réel. |
 | Moteur Fichier sur une ville réaliste (6,4 × 5,2 km, ~18 500 bâtiments, 7,8 Mo) | ✅ | `tests/city.py` : import JSON (≈ 0,15 s) et XML, fleuve assemblé depuis 7 membres avec 2 îles, eau et pont aux points de contrôle, cache en ≈ 0,2 s, déplacement ≈ 2 ms par image (Chromium, ordinateur) ; ⏳ mêmes mesures sur un téléphone réel et sur un vrai extrait OSM. |

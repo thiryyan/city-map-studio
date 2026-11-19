@@ -1,10 +1,10 @@
-/* City Map Studio — Export PNG 300 DPI, contexte d'exécution, diagnostic réseau, import de fichier.
+/* City Map Studio — Export PNG et PDF, contexte d'exécution, diagnostic réseau, import de fichier.
  * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
 'use strict';
-// ---------- Export PNG 300 DPI ----------
+// ---------- Export PNG (résolution inscrite dans le fichier) ----------
 const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
 function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
-/** Insère un chunk pHYs (300 DPI = 11811 px/m) après IHDR */
+/** Insère un chunk pHYs (résolution ; 300 DPI = 11811 px/m) après IHDR */
 async function withDpi(blob,dpi){
   const src=new Uint8Array(await blob.arrayBuffer()), ppm=Math.round(dpi/0.0254);
   const chunk=new Uint8Array(21), dv=new DataView(chunk.buffer);
@@ -13,26 +13,59 @@ async function withDpi(blob,dpi){
   const out=new Uint8Array(src.length+21); out.set(src.subarray(0,33),0); out.set(chunk,33); out.set(src.subarray(33),54);
   return new Blob([out],{type:'image/png'});
 }
+// ---------- Export PDF (sans dépendance) ----------
+/** Chaîne PDF en UTF-16BE hexadécimal (accents des titres) */
+const pdfText=t=>'<FEFF'+[...String(t)].map(ch=>{ const c=ch.codePointAt(0);
+  const u=c>0xFFFF?[0xD800+((c-0x10000)>>10),0xDC00+((c-0x10000)&0x3FF)]:[c]; return u.map(x=>x.toString(16).padStart(4,'0')).join(''); }).join('').toUpperCase()+'>';
+/** PDF d'une page à la taille exacte d'impression (mm → points) : l'affiche y est une image JPEG (DCTDecode), sans
+ *  rééchantillonnage. Écrit à la main (une dizaine d'objets) : aucune bibliothèque à embarquer. */
+function pdfFromJpeg(jpeg, wPx, hPx, mm, title){
+  const pt=v=>(v/25.4*72).toFixed(2), W=pt(mm[0]), H=pt(mm[1]), enc=new TextEncoder();
+  const d=new Date(), z=n=>String(n).padStart(2,'0');
+  const date=`D:${d.getUTCFullYear()}${z(d.getUTCMonth()+1)}${z(d.getUTCDate())}${z(d.getUTCHours())}${z(d.getUTCMinutes())}${z(d.getUTCSeconds())}Z`;
+  const content=`q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
+  const objs=[
+    `<< /Type /Catalog /Pages 2 0 R >>`,
+    `<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /TrimBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>`,
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    [`<< /Type /XObject /Subtype /Image /Width ${wPx} /Height ${hPx} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`,jpeg,`\nendstream`],
+    `<< /Title ${pdfText(title)} /Creator (City Map Studio) /Producer (City Map Studio) /CreationDate (${date}) >>`
+  ];
+  const parts=[], offs=[]; let n=0;
+  const put=x=>{ const b=typeof x==='string'?enc.encode(x):x; parts.push(b); n+=b.length; };
+  put('%PDF-1.4\n'); put(new Uint8Array([0x25,0xE2,0xE3,0xCF,0xD3,0x0A]));   // en-tête, puis commentaire binaire (fichier non textuel)
+  objs.forEach((o,i)=>{ offs.push(n); put(`${i+1} 0 obj\n`); (Array.isArray(o)?o:[o]).forEach(put); put('\nendobj\n'); });
+  const xref=n;
+  put(`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+offs.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join(''));
+  put(`trailer\n<< /Size ${objs.length+1} /Root 1 0 R /Info 6 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(parts,{type:'application/pdf'});
+}
+
 const slug=s=>(s||'ville').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'ville';
-let lastUrl=null;
+const toBlobP=(cv,type,q)=>new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('l\'image n\'a pas pu être encodée (mémoire insuffisante ?)')),type,q));
+let lastUrl=null, lastImgUrl=null;
 async function exportPoster(){
   if(st.engine==='maplibre' && !needConsent(()=>exportPoster())) return;
   if(st.engine!=='maplibre' && !osmData){ toast('Importez d\'abord un fichier de données.',true); return; }
   setBusy(true,'Chargement des polices…'); let show=false;
   try{
-    const {W:EW,H:EH}=posterDims();
+    const spec=exportSpec(), {W:EW,H:EH,dpi}=spec, pdf=st.fileType==='pdf';
     const {canvas:cv,warn,fontWarn}=await composePoster(EW,EH,t=>$('busyTxt').textContent=t);
-    $('busyTxt').textContent='Encodage PNG 300 DPI…';
-    const blob0=await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('toBlob a échoué')),'image/png'));
-    cv.width=cv.height=0;   // ≈ 35 Mo de pixels libérés avant d'assembler le PNG final (limite mémoire des canevas sur iOS)
-    const blob=await withDpi(blob0,300);
-    const name=`affiche-carte-${slug(st.texts.title)}-300dpi.png`;
+    $('busyTxt').textContent=pdf?'Création du PDF…':`Encodage PNG ${dpi} DPI…`;
+    const blob0=await toBlobP(cv,pdf?'image/jpeg':'image/png',pdf?0.95:undefined);
+    cv.width=cv.height=0;   // pixels libérés avant d'assembler le fichier final (limite mémoire des canevas sur iOS)
+    const blob=pdf ? pdfFromJpeg(new Uint8Array(await blob0.arrayBuffer()),EW,EH,spec.mm,st.texts.title||'Affiche') : await withDpi(blob0,dpi);
+    const name=`affiche-carte-${slug(st.texts.title)}${spec.key==='a4'?'':'-'+spec.key}-${dpi}dpi.${pdf?'pdf':'png'}`;
     if(lastUrl) URL.revokeObjectURL(lastUrl);
+    if(lastImgUrl){ URL.revokeObjectURL(lastImgUrl); lastImgUrl=null; }
     lastUrl=URL.createObjectURL(blob);
-    $('resImg').src=lastUrl; $('resDl').href=lastUrl; $('resDl').download=name;
-    $('resInfo').textContent=`${name} · ${EW} × ${EH} px · 300 DPI · ${(blob.size/1048576).toFixed(1)} Mo`+(warn?' · ⚠ certaines tuiles ont pu manquer (délai dépassé)':'')+(fontWarn?' · ⚠ police non chargée : une police de secours a été utilisée':'');
+    if(pdf) lastImgUrl=URL.createObjectURL(blob0);   // aperçu : l'image du PDF
+    $('resImg').src=lastImgUrl||lastUrl; $('resDl').href=lastUrl; $('resDl').download=name;
+    const cm=v=>(v/10).toLocaleString('fr-FR');
+    $('resInfo').textContent=`${name} · ${spec.key==='50x70'?'':`${spec.name} `}(${cm(spec.mm[0])} × ${cm(spec.mm[1])} cm) · ${EW} × ${EH} px · ${dpi} DPI · ${(blob.size/1048576).toFixed(1)} Mo`+(warn?' · ⚠ certaines tuiles ont pu manquer (délai dépassé)':'')+(fontWarn?' · ⚠ police non chargée : une police de secours a été utilisée':'');
     // Partage : le fichier n'est créé qu'au moment du partage (pas de copie gardée en mémoire avec la fenêtre)
-    const asFile=()=>new File([blob],name,{type:'image/png'});
+    const asFile=()=>new File([blob],name,{type:blob.type});
     const canShare=!!(navigator.canShare && navigator.canShare({files:[asFile()]}));
     $('resShare').hidden=!canShare;
     $('resShare').onclick=()=>navigator.share({files:[asFile()],title:name}).catch(()=>{});

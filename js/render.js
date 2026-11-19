@@ -55,6 +55,54 @@ function drawRun(ctx, parts, x, y, o){
   parts.forEach((p,i)=>{ ctx.font=fontStr(p.size*f,p); ctx.fillText(p.t,sx,y); sx+=ws[i]*f; });
   return tot*f;
 }
+// ---------- Dédicace sur deux lignes ----------
+// Une dédicace trop longue n'est plus seulement réduite : en mode automatique, elle passe sur deux lignes dès que,
+// sur une seule, elle serait réduite de plus de 20 %. Les mesures se font en unités U (petit côté de l'affiche) :
+// la décision est la même dans l'aperçu, les vignettes et l'export, quelle que soit la résolution.
+const WRAP_AT=0.8;
+const measCtx=document.createElement('canvas').getContext('2d'), wrapCache=new Map();
+if(document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone',()=>wrapCache.clear());   // mesures refaites avec les vraies polices
+/** Largeur d'un texte (en U) pour une taille donnée (en U) */
+function measU(t,sizeU,o){ measCtx.font=fontStr(sizeU*1000,o); return measCtx.measureText(t).width/1000; }
+/** Coupure en deux lignes la plus équilibrée (à l'espace qui rend la plus longue ligne la plus courte) ; null pour un seul mot */
+function splitBalanced(ctx,t){
+  let best=null;
+  for(const m of t.matchAll(/\s+/g)){ const a=t.slice(0,m.index).trim(), b=t.slice(m.index+m[0].length).trim(); if(!a||!b) continue;
+    const w=Math.max(ctx.measureText(a).width,ctx.measureText(b).width); if(!best||w<best.w) best={a,b,w}; }
+  return best;
+}
+/** Lignes de la dédicace (réglage st.dedWrap : 'auto' | 'one' | 'two'). sizeU, maxWU : taille et largeur disponible en U ;
+ *  o.extraU : largeur occupée à côté sur la même ligne (noms du gabarit Souvenir). Renvoie {lines, w : ligne la plus longue (U)}. */
+function dedLines(t,sizeU,maxWU,o={}){
+  if(!t) return {lines:[],w:0};
+  const mode=st.dedWrap||'auto', fo={key:'dedication',italic:!!o.italic}, extra=o.extraU||0;
+  const key=[t,sizeU,maxWU,extra,mode,fontStr(1,fo)].join('|'); if(wrapCache.has(key)) return wrapCache.get(key);
+  const w1=measU(t,sizeU,fo); let r={lines:[t],w:w1};
+  if(mode==='two' || (mode==='auto' && (w1+extra)*WRAP_AT>maxWU)){
+    measCtx.font=fontStr(sizeU*1000,fo); const sp=splitBalanced(measCtx,t);
+    if(sp && sp.w/1000<w1) r={lines:[sp.a,sp.b],w:sp.w/1000};
+  }
+  if(wrapCache.size>300) wrapCache.clear();
+  wrapCache.set(key,r); return r;
+}
+/** Interligne de la dédicace sur deux lignes (en U) */
+const dedLeading=sizeU=>sizeU*(fontOf('','dedication').scale||1)*1.12;
+/** Dédicace du cartouche (gabarits centrés) : lignes et hauteur ajoutée par la deuxième ligne (en U) */
+function cartDed(rows,maxWU){
+  const o=(rows||CART_ROWS).find(r=>r[0]==='dedication')[2], size=o.size*tScale('dedication');
+  const L=dedLines(textLine('dedication'),size,maxWU,{italic:o.italic});
+  return {L,size,extra:L.lines.length>1?dedLeading(size):0};
+}
+/** Pied du gabarit Souvenir : dédicace (une ou deux lignes) | noms. Partagé par geom (la carte cède la hauteur
+ *  de la deuxième ligne) et par le dessin. Tailles et largeurs en U ; f : réduction commune si le pied déborde. */
+function souvenirFoot(W,U,m){
+  const ded=textLine('dedication'), names=textLine('names'), inner=(W-2*m)/U, gap=0.062;
+  const ds=0.062*tScale('dedication'), ns=0.026*tScale('names');
+  const wn=ded&&names ? measU(names,ns,{italic:true,key:'names'}) : 0;
+  const L=dedLines(ded,ds,ded&&names?inner-gap:inner,{extraU:wn});
+  const f=ded&&names ? Math.min(1,(inner-gap)/(L.w+wn)) : 1;
+  return {ded,names,inner,gap,ds,ns,wn,L,f,lh:dedLeading(ds)*f,extra:L.lines.length>1?dedLeading(ds)*f:0};
+}
 function hline(ctx,x1,x2,y,lw,color){ctx.strokeStyle=paint(color);ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke()}
 
 // Lignes du cartouche : [clé, écart avant la ligne (× U), options de texte (tailles × U)]
@@ -87,6 +135,10 @@ function drawCartouche(ctx, U, box){
   // Taille choisie : la ligne grandit (ou rétrécit) et les interlignes suivent (≈ 0,8 × l'écart de corps de la ligne, 0,25 × celui de la précédente)
   let prevGrow=0;
   for(const r of rows){ const base=r[2].size, grow=base*(tScale(r[3])-1); r[2].size=base+grow; r[1]=Math.max(0.2*r[2].size/U, r[1]+(0.8*grow+0.25*prevGrow)/U); prevGrow=grow; }
+  // Dédicace trop longue : deux lignes (cf. dedLines), la seconde à l'interligne de la dédicace ; les lignes suivantes descendent
+  const di=rows.findIndex(r=>r[3]==='dedication');
+  if(di>=0){ const r=rows[di], L=dedLines(r[0],r[2].size/U,maxW/U,{italic:r[2].italic});
+    if(L.lines.length>1) rows.splice(di,1,[L.lines[0],r[1],r[2],r[3]],[L.lines[1],dedLeading(r[2].size/U),{...r[2]},r[3]]); }
   rows[0][1]=Math.max(rows[0][1],rows[0][2].size/U*1.1);   // première ligne : juste sous le haut du bloc
   let total=rows.reduce((a,r)=>a+r[1],0)*U;
   if(avail && total>avail){ const f=avail/total; for(const r of rows){ r[1]*=f; r[2].size*=f; noteFit(r[3],f); } total=avail; }
@@ -521,20 +573,20 @@ function drawPosterAt(ctx, W, H, pass, mapFn){
                : [{t:title||date,size:hs*tScale(title?'title':'date'),key:title?'title':'date',role:title?'title':''}];
     drawRun(ctx,left,m,yH,{align:'left',color:c.text,maxW:inner*(coords?0.58:1)});
     drawText(ctx,coords,W-m,yH,{size:0.026*U*tScale('coords'),key:'coords',align:'right',color:c.text,maxW:inner*(title||date?0.4:1)});
-    const yF=H-m-0.0195*U, ded=textLine('dedication'), names=textLine('names'), ns=tScale('names'), ds=0.062*U*tScale('dedication');
+    // Pied : dédicace (sur une ou deux lignes, cf. souvenirFoot) | noms, alignés sur la ligne de base du bas
+    const yF=H-m-0.0195*U, P=souvenirFoot(W,U,m), {ded,names}=P, n=P.L.lines.length;
+    const dedAt=(sz,maxW)=>P.L.lines.forEach((l,i)=>drawText(ctx,l,m,yF-(n-1-i)*P.lh*U,{size:sz,key:'dedication',align:'left',color:c.text,maxW}));
     if(names && ded){
       // Dédicace | Noms : s'ils dépassent la largeur, les deux sont réduits du même facteur (les tailles choisies gardent leur rapport)
-      const gap=0.062*U, nsz=0.026*U*ns;
-      ctx.font=fontStr(ds,{key:'dedication'}); const wd=ctx.measureText(ded).width; ctx.font=fontStr(nsz,{italic:true,key:'names'}); const wn=ctx.measureText(names).width;
-      const f=Math.min(1,(inner-gap)/(wd+wn)); noteFit('dedication',f); noteFit('names',f);
-      drawText(ctx,ded,m,yF,{size:ds*f,align:'left',color:c.text,key:'dedication'});
-      const bx=m+wd*f+0.032*U;
-      ctx.strokeStyle=paint(c.frame); ctx.lineWidth=0.0018*U; ctx.beginPath(); ctx.moveTo(bx,yF-0.04*U); ctx.lineTo(bx,yF+0.004*U); ctx.stroke();
-      drawText(ctx,names,bx+0.03*U,yF-0.008*U,{size:nsz*f,italic:true,align:'left',color:c.text,key:'names'});
+      const f=P.f; noteFit('dedication',f); noteFit('names',f);
+      dedAt(P.ds*U*f);
+      const bx=m+P.L.w*U*f+0.032*U;
+      ctx.strokeStyle=paint(c.frame); ctx.lineWidth=0.0018*U; ctx.beginPath(); ctx.moveTo(bx,yF-0.04*U-(n-1)*P.lh*U); ctx.lineTo(bx,yF+0.004*U); ctx.stroke();
+      drawText(ctx,names,bx+0.03*U,yF-0.008*U,{size:P.ns*U*f,italic:true,align:'left',color:c.text,key:'names'});
     } else if(ded){
-      drawText(ctx,ded,m,yF,{size:ds,key:'dedication',align:'left',color:c.text,maxW:inner});
+      dedAt(P.ds*U,P.inner*U);
     } else if(names){
-      drawText(ctx,names,m,yF-0.008*U,{size:0.026*U*ns,key:'names',italic:true,align:'left',color:c.text,maxW:inner});
+      drawText(ctx,names,m,yF-0.008*U,{size:P.ns*U,key:'names',italic:true,align:'left',color:c.text,maxW:P.inner*U});
     }
   } else if(lay==='diptych'){
     drawText(ctx,textLine('title'),W/2,g.title.y,{size:0.06*U*tScale('title'),spacing:0.15,upper:true,role:'title',key:'title',align:'center',color:c.text,maxW:W-2*m});

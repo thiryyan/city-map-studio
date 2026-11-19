@@ -1,7 +1,10 @@
 /* City Map Studio — feuille de styles de l'application */
 :root{color-scheme:dark;
   --bg:#16161a; --panel:#1e1e23; --panel2:#26262c; --line:#34343c; --txt:#ececf1; --mut:#9a9aa6;
-  --acc:#c5a059; --acc2:#e2c27f; --danger:#e5484d; --r:12px;
+  --acc:#c5a059; --acc2:#e2c27f; --danger:#f06468; --r:12px;
+  /* Contrastes (WCAG 2.2, vérifiés par tests/contrast.py) : --txt 13:1 et --mut 5,4:1 au moins sur les panneaux ;
+     --field (bordure des champs) 3,2:1 ; --danger 4,5:1 (texte d'erreur) ; état inactif = opacité .65 (3:1 au moins) */
+  --field:#74747f; --off:.65;
   --sab:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -49,25 +52,29 @@ button,input,select{font:inherit;color:inherit}
 .uisz{flex:none;display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .uisz button{background:none;border:0;min-width:40px;min-height:44px;padding:0 6px;color:var(--mut);cursor:pointer;line-height:1}
 .uisz button+button{border-left:1px solid var(--line)}
-.uisz button[disabled]{opacity:.35}
+.uisz button[disabled]{opacity:var(--off)}
 .dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex:none}.dot.busy{background:#facc15}.dot.wait{background:#f59e0b}.dot.err{background:var(--danger)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;min-height:44px}
 .btn:active{transform:scale(.98)}
 .btn.pri{background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600;width:100%;min-height:48px;font-size:1rem}
 .btn.on{border-color:var(--acc);color:var(--acc2)}
 .btn.sm{min-height:44px;padding:6px 10px;font-size:.875rem}
-.btn[disabled]{opacity:.45;pointer-events:none}
+.btn[disabled]{opacity:var(--off);pointer-events:none}
 h3{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px;font-weight:600}
 h3:first-child{margin-top:2px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .row>.grow{flex:1;min-width:0}
-input[type=text],input[type=search],input[type=number]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;min-height:44px}
+input[type=text],input[type=search],input[type=number]{width:100%;background:var(--panel2);border:1px solid var(--field);border-radius:10px;padding:10px 12px;outline:none;min-height:44px}
 input[type=text]:focus,input[type=search]:focus{border-color:var(--acc)}
+::placeholder{color:var(--mut);opacity:1}
 @media (max-width:899px){input[type=text],input[type=search],input[type=number]{font-size:max(16px,1rem)}} /* iOS : pas de zoom à la saisie */
 label.f{display:block;margin:10px 0 4px;color:var(--mut);font-size:.8125rem}
 label.f.show{display:flex;align-items:center;gap:8px;cursor:pointer;min-height:44px;margin:6px 0 2px}
 label.f.show input{width:22px;height:22px;margin:0;accent-color:var(--acc)}
-label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked))+input+.tsz{opacity:.45}
+/* Ligne masquée sur l'affiche : le champ, toujours modifiable, garde sa bordure et passe en texte secondaire ;
+   le réglage de taille est atténué (3:1 au moins). La date a son champ dans une rangée. */
+label.f.show:has(input:not(:checked))+input,label.f.show:has(input:not(:checked))+.row input[type=text]{color:var(--mut)}
+label.f.show:has(input:not(:checked))+input+.tsz,label.f.show:has(input:not(:checked))+.row+.tsz{opacity:var(--off)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;min-height:44px;display:inline-flex;align-items:center;padding:8px 14px;cursor:pointer;font-size:.875rem}
 .chip.on{border-color:var(--acc);color:var(--acc2)}
@@ -204,7 +211,7 @@ details.adv>h3:first-of-type{margin-top:6px}
 /* Annuler / rétablir */
 .hist{flex:none;display:flex;gap:2px}
 .hist button{background:none;border:1px solid var(--line);border-radius:8px;min-width:40px;min-height:44px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center}
-.hist button[disabled]{opacity:.3;cursor:default}
+.hist button[disabled]{opacity:var(--off);cursor:default}
 /* Évolutions graphiques : duos, ambiances, lieux, aperçu au mur */
 .fcats{margin:-2px 0 4px}.fcats .chip{font-size:.8125rem}
 .duos button{min-width:132px}.duos .t{font-size:1.2rem;line-height:1.2}.duos .d{font-size:1rem;color:var(--mut);line-height:1.3;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}

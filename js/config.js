@@ -9,6 +9,13 @@
 
 // ---------- Constantes ----------
 const EXPORT_W = 2480, EXPORT_H = 3508;   // A4 à 300 DPI, en portrait ; inversé en paysage (posterDims)
+// Formats d'impression : [clé, nom, petit côté, grand côté (mm)]. A4 et A3 ont le rapport √2 ; 50 × 70 cm, le rapport 7/5.
+const FORMATS = [['a4','A4',210,297],['a3','A3',297,420],['50x70','50 × 70 cm',500,700]];
+const EXPORT_MAX_DPI = 300;
+// Surface maximale d'un canevas d'export : 16,7 Mpx sous Safari iOS (au-delà, le canevas reste vide) ; même prudence
+// sur Android (mémoire) ; 40 Mpx ailleurs. La résolution d'un grand format est abaissée (par pas de 10 DPI) pour tenir.
+const CANVAS_MAX_PX = (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1)) ? 16777216 : 40e6;
+const GL_TILE_MAX = 4096;   // côté maximal d'un rendu WebGL (MapLibre) : au-delà, la carte est rendue en plusieurs tuiles
 const REF_W = 800;               // largeur de référence du cadre carte (zoom de référence)
 const MARKER_BASE = 0.055;       // 100 % = 5,5 % de la largeur de l'affiche
 const GOLD = '#C5A059';
@@ -140,6 +147,9 @@ const DEFAULT_STATE = {
   layers:{parks:true,buildings:true,rail:true},
   fontTitle:'',                 // police du titre ('' : celle du texte)
   orient:'portrait',            // 'portrait' | 'landscape'
+  format:'a4',                  // format d'impression (FORMATS)
+  fileType:'png',               // fichier exporté : 'png' | 'pdf'
+  dedWrap:'auto',               // dédicace : 'auto' (deux lignes si elle serait trop réduite) | 'one' | 'two'
   texture:'none',               // papier (TEXTURES)
   markers2:[], markerLabel:'', numbered:false, linkMarkers:false,   // lieux supplémentaires (2 au plus)
   route:null,                   // itinéraire importé : {name, pts:[[lat,lon],…], show}

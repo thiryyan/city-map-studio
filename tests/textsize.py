@@ -56,6 +56,7 @@ async def main():
         # Réduction automatique signalée
         await page.evaluate("__cms.st.layout='classic'"); await page.click('#tabs [data-tab=style]'); await page.click('#layouts .card[data-v=classic]')
         await page.click('#tabs [data-tab=textes]')
+        await page.click('#dedWrapSeg [data-v=one]')   # sur une seule ligne (le retour à la ligne est vérifié par tests/dedication.py)
         await page.fill('input[data-k="texts.dedication"]', 'Là où tout a commencé, un soir de juillet sur les quais de la Loire, au coucher du soleil')
         await page.wait_for_timeout(250)
         note = await page.inner_text('#fitNote'); shr = await page.evaluate("document.getElementById('oTs-dedication').classList.contains('shrunk')")
@@ -63,6 +64,7 @@ async def main():
         check('dédicace' in note and shr, 'texte trop long : réduction signalée (note + curseur)')
         await page.fill('input[data-k="texts.dedication"]', 'Là où tout a commencé'); await page.wait_for_timeout(250)
         check(await page.inner_text('#fitNote') == '', 'texte raccourci : avertissement retiré')
+        await page.click('#dedWrapSeg [data-v=auto]')
         # Toutes les lignes à 150 % : le bloc est réduit pour tenir, et le signale
         for k in KEYS: await setv(f'textScale.{k}', 150)
         await setv('textScaleAll', 140); await page.wait_for_timeout(250)

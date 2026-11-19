@@ -173,6 +173,9 @@ function buildUI(){
     b.onclick=()=>applyAmbiance(k); $('ambiances').appendChild(b); });
   // orientation
   document.querySelectorAll('#orientSeg button').forEach(b=>b.onclick=()=>setOrient(b.dataset.v));
+  document.querySelectorAll('#dedWrapSeg button').forEach(b=>b.onclick=()=>setDedWrap(b.dataset.v));
+  document.querySelectorAll('#formatSeg button').forEach(b=>b.onclick=()=>setFormat(b.dataset.v));
+  document.querySelectorAll('#fileSeg button').forEach(b=>b.onclick=()=>setFileType(b.dataset.v));
   // ciel
   const tz=$('skyTz'); tz.add(new Option('Celui de cet appareil','auto'));
   for(let m=-720;m<=840;m+=30){ const h=Math.trunc(Math.abs(m)/60), mi=Math.abs(m)%60; tz.add(new Option(`UTC${m<0?'−':'+'}${h}${mi?':'+String(mi).padStart(2,'0'):''}`,String(m))); }
@@ -301,7 +304,8 @@ function resetAll(){
 function syncInputs(){
   document.querySelectorAll('[data-k]').forEach(el=>{ const v=getPath(st,el.dataset.k); if(el.type==='checkbox') el.checked=!!v; else el.value=v??''; });
   setSeg('engineSeg',st.engine); setSeg('fillSeg',st.markerFill?'1':'0'); setSeg('coordSeg',st.coordFormat);
-  setSeg('orientSeg',st.orient); setSeg('textures',st.texture); updateExportLabel();
+  setSeg('orientSeg',st.orient); setSeg('formatSeg',st.format); setSeg('fileSeg',st.fileType); setSeg('dedWrapSeg',st.dedWrap);
+  setSeg('textures',st.texture); updateExportLabel();
   syncZoomUI(); syncOutputs(); refreshColors(); refreshCards(); updateMarkerTxt(); updateEngineUI(); syncFonts(); updateLayoutUI(); renderRoute(); drawTexture();
 }
 /** Polices : sélection des cartes (titre, texte, duo) et aperçus */

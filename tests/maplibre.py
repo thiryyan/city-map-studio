@@ -197,6 +197,26 @@ async def main():
                 assert (w3, h3) == (2480, 3508)
                 bad = [l for l in logs if 'PAGEERROR' in l or 'could not be loaded' in l or ('MapLibre' in l and 'warn' in l)]
                 assert not bad, bad[-5:]
+                # Grands formats : au-delà du côté maximal d'un canevas WebGL, carte rendue en tuiles recollées.
+                # Rendu d'un seul tenant comparé au même rendu en 2 × 3 tuiles (côté maximal forcé à 1024 px).
+                cmp = await page.evaluate("""(async()=>{
+                    const one=(await __cms.renderMaplibreOffscreen(1600,2400)).canvas;
+                    __cms.glMaxTest=1024; const tiled=(await __cms.renderMaplibreOffscreen(1600,2400)).canvas; __cms.glMaxTest=0;
+                    const a=one.getContext('2d').getImageData(0,0,1600,2400).data, b=tiled.getContext('2d').getImageData(0,0,1600,2400).data;
+                    let diff=0, seam=0, n=a.length/4;
+                    for(let i=0;i<a.length;i+=4){ const d=Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2]); if(d>60){ diff++; const x=(i/4)%1600, y=(i/4/1600)|0; if(Math.abs(x-800)<3||Math.abs(y-800)<3||Math.abs(y-1600)<3) seam++; } }
+                    return {diff:diff/n, seam}; })()""")
+                print('  tuiles WebGL (2 × 3) contre rendu unique :', cmp)
+                assert cmp['diff'] < 0.01 and cmp['seam'] < 400, cmp
+                # Export A3 (3508 × 4961) : carte de plus de 4096 px de haut, rendue en tuiles
+                await page.evaluate("__cms.setFormat('a3')")
+                async with page.expect_download(timeout=180000) as dl:
+                    await page.click('#resClose'); await page.click('#bExport')
+                d = await dl.value; path = str(T / 'ml-export-a3.png'); await d.save_as(path)
+                w4, h4, water4, dark4 = png_stats(path)
+                print('  export A3', w4, h4, '| pixels eau', water4, '| pixels axes', dark4)
+                assert (w4, h4) == (3508, 4961) and dark4 > 200, (w4, h4, dark4)
+                await page.evaluate("__cms.setFormat('a4')")
             await ctx.close()
         await b.close()
     srv.shutdown(); print('OK')
