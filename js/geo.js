@@ -1,6 +1,9 @@
 /* City Map Studio — Projection de Mercator et géométrie des gabarits.
  * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
 'use strict';
+// Module CMS.geo : fonctions de projection, de format et de géométrie des gabarits (testées seules : tests/unit).
+// Tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier.
+CMS.define('geo', () => {
 // ---------- Mathématiques ----------
 const D2R = Math.PI/180;
 const merc = lat => Math.log(Math.tan(Math.PI/4 + lat*D2R/2));
@@ -134,3 +137,7 @@ function shapePath(ctx, r){
 }
 function clipMap(ctx, r){ const p=shapePath(ctx,r); p ? ctx.clip(p) : ctx.clip(); }
 function strokeShape(ctx, r, o){ const e={...r,x:r.x-o,y:r.y-o,w:r.w+2*o,h:r.h+2*o}; const p=shapePath(ctx,e); p ? ctx.stroke(p) : ctx.stroke(); }
+
+return {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, geom, shapeD, clipMap, strokeShape};
+});
+const {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, geom, shapeD, clipMap, strokeShape} = CMS.geo;

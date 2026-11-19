@@ -1,6 +1,8 @@
 /* City Map Studio — Export PNG et PDF, contexte d'exécution, diagnostic réseau, import de fichier.
  * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
 'use strict';
+// Module CMS.export : tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier (utilisées par les autres fichiers).
+CMS.define('export', () => {
 // ---------- Export PNG (résolution inscrite dans le fichier) ----------
 const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
 function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
@@ -175,3 +177,7 @@ async function importFile(f){
   try{ setStatus('Lecture du fichier…','busy'); const n=importText(await f.text(),f.name); toast(`${n.toLocaleString('fr-FR')} objets importés`); }
   catch(e){ setStatus('Import impossible : '+e.message,'err'); toast('Import impossible : '+e.message,true); }
 }
+
+return {slug, exportPoster, ENV, showEnvWarning, runDiagnostics, importText, importFile};
+});
+const {slug, exportPoster, ENV, showEnvWarning, runDiagnostics, importText, importFile} = CMS.export;

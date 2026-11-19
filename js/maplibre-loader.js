@@ -11,7 +11,7 @@
  */
 'use strict';
 (function (g) {
-  const CMS = g.CMS = g.CMS || {};
+  const CMS = g.CMS;   // js/core.js
   const S = Object.freeze({ IDLE: 'idle', LOADING: 'loading', OK: 'ok', NEED_CONSENT: 'local-fail', FAIL: 'fail' });
   // Délais réglables par les tests seulement (adresse avec ?test et objet __cmsTestConfig posé avant le chargement)
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
@@ -116,8 +116,8 @@
     return inflight;
   }
 
-  CMS.maplibre = Object.freeze({
+  CMS.define('maplibre', () => ({
     load, STATES: S,
     get state() { return state; }, get source() { return source; }, get lib() { return lib; }, get cssOk() { return cssOk; },
-  });
+  }));
 })(globalThis);

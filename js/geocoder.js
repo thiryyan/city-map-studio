@@ -11,7 +11,7 @@
  */
 'use strict';
 (function (g) {
-  const CMS = g.CMS = g.CMS || {};
+  const CMS = g.CMS;   // js/core.js
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
   const MIN_INTERVAL = testCfg.geoInterval ?? 1100, TIMEOUT = testCfg.geoTimeout ?? 10000, RETRY_DELAY = testCfg.geoRetry ?? 1500;
   const CACHE_MAX = 50, DEFAULT_COOLDOWN = 60000;
@@ -100,9 +100,9 @@
   /** Adresse de l'état du service (diagnostic : ne consomme pas de recherche) */
   const statusUrl = () => new URL('status?format=json', NOMINATIM).href;
 
-  CMS.geocoder = Object.freeze({
+  CMS.define('geocoder', () => ({
     search, debounceSubmit, statusUrl, sanitize,
     cancel: () => current?.ctl.abort(),
     get cooldownMs() { return Math.max(0, cooldownUntil - Date.now()); },
-  });
+  }));
 })(globalThis);

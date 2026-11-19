@@ -1,6 +1,8 @@
 /* City Map Studio — Moteurs cartographiques : données OSM + Canvas (moteur Fichier), effets de tracé, MapLibre + OpenFreeMap.
  * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
 'use strict';
+// Module CMS.engines : tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier (utilisées par les autres fichiers ou par les tests).
+CMS.define('engines', () => {
 // ---------- Données OSM + Canvas (moteur Fichier) ----------
 function toPts(geo){const a=[];for(const p of geo) if(p) a.push([p.lon,merc(p.lat)]);return a}   // points null (hors cadre) ignorés
 /** Coupe une géométrie aux points null (points hors de la zone extraite) */
@@ -343,6 +345,7 @@ function mlUpdateView(){
 function mlRestyle(){ if(mlMap) mlMap.setStyle(buildStyle(mlK(ui.slotCss.w),ui.slotCss.w/REF_W)); }
 /** Côté maximal d'un canevas WebGL sur cet appareil (GL_TILE_MAX au plus : limite courante des mobiles) */
 let glMaxCache=0;
+const setGlMaxTest=v=>{ glMaxCache=v; };   // tests : côté maximal simulé
 function glMax(){
   if(glMaxCache) return glMaxCache;
   let m=GL_TILE_MAX;
@@ -411,3 +414,7 @@ async function renderMaplibreOffscreen(wPx,hPx,view=st){
   }catch(e){ out.width=out.height=0; throw e; }
   return {canvas:out,warn};
 }
+
+return {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest};
+});
+const {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest} = CMS.engines;

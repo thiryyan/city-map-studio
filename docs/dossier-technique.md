@@ -485,9 +485,11 @@ city-map-studio/
 Le script est découpé en fichiers `js/*.js`, eux-mêmes organisés en sections balisées `// ---------- Titre ----------`.
 Ce sont des scripts classiques : leurs déclarations de premier niveau sont partagées et le **code exécuté au chargement
 d'un fichier ne peut utiliser que les fichiers précédents** (les fonctions, elles, peuvent s'appeler d'un fichier à l'autre).
+Pour réduire cette portée partagée, les fichiers migrent vers des modules `CMS.define(…)` (aujourd'hui `CMS.maplibre`, `CMS.geocoder`, `CMS.geo`, `CMS.engines`, `CMS.export`) : leur code est privé, seules leurs fonctions publiques sont reprises en tête de portée. `tests/globals.py` interdit toute hausse du nombre de déclarations globales (433 → 382 avec cette première migration) ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur.
 
 | Fichier | Contenu |
 | :--- | :--- |
+| `core.js` | Socle : espace de noms `CMS`, `CMS.define` (module défini une seule fois, figé), bus d'événements `CMS.on` / `CMS.emit`. |
 | `config.js` | Constantes : polices, thèmes, gabarits, repères, ambiances, villes, hiérarchie routière, `DEFAULT_STATE`. |
 | `maplibre-loader.js` | `CMS.maplibre` : chargement résilient de MapLibre (sources, délais, version, CSS de secours). |
 | `geocoder.js` | `CMS.geocoder` : client Nominatim (délai, annulation, une requête par seconde, quota 429 / 403, relance 5xx, cache, réponses validées). |

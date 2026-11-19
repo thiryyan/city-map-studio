@@ -25,6 +25,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 
 ## Organisation
 - `index.html` : balisage, CSP et métadonnées seulement. `css/app.css` : styles. `js/*.js` : scripts chargés dans l'ordre (dossier, § 8.2), organisés en sections `// ---------- Titre ----------`. Le code exécuté au chargement d'un fichier ne doit utiliser que les fichiers précédents.
+- **Modules `CMS`** (`js/core.js`, chargé en premier) : un fichier déclare son code dans `CMS.define('nom', () => { …; return {publiques}; });` puis reprend ses seules fonctions publiques en tête de portée (`const {a, b} = CMS.nom;`) ; le reste lui est privé. Les fichiers se parlent par événements (`CMS.on` / `CMS.emit`, ex. `state:saved`) plutôt que par `typeof f === 'function'`. Le nombre de déclarations globales ne peut pas augmenter (`tests/globals.py`, plafond `tests/globals.max`, à abaisser quand il baisse). Une fonction pure gagne un test dans `tests/unit/`.
 - `window.__cms` expose l'état et les fonctions pour la console et les tests, seulement avec `?test` dans l'adresse (ou `localStorage['cityMapStudio.debug']='1'`).
 - `sw.js`, `manifest.webmanifest`, `icons/` : application installable et cache hors ligne.
 - `lib/` : MapLibre GL JS 4.7.1 et sa licence BSD-3. `lib/sky/` : données du ciel (d3-celestial, BSD-3), chargées seulement par le gabarit Ciel. Pour changer de version, remplacer les fichiers et mettre à jour `ML_VERSION`.
@@ -41,6 +42,8 @@ python tests/run.py              # moteur Fichier + export PNG 2480×3508 / pHYs
 python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
 python tests/layouts.py          # captures des gabarits
 python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap simulé, export hors écran
+python tests/unit.py             # tests unitaires sans navigateur (node --test tests/unit/*.test.mjs : CMS.geo, normState, CMS.geocoder)
+python tests/globals.py          # garde-fou : nombre de déclarations globales ≤ tests/globals.max
 python tests/attribution.py      # attributions : mention minimale toujours sur l'affiche, attribution près de la carte
 python tests/webgl.py            # WebGL : perte et restauration du contexte, rendus hors écran en file d'attente, carte libérée en moteur Fichier
 python tests/geocoder.py         # recherche Nominatim : délai, quota, relance 5xx, cache, réponses piégées
