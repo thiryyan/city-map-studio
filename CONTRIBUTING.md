@@ -7,7 +7,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - **HTML, CSS et JavaScript natifs, sans étape de build**, servis tels quels par GitHub Pages depuis `main` : `index.html`, `css/app.css`, `js/*.js`. Chemins toujours relatifs (le site est servi sous `/city-map-studio/`). Scripts **classiques**, pas de module ES : l'application doit rester utilisable en `file://`. Dépendances embarquées dans `lib/` (MapLibre, polices), chacune avec sa licence.
 - **Mobile en priorité**, puis ordinateur. Interface en français.
 - `drawPoster(ctx, W, H, pass, mapFn)` est la **seule** fonction de rendu de l'affiche : l'aperçu et l'export doivent rester identiques.
-- Attribution « © contributeurs OpenStreetMap » active par défaut (licence ODbL).
+- Attributions : « © OpenStreetMap » (et « © OpenMapTiles » avec le moteur GPU) toujours inscrit sur l'affiche, mention complète active par défaut (`attributionText`) ; attribution visible près de la carte (`#mapCredit`). Licences ODbL et CC-BY 4.0.
 - **Aucune ressource tierce pour la présentation** (CDN de polices, de styles ou de scripts) : tout est servi depuis le dépôt (RGPD, cf. dossier E14). Les CDN de MapLibre ne servent qu'en secours.
 - **Accord préalable** : tout nouvel appel à un service tiers passe par `needConsent()` ; aucune requête externe avant l'accord de l'utilisateur (`tests/consent.py`).
 - **Nominatim** : requêtes uniquement à la demande (jamais pendant la frappe), une seule à la fois, toujours par `CMS.geocoder` (`js/geocoder.js` : délai, une requête par seconde au plus, quota 429 / 403, cache, réponses validées).
@@ -41,6 +41,7 @@ python tests/run.py              # moteur Fichier + export PNG 2480×3508 / pHYs
 python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
 python tests/layouts.py          # captures des gabarits
 python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap simulé, export hors écran
+python tests/attribution.py      # attributions : mention minimale toujours sur l'affiche, attribution près de la carte
 python tests/webgl.py            # WebGL : perte et restauration du contexte, rendus hors écran en file d'attente, carte libérée en moteur Fichier
 python tests/geocoder.py         # recherche Nominatim : délai, quota, relance 5xx, cache, réponses piégées
 python tests/mlloader.py         # chargement de MapLibre : CDN de secours, copie tardive, version, CSS de secours

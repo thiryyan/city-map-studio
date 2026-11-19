@@ -20,6 +20,8 @@ const REF_W = 800;               // largeur de référence du cadre carte (zoom 
 const MARKER_BASE = 0.055;       // 100 % = 5,5 % de la largeur de l'affiche
 const GOLD = '#C5A059';
 const OFM_URL = 'https://tiles.openfreemap.org/planet';
+// Attribution déclarée sur la source du style (texte statique ; affichée près de la carte par #mapCredit, la carte n'ayant pas de contrôle d'attribution)
+const OFM_ATTRIBUTION = 'OpenFreeMap © OpenMapTiles · Données © contributeurs OpenStreetMap';
 const ML_VERSION = '4.7.1';
 // lib/ : copie embarquée dans le dépôt (BSD-3, cf. lib/LICENSE-maplibre-gl.txt) ; les CDN restent en secours
 // Empreintes SRI des fichiers 4.7.1 (identiques au paquet npm et à lib/) : un CDN qui servirait un autre contenu est refusé.

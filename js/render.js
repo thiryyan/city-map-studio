@@ -613,12 +613,16 @@ function drawPosterAt(ctx, W, H, pass, mapFn){
     }
     drawCartouche(ctx,U,{...g.text,rows:lay==='polaroid'?POLA_ROWS:CART_ROWS,only:lay==='typo'?TYPO_ROWS:null});
   }
-  // Attribution OSM (ODbL)
-  if(st.attribution){
-    ctx.globalAlpha=0.55;
-    drawText(ctx,'© contributeurs OpenStreetMap'+(st.engine==='maplibre'?' · OpenFreeMap © OpenMapTiles':'')+(g.sky?' · Ciel : d3-celestial (XHIP)':''),W-m,H-m*0.38,{size:0.0085*U,align:'right',color:c.text});
-    ctx.globalAlpha=1;
-  }
+  // Attributions (ODbL, CC-BY 4.0) : la mention minimale est toujours inscrite ; la case « Mention complète » l'étend
+  ctx.globalAlpha=0.55;
+  drawText(ctx,attributionText(!!g.sky),W-m,H-m*0.38,{size:0.0085*U,align:'right',color:c.text});
+  ctx.globalAlpha=1;
   return g;
+}
+/** Mention de l'affiche : minimale (toujours), complète si st.attribution */
+function attributionText(sky){
+  const gpu=st.engine==='maplibre';
+  if(!st.attribution) return '© OpenStreetMap'+(gpu?' · © OpenMapTiles':'');
+  return '© contributeurs OpenStreetMap'+(gpu?' · OpenFreeMap © OpenMapTiles':'')+(sky?' · Ciel : d3-celestial (XHIP)':'');
 }
 function hexA(hex){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g=n>>8&255,b=n&255;return a=>`rgba(${r},${g},${b},${a})`}

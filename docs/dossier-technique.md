@@ -20,7 +20,7 @@
 | E10 | Livraison | Fichiers statiques **sans étape de build**, servis tels quels : `index.html` (balisage), `css/app.css`, `js/*.js` (scripts classiques chargés dans l'ordre, sans module ES, pour que l'ouverture en `file://` reste possible). MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
 | E11 | Écrans | Mobile en priorité, ordinateur en second. Interface en français. |
 | E12 | Hébergement | **GitHub Pages** (dépôt public, `index.html` à la racine, branche `main`). |
-| E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU. Active par défaut, désactivable sous la responsabilité de l'utilisateur. |
+| E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU : mention complète active par défaut. Décochée, la case laisse une **mention minimale toujours inscrite** (« © OpenStreetMap », plus « © OpenMapTiles » avec le moteur GPU ; `attributionText`). À l'écran, une attribution compacte reste visible près de la carte sur tous les onglets (`#mapCredit`, absente des exports). |
 | E14 | Vie privée | Aucune ressource de présentation (librairie, polices, styles) n'est chargée depuis un tiers : l'adresse IP du visiteur n'est transmise qu'aux services de données cartographiques nécessaires au fonctionnement, et **seulement après son accord explicite** (§ 2.4). Les polices sont auto-hébergées, conformément à la jurisprudence RGPD sur Google Fonts (LG München, 20/01/2022, 3 O 17493/20). |
 | E15 | Sécurité | Politique de sécurité du contenu (CSP) en balise meta : aucun script ni style en ligne, réseau limité aux services cartographiques. Tout état venu de l'extérieur (lien partagé, `localStorage`) est validé champ par champ (`normState`). CDN de secours chargés avec empreinte SRI. |
 | E16 | Accessibilité | Fenêtres en `<dialog>` modal (focus retenu, Échap), commandes au clavier, cibles tactiles de 44 px, noms accessibles pour tous les champs, texte de remplacement de l'aperçu. |
@@ -546,7 +546,7 @@ Principales sections :
 | Mobile | iPhone 13 (390 × 664) : au moins 180 px de réglages à mi-hauteur ; poignée (toucher, glisser) ; dépliage à la saisie ; carte verrouillée hors du mode Cadrer ; placement du repère ; bulle au-dessus du panneau ; A− / A+ persistant, sans défilement horizontal ; paysage en deux colonnes ; ordinateur inchangé. |
 | Saisie du repère | Formats du § 3.3 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
 | Résilience | MapLibre indisponible → bascule possible vers le moteur Fichier, recommandée par le diagnostic. |
-| Licence | Aucune dépendance propriétaire ; attribution OSM présente par défaut. |
+| Licence | Aucune dépendance propriétaire ; attribution OSM toujours présente (mention complète par défaut, minimale sinon). |
 | Hors ligne | Réseau coupé : diagnostic en échec, import `.json` / `.osm` / `.geojson` réussi, export PNG 2480 × 3508. |
 | Aperçu intégré | Page dans une iframe : avertissement explicite dans l'onglet Lieu. |
 | Sécurité | Lien forgé (types faux, valeurs hors bornes, champs inconnus) : application intacte, valeurs invalides remplacées, rien d'invalide enregistré ; lien piégé (contenu décompressé > 512 Ko) refusé ; aucune violation de la CSP en `file://` ni en HTTP. |

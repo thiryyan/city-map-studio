@@ -379,6 +379,7 @@ function drawCards(tab){
 function updateEngineUI(){
   document.querySelector('#engineSeg [data-v=maplibre]').disabled = mlLib==='fail';
   $('fileBlock').hidden=st.engine!=='file';
+  $('mcOmt').hidden=st.engine!=='maplibre';   // attribution près de la carte : schéma OpenMapTiles avec le moteur GPU seulement
   $('engineHint').textContent = {
     maplibre: mlLib==='fail' ? 'Librairie MapLibre impossible à charger (aucun CDN joignable).' : 'Tuiles vectorielles OpenFreeMap : instantané, mers et côtes correctes, idéal sur mobile.',
     file:'Aucun accès réseau requis : importez un fichier de données OSM. Tracé vectoriel au détail maximal, aperçu et export identiques.'

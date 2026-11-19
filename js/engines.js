@@ -266,7 +266,7 @@ function buildStyle(k, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=window.device
   roads('road-',null,1);
   if(fx.quarter) roads('quarter-',c.marker,QUARTER_W,[['within',focusPolygon(view)]]);   // rues entièrement dans le rayon du repère
   if(fx.riso) L.push(...water('-plate',[RISO[0]*scale,RISO[1]*scale]));   // plaque d'eau décalée, par-dessus (fondu approché par l'opacité)
-  return {version:8,sources:{omt:{type:'vector',url:OFM_URL}},layers:L};
+  return {version:8,sources:{omt:{type:'vector',url:OFM_URL,attribution:OFM_ATTRIBUTION}},layers:L};
 }
 /** Charge un script local (données du ciel) ; `integrity` (SRI) pour un fichier servi par un tiers */
 function loadScript(src,ms,integrity){
