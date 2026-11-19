@@ -178,6 +178,17 @@ function changed(o={}){
     if(wasTap && ui.placing){ const rc=vecC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); placeAt(ll.lat,ll.lon); }
     if(pts.size===0) saveState(); };
   vecC.addEventListener('pointerup',up); vecC.addEventListener('pointercancel',up);
+  // Clavier (la carte MapLibre a le sien) : flèches = 10 % du cadre (Maj : 50 %), + / − = zoom, Entrée = repère au centre en mode placement
+  vecC.addEventListener('keydown',e=>{
+    if(e.altKey||e.ctrlKey||e.metaKey) return;
+    const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+    if(d){ const f=e.shiftKey?0.5:0.1, S=worldSize(ui.slotCss.w,st.zoom), dx=d[0]*f*ui.slotCss.w, dy=d[1]*f*ui.slotCss.h;
+      st.center={lon:st.center.lon+dx/S*360, lat:imerc(merc(st.center.lat)-dy*2*Math.PI/S)}; }
+    else if(e.key==='+'||e.key==='='||e.key==='-'||e.key==='_'){ st.zoom=clamp(st.zoom+(e.key==='+'||e.key==='='?0.5:-0.5),10,18); syncZoomUI(); }
+    else if(e.key==='Enter' && ui.placing){ placeAt(st.center.lat,st.center.lon); }
+    else return;
+    e.preventDefault(); renderMap(); saveState();
+  });
   vecC.addEventListener('wheel',e=>{ e.preventDefault(); st.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18); syncZoomUI(); renderMap(); saveState(); },{passive:false});
 })();
 

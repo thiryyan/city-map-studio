@@ -276,6 +276,7 @@ function buildUI(){
   $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
   const submitSearch=CMS.geocoder.debounceSubmit(q=>search(q),300);
   $('searchForm').onsubmit=e=>{ e.preventDefault(); submitSearch($('q').value); };
+  $('results').addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeResults(); } });
   $('bExport').onclick=exportPoster;
   $('resClose').onclick=()=>closeDialog('result');
 }
@@ -413,6 +414,7 @@ function locateMe(){
 // ---------- Géocodage Nominatim ----------
 // Recherche uniquement à la validation (pas d'autocomplétion : interdite par la politique d'usage de Nominatim).
 // Délai, quota, relance, cache et validation des réponses : CMS.geocoder (js/geocoder.js).
+CMS.define('searchUI', () => {
 const GEO_MSG={
   TIMEOUT:()=>'Le service de recherche ne répond pas.',
   RATE_LIMITED:e=>`Trop de recherches : réessayez dans ${Math.ceil((e.retryInMs||60000)/1000)} s.`,
@@ -421,36 +423,46 @@ const GEO_MSG={
   BAD_RESPONSE:()=>'Réponse inattendue du service de recherche.'
 };
 let searching=false;
+/** Message de la recherche : affiché dans la liste (texte) et annoncé par la zone d'état */
+function searchMsg(t){ const box=$('results'); box.replaceChildren(...(t?[h('li',{className:'msg'},t)]:[])); $('resultsStatus').textContent=t; }
 async function search(q){
   q=(q||'').trim(); if(!q){ $('q').focus(); return; }
   if(searching) return;
   if(!needConsent(()=>search(q))) return;
   const box=$('results'), sb=document.querySelector('#searchForm [type=submit]');
-  searching=true; sb.disabled=true; box.setAttribute('aria-busy','true'); box.textContent='Recherche…';
+  searching=true; sb.disabled=true; box.setAttribute('aria-busy','true'); searchMsg('Recherche…');
   try{
     const list=await CMS.geocoder.search(q);
-    box.textContent='';
-    if(!list.length){ box.textContent='Aucun résultat.'; return; }
-    for(const it of list) box.appendChild(resultItem(it));
+    if(!list.length){ searchMsg('Aucun résultat.'); return; }
+    box.replaceChildren(...list.map(resultItem));
+    $('resultsStatus').textContent=`${list.length} résultat${list.length>1?'s':''} pour « ${q} ».`;
+    box.querySelector('button')?.focus({preventScroll:false});
   }catch(e){
     if(e.code==='ABORTED') return;
-    box.textContent=(GEO_MSG[e.code]?.(e) ?? 'Recherche indisponible.')+' Vous pouvez placer le repère en touchant la carte.';
+    searchMsg((GEO_MSG[e.code]?.(e) ?? 'Recherche indisponible.')+' Vous pouvez placer le repère en touchant la carte.');
   }
   finally{ searching=false; sb.disabled=false; box.removeAttribute('aria-busy'); }
 }
-/** Un résultat validé (CMS.geocoder) : nom en tête, adresse en dessous, deux actions */
+/** Ferme la liste des résultats et rend le focus au champ de recherche */
+function closeResults(){ searchMsg(''); $('q').focus(); }
+/** Un résultat validé (CMS.geocoder) : nom en tête, adresse en dessous, deux actions décrites par le lieu */
+let resultSeq=0;
 function resultItem(it){
-  const {lat,lon,name:nm,display}=it;
+  const {lat,lon,name:nm,display}=it, id='res-'+(++resultSeq);
   const rest=nm && display.startsWith(nm) ? display.slice(nm.length).replace(/^,\s*/,'') : display;
-  const t=h('div',{className:'t'});
-  if(nm && rest!==display) t.append(h('b',{},nm),h('small',{},rest)); else t.textContent=display;
-  const box=$('results');
-  const b1=h('button',{type:'button',className:'btn sm'},'Carte + repère');
-  b1.onclick=()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); box.textContent=''; };
-  const b2=h('button',{type:'button',className:'btn sm'},'Repère seul');
-  b2.onclick=()=>{ setMarker(lat,lon); box.textContent=''; toast('Repère placé'); };
-  return h('div',{className:'res'},t,h('div',{className:'row'},b1,b2));
+  const t=h('div',{className:'t',id});
+  if(nm && rest!==display) t.append(h('b',{},nm),h('span',{className:'sr-only'},', '),h('small',{},rest)); else t.textContent=display;   // virgule lue, non affichée
+  const btn=(label,fn)=>{ const b=h('button',{type:'button',className:'btn sm'},label); b.setAttribute('aria-describedby',id);
+    b.onclick=e=>{ fn(); if(e.detail===0) $('q').focus({preventScroll:true}); };   // activé au clavier : le focus revient au champ
+    return b; };
+  const b1=btn('Carte + repère',()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); searchMsg(''); $('resultsStatus').textContent='Carte centrée et repère placé.'; });
+  const b2=btn('Repère seul',()=>{ setMarker(lat,lon); searchMsg(''); toast('Repère placé'); });
+  return h('li',{className:'res'},t,h('div',{className:'row'},b1,b2));
 }
+
+return {search, closeResults};
+});
+const {search, closeResults} = CMS.searchUI;
 
 // ---------- Polices ----------
 async function loadFonts(){

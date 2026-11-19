@@ -42,6 +42,7 @@ python tests/run.py              # moteur Fichier + export PNG 2480×3508 / pHYs
 python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
 python tests/layouts.py          # captures des gabarits
 python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap simulé, export hors écran
+python tests/keyboard.py         # clavier : carte du moteur Fichier, résultats de recherche (focus, descriptions, Échap)
 python tests/perf.py             # épaisseurs GPU en expressions de zoom (aucun setStyle pendant les gestes), densité de pixels, graphèmes
 python tests/unit.py             # tests unitaires sans navigateur (node --test tests/unit/*.test.mjs : CMS.geo, normState, CMS.geocoder)
 python tests/globals.py          # garde-fou : nombre de déclarations globales ≤ tests/globals.max
