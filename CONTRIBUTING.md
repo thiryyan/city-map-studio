@@ -24,7 +24,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - **Grands formats** : ne jamais créer de canevas d'export plus grand que `exportSpec()` (limite `CANVAS_MAX_PX`) ni de carte WebGL de plus de `glMax()` px de côté (`renderMaplibreOffscreen` découpe en tuiles).
 
 ## Organisation
-- `index.html` : balisage, CSP et métadonnées seulement. `css/app.css` : styles. `js/*.js` : dix scripts chargés dans l'ordre (dossier, § 8.2), organisés en sections `// ---------- Titre ----------`. Le code exécuté au chargement d'un fichier ne doit utiliser que les fichiers précédents.
+- `index.html` : balisage, CSP et métadonnées seulement. `css/app.css` : styles. `js/*.js` : scripts chargés dans l'ordre (dossier, § 8.2), organisés en sections `// ---------- Titre ----------`. Le code exécuté au chargement d'un fichier ne doit utiliser que les fichiers précédents.
 - `window.__cms` expose l'état et les fonctions pour la console et les tests, seulement avec `?test` dans l'adresse (ou `localStorage['cityMapStudio.debug']='1'`).
 - `sw.js`, `manifest.webmanifest`, `icons/` : application installable et cache hors ligne.
 - `lib/` : MapLibre GL JS 4.7.1 et sa licence BSD-3. `lib/sky/` : données du ciel (d3-celestial, BSD-3), chargées seulement par le gabarit Ciel. Pour changer de version, remplacer les fichiers et mettre à jour `ML_VERSION`.
@@ -41,6 +41,7 @@ python tests/run.py              # moteur Fichier + export PNG 2480×3508 / pHYs
 python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
 python tests/layouts.py          # captures des gabarits
 python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap simulé, export hors écran
+python tests/mlloader.py         # chargement de MapLibre : CDN de secours, copie tardive, version, CSS de secours
 python tests/coords.py           # saisie des coordonnées du repère
 python tests/texts.py            # lignes de texte optionnelles
 python tests/textsize.py         # taille des textes de l'affiche (par ligne et globale)

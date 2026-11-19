@@ -48,7 +48,7 @@
 | **1. Vectoriel GPU (défaut)** | MapLibre + OpenFreeMap | Instantané, monde entier, mers et côtes correctes, fluide sur mobile. | Généralisation des tuiles : certaines petites voies disparaissent aux zooms faibles. |
 | **2. Fichier (hors ligne)** | Fichier importé : `.osm` XML, JSON OSM (`{"elements":[…]}`) ou GeoJSON → Canvas 2D | Aucun accès réseau requis ; géométrie OSM brute au niveau de détail maximal, contrôle total du tracé. | L'utilisateur obtient le fichier lui-même (§ 7.3) ; le trait de côte marin n'est pas traité (villes continentales et fluviales). |
 
-**Chaîne de secours** : MapLibre est chargé depuis `lib/`, puis depuis 3 CDN (12 s par source). Les tuiles sont surveillées pendant 15 s. En cas d'échec, un bandeau « Diagnostiquer » oriente vers le moteur qui fonctionne, et en dernier recours vers le moteur Fichier.
+**Chaîne de secours** : MapLibre est chargé par `js/maplibre-loader.js` (`CMS.maplibre`) depuis `lib/`, puis depuis 3 CDN (12 s par source, CDN seulement après l'accord). Une seule promesse de chargement à la fois ; la version (`getVersion() === ML_VERSION`) est vérifiée pour toutes les sources, copie locale comprise ; un script arrivé après son délai (qu'on ne peut pas annuler) est neutralisé si une autre source a gagné, ou adopté si toutes avaient échoué (événement `cms:maplibre-ready`, la carte est relancée). La feuille de style est chargée avec `onload`/`onerror`, depuis la même source puis les autres sources autorisées. Les tuiles sont surveillées pendant 15 s. En cas d'échec, un bandeau « Diagnostiquer » oriente vers le moteur qui fonctionne, et en dernier recours vers le moteur Fichier.
 
 ### 2.3. Rendu en trois couches (WYSIWYG)
 
@@ -482,13 +482,14 @@ city-map-studio/
 
 ### 8.2. Fichiers et sections du script
 
-Le script est découpé en dix fichiers `js/*.js`, eux-mêmes organisés en sections balisées `// ---------- Titre ----------`.
+Le script est découpé en fichiers `js/*.js`, eux-mêmes organisés en sections balisées `// ---------- Titre ----------`.
 Ce sont des scripts classiques : leurs déclarations de premier niveau sont partagées et le **code exécuté au chargement
 d'un fichier ne peut utiliser que les fichiers précédents** (les fonctions, elles, peuvent s'appeler d'un fichier à l'autre).
 
 | Fichier | Contenu |
 | :--- | :--- |
 | `config.js` | Constantes : polices, thèmes, gabarits, repères, ambiances, villes, hiérarchie routière, `DEFAULT_STATE`. |
+| `maplibre-loader.js` | `CMS.maplibre` : chargement résilient de MapLibre (sources, délais, version, CSS de secours). |
 | `state.js` | Validation (`normState`), état `st`, fenêtres modales (`openDialog`, `closeDialog`, `setBusy`), accord préalable, enregistrement. |
 | `geo.js` | Mercator, `geom` (géométrie des gabarits), formes. |
 | `render.js` | Typographie, cartouche, repères, ciel, `drawPoster`. |

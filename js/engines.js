@@ -268,7 +268,7 @@ function buildStyle(k, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=window.device
   if(fx.riso) L.push(...water('-plate',[RISO[0]*scale,RISO[1]*scale]));   // plaque d'eau décalée, par-dessus (fondu approché par l'opacité)
   return {version:8,sources:{omt:{type:'vector',url:OFM_URL}},layers:L};
 }
-/** Charge un script ; `integrity` (SRI) pour un fichier servi par un tiers */
+/** Charge un script local (données du ciel) ; `integrity` (SRI) pour un fichier servi par un tiers */
 function loadScript(src,ms,integrity){
   return new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src=src; sc.async=true;
     if(integrity){ sc.integrity=integrity; sc.crossOrigin='anonymous'; }
@@ -276,24 +276,18 @@ function loadScript(src,ms,integrity){
     sc.onload=()=>{clearTimeout(t);res()}; sc.onerror=()=>{clearTimeout(t);sc.remove();rej(new Error('bloqué'))};
     document.head.appendChild(sc); });
 }
+/** Charge MapLibre (js/maplibre-loader.js) et reporte son état dans mlLib / mlCdn */
 async function loadMaplibre(){
-  if(window.maplibregl){ mlLib='ok'; return true; }
-  mlLib='loading';
-  for(const base of ML_CDNS){
-    if(!consent && /^https?:/.test(base)){ mlLib='local-fail'; return false; }   // CDN tiers : seulement après accord
-    const remote=/^https?:/.test(base);
-    try{
-      await loadScript(base+'maplibre-gl.js',12000,remote?ML_SRI.js:'');
-      if(window.maplibregl){
-        const l=document.createElement('link'); l.rel='stylesheet'; l.href=base+'maplibre-gl.css';
-        if(remote){ l.integrity=ML_SRI.css; l.crossOrigin='anonymous'; }
-        document.head.appendChild(l);
-        mlLib='ok'; mlCdn=/^https?:/.test(base)?new URL(base).host:'copie locale (lib/)'; return true;
-      }
-    }catch(e){ console.warn('MapLibre CDN',base,e.message); }
-  }
-  mlLib='fail'; return false;
+  if(mlLib!=='ok') mlLib='loading';
+  const ok=await CMS.maplibre.load({consent});
+  mlLib=CMS.maplibre.state; mlCdn=CMS.maplibre.source;
+  return ok;
 }
+/** Librairie arrivée après l'échec de toutes les sources (réseau lent) : la carte est relancée */
+addEventListener('cms:maplibre-ready',()=>{
+  mlLib='ok'; mlCdn=CMS.maplibre.source; mlFailMsg=''; showBanner(false); updateEngineUI();
+  if(st.engine==='maplibre') renderMap(true);
+});
 function mlFail(msg){
   if(mlFailMsg) return; mlFailMsg=msg;
   setStatus(msg,'err');
@@ -307,7 +301,7 @@ function initMaplibre(){
   if(!needConsent()){ setStatus('Carte en attente de votre accord','wait'); return false; }
   const w=ui.slotCss.w||300;
   try{
-    mlMap=new maplibregl.Map({container:'mlMap',style:buildStyle(mlK(w),w/REF_W),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
+    mlMap=new CMS.maplibre.lib.Map({container:'mlMap',style:buildStyle(mlK(w),w/REF_W),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
       attributionControl:false,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,fadeDuration:0,renderWorldCopies:false});
   }catch(e){ console.error(e); mlMap=null; return false; }
   mlMap.touchZoomRotate.disableRotation(); mlMap.keyboard.disableRotation();
@@ -356,7 +350,7 @@ function mlSnapshot(cssW,cssH,pr,center,view,draw){
       try{ draw(map.getCanvas()); map.remove(); div.remove(); resolve(warn); }
       catch(e){ try{map.remove()}catch(_){} div.remove(); reject(e); } };
     try{
-      map=new maplibregl.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom),1,pr,view),center:[center.lon,center.lat],zoom:view.zoom,
+      map=new CMS.maplibre.lib.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom),1,pr,view),center:[center.lon,center.lat],zoom:view.zoom,
         pixelRatio:pr,interactive:false,preserveDrawingBuffer:true,fadeDuration:0,attributionControl:false,renderWorldCopies:false,maxCanvasSize:[8192,8192]});
     }catch(e){ div.remove(); reject(e); return; }
     map.on('styleimagemissing',e=>onImageMissing(map,e));
