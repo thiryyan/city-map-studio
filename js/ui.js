@@ -55,13 +55,24 @@ function placeMarkerFromInput(){
   toast('Repère placé'+(out?' · carte recentrée':''));
 }
 function setMarker(lat,lon){ st.marker={lat,lon}; setPlacing(false); updateMarkerTxt(); if(st.fx.quarter){ ui.snap=null; redrawAll(true); } else changed(); }
-function updateMarkerTxt(){ $('markerTxt').textContent=`${dms(st.marker.lat,'N','S')}  ·  ${dms(st.marker.lon,'E','W')}`; $('coordsManual').placeholder=coordText(); }
+/** Indications du panneau Lieu, sur le même modèle pour la ville (centre de la carte) et le lieu de rencontre (repère) :
+ *  nom de la ville proposée la plus proche (5 km au plus) ou « Autre lieu », puis les coordonnées ; bouton de la ville en surbrillance */
+function updateMarkerTxt(){
+  const near=({lat,lon})=>{ let best=null, bd=5; for(const p of PRESETS){ const dy=(lat-p[1])*111.2, dx=(lon-p[2])*111.2*Math.cos(lat*Math.PI/180), d=Math.hypot(dx,dy); if(d<bd){ bd=d; best=p; } } return best; };
+  const show=(id,pt,p,sub)=>$(id).replaceChildren(h('b',{},p?p[4]:'Autre lieu'),h('span',{className:'sr-only'},', '),h('small',{},p?sub(p):'Hors des villes proposées'),
+    h('span',{className:'mono'},`${dms(pt.lat,'N','S')}  ·  ${dms(pt.lon,'E','W')}`));
+  const city=near(st.center), mk=near(st.marker);
+  show('cityTxt',st.center,city,p=>p[5]);
+  show('markerTxt',st.marker,mk,p=>mk===city?'Dans la ville affichée':'Hors de la ville affichée');
+  document.querySelectorAll('#presets .chip').forEach((b,i)=>{ const on=PRESETS[i]===city; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); });
+  $('coordsManual').placeholder=coordText();
+}
 function syncZoomUI(){ $('zoom').value=st.zoom.toFixed(1); $('oZoom').textContent=st.zoom.toFixed(1); }
 function setZoom(z){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
 function goTo(lat,lon,zoom){
   st.center={lat,lon}; if(zoom!=null) st.zoom=zoom; syncZoomUI();
   if(mlMap&&st.engine==='maplibre'){ mlMap.jumpTo({center:[lon,lat],zoom:mlZoom(ui.slotCss.w)}); mlRestyle(); }
-  renderMap(true); saveState();
+  renderMap(true); saveState(); updateMarkerTxt();
 }
 function setSeg(id,v){ document.querySelectorAll(`#${id} button`).forEach(b=>{ const on=b.dataset.v===String(v); b.classList.toggle('on',on);
   if(b.getAttribute('role')==='radio') b.setAttribute('aria-checked',String(on)); else b.setAttribute('aria-pressed',String(on)); }); }
@@ -100,7 +111,7 @@ function isoFromFr(t){
 // Le moteur cartographique est exclu : le rétablir relancerait des requêtes réseau.
 const HIST_MAX=50, hist={past:[],future:[],cur:null,quietUntil:0};
 function histSnap(){ const {engine,...rest}=st; return JSON.stringify(rest); }
-CMS.on('state:saved',()=>recordHistory());   // émis par saveState (state.js)
+CMS.on('state:saved',()=>{ recordHistory(); updateMarkerTxt(); });   // émis par saveState (state.js)
 function recordHistory(){
   const s=histSnap(); if(s===hist.cur) return;
   if(Date.now()<hist.quietUntil || hist.cur==null){ hist.cur=s; return; }   // effets de bord d'un retour arrière (recentrage de la carte)

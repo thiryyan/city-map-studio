@@ -106,12 +106,12 @@ const AMBIANCES=[
 ];
 // Modèles de texte par occasion : la dédicace change ; les noms seulement s'ils sont encore ceux de l'exemple
 const OCCASIONS=[
-  ['rencontre','Rencontre','Là où tout a commencé','Camille & Julien'],
-  ['mariage','Mariage','Le plus beau jour de notre vie','Camille & Julien'],
+  ['rencontre','Rencontre','Là où tout a commencé','Alice & Mathias'],
+  ['mariage','Mariage','Le plus beau jour de notre vie','Alice & Mathias'],
   ['naissance','Naissance','Bienvenue, petit trésor','Léa'],
   ['maison','Maison','Bienvenue à la maison','Famille Martin'],
-  ['voyage','Voyage','Le voyage d\'une vie','Camille & Julien'],
-  ['anniversaire','Anniversaire','Dix ans, et toujours ici','Camille & Julien']
+  ['voyage','Voyage','Le voyage d\'une vie','Alice & Mathias'],
+  ['anniversaire','Anniversaire','Dix ans, et toujours ici','Alice & Mathias']
 ];
 const MARKER_COLORS = [['Or','#C5A059'],['Rouge','#D0312D'],['Noir','#111111'],['Blanc','#FFFFFF']];
 
@@ -121,8 +121,7 @@ const PRESETS = [
   ['Venise · Lagune',45.4380,12.3300,13.6,'Venezia','Vénétie • Italie'],
   ['New York',40.7580,-73.9855,13.2,'New York','Manhattan • USA'],
   ['Bordeaux · Garonne',44.8410,-0.5700,13.6,'Bordeaux','Gironde • France'],
-  ['Kyoto · Kamo',35.0116,135.7681,13.6,'Kyoto','Kansai • Japon'],
-  ['Lyon · Rhône',45.7600,4.8320,13.6,'Lyon','Rhône • France']
+  ['Périgueux · Isle',45.1843,0.7215,14,'Périgueux','Périgord • France']
 ];
 
 // Hiérarchie routière (largeur de base en px pour un cadre de 800 px)
@@ -141,7 +140,7 @@ const DEFAULT_STATE = {
   center:{lat:47.5861,lon:1.3359}, zoom:14, marker:{lat:47.5861,lon:1.3359},
   markerStyle:'heart', markerFill:true, markerSize:100, markerOpacity:1,
   coordFormat:'dec', coordsManual:'',
-  texts:{title:'Blois',subtitle:'Val de Loire • France',dedication:'Là où tout a commencé',names:'Camille & Julien',date:'Le 14 juillet 2023',label1:'Notre rencontre',label2:'Notre mariage'},
+  texts:{title:'Blois',subtitle:'Val de Loire • France',dedication:'Là où tout a commencé',names:'Alice & Mathias',date:'Le 23 septembre 2023',label1:'Notre rencontre',label2:'Notre mariage'},
   show:{title:true,subtitle:true,coords:true,dedication:true,names:true,date:true},   // lignes de texte affichées
   textScale:{title:100,subtitle:100,coords:100,dedication:100,names:100,date:100},   // taille de chaque ligne (%)
   textScaleAll:100,                                                                  // taille de tous les textes (%)

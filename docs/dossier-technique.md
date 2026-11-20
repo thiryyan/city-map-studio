@@ -74,7 +74,9 @@ Les canevas de l'aperçu sont à la densité de l'écran (`devicePixelRatio`, 3 
 
 ### 2.5. Villes préréglées
 
-Blois (Loire) · Paris (Seine) · Venise (Lagune) · New York (Manhattan) · Bordeaux (Garonne) · Kyoto (Kamo) · Lyon (Rhône & Saône).
+Blois (Loire) · Paris (Seine) · Venise (Lagune) · New York (Manhattan) · Bordeaux (Garonne) · Périgueux (Isle).
+
+L'onglet Lieu indique de la même façon la ville affichée (centre de la carte) et le lieu de rencontre (repère) : nom de la ville proposée la plus proche, à 5 km au plus (« Autre lieu » sinon), précision (région, ou repère dans / hors de la ville affichée) et coordonnées. Le bouton de la ville affichée est en surbrillance (`aria-pressed`).
 
 ---
 
@@ -202,7 +204,7 @@ Le repère (point de rencontre) est indépendant du centre de la carte. Il se pl
 
 Interlettrage : le texte est tracé **graphème par graphème** (`CMS.glyphs`, `Intl.Segmenter` ; repli NFC) : un « é » décomposé ou un émoji composé reste d'un bloc ; largeurs mises en cache par police.
 
-Champs : **Titre** (« Blois ») · **Sous-titre** (« Val de Loire • France ») · **Coordonnées** (automatiques ou saisies) · **Dédicace** (« Là où tout a commencé ») · **Noms** (« Prénom & Prénom ») · **Date** (« Le 14 juillet 2023 »).
+Champs : **Titre** (« Blois ») · **Sous-titre** (« Val de Loire • France ») · **Coordonnées** (automatiques ou saisies) · **Dédicace** (« Là où tout a commencé ») · **Noms** (« Prénom & Prénom ») · **Date** (« Le 23 septembre 2023 »).
 Familles :
 
 | Famille | Police | Esprit | Réglages |

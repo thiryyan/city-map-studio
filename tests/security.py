@@ -46,7 +46,7 @@ async def main():
         s = await page.evaluate("JSON.parse(JSON.stringify(__cms.st))")
         check(s['texts']['title'] == 'Chambord' and s['colors']['text'] == '#123456' and s['fontTitle'] == 'vibes', 'lien forgé : valeurs valides reprises')
         check(s['marker'] == {'lat': 47.5861, 'lon': 1.3359} and s['center']['lat'] == 47.5861 and s['zoom'] == 14, 'lien forgé : repère, centre et zoom invalides remplacés')
-        check(s['layout'] == 'souvenir' and s['font'] == 'serif' and s['colors']['paper'] == '#FFFFFF' and s['texts']['names'] == 'Camille & Julien',
+        check(s['layout'] == 'souvenir' and s['font'] == 'serif' and s['colors']['paper'] == '#FFFFFF' and s['texts']['names'] == 'Alice & Mathias',
               'lien forgé : gabarit, police, couleur et texte invalides remplacés')
         check(s['markerSize'] == 300 and len(s['markers2']) == 1 and s['markers2'][0]['label'] == 'Ici' and s['route'] is None and s['sky']['when'] == '',
               'lien forgé : nombres bornés, lieux, itinéraire et date du ciel filtrés')
