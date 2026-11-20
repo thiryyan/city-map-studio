@@ -100,6 +100,7 @@ function isoFromFr(t){
 // Le moteur cartographique est exclu : le rétablir relancerait des requêtes réseau.
 const HIST_MAX=50, hist={past:[],future:[],cur:null,quietUntil:0};
 function histSnap(){ const {engine,...rest}=st; return JSON.stringify(rest); }
+CMS.on('state:saved',()=>recordHistory());   // émis par saveState (state.js)
 function recordHistory(){
   const s=histSnap(); if(s===hist.cur) return;
   if(Date.now()<hist.quietUntil || hist.cur==null){ hist.cur=s; return; }   // effets de bord d'un retour arrière (recentrage de la carte)
@@ -273,7 +274,9 @@ function buildUI(){
   $('bUiSmaller').onclick=()=>stepUiScale(-1); $('bUiLarger').onclick=()=>stepUiScale(1);
   $('bTsReset').onclick=()=>{ st.textScale={...DEFAULT_STATE.textScale}; st.textScaleAll=DEFAULT_STATE.textScaleAll; syncInputs(); changed(); toast('Tailles des textes rétablies'); };
   $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
-  $('searchForm').onsubmit=e=>{ e.preventDefault(); search($('q').value); };
+  const submitSearch=CMS.geocoder.debounceSubmit(q=>search(q),300);
+  $('searchForm').onsubmit=e=>{ e.preventDefault(); submitSearch($('q').value); };
+  $('results').addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeResults(); } });
   $('bExport').onclick=exportPoster;
   $('resClose').onclick=()=>closeDialog('result');
 }
@@ -378,6 +381,7 @@ function drawCards(tab){
 function updateEngineUI(){
   document.querySelector('#engineSeg [data-v=maplibre]').disabled = mlLib==='fail';
   $('fileBlock').hidden=st.engine!=='file';
+  $('mcOmt').hidden=st.engine!=='maplibre';   // attribution près de la carte : schéma OpenMapTiles avec le moteur GPU seulement
   $('engineHint').textContent = {
     maplibre: mlLib==='fail' ? 'Librairie MapLibre impossible à charger (aucun CDN joignable).' : 'Tuiles vectorielles OpenFreeMap : instantané, mers et côtes correctes, idéal sur mobile.',
     file:'Aucun accès réseau requis : importez un fichier de données OSM. Tracé vectoriel au détail maximal, aperçu et export identiques.'
@@ -408,37 +412,57 @@ function locateMe(){
 }
 
 // ---------- Géocodage Nominatim ----------
-// Recherche uniquement à la validation (pas d'autocomplétion : interdite par la politique d'usage de Nominatim), une seule à la fois.
+// Recherche uniquement à la validation (pas d'autocomplétion : interdite par la politique d'usage de Nominatim).
+// Délai, quota, relance, cache et validation des réponses : CMS.geocoder (js/geocoder.js).
+CMS.define('searchUI', () => {
+const GEO_MSG={
+  TIMEOUT:()=>'Le service de recherche ne répond pas.',
+  RATE_LIMITED:e=>`Trop de recherches : réessayez dans ${Math.ceil((e.retryInMs||60000)/1000)} s.`,
+  NETWORK:e=>`Recherche indisponible (${e.message}).`,
+  HTTP:e=>`Recherche indisponible (${e.message}).`,
+  BAD_RESPONSE:()=>'Réponse inattendue du service de recherche.'
+};
 let searching=false;
+/** Message de la recherche : affiché dans la liste (texte) et annoncé par la zone d'état */
+function searchMsg(t){ const box=$('results'); box.replaceChildren(...(t?[h('li',{className:'msg'},t)]:[])); $('resultsStatus').textContent=t; }
 async function search(q){
   q=(q||'').trim(); if(!q){ $('q').focus(); return; }
   if(searching) return;
   if(!needConsent(()=>search(q))) return;
   const box=$('results'), sb=document.querySelector('#searchForm [type=submit]');
-  searching=true; sb.disabled=true; box.textContent='Recherche…';
+  searching=true; sb.disabled=true; box.setAttribute('aria-busy','true'); searchMsg('Recherche…');
   try{
-    const res=await fetch(NOMINATIM+'?format=jsonv2&limit=5&accept-language=fr&q='+encodeURIComponent(q));
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const list=await res.json(); box.textContent='';
-    if(!list.length){ box.textContent='Aucun résultat.'; return; }
-    for(const it of list){
-      const lat=parseFloat(it.lat), lon=parseFloat(it.lon);
-      const d=document.createElement('div'); d.className='res';
-      const t=document.createElement('div'); t.className='t';
-      const nm=(it.name||'').trim(), rest=nm && it.display_name.startsWith(nm) ? it.display_name.slice(nm.length).replace(/^,\s*/,'') : it.display_name;
-      if(nm && rest!==it.display_name){ const bb=document.createElement('b'); bb.textContent=nm; const sm=document.createElement('small'); sm.textContent=rest; t.append(bb,sm); }
-      else t.textContent=it.display_name;
-      d.appendChild(t);
-      const row=document.createElement('div'); row.className='row';
-      const b1=document.createElement('button'); b1.className='btn sm'; b1.textContent='Carte + repère';
-      b1.onclick=()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); box.textContent=''; };
-      const b2=document.createElement('button'); b2.className='btn sm'; b2.textContent='Repère seul';
-      b2.onclick=()=>{ setMarker(lat,lon); box.textContent=''; toast('Repère placé'); };
-      row.append(b1,b2); d.appendChild(row); box.appendChild(d);
-    }
-  }catch(e){ box.textContent='Recherche indisponible ('+netMsg(e)+'). Vous pouvez placer le repère en touchant la carte.'; }
-  finally{ searching=false; sb.disabled=false; }
+    const list=await CMS.geocoder.search(q);
+    if(!list.length){ searchMsg('Aucun résultat.'); return; }
+    box.replaceChildren(...list.map(resultItem));
+    $('resultsStatus').textContent=`${list.length} résultat${list.length>1?'s':''} pour « ${q} ».`;
+    box.querySelector('button')?.focus({preventScroll:false});
+  }catch(e){
+    if(e.code==='ABORTED') return;
+    searchMsg((GEO_MSG[e.code]?.(e) ?? 'Recherche indisponible.')+' Vous pouvez placer le repère en touchant la carte.');
+  }
+  finally{ searching=false; sb.disabled=false; box.removeAttribute('aria-busy'); }
 }
+/** Ferme la liste des résultats et rend le focus au champ de recherche */
+function closeResults(){ searchMsg(''); $('q').focus(); }
+/** Un résultat validé (CMS.geocoder) : nom en tête, adresse en dessous, deux actions décrites par le lieu */
+let resultSeq=0;
+function resultItem(it){
+  const {lat,lon,name:nm,display}=it, id='res-'+(++resultSeq);
+  const rest=nm && display.startsWith(nm) ? display.slice(nm.length).replace(/^,\s*/,'') : display;
+  const t=h('div',{className:'t',id});
+  if(nm && rest!==display) t.append(h('b',{},nm),h('span',{className:'sr-only'},', '),h('small',{},rest)); else t.textContent=display;   // virgule lue, non affichée
+  const btn=(label,fn)=>{ const b=h('button',{type:'button',className:'btn sm'},label); b.setAttribute('aria-describedby',id);
+    b.onclick=e=>{ fn(); if(e.detail===0) $('q').focus({preventScroll:true}); };   // activé au clavier : le focus revient au champ
+    return b; };
+  const b1=btn('Carte + repère',()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); searchMsg(''); $('resultsStatus').textContent='Carte centrée et repère placé.'; });
+  const b2=btn('Repère seul',()=>{ setMarker(lat,lon); searchMsg(''); toast('Repère placé'); });
+  return h('li',{className:'res'},t,h('div',{className:'row'},b1,b2));
+}
+
+return {search, closeResults};
+});
+const {search, closeResults} = CMS.searchUI;
 
 // ---------- Polices ----------
 async function loadFonts(){

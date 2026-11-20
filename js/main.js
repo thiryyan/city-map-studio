@@ -15,6 +15,7 @@ async function boot(){
   hist.cur=histSnap(); hist.quietUntil=Date.now()+2500; updateHistUI();   // l'état chargé est le point de départ de l'historique
   let rafL=0; new ResizeObserver(()=>{ if(!rafL) rafL=requestAnimationFrame(()=>{ rafL=0; layoutPreview(); }); }).observe(stage);
   addEventListener('resize',()=>applySheet());
+  CMS.surface.watchDpr(()=>layoutPreview());   // densité changée sans redimensionnement : aperçu redessiné à la nouvelle densité
   layoutPreview();
   loadFonts().then(()=>{ scheduleOver(); refreshCards(); });
   loadFromHash();
@@ -30,7 +31,7 @@ async function boot(){
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
   installPwa();
-  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,setFormat,setFileType,setDedWrap,exportSpec,dedLines,renderMaplibreOffscreen,set glMaxTest(v){glMaxCache=v},applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll};
+  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,setFormat,setFileType,setDedWrap,exportSpec,dedLines,renderMaplibreOffscreen,set glMaxTest(v){setGlMaxTest(v)},applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll};
 }
 /** Application installable et utilisable hors ligne : manifeste et service worker (sw.js), seulement en http(s).
  *  En file://, le navigateur refuse les deux (simple bruit dans la console) : rien n'est déclaré.

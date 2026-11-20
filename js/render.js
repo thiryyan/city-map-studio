@@ -12,13 +12,25 @@ function fontKey(role,key){
 }
 function fontOf(role,key){ return FONTS[fontKey(role,key)]||FONTS.serif; }
 function fontStr(size, o={}){const f=fontOf(o.role,o.key); return `${o.italic&&!f.script?'italic ':''}${o.weight||f.weight||400} ${size*(f.scale||1)}px ${f.fam}`}
-/** Largeur dessinée : texte d'un bloc sans interlettrage ; sinon somme des caractères dessinés un à un (comme drawText),
- *  pour que le centrage et l'alignement à droite tombent juste (le crénage d'un bloc ne s'applique pas lettre à lettre).
- *  Les caractères sont comptés en points de code (emoji, lettres hors du plan de base). */
+/** Graphèmes d'un texte (ce que le lecteur voit comme un caractère : « é » décomposé, émoji composé, drapeau) :
+ *  l'interlettrage les trace d'un bloc, jamais un signe combinant isolé. Repli sans Intl.Segmenter : NFC puis points de code.
+ *  Largeurs mises en cache par police (l'aperçu redessine les mêmes lettres à chaque image). */
+CMS.define('glyphs', () => {
+  const seg = typeof Intl!=='undefined' && Intl.Segmenter ? new Intl.Segmenter('fr',{granularity:'grapheme'}) : null;
+  const graphemes = t => seg ? Array.from(seg.segment(t),x=>x.segment) : Array.from(t.normalize('NFC'));
+  const cache=new Map();
+  const width=(ctx,g)=>{ const k=ctx.font+'\u0000'+g; let w=cache.get(k);
+    if(w===undefined){ w=ctx.measureText(g).width; if(cache.size>4000) cache.clear(); cache.set(k,w); } return w; };
+  /** Parcourt les graphèmes d'une ligne espacée : fn(graphème, x) ; avance = largeur + spPx */
+  const each=(ctx,t,x,spPx,fn)=>{ for(const g of graphemes(t)){ fn(g,x); x+=width(ctx,g)+spPx; } };
+  return {graphemes, width, each};
+});
+/** Largeur dessinée : texte d'un bloc sans interlettrage ; sinon somme des graphèmes dessinés un à un (comme drawText),
+ *  pour que le centrage et l'alignement à droite tombent juste (le crénage d'un bloc ne s'applique pas lettre à lettre). */
 function textW(ctx, t, sp, size){
   if(!sp) return ctx.measureText(t).width;
-  const chars=[...t]; let w=0; for(const ch of chars) w+=ctx.measureText(ch).width;
-  return w + sp*size*Math.max(0,chars.length-1);
+  const gs=CMS.glyphs.graphemes(t); let w=0; for(const g of gs) w+=CMS.glyphs.width(ctx,g);
+  return w + sp*size*Math.max(0,gs.length-1);
 }
 /** Facteur de taille d'une ligne de texte : réglage de la ligne × réglage global */
 function tScale(k){ return (st.textScale?.[k]??100)/100 * (st.textScaleAll??100)/100; }
@@ -40,7 +52,7 @@ function drawText(ctx, t, x, y, o){
   let sx = o.align==='center' ? x-w/2 : o.align==='right' ? x-w : x;
   if(!sp){ ctx.textAlign='left'; ctx.fillText(t,sx,y); return w; }
   ctx.textAlign='left';
-  for(const ch of t){ ctx.fillText(ch,sx,y); sx += ctx.measureText(ch).width + sp*size; }
+  CMS.glyphs.each(ctx,t,sx,sp*size,(g,gx)=>ctx.fillText(g,gx,y));
   return w;
 }
 /** Dessine bout à bout plusieurs segments de tailles différentes, alignés sur la même ligne de base,
@@ -513,11 +525,11 @@ function drawLetters(ctx, g){
     const cap=lh*0.82, y0=h/2-(n*lh)/2+cap;   // lignes centrées sur la hauteur des capitales
     const lines=f.lines.map((l,i)=>{ const lw=textW(m,l,f.sp,f.size); return {l,x:(w-lw)/2,y:y0+i*lh}; });
     m.globalCompositeOperation='destination-out';
-    const each=(fn)=>{ for(const L of lines){ let x=L.x; for(const ch of L.l){ fn(ch,x,L.y); x+=m.measureText(ch).width+f.sp*f.size; } } };
+    const each=(fn)=>{ for(const L of lines) CMS.glyphs.each(m,L.l,L.x,f.sp*f.size,(g,x)=>fn(g,x,L.y)); };
     each((ch,x,y)=>m.fillText(ch,x,y));
     ctx.drawImage(cv,r.x,r.y,w,h);
     ctx.save(); ctx.font=font; ctx.textBaseline='alphabetic'; ctx.textAlign='left'; ctx.strokeStyle=paint(c.frame); ctx.lineWidth=0.0014*U; ctx.lineJoin='round';
-    for(const L of lines){ let x=L.x; for(const ch of L.l){ ctx.strokeText(ch,r.x+x,r.y+L.y); x+=m.measureText(ch).width+f.sp*f.size; } }
+    for(const L of lines) CMS.glyphs.each(m,L.l,L.x,f.sp*f.size,(g,x)=>ctx.strokeText(g,r.x+x,r.y+L.y));
     ctx.restore();
   } else ctx.drawImage(cv,r.x,r.y,w,h);
   cv.width=cv.height=0;
@@ -613,12 +625,16 @@ function drawPosterAt(ctx, W, H, pass, mapFn){
     }
     drawCartouche(ctx,U,{...g.text,rows:lay==='polaroid'?POLA_ROWS:CART_ROWS,only:lay==='typo'?TYPO_ROWS:null});
   }
-  // Attribution OSM (ODbL)
-  if(st.attribution){
-    ctx.globalAlpha=0.55;
-    drawText(ctx,'© contributeurs OpenStreetMap'+(st.engine==='maplibre'?' · OpenFreeMap © OpenMapTiles':'')+(g.sky?' · Ciel : d3-celestial (XHIP)':''),W-m,H-m*0.38,{size:0.0085*U,align:'right',color:c.text});
-    ctx.globalAlpha=1;
-  }
+  // Attributions (ODbL, CC-BY 4.0) : la mention minimale est toujours inscrite ; la case « Mention complète » l'étend
+  ctx.globalAlpha=0.55;
+  drawText(ctx,attributionText(!!g.sky),W-m,H-m*0.38,{size:0.0085*U,align:'right',color:c.text});
+  ctx.globalAlpha=1;
   return g;
+}
+/** Mention de l'affiche : minimale (toujours), complète si st.attribution */
+function attributionText(sky){
+  const gpu=st.engine==='maplibre';
+  if(!st.attribution) return '© OpenStreetMap'+(gpu?' · © OpenMapTiles':'');
+  return '© contributeurs OpenStreetMap'+(gpu?' · OpenFreeMap © OpenMapTiles':'')+(sky?' · Ciel : d3-celestial (XHIP)':'');
 }
 function hexA(hex){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g=n>>8&255,b=n&255;return a=>`rgba(${r},${g},${b},${a})`}

@@ -1,6 +1,8 @@
 /* City Map Studio — Moteurs cartographiques : données OSM + Canvas (moteur Fichier), effets de tracé, MapLibre + OpenFreeMap.
  * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
 'use strict';
+// Module CMS.engines : tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier (utilisées par les autres fichiers ou par les tests).
+CMS.define('engines', () => {
 // ---------- Données OSM + Canvas (moteur Fichier) ----------
 function toPts(geo){const a=[];for(const p of geo) if(p) a.push([p.lon,merc(p.lat)]);return a}   // points null (hors cadre) ignorés
 /** Coupe une géométrie aux points null (points hors de la zone extraite) */
@@ -222,11 +224,18 @@ function focusPolygon(view){
 }
 
 // ---------- Moteur 1 : MapLibre + OpenFreeMap ----------
-/** k : facteur d'épaisseur ; scale : largeur du cadre / 800 ; pr : densité de pixels de la carte (motifs) ; view : vue dessinée */
-function buildStyle(k, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=window.devicePixelRatio||1, view=st){
-  const c=st.colors, L=[], fx=st.fx||{}, wk=k/st.stroke*st.waterMult;
+/** k : facteur d'épaisseur ; scale : largeur du cadre / 800 ; pr : densité de pixels de la carte (motifs) ; view : vue dessinée ;
+ *  live : carte interactive ({off : zoom de la carte − zoom de l'affiche}). Avec live, les épaisseurs suivent le zoom de la carte
+ *  par des expressions (interpolation exponentielle de base √2 entre les paliers 12 et 16 = zoomFactor, borné entre 0,5 et 2,
+ *  exact pour toute épaisseur affine en k) : les gestes ne reconstruisent plus le style. Sans live, valeurs figées (exports). */
+function buildStyle(k, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=window.devicePixelRatio||1, view=st, live=null){
+  const c=st.colors, L=[], fx=st.fx||{}, kz=k/zoomFactor(view.zoom);
+  /** Valeur dépendant de l'épaisseur K : f(K) figée, ou expression de zoom */
+  const Z=f=>live ? ['interpolate',['exponential',Math.SQRT2],['zoom'],12+live.off,f(kz*0.5),16+live.off,f(kz*2)] : f(k);
+  const ZA=f=>live ? Z(K=>['literal',f(K)]) : f(k);   // tableau de nombres (line-translate) : littéral dans une expression
+  const wkOf=K=>K/st.stroke*st.waterMult;
   const lineGeom=['in',['geometry-type'],['literal',['LineString','MultiLineString']]];
-  const wwFilter=['in',['get','class'],['literal',['river','canal','stream']]], wwWidth=(add=0)=>['match',['get','class'],'river',3*wk+add,'canal',2*wk+add,0.8*wk+add];
+  const wwFilter=['in',['get','class'],['literal',['river','canal','stream']]], wwWidth=(add=0)=>Z(K=>{ const wk=wkOf(K); return ['match',['get','class'],'river',3*wk+add,'canal',2*wk+add,0.8*wk+add]; });
   const waterFilter=['!=',['coalesce',['get','intermittent'],0],1];
   L.push({id:'bg',type:'background',paint:{'background-color':c.land}});
   if(fx.waterlines){   // lignes d'eau : deux traits parallèles (line-gap-width) de part et d'autre du contour ; le côté eau est recouvert
@@ -247,28 +256,28 @@ function buildStyle(k, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=window.device
       paint:{...(fx.hatch ? {'fill-pattern':patId('hatch',FX_HATCH,scale,pr,c.water,c.land)} : {'fill-color':c.water}),...(tr?{'fill-translate':tr,'fill-opacity':RISO_ALPHA}:{})}}];
   if(!fx.riso) L.push(...water(''));
   if(st.layers.buildings) L.push(fx.outline
-    ? {id:'building',type:'line',source:'omt','source-layer':'building',paint:{'line-color':c.roadMinor,'line-width':OUTLINE_W*k,'line-opacity':0.8}}
+    ? {id:'building',type:'line',source:'omt','source-layer':'building',paint:{'line-color':c.roadMinor,'line-width':Z(K=>OUTLINE_W*K),'line-opacity':0.8}}
     : {id:'building',type:'fill',source:'omt','source-layer':'building',paint:fx.dots ? {'fill-pattern':patId('dots',FX_DOTS,scale,pr,c.building,c.land)} : {'fill-color':c.building,'fill-antialias':false}});
   if(st.layers.rail) L.push({id:'rail',type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,['==',['get','class'],'rail']],
-    paint:{'line-color':c.rail,'line-width':0.8*k,'line-dasharray':[3,2]}});
+    paint:{'line-color':c.rail,'line-width':Z(K=>0.8*K),'line-dasharray':[3,2]}});
   const tunnel=a=>['case',['==',['get','brunnel'],'tunnel'],0.4*a,a];
   const roads=(pre,color,wMul,extra)=>{ for(const [cls,w,col] of ROADS){
     const f = cls==='path' ? ['in',['get','class'],['literal',['path','track']]] : ['==',['get','class'],cls];
     const base={type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,f,...(extra||[])],layout:{'line-cap':'round','line-join':'round'}};
     if(fx.pencil) PENCIL.forEach(([dx,dy],i)=>L.push({...base,id:`${pre}${cls}-${i}`,
-      paint:{'line-color':color||c[col],'line-width':w*k*PENCIL_W*wMul,'line-translate':[dx*k,dy*k],'line-opacity':tunnel(PENCIL_ALPHA)}}));
-    else L.push({...base,id:pre+cls,paint:{'line-color':color||c[col],'line-width':w*k*wMul,'line-opacity':tunnel(1)}});
+      paint:{'line-color':color||c[col],'line-width':Z(K=>w*K*PENCIL_W*wMul),'line-translate':ZA(K=>[dx*K,dy*K]),'line-opacity':tunnel(PENCIL_ALPHA)}}));
+    else L.push({...base,id:pre+cls,paint:{'line-color':color||c[col],'line-width':Z(K=>w*K*wMul),'line-opacity':tunnel(1)}});
   } };
   if(fx.glow) GLOW.forEach(([wf,a],i)=>{ for(const [cls,w,col] of ROADS){   // lueur : traits larges, flous et pâles sous les rues
     const f = cls==='path' ? ['in',['get','class'],['literal',['path','track']]] : ['==',['get','class'],cls];
     L.push({id:`glow-${i}-${cls}`,type:'line',source:'omt','source-layer':'transportation',filter:['all',lineGeom,f],layout:{'line-cap':'round','line-join':'round'},
-      paint:{'line-color':c[col],'line-width':w*k*wf,'line-blur':w*k*wf*0.5,'line-opacity':tunnel(a*1.3)}}); } });
+      paint:{'line-color':c[col],'line-width':Z(K=>w*K*wf),'line-blur':Z(K=>w*K*wf*0.5),'line-opacity':tunnel(a*1.3)}}); } });
   roads('road-',null,1);
   if(fx.quarter) roads('quarter-',c.marker,QUARTER_W,[['within',focusPolygon(view)]]);   // rues entièrement dans le rayon du repère
   if(fx.riso) L.push(...water('-plate',[RISO[0]*scale,RISO[1]*scale]));   // plaque d'eau décalée, par-dessus (fondu approché par l'opacité)
-  return {version:8,sources:{omt:{type:'vector',url:OFM_URL}},layers:L};
+  return {version:8,sources:{omt:{type:'vector',url:OFM_URL,attribution:OFM_ATTRIBUTION}},layers:L};
 }
-/** Charge un script ; `integrity` (SRI) pour un fichier servi par un tiers */
+/** Charge un script local (données du ciel) ; `integrity` (SRI) pour un fichier servi par un tiers */
 function loadScript(src,ms,integrity){
   return new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src=src; sc.async=true;
     if(integrity){ sc.integrity=integrity; sc.crossOrigin='anonymous'; }
@@ -276,24 +285,18 @@ function loadScript(src,ms,integrity){
     sc.onload=()=>{clearTimeout(t);res()}; sc.onerror=()=>{clearTimeout(t);sc.remove();rej(new Error('bloqué'))};
     document.head.appendChild(sc); });
 }
+/** Charge MapLibre (js/maplibre-loader.js) et reporte son état dans mlLib / mlCdn */
 async function loadMaplibre(){
-  if(window.maplibregl){ mlLib='ok'; return true; }
-  mlLib='loading';
-  for(const base of ML_CDNS){
-    if(!consent && /^https?:/.test(base)){ mlLib='local-fail'; return false; }   // CDN tiers : seulement après accord
-    const remote=/^https?:/.test(base);
-    try{
-      await loadScript(base+'maplibre-gl.js',12000,remote?ML_SRI.js:'');
-      if(window.maplibregl){
-        const l=document.createElement('link'); l.rel='stylesheet'; l.href=base+'maplibre-gl.css';
-        if(remote){ l.integrity=ML_SRI.css; l.crossOrigin='anonymous'; }
-        document.head.appendChild(l);
-        mlLib='ok'; mlCdn=/^https?:/.test(base)?new URL(base).host:'copie locale (lib/)'; return true;
-      }
-    }catch(e){ console.warn('MapLibre CDN',base,e.message); }
-  }
-  mlLib='fail'; return false;
+  if(mlLib!=='ok') mlLib='loading';
+  const ok=await CMS.maplibre.load({consent});
+  mlLib=CMS.maplibre.state; mlCdn=CMS.maplibre.source;
+  return ok;
 }
+/** Librairie arrivée après l'échec de toutes les sources (réseau lent) : la carte est relancée */
+addEventListener('cms:maplibre-ready',()=>{
+  mlLib='ok'; mlCdn=CMS.maplibre.source; mlFailMsg=''; showBanner(false); updateEngineUI();
+  if(st.engine==='maplibre') renderMap(true);
+});
 function mlFail(msg){
   if(mlFailMsg) return; mlFailMsg=msg;
   setStatus(msg,'err');
@@ -307,14 +310,20 @@ function initMaplibre(){
   if(!needConsent()){ setStatus('Carte en attente de votre accord','wait'); return false; }
   const w=ui.slotCss.w||300;
   try{
-    mlMap=new maplibregl.Map({container:'mlMap',style:buildStyle(mlK(w),w/REF_W),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
+    mlStyledW=w;
+    mlMap=new CMS.maplibre.lib.Map({container:'mlMap',style:liveStyle(w),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
       attributionControl:false,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,fadeDuration:0,renderWorldCopies:false});
   }catch(e){ console.error(e); mlMap=null; return false; }
   mlMap.touchZoomRotate.disableRotation(); mlMap.keyboard.disableRotation();
   mlMap.on('move',()=>{ if(mlSync) return; const cc=mlMap.getCenter(); st.center={lat:cc.lat,lon:cc.lng}; st.zoom=mlMap.getZoom()-Math.log2(ui.slotCss.w/REF_W); scheduleOver(); syncZoomUI(); });
   mlMap.on('styleimagemissing',e=>onImageMissing(mlMap,e));
-  mlMap.on('moveend',()=>{ mlMap.setStyle(buildStyle(mlK(ui.slotCss.w),ui.slotCss.w/REF_W)); saveState(); });
+  // Fin de geste : les épaisseurs suivent le zoom par expressions ; seul le disque du quartier (rayon en px de l'affiche) est recalculé
+  mlMap.on('moveend',()=>{ mlUpdateQuarter(); saveState(); });
   mlMap.on('click',e=>{ if(ui.placing){ placeAt(e.lngLat.lat,e.lngLat.lng); } });
+  // Perte du contexte WebGL (mémoire graphique saturée, onglet en arrière-plan sur mobile) : MapLibre le rétablit seul,
+  // l'interface le signale et l'export attend
+  mlMap.on('webglcontextlost',()=>{ ui.glLost=true; if(st.engine==='maplibre') setStatus('Carte GPU suspendue (mémoire graphique) : rétablissement…','wait'); });
+  mlMap.on('webglcontextrestored',()=>{ ui.glLost=false; mlRestyle(); if(st.engine==='maplibre') setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'); });
   // Messages du moteur GPU seulement quand il est actif : sinon ils écraseraient l'état du moteur Fichier
   mlMap.on('dataloading',()=>{ if(st.engine==='maplibre') setStatus('Chargement des tuiles…','busy'); });
   mlMap.on('idle',()=>{ if(st.engine==='maplibre') setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'); });
@@ -325,13 +334,39 @@ function initMaplibre(){
   setTimeout(()=>{ if(!gotTiles && mlMap && st.engine==='maplibre') mlFail('Les tuiles OpenFreeMap ne se chargent pas (15 s).'); },15000);
   return true;
 }
+/** Moteur Fichier : la carte MapLibre (contexte WebGL, mémoire GPU) est libérée après ML_RELEASE_MS, recréée au retour */
+const ML_RELEASE_MS=30000;
+let mlReleaseT=0;
+function mlKeepAlive(active){
+  if(active){ clearTimeout(mlReleaseT); mlReleaseT=0; return; }
+  if(!mlMap || mlReleaseT) return;
+  const ms=(typeof TEST_HOOKS!=='undefined' && TEST_HOOKS && globalThis.__cmsTestConfig?.mlRelease) || ML_RELEASE_MS;
+  mlReleaseT=setTimeout(()=>{ mlReleaseT=0;
+    if(st.engine==='maplibre' || !mlMap) return;
+    try{ mlMap.remove(); }catch(e){ console.warn('MapLibre',e); }
+    mlMap=null; ui.glLost=false;
+  },ms);
+}
 function mlUpdateView(){
   if(!mlMap) return;
   mlSync=true; mlMap.resize(); mlMap.jumpTo({center:[st.center.lon,st.center.lat],zoom:mlZoom(ui.slotCss.w)}); mlSync=false;
+  if(Math.abs(ui.slotCss.w-mlStyledW)>0.5) mlRestyle();   // cadre redimensionné : l'écart de zoom des expressions a changé
+  else mlUpdateQuarter();
 }
-function mlRestyle(){ if(mlMap) mlMap.setStyle(buildStyle(mlK(ui.slotCss.w),ui.slotCss.w/REF_W)); }
+/** Style de la carte interactive pour un cadre de w px CSS (épaisseurs en expressions de zoom) */
+const liveStyle=w=>buildStyle(mlK(w),w/REF_W,undefined,st,{off:Math.log2(w/REF_W)});
+let mlStyledW=0, mlQuarterKey='';
+function mlRestyle(){ if(!mlMap) return; mlStyledW=ui.slotCss.w; mlQuarterKey=''; mlMap.setStyle(liveStyle(mlStyledW)); }
+/** Quartier en relief : filtre `within` mis à jour sur place quand le zoom ou le repère change (pas de setStyle) */
+function mlUpdateQuarter(){
+  if(!mlMap || !st.fx?.quarter) return;
+  const key=JSON.stringify([st.zoom.toFixed(4),st.marker,st.focusR]); if(key===mlQuarterKey) return; mlQuarterKey=key;
+  const poly=focusPolygon(st);
+  for(const l of mlMap.getStyle()?.layers||[]) if(l.id.startsWith('quarter-')) mlMap.setFilter(l.id,[...l.filter.slice(0,-1),['within',poly]]);
+}
 /** Côté maximal d'un canevas WebGL sur cet appareil (GL_TILE_MAX au plus : limite courante des mobiles) */
 let glMaxCache=0;
+const setGlMaxTest=v=>{ glMaxCache=v; };   // tests : côté maximal simulé
 function glMax(){
   if(glMaxCache) return glMaxCache;
   let m=GL_TILE_MAX;
@@ -345,24 +380,33 @@ const mercX=(lon,ws)=>(lon+180)/360*ws;
 const mercY=(lat,ws)=>{ const s=Math.sin(lat*Math.PI/180); return (0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*ws; };
 const unmercX=(x,ws)=>x/ws*360-180;
 const unmercY=(y,ws)=>180/Math.PI*Math.atan(Math.sinh(Math.PI-2*Math.PI*y/ws));
-/** Une carte MapLibre hors écran (cssW × cssH px CSS, densité pr) ; draw(canevas WebGL) est appelé une fois la carte prête */
+/** File d'attente des rendus MapLibre hors écran (vue figée, export, tuiles) : un seul contexte WebGL hors écran à la fois */
+const gpuQueue=(()=>{ let tail=Promise.resolve(); return fn=>{ const run=tail.then(()=>fn()); tail=run.catch(()=>{}); return run; }; })();
+const SNAP_TIMEOUT=45000;
+/** Une carte MapLibre hors écran (cssW × cssH px CSS, densité pr) ; draw(canevas WebGL) est appelé une fois la carte prête.
+ *  Échec immédiat si le contexte WebGL est perdu ou si le rendu échoue ; au bout de SNAP_TIMEOUT, la carte est livrée telle quelle (warn). */
 function mlSnapshot(cssW,cssH,pr,center,view,draw){
-  return new Promise((resolve,reject)=>{
+  return gpuQueue(()=>new Promise((resolve,reject)=>{
     const div=document.createElement('div');
+    div.className='ml-offscreen';
     div.style.cssText=`position:fixed;left:-20000px;top:0;width:${cssW}px;height:${cssH}px;pointer-events:none`;
     document.body.appendChild(div);
-    let map, done=false;
-    const finish=(warn)=>{ if(done) return; done=true;
-      try{ draw(map.getCanvas()); map.remove(); div.remove(); resolve(warn); }
-      catch(e){ try{map.remove()}catch(_){} div.remove(); reject(e); } };
+    let map=null, done=false, timer=0;
+    const cleanup=()=>{ clearTimeout(timer); try{ map?.remove(); }catch(_){} div.remove(); };
+    const fail=e=>{ if(done) return; done=true; cleanup(); reject(e); };
+    const finish=warn=>{ if(done) return; done=true;
+      try{ draw(map.getCanvas()); cleanup(); resolve(warn); } catch(e){ cleanup(); reject(e); } };
     try{
-      map=new maplibregl.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom),1,pr,view),center:[center.lon,center.lat],zoom:view.zoom,
+      map=new CMS.maplibre.lib.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom),1,pr,view),center:[center.lon,center.lat],zoom:view.zoom,
         pixelRatio:pr,interactive:false,preserveDrawingBuffer:true,fadeDuration:0,attributionControl:false,renderWorldCopies:false,maxCanvasSize:[8192,8192]});
-    }catch(e){ div.remove(); reject(e); return; }
+    }catch(e){ fail(e); return; }
     map.on('styleimagemissing',e=>onImageMissing(map,e));
+    map.on('webglcontextlost',()=>fail(new Error('contexte WebGL perdu (mémoire graphique saturée) : réessayez')));
+    // Erreurs de rendu (pas celles d'une tuile ou d'une source : « idle » ou le délai tranchent)
+    map.on('error',e=>{ const m=e?.error?.message||''; if(!e?.sourceId && !e?.tile && /WebGL|context|shader/i.test(m)) fail(e.error); });
     map.once('idle',()=>finish(false));
-    setTimeout(()=>finish(true),45000);
-  });
+    timer=setTimeout(()=>finish(true),SNAP_TIMEOUT);
+  }));
 }
 /** Rendu MapLibre hors écran à pleine résolution pour l'export.
  *  Au-delà du côté maximal d'un canevas WebGL (glMax : 4096 px sur la plupart des mobiles), la carte serait rendue
@@ -391,3 +435,7 @@ async function renderMaplibreOffscreen(wPx,hPx,view=st){
   }catch(e){ out.width=out.height=0; throw e; }
   return {canvas:out,warn};
 }
+
+return {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest};
+});
+const {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest} = CMS.engines;

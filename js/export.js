@@ -1,6 +1,8 @@
 /* City Map Studio — Export PNG et PDF, contexte d'exécution, diagnostic réseau, import de fichier.
  * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
 'use strict';
+// Module CMS.export : tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier (utilisées par les autres fichiers).
+CMS.define('export', () => {
 // ---------- Export PNG (résolution inscrite dans le fichier) ----------
 const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
 function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
@@ -48,6 +50,7 @@ let lastUrl=null, lastImgUrl=null;
 async function exportPoster(){
   if(st.engine==='maplibre' && !needConsent(()=>exportPoster())) return;
   if(st.engine!=='maplibre' && !osmData){ toast('Importez d\'abord un fichier de données.',true); return; }
+  if(st.engine==='maplibre' && ui.glLost){ toast('Carte GPU momentanément indisponible (mémoire graphique) : réessayez dans un instant.',true); return; }
   setBusy(true,'Chargement des polices…'); let show=false;
   try{
     const spec=exportSpec(), {W:EW,H:EH,dpi}=spec, pdf=st.fileType==='pdf';
@@ -107,7 +110,7 @@ async function runDiagnostics(){
   const lib=line('Librairie MapLibre'); set(lib,{ok:mlLib==='ok', info: mlLib==='ok'?('chargée'+(mlCdn?' via '+mlCdn:'')):mlLib==='loading'?'chargement en cours':'aucun CDN joignable'});
   const tests=[
     ['Tuiles OpenFreeMap', s=>fetch(OFM_URL,{signal:s}).then(async r=>({ok:r.ok&&!!(await r.json()).tiles,status:r.status}))],
-    ['Géocodage Nominatim', s=>fetch(NOMINATIM+'?format=json&limit=1&q=Blois',{signal:s}).then(r=>({ok:r.ok,status:r.status}))]
+    ['Géocodage Nominatim', s=>fetch(CMS.geocoder.statusUrl(),{signal:s}).then(r=>({ok:r.ok,status:r.status}))]   // état du service : ne consomme pas de recherche
   ];
   const results=await Promise.all(tests.map(async([label,fn,ms])=>{ const d=line(label); const r=await probe(fn,ms); set(d,r); return r; }));
   const anyOk=results.some(r=>r.ok);
@@ -174,3 +177,7 @@ async function importFile(f){
   try{ setStatus('Lecture du fichier…','busy'); const n=importText(await f.text(),f.name); toast(`${n.toLocaleString('fr-FR')} objets importés`); }
   catch(e){ setStatus('Import impossible : '+e.message,'err'); toast('Import impossible : '+e.message,true); }
 }
+
+return {slug, exportPoster, ENV, showEnvWarning, runDiagnostics, importText, importFile};
+});
+const {slug, exportPoster, ENV, showEnvWarning, runDiagnostics, importText, importFile} = CMS.export;

@@ -20,7 +20,7 @@
 | E10 | Livraison | Fichiers statiques **sans étape de build**, servis tels quels : `index.html` (balisage), `css/app.css`, `js/*.js` (scripts classiques chargés dans l'ordre, sans module ES, pour que l'ouverture en `file://` reste possible). MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
 | E11 | Écrans | Mobile en priorité, ordinateur en second. Interface en français. |
 | E12 | Hébergement | **GitHub Pages** (dépôt public, `index.html` à la racine, branche `main`). |
-| E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU. Active par défaut, désactivable sous la responsabilité de l'utilisateur. |
+| E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU : mention complète active par défaut. Décochée, la case laisse une **mention minimale toujours inscrite** (« © OpenStreetMap », plus « © OpenMapTiles » avec le moteur GPU ; `attributionText`). À l'écran, une attribution compacte reste visible près de la carte sur tous les onglets (`#mapCredit`, absente des exports). |
 | E14 | Vie privée | Aucune ressource de présentation (librairie, polices, styles) n'est chargée depuis un tiers : l'adresse IP du visiteur n'est transmise qu'aux services de données cartographiques nécessaires au fonctionnement, et **seulement après son accord explicite** (§ 2.4). Les polices sont auto-hébergées, conformément à la jurisprudence RGPD sur Google Fonts (LG München, 20/01/2022, 3 O 17493/20). |
 | E15 | Sécurité | Politique de sécurité du contenu (CSP) en balise meta : aucun script ni style en ligne, réseau limité aux services cartographiques. Tout état venu de l'extérieur (lien partagé, `localStorage`) est validé champ par champ (`normState`). CDN de secours chargés avec empreinte SRI. |
 | E16 | Accessibilité | Fenêtres en `<dialog>` modal (focus retenu, Échap), commandes au clavier, cibles tactiles de 44 px, noms accessibles pour tous les champs, texte de remplacement de l'aperçu. |
@@ -48,7 +48,7 @@
 | **1. Vectoriel GPU (défaut)** | MapLibre + OpenFreeMap | Instantané, monde entier, mers et côtes correctes, fluide sur mobile. | Généralisation des tuiles : certaines petites voies disparaissent aux zooms faibles. |
 | **2. Fichier (hors ligne)** | Fichier importé : `.osm` XML, JSON OSM (`{"elements":[…]}`) ou GeoJSON → Canvas 2D | Aucun accès réseau requis ; géométrie OSM brute au niveau de détail maximal, contrôle total du tracé. | L'utilisateur obtient le fichier lui-même (§ 7.3) ; le trait de côte marin n'est pas traité (villes continentales et fluviales). |
 
-**Chaîne de secours** : MapLibre est chargé depuis `lib/`, puis depuis 3 CDN (12 s par source). Les tuiles sont surveillées pendant 15 s. En cas d'échec, un bandeau « Diagnostiquer » oriente vers le moteur qui fonctionne, et en dernier recours vers le moteur Fichier.
+**Chaîne de secours** : MapLibre est chargé par `js/maplibre-loader.js` (`CMS.maplibre`) depuis `lib/`, puis depuis 3 CDN (12 s par source, CDN seulement après l'accord). Une seule promesse de chargement à la fois ; la version (`getVersion() === ML_VERSION`) est vérifiée pour toutes les sources, copie locale comprise ; un script arrivé après son délai (qu'on ne peut pas annuler) est neutralisé si une autre source a gagné, ou adopté si toutes avaient échoué (événement `cms:maplibre-ready`, la carte est relancée). La feuille de style est chargée avec `onload`/`onerror`, depuis la même source puis les autres sources autorisées. Les tuiles sont surveillées pendant 15 s. **Style de la carte interactive** : les épaisseurs suivent le zoom de la carte par des expressions (`interpolate` exponentielle de base √2 entre les paliers 12 et 16 du zoom de l'affiche, exactement `zoomFactor` borné entre 0,5 et 2) : un geste ne reconstruit pas le style ; seul le disque du quartier en relief est remis à jour par `setFilter`. Le style n'est reconstruit (`mlRestyle`) que si un réglage ou la largeur du cadre change. Les exports gardent des valeurs figées. **Contexte WebGL** : MapLibre rétablit seul un contexte perdu ; l'application l'affiche (« Carte GPU suspendue ») et refuse l'export pendant ce temps. Les rendus hors écran (`mlSnapshot` : vue figée, export, tuiles) passent par une file d'attente (`gpuQueue`, un seul contexte hors écran à la fois) et échouent immédiatement si leur contexte est perdu (au lieu d'attendre 45 s). En moteur Fichier, la carte MapLibre est libérée au bout de 30 s et recréée au retour. En cas d'échec, un bandeau « Diagnostiquer » oriente vers le moteur qui fonctionne, et en dernier recours vers le moteur Fichier.
 
 ### 2.3. Rendu en trois couches (WYSIWYG)
 
@@ -60,6 +60,8 @@ Une fonction unique, `drawPoster(ctx, W, H, pass, mapFn)`, dessine l'affiche à 
 
 À l'export, les trois couches sont recomposées dans un canvas unique de 2480 × 3508 px.
 
+Les canevas de l'aperçu sont à la densité de l'écran (`devicePixelRatio`, 3 au plus), suivie aussi sans redimensionnement (fenêtre déplacée vers un autre écran : `CMS.surface.watchDpr`) ; ils ne sont réalloués que si leur taille change (`CMS.surface.fit`).
+
 ### 2.4. Réseau et politiques d'usage
 
 * **Accord préalable (RGPD)** : au premier lancement, **aucune requête n'est émise vers un service tiers**. Un panneau « Afficher la carte ? » explique que l'affichage des tuiles transmet l'adresse IP à OpenFreeMap, et que Nominatim la reçoit aussi, seulement à la demande. Il propose deux choix :
@@ -67,7 +69,7 @@ Une fonction unique, `drawPoster(ctx, W, H, pass, mapFn)`, dessine l'affiche à 
   * **Travailler hors ligne** : passage au moteur Fichier, sans aucune requête.
 
   Tant que l'accord n'est pas donné, chaque point d'accès au réseau (`initMaplibre`, `search`, `runDiagnostics`, `exportPoster` avec le moteur Vectoriel GPU, CDN de secours de MapLibre) affiche la demande au lieu d'appeler le service. L'onglet Lieu indique l'état de l'accord et permet de le retirer, ce qui recharge la page dans l'état initial.
-* **Nominatim** : appel uniquement à la validation de la recherche (jamais à la frappe), 5 résultats, `accept-language=fr`. Les résultats sont insérés via `textContent` (aucune injection HTML).
+* **Nominatim** : appel uniquement à la validation de la recherche (jamais à la frappe), 5 résultats, `accept-language=fr`, par `CMS.geocoder` (`js/geocoder.js`) : délai de 10 s, au plus une requête par seconde, la plus récente annule la précédente, validation répétée ignorée pendant 300 ms ; 429 / 403 → attente de 60 s (l'en-tête `Retry-After` n'est pas exposé par CORS) sans aucune requête ; 5xx → une relance ; cache des 50 dernières requêtes. Les réponses sont validées (coordonnées finies et dans les bornes Mercator, textes tronqués) puis insérées via `textContent` (aucune injection HTML). Le diagnostic interroge `/status` (aucune recherche consommée).
 * **Persistance** : l'état de l'atelier est sauvegardé dans `localStorage` (clé `cityMapStudio.v2`, sous `try/catch`). La clé `cityMapStudio.opBlocked`, laissée par une version antérieure, est effacée au démarrage.
 
 ### 2.5. Villes préréglées
@@ -197,6 +199,8 @@ Le repère (point de rencontre) est indépendant du centre de la carte. Il se pl
 **Itinéraire** : import d'un fichier GPX (traces `trkpt`, routes `rtept` ou, à défaut, points `wpt`), simplifié par Douglas-Peucker à 1 500 points au plus, puis cadrage automatique de la carte (zoom borné à 10–18). Couleur (repère, rues ou filets), épaisseur et pointillés réglables. L'itinéraire est conservé dans le navigateur avec les autres réglages.
 
 ### 4.4. Typographie (6 champs, 11 familles)
+
+Interlettrage : le texte est tracé **graphème par graphème** (`CMS.glyphs`, `Intl.Segmenter` ; repli NFC) : un « é » décomposé ou un émoji composé reste d'un bloc ; largeurs mises en cache par police.
 
 Champs : **Titre** (« Blois ») · **Sous-titre** (« Val de Loire • France ») · **Coordonnées** (automatiques ou saisies) · **Dédicace** (« Là où tout a commencé ») · **Noms** (« Prénom & Prénom ») · **Date** (« Le 14 juillet 2023 »).
 Familles :
@@ -372,6 +376,7 @@ La fenêtre **Mes affiches** (onglet Style, « Avant d'imprimer ») garde la con
 * **Parcours guidé** : les onglets suivent l'ordre de création **Lieu → Repère → Textes → Style**. Chaque onglet se termine par un bouton « Étape suivante », et le dernier par « Tout est prêt : exporter l'affiche ».
 * **Onglet Lieu** : recherche, « Ma position actuelle », villes, lieu de rencontre et cadrage. Le moteur cartographique, l'import de fichier, le diagnostic et l'accord aux services tiers sont dans la section repliable **« Avancé »**. Son état est mémorisé (`cityMapStudio.advOpen`), et elle s'ouvre d'office quand elle devient utile : moteur Fichier, « Travailler hors ligne », diagnostic lancé depuis le bandeau. Les calques sont dans l'onglet Style, et les 12 couleurs dans une section repliable « Personnaliser les couleurs ».
 * **Recherche d'adresse** : uniquement à la validation, une seule à la fois (bouton inactif pendant la requête). Il n'y a pas d'autocomplétion, que la politique d'usage de Nominatim interdit. Chaque résultat affiche le nom en tête et l'adresse en dessous.
+* **Clavier** : la carte du moteur Fichier est atteignable par Tab (rôle « application », consignes dans son nom) : flèches = déplacement de 10 % du cadre (Maj : 50 %), + / − = zoom de 0,5, Entrée = repère au centre en mode placement. Résultats de recherche en liste : focus sur le premier bouton, chaque bouton décrit par son lieu (`aria-describedby`), seule la phrase « N résultats pour « … » » est annoncée (zone d'état séparée), Échap ferme la liste et rend le focus au champ.
 * **Ma position actuelle** : géolocalisation de l'appareil (`navigator.geolocation`, permission demandée par le navigateur, page sécurisée requise). Elle place le repère et y centre la carte, à un zoom d'au moins 15.
 * **Date** : un bouton calendrier, couvert par un champ `date` natif transparent pour fonctionner aussi sur iOS, remplit le champ au format de l'affiche (« Le 1er juillet 2023 ») et réaffiche la ligne si elle était masquée. Le texte reste modifiable, et le calendrier s'ouvre sur la date déjà saisie quand elle est reconnue.
 * **Polices** : cartes à défilement horizontal, chacune montrant le titre saisi dans sa police.
@@ -482,13 +487,17 @@ city-map-studio/
 
 ### 8.2. Fichiers et sections du script
 
-Le script est découpé en dix fichiers `js/*.js`, eux-mêmes organisés en sections balisées `// ---------- Titre ----------`.
+Le script est découpé en fichiers `js/*.js`, eux-mêmes organisés en sections balisées `// ---------- Titre ----------`.
 Ce sont des scripts classiques : leurs déclarations de premier niveau sont partagées et le **code exécuté au chargement
 d'un fichier ne peut utiliser que les fichiers précédents** (les fonctions, elles, peuvent s'appeler d'un fichier à l'autre).
+Pour réduire cette portée partagée, les fichiers migrent vers des modules `CMS.define(…)` (aujourd'hui `CMS.maplibre`, `CMS.geocoder`, `CMS.geo`, `CMS.engines`, `CMS.export`) : leur code est privé, seules leurs fonctions publiques sont reprises en tête de portée. `tests/globals.py` interdit toute hausse du nombre de déclarations globales (433 → 382 avec cette première migration) ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur.
 
 | Fichier | Contenu |
 | :--- | :--- |
+| `core.js` | Socle : espace de noms `CMS`, `CMS.define` (module défini une seule fois, figé), bus d'événements `CMS.on` / `CMS.emit`. |
 | `config.js` | Constantes : polices, thèmes, gabarits, repères, ambiances, villes, hiérarchie routière, `DEFAULT_STATE`. |
+| `maplibre-loader.js` | `CMS.maplibre` : chargement résilient de MapLibre (sources, délais, version, CSS de secours). |
+| `geocoder.js` | `CMS.geocoder` : client Nominatim (délai, annulation, une requête par seconde, quota 429 / 403, relance 5xx, cache, réponses validées). |
 | `state.js` | Validation (`normState`), état `st`, fenêtres modales (`openDialog`, `closeDialog`, `setBusy`), accord préalable, enregistrement. |
 | `geo.js` | Mercator, `geom` (géométrie des gabarits), formes. |
 | `render.js` | Typographie, cartouche, repères, ciel, `drawPoster`. |
@@ -544,7 +553,7 @@ Principales sections :
 | Mobile | iPhone 13 (390 × 664) : au moins 180 px de réglages à mi-hauteur ; poignée (toucher, glisser) ; dépliage à la saisie ; carte verrouillée hors du mode Cadrer ; placement du repère ; bulle au-dessus du panneau ; A− / A+ persistant, sans défilement horizontal ; paysage en deux colonnes ; ordinateur inchangé. |
 | Saisie du repère | Formats du § 3.3 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
 | Résilience | MapLibre indisponible → bascule possible vers le moteur Fichier, recommandée par le diagnostic. |
-| Licence | Aucune dépendance propriétaire ; attribution OSM présente par défaut. |
+| Licence | Aucune dépendance propriétaire ; attribution OSM toujours présente (mention complète par défaut, minimale sinon). |
 | Hors ligne | Réseau coupé : diagnostic en échec, import `.json` / `.osm` / `.geojson` réussi, export PNG 2480 × 3508. |
 | Aperçu intégré | Page dans une iframe : avertissement explicite dans l'onglet Lieu. |
 | Sécurité | Lien forgé (types faux, valeurs hors bornes, champs inconnus) : application intacte, valeurs invalides remplacées, rien d'invalide enregistré ; lien piégé (contenu décompressé > 512 Ko) refusé ; aucune violation de la CSP en `file://` ni en HTTP. |

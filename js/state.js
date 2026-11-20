@@ -151,6 +151,6 @@ function loadState(){
   return structuredClone(DEFAULT_STATE);
 }
 let saveT=0;
-function saveState(){if(ui.comparing) return; clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} if(typeof recordHistory==='function') recordHistory();},300)}
+function saveState(){if(ui.comparing) return; clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} CMS.emit('state:saved');},300)}
 function getPath(o,p){return p.split('.').reduce((a,k)=>a?.[k],o)}
 function setPath(o,p,v){const ks=p.split('.');const last=ks.pop();ks.reduce((a,k)=>a[k],o)[last]=v}
