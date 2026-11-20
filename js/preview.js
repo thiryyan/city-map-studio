@@ -29,6 +29,8 @@ function layoutPreview(){
   if(mode==='side') poster.style.marginRight=FAB+'px'; else poster.style.marginRight='';
   ui.posterCss={w,h}; ui.dpr=Math.min(window.devicePixelRatio||1,3);
   poster.style.width=w+'px'; poster.style.height=h+'px';
+  // Sources de la carte : juste sous l'affiche, alignées sur son bord droit (hors de l'affiche, dans la marge de la scène)
+  Object.assign($('mapCredit').style,{left:poster.offsetLeft+'px',width:w+'px',top:(poster.offsetTop+h+2)+'px'});
   for(const cv of [cvU,cvO,cvT]) CMS.surface.fit(cv,w*ui.dpr,h*ui.dpr);   // chaque couche est entièrement redessinée ensuite
   const G=geom(st,w,h), g=G.map; ui.slotCss=g; ui.geomCss=G;
   const clip=g.shape && g.shape!=='circle' ? `path('${shapeD(g.shape,g.w,g.h)}')` : '';
