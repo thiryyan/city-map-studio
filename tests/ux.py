@@ -161,6 +161,13 @@ async def main():
         await page.click('#bGeo'); await page.wait_for_timeout(600)
         m = await page.evaluate("[__cms.st.marker.lat.toFixed(4), __cms.st.marker.lon.toFixed(4), __cms.st.center.lat.toFixed(4)]")
         check(m == ['48.8584', '2.2945', '48.8584'], f'« Ma position » : repère et carte sur la position {m}')
+        cur = lambda: page.evaluate("[...['cityTxt','markerTxt'].map(i=>document.getElementById(i).querySelector('b').textContent), [...document.querySelectorAll('#presets .chip[aria-pressed=true]')].map(b=>b.textContent)]")
+        check(await cur() == ['Paris', 'Paris', ['Paris · Seine']], f'onglet Lieu : ville et lieu de rencontre indiqués de la même façon, ville en surbrillance {await cur()}')
+        await page.click('#presets .chip:has-text("Périgueux")'); await page.wait_for_timeout(300)
+        check(await cur() == ['Périgueux', 'Périgueux', ['Périgueux · Isle']], f'onglet Lieu : indications suivant la ville choisie {await cur()}')
+        await page.fill('#markerIn', '46.5, 2.5'); await page.press('#markerIn', 'Enter'); await page.wait_for_timeout(300)
+        t = await page.inner_text('#markerTxt')
+        check(t.startswith('Autre lieu') and '46° 30′' in t, f'onglet Lieu : repère hors des villes proposées {t!r}')
 
         # ---------- Recherche ----------
         await page.fill('#q', 'tour eiffel'); await page.press('#q', 'Enter'); await page.wait_for_timeout(100)

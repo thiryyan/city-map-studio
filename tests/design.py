@@ -69,7 +69,7 @@ async def main():
             const c=document.createElement('canvas'); c.width=620; c.height=877; __cms.st.layout='classic'; __cms.drawPoster(c.getContext('2d'),620,877,'over');
             CanvasRenderingContext2D.prototype.fillText=orig; __cms.st.layout='souvenir';
             const f=t=>(seen.find(s=>s[0].startsWith(t))||['',''])[1];
-            return {ded:f('Là où'), names:f('Camille'), sub:f('V'), date:f('L')}; })()""")
+            return {ded:f('Là où'), names:f('Alice'), sub:f('V'), date:f('L')}; })()""")
         check('Great Vibes' in uses['ded'] and 'Great Vibes' in uses['names'] and 'Great Vibes' not in uses['sub'] and 'Great Vibes' not in uses['date'],
               f'police manuscrite : dédicace et noms seulement {uses}')
         await page.click('#duos [data-v=origine]'); await page.wait_for_timeout(300)
@@ -218,7 +218,7 @@ async def main():
         sirius = await ev("__cms.altAz(101.29,-16.72,47.5861,1.3359,Date.UTC(2023,0,15,23,0)).alt")
         check(abs(pol - 47.59) < 1.2 and 20 < sirius < 30, f'astronomie : Polaire à {pol:.1f}° (lat 47,6°), Sirius à {sirius:.1f}° un soir de janvier')
         await ev("__cms.showTab('style')"); await page.click('#layouts .card[data-v=sky]'); await page.wait_for_timeout(1200)
-        check(await ev("!!window.SKY_DATA && __cms.st.sky.when.startsWith('2023-07-14')"), 'ciel : données chargées à la demande, date reprise du texte')
+        check(await ev("!!window.SKY_DATA && __cms.st.sky.when.startsWith('2023-09-23')"), 'ciel : données chargées à la demande, date reprise du texte')
         u1 = await ev(UNDER)
         await page.fill('#skyWhen', '2023-01-15T23:00'); await page.dispatch_event('#skyWhen', 'change'); await page.wait_for_timeout(300)
         check(await ev(UNDER) != u1, 'ciel : la date change les étoiles')

@@ -35,7 +35,7 @@ async def main():
         # 1. Fenêtre, enregistrement nommé, vignette
         await page.click('#bSaves'); await wait_js(page, "document.getElementById('saves').open")
         check(await ev("!document.getElementById('savesEmpty').hidden && document.getElementById('bSavesBackup').disabled"), 'liste vide : message et sauvegarde complète désactivée')
-        check(await ev("document.getElementById('saveName').value") == 'Blois · Camille & Julien', 'nom proposé : titre et noms')
+        check(await ev("document.getElementById('saveName').value") == 'Blois · Alice & Mathias', 'nom proposé : titre et noms')
         await ev("()=>__cms.applyAmbiance('ancienne')")
         a_snap = await ev(SNAP)
         await page.fill('#saveName', 'Carte ancienne'); await page.click('#saveForm button[type=submit]'); await page.wait_for_timeout(200)
