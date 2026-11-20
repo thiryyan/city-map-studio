@@ -59,6 +59,10 @@ async def main():
             await page.evaluate(f"__cms.showTab('{tab}')"); await page.wait_for_timeout(100)
             check(await page.is_visible('#mapCredit'), f'attribution visible près de la carte (onglet {tab})')
         check(await page.evaluate("[...document.querySelectorAll('#mapCredit a')].every(a=>a.rel.includes('noopener') && a.target==='_blank')"), 'liens d\'attribution rel=noopener')
+        pos = await page.evaluate("""(()=>{ const c=document.getElementById('mapCredit').getBoundingClientRect(), p=document.getElementById('poster').getBoundingClientRect(),
+          s=document.getElementById('stage').getBoundingClientRect(); return {outside:c.top>=p.bottom-0.5, inStage:c.bottom<=s.bottom+0.5, aligned:Math.abs(c.right-p.right)<1,
+          inPoster:!!document.getElementById('mapCredit').closest('#poster')}; })()""")
+        check(pos['outside'] and pos['inStage'] and pos['aligned'] and not pos['inPoster'], f'sources sous l\'aperçu, hors de l\'affiche, alignées à droite {pos}')
         check(not await page.is_visible('#mcOmt'), 'moteur Fichier : pas de mention OpenMapTiles près de la carte')
         await page.evaluate("__cms.setEngine('maplibre')"); await page.wait_for_timeout(300)
         check(await page.is_visible('#mcOmt'), 'moteur GPU : mention OpenMapTiles près de la carte')
