@@ -167,6 +167,7 @@ const DEFAULT_STATE = {
   // Illustration : cadrage (zoom en %, décalage en fraction de l'affiche), retouches, filtre vintage, choix du prompt.
   // L'image elle-même n'est pas dans l'état (trop lourde) : elle est tenue par CMS.illus.
   illus:{fit:'cover',zoom:100,ox:0,oy:0,bright:0,contrast:0,satur:0,vintage:'none',grain:false,paper:false,flat:false,upscale:false,
+    img:null,   // image importée : {ref (empreinte SHA-256), name, w, h} ; l'image est dans IndexedDB (js/illus.js)
     prompt:{pistes:[],moment:'any',saison:'any',palette:'ia',lang:'fr'}},
   // Textes des modes illustrés : style du titre, couleurs (ombre et contour : '' = aucun), décalage de l'ombre, position (ILLUS_POS)
   illusText:{style:'vintage',color:'#24365A',shadow:'#F3EAD8',outline:'',off:4,pos:'hc'}

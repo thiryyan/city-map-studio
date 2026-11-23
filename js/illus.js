@@ -130,7 +130,7 @@ CMS.define('illus', () => {
   const TYPES=/^image\/(png|jpeg|webp)$/, EXT=/\.(png|jpe?g|webp)$/i;
   const MAX_BYTES=40*1024*1024, MIN_SIDE=64, PREV_SIDE=1600;
   const MAX_PX=Math.min(36e6, CANVAS_MAX_PX*0.6);   // laisse de la place au canevas d'export (iOS : 16,7 Mpx au total)
-  let img=null;          // {full, prev, w, h, name, size}
+  let img=null;          // {full, prev, w, h, name, size, ref, url}
   let step='prompt';
   const cache={key:'', canvas:null};   // dernière image retouchée (aperçu ou export)
   let grainTex=null;
@@ -173,6 +173,131 @@ CMS.define('illus', () => {
     for(let i=0;i<d.length;i+=4){ const v=255-Math.round(rnd()*rnd()*150); d[i]=d[i+1]=d[i+2]=v; d[i+3]=255; }
     x.putImageData(id,0,0); grainTex={land,c}; return c;
   }
+  // ---------- Conservation : IndexedDB (images binaires), l'état ne garde qu'une référence ----------
+  // st.illus.img = {ref, name, w, h} : ref = empreinte SHA-256 du fichier importé (64 hexa). L'image ré-encodée (WebP,
+  // PNG si le navigateur n'encode pas le WebP) est rangée sous cette clé. Les configurations restent dans localStorage.
+  // Sans IndexedDB (navigation privée stricte, stockage bloqué) : l'image n'est gardée que pendant la visite.
+  const DB_NAME='cityMapStudio', DB_STORE='images', REF_RE=/^[0-9a-f]{64}$/, DATA_RE=/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/]+=*$/;
+  const memStore=new Map(); let dbP=null, dbWarned=false, persistAsked=false;
+  function db(){
+    if(dbP) return dbP;
+    dbP=new Promise(res=>{
+      try{
+        const rq=indexedDB.open(DB_NAME,1);
+        rq.onupgradeneeded=()=>rq.result.createObjectStore(DB_STORE);
+        rq.onsuccess=()=>res(rq.result); rq.onerror=()=>res(null); rq.onblocked=()=>res(null);
+      }catch(e){ res(null); }
+    });
+    return dbP;
+  }
+  async function idb(mode, fn){
+    const d=await db(); if(!d) throw new Error('IndexedDB indisponible');
+    return new Promise((res,rej)=>{ try{ const tx=d.transaction(DB_STORE,mode), rq=fn(tx.objectStore(DB_STORE));
+      tx.oncomplete=()=>res(rq?.result); tx.onerror=tx.onabort=()=>rej(tx.error||new Error('IndexedDB')); }catch(e){ rej(e); } });
+  }
+  const store={
+    async get(ref){ try{ const v=await idb('readonly',s=>s.get(ref)); return v ?? memStore.get(ref); }catch(e){ return memStore.get(ref); } },
+    async put(ref,rec){
+      memStore.set(ref,rec);
+      try{ await idb('readwrite',s=>s.put(rec,ref)); memStore.delete(ref);
+        if(!persistAsked){ persistAsked=true; navigator.storage?.persist?.().catch(()=>{}); }   // demande d'un stockage persistant
+        return true; }
+      catch(e){ if(!dbWarned){ dbWarned=true; toast('Stockage du navigateur indisponible : l’illustration ne sera gardée que pendant cette visite',true); } return false; }
+    },
+    async keys(){ let k=[]; try{ k=(await idb('readonly',s=>s.getAllKeys()))||[]; }catch(e){} return [...new Set([...k,...memStore.keys()])]; },
+    async del(ref){ memStore.delete(ref); try{ await idb('readwrite',s=>s.delete(ref)); }catch(e){} }
+  };
+  /** Empreinte SHA-256 (hexadécimal) des octets d'un fichier */
+  async function sha256(buf){
+    const d=new Uint8Array(await crypto.subtle.digest('SHA-256',buf));
+    return Array.from(d,x=>x.toString(16).padStart(2,'0')).join('');
+  }
+  const refOf=s=>s?.illus?.img?.ref||'';
+  /** Supprime les images que plus rien n'utilise (affiche en cours, Mes affiches) ; lancé au démarrage et après une suppression */
+  async function gc(){
+    const used=new Set([refOf(st),...loadSaves().map(e=>refOf(e.state))].filter(Boolean));
+    for(const k of await store.keys()) if(!used.has(k)) await store.del(k);
+  }
+  const blobToDataUrl=b=>new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsDataURL(b); });
+  /** Images à intégrer dans un fichier : {ref: {data, name, w, h}} (celles qui manquent sont omises) */
+  async function exportImages(refs){
+    const out={};
+    for(const ref of new Set(refs.filter(r=>REF_RE.test(r)))){ const rec=await store.get(ref); if(rec?.blob) out[ref]={data:await blobToDataUrl(rec.blob), name:rec.name, w:rec.w, h:rec.h}; }
+    return out;
+  }
+  // Fichiers de configuration et sauvegardes avec illustrations intégrées (js/features.js) : version 2, limites propres
+  const FILE=Object.freeze({version:2, cfgMax:60*1024*1024, bakMax:400*1024*1024});
+  /** Ajoute à un fichier les illustrations de ses affiches (include : case « Inclure les illustrations ») ; renvoie {o, note} */
+  async function attachImages(o, states, include){
+    const refs=[...new Set(states.map(refOf).filter(Boolean))];
+    if(!refs.length || !include) return {o, note:refs.length ? ' · sans les illustrations' : ''};
+    const images=await exportImages(refs), n=Object.keys(images).length, missing=refs.length-n, pl=k=>k>1?'s':'';
+    return {o:n ? {...o, version:FILE.version, images} : o,
+      note:(n?` · ${n} illustration${pl(n)} incluse${pl(n)}`:'')+(missing?` · ${missing} illustration${pl(missing)} introuvable${pl(missing)} dans ce navigateur`:'')};
+  }
+  /** Images lues dans un fichier : chacune décodée puis ré-encodée ; une image déjà présente n'est jamais remplacée.
+   *  Renvoie {added, bad} (images ajoutées, images refusées). */
+  async function importImages(images){
+    let added=0, bad=0;
+    if(!images || typeof images!=='object' || Array.isArray(images)) return {added,bad};
+    for(const [ref,o] of Object.entries(images).slice(0,50)){
+      try{
+        if(!REF_RE.test(ref) || !o || typeof o.data!=='string' || o.data.length>MAX_BYTES*1.4 || !DATA_RE.test(o.data)) throw new Error('entrée invalide');
+        if((await store.get(ref))?.blob) continue;
+        const bin=atob(o.data.slice(o.data.indexOf(',')+1)), u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+        const bmp=await createImageBitmap(new Blob([u8]));
+        try{
+          if(bmp.width<MIN_SIDE || bmp.height<MIN_SIDE) throw new Error('image trop petite');
+          const {full}=toCanvas(bmp);
+          await store.put(ref,{blob:await encode(full), w:full.width, h:full.height, name:V.str(o.name,'image',120), size:u8.length}); full.width=full.height=0;
+        }finally{ bmp.close?.(); }
+        added++;
+      }catch(e){ bad++; }
+    }
+    if(added){ tried=''; }   // une image arrivée d'un fichier : nouvelle tentative de chargement
+    return {added,bad};
+  }
+  /** Pixels d'une image décodée dans un canevas (taille bornée par la mémoire) : ré-encodage sans métadonnées */
+  function toCanvas(bmp){
+    const f=Math.min(1, Math.sqrt(MAX_PX/(bmp.width*bmp.height)));
+    const full=canvasOf(bmp.width*f,bmp.height*f), x=full.getContext('2d'); x.imageSmoothingQuality='high'; x.drawImage(bmp,0,0,full.width,full.height);
+    return {full, reduced:f<1};
+  }
+  const encode=c=>new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('encodage impossible')),'image/webp',0.95));
+  function setImage(full, meta){
+    const p=Math.min(1,PREV_SIDE/Math.max(full.width,full.height)), prev=p<1 ? resample(full,full.width*p,full.height*p) : full;
+    freeImage();
+    img={full, prev, w:full.width, h:full.height, name:meta.name, size:meta.size, ref:meta.ref, url:null};
+  }
+  function freeImage(){
+    if(cache.canvas && (!img || (cache.canvas!==img.full && cache.canvas!==img.prev))) cache.canvas.width=cache.canvas.height=0;
+    cache.key=''; cache.canvas=null;
+    if(!img) return;
+    img.full.width=img.full.height=0; if(img.prev!==img.full) img.prev.width=img.prev.height=0;
+    if(img.url) URL.revokeObjectURL(img.url);
+    img=null;
+  }
+  /** L'image chargée suit la référence de l'état (démarrage, restauration, lien, « Annuler ») ; introuvable : signalée */
+  let loading='', missing=false, tried='';   // tried : dernière référence introuvable (pas de nouvelle tentative en boucle)
+  async function ensureImage(){
+    const want=st.illus.img;
+    if(!want){ if(img){ freeImage(); redraw(); } missing=false; return; }
+    if(img && img.ref===want.ref){ missing=false; return; }
+    if(st.mode==='map' || loading===want.ref) return;   // chargée au passage en mode illustré
+    loading=want.ref; missing=false; syncImage(); redraw();
+    let ok=false;
+    try{
+      const rec=await store.get(want.ref);
+      if(rec?.blob && st.illus.img?.ref===want.ref){
+        const bmp=await createImageBitmap(rec.blob);
+        try{ setImage(toCanvas(bmp).full,{name:rec.name||want.name, size:rec.size, ref:want.ref}); ok=true; } finally{ bmp.close?.(); }
+      }
+    }catch(e){ ok=false; }
+    loading=''; tried=ok ? '' : want.ref;
+    if(st.illus.img?.ref!==want.ref) return ensureImage();   // l'état a changé pendant le chargement
+    missing=!ok; sync(); redraw();
+    CMS.emit('illus:loaded',ok);
+  }
   async function importFile(file){
     if(!file) return false;
     if(!(TYPES.test(file.type) || (!file.type && EXT.test(file.name||'')))){
@@ -180,30 +305,29 @@ CMS.define('illus', () => {
       return fail(`Format non pris en charge${ext?` (.${ext.toLowerCase()})`:''}. Formats acceptés : PNG, JPEG ou WebP.`);
     }
     if(file.size>MAX_BYTES) return fail('Image trop lourde (40 Mo au plus).');
-    let bmp;
-    try{ bmp=await createImageBitmap(file); }catch(e){ return fail('Image illisible : le fichier est peut-être endommagé.'); }
+    let bmp, buf;
+    try{ buf=await file.arrayBuffer(); bmp=await createImageBitmap(new Blob([buf],{type:file.type})); }catch(e){ return fail('Image illisible : le fichier est peut-être endommagé.'); }
     try{
       if(bmp.width<MIN_SIDE || bmp.height<MIN_SIDE) return fail(`Image trop petite (${MIN_SIDE} px de côté au moins).`);
-      const f=Math.min(1, Math.sqrt(MAX_PX/(bmp.width*bmp.height)));
-      // Ré-encodage : seuls les pixels sont gardés (métadonnées, coordonnées GPS comprises, écartées)
-      const full=canvasOf(bmp.width*f,bmp.height*f), x=full.getContext('2d'); x.imageSmoothingQuality='high'; x.drawImage(bmp,0,0,full.width,full.height);
-      const p=Math.min(1,PREV_SIDE/Math.max(full.width,full.height)), prev=p<1 ? resample(full,full.width*p,full.height*p) : full;
-      if(img){ img.full.width=img.full.height=0; if(img.prev!==img.full) img.prev.width=img.prev.height=0; }
-      cache.key=''; cache.canvas=null;
-      img={full, prev, w:full.width, h:full.height, name:(file.name||'image collée').slice(0,120), size:file.size, url:null};
-      Object.assign(st.illus,{zoom:100,ox:0,oy:0});
-      fail('');
+      const ref=await sha256(buf), expected=st.illus.img, wasMissing=missing;
+      const {full,reduced}=toCanvas(bmp);   // ré-encodage : seuls les pixels sont gardés (métadonnées, coordonnées GPS comprises, écartées)
+      const name=(file.name||'image collée').slice(0,120);
+      setImage(full,{name, size:file.size, ref});
+      const same=!!expected && expected.ref===ref, other=wasMissing && !!expected && !same;
+      st.illus.img={ref, name, w:full.width, h:full.height};
+      if(!same) Object.assign(st.illus,{zoom:100,ox:0,oy:0});
+      missing=false; fail('');
       setStep('image'); sync(); redraw(); saveState();
-      toast('Illustration importée'+(f<1?' (réduite pour tenir en mémoire)':''));
+      toast(same ? 'Illustration retrouvée' : other ? `Ce n’est pas l’illustration de l’affiche (« ${expected.name} ») : la nouvelle image la remplace` : 'Illustration importée'+(reduced?' (réduite pour tenir en mémoire)':''), other);
+      if(!(await store.get(ref))?.blob) await store.put(ref,{blob:await encode(full), w:full.width, h:full.height, name, size:file.size});
       return true;
     }finally{ bmp.close?.(); }
   }
   function fail(msg){ const e=$('illusErr'); if(e) e.textContent=msg; if(msg) toast(msg,true); return !msg; }
+  /** Retire l'illustration de l'affiche (l'image reste stockée jusqu'au prochain nettoyage : « Annuler » la retrouve) */
   function removeImage(){
-    if(!img) return;
-    img.full.width=img.full.height=0; if(img.prev!==img.full) img.prev.width=img.prev.height=0;
-    if(img.url) URL.revokeObjectURL(img.url);
-    img=null; cache.key=''; cache.canvas=null; sync(); redraw(); toast('Illustration retirée');
+    if(!img && !st.illus.img) return;
+    freeImage(); st.illus.img=null; missing=false; sync(); redraw(); saveState(); toast('Illustration retirée');
   }
 
   // ---------- Rendu (appelé par drawPoster : aperçu et export) ----------
@@ -211,7 +335,7 @@ CMS.define('illus', () => {
     const I=st.illus, U=g.U;
     if(pass!=='over'){
       ctx.fillStyle=st.colors.paper; ctx.fillRect(0,0,W,H);
-      if(img){
+      if(ready()){
         const r=placement(W,H,img.w,img.h,I);
         ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
         ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
@@ -221,17 +345,19 @@ CMS.define('illus', () => {
         if(I.paper){ ctx.globalAlpha=I.vintage==='strong'?0.42:0.28; ctx.fillStyle='#E7D6B0'; ctx.fillRect(r.x,r.y,r.w,r.h); }
         if(I.grain){ ctx.globalAlpha=I.vintage==='strong'?0.6:0.42; ctx.drawImage(grain(W>H),0,0,W,H); }
         ctx.restore();
-      } else placeholder(ctx,W,H,U);
+      } else placeholder(ctx,W,H,U,st.illus.img);
     }
     if(pass!=='under') drawTexts(ctx,W,H,U);
   }
-  function placeholder(ctx, W, H, U){
+  function placeholder(ctx, W, H, U, want){
     const m=0.06*U, ink=st.colors.text;
     ctx.save(); ctx.strokeStyle=hexA(ink)(0.35); ctx.lineWidth=Math.max(1,0.003*U); ctx.setLineDash([0.012*U,0.009*U]);
     ctx.strokeRect(m,H*0.3,W-2*m,H*0.62);
     ctx.fillStyle=hexA(ink)(0.7); ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.font=`600 ${0.034*U}px system-ui, sans-serif`; ctx.fillText('Votre illustration apparaîtra ici',W/2,H*0.58);
-    ctx.font=`400 ${0.024*U}px system-ui, sans-serif`; ctx.fillText('Onglet Illustration : prompt, puis import de l’image',W/2,H*0.58+0.05*U);
+    const [l1,l2]=!want ? ['Votre illustration apparaîtra ici','Onglet Illustration : prompt, puis import de l’image']
+      : loading ? ['Chargement de l’illustration…',''] : ['Illustration à importer',`« ${want.name} » (${want.w} × ${want.h} px)`];
+    ctx.font=`600 ${0.034*U}px system-ui, sans-serif`; ctx.fillText(l1,W/2,H*0.58,W-0.16*U);
+    ctx.font=`400 ${0.024*U}px system-ui, sans-serif`; ctx.fillText(l2,W/2,H*0.58+0.05*U,W-0.16*U);
     ctx.restore();
   }
   /** Titre et sous-titre à la position choisie ; dédicace, noms, date et coordonnées du côté opposé */
@@ -265,14 +391,14 @@ CMS.define('illus', () => {
   const SW_OUTLINE=[['','Sans contour'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#F3EAD8','Crème'],['#FFFFFF','Blanc'],['#C5A059','Or']];
   const POS_NAMES={h:'en haut',m:'au milieu',b:'en bas'}, COL_NAMES={g:'à gauche',c:'au centre',d:'à droite'};
   const POS_ARROWS=['↖','↑','↗','←','•','→','↙','↓','↘'];
-  const ready=()=>!!img;
+  const ready=()=>!!img && img.ref===refOf(st);
   /** Rafraîchit l'affiche après un changement de l'image ou de son cadrage */
   let rafU=0;
   function redraw(){ if(rafU) return; rafU=requestAnimationFrame(()=>{ rafU=0; drawUnder(); scheduleOver(); exportState(); }); }
   function exportState(){
-    const off=st.mode==='illus' && !img;
+    const off=st.mode==='illus' && !ready();
     for(const id of ['bExport','bNextExport']){ const b=$(id); if(b){ b.disabled=off; b.title=off?'Importez d’abord votre illustration (onglet Illustration)':''; } }
-    if(st.mode==='illus') setStatus(img ? 'Prêt' : 'Importez votre illustration pour exporter', img ? '' : 'wait');
+    if(st.mode==='illus') setStatus(ready() ? 'Prêt' : loading ? 'Chargement de l\u2019illustration…' : missing ? 'Illustration à réimporter' : 'Importez votre illustration pour exporter', ready() ? '' : loading ? 'busy' : 'wait');
   }
   function setMode(v){
     if(!C.MODES.includes(v) || st.mode===v) return;
@@ -337,7 +463,9 @@ CMS.define('illus', () => {
     $('promptInfo').textContent=`Format demandé : ${d.name} ${st.orient==='landscape'?'paysage':'portrait'} · zone du titre : ${POS_NAMES[T.pos[0]]}, ${COL_NAMES[T.pos[1]]} (onglet Textes).`;
   }
   function syncImage(){
-    const I=st.illus, has=!!img;
+    const I=st.illus, has=ready(), want=I.img;
+    const ms=$('illusMissing'); ms.hidden=!(missing && want);
+    if(missing && want) ms.textContent=`Illustration introuvable dans ce navigateur : « ${want.name} » (${want.w} × ${want.h} px). Réimportez-la : elle a pu être effacée par le navigateur, ou l\u2019affiche vient d\u2019un lien ou d\u2019un fichier sans image.`;
     $('illusDrop').hidden=has; $('illusFile').hidden=!has; $('illusTools').hidden=!has;
     setSeg('illusFitSeg',I.fit); setSeg('illusVintageSeg',I.vintage);
     $('oIllusZoom').textContent=I.zoom+' %';
@@ -354,7 +482,13 @@ CMS.define('illus', () => {
     $('illusRatio').textContent=(I.fit==='cover' ? (pct>1 ? `Recadrage automatique : ${pct} % de l'image hors de l'affiche.` : 'Proportions de l’image conformes à l’affiche.')
       : (pct>1 ? `Image entière : bandes de ${pct} % de la couleur du fond.` : 'Proportions de l’image conformes à l’affiche.'))+' Agrandir ne crée pas de détails : pour un grand format, demandez à l’IA sa plus haute résolution.';
   }
-  function sync(){ applyMode(); setStep(step); syncPrompt(); syncImage(); syncText(); }
+  function sync(){
+    const want=refOf(st);
+    // Image déjà cherchée en vain (restauration, « Annuler ») : signalée tout de suite, sans nouvelle tentative
+    if(want && want!==(img?.ref||'') && !loading && tried===want && st.mode!=='map') missing=true;
+    applyMode(); setStep(step); syncPrompt(); syncImage(); syncText();
+    if(want!==(img?.ref||'') && !loading && tried!==want) ensureImage();
+  }
 
   function init(){
     document.querySelectorAll('.modes button').forEach(b=>b.onclick=()=>setMode(b.dataset.v));
@@ -402,7 +536,7 @@ CMS.define('illus', () => {
     // Déplacer l'image en la glissant sur l'aperçu
     let drag=null;
     poster.addEventListener('pointerdown',e=>{
-      if(st.mode!=='illus' || !img || e.button>0 || e.target.closest('button')) return;
+      if(st.mode!=='illus' || !ready() || e.button>0 || e.target.closest('button')) return;
       drag={x:e.clientX,y:e.clientY,ox:st.illus.ox,oy:st.illus.oy,id:e.pointerId}; poster.setPointerCapture(e.pointerId); poster.classList.add('dragging');
     });
     poster.addEventListener('pointermove',e=>{
@@ -417,7 +551,9 @@ CMS.define('illus', () => {
     C.POS.forEach((p,i)=>{ const b=h('button',{type:'button',dataset:{v:p},'aria-label':`Titre ${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`,title:`${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`},POS_ARROWS[i]);
       b.onclick=()=>{ st.illusText.pos=p; syncText(); scheduleOver(); saveState(); }; $('tPosSeg').append(b); });
     sync();
+    setTimeout(()=>gc().catch(()=>{}),2000);   // images orphelines (affiches supprimées, autre image importée)
   }
-  return {init, draw, ready, importFile, removeImage, setMode, buildPrompt, quality, cropPct, placement, adjust, processPixels,
+  return {init, draw, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
+    get missing(){ return missing; }, get loading(){ return !!loading; }, buildPrompt, quality, cropPct, placement, adjust, processPixels,
     get step(){ return step; }, get image(){ return img && {w:img.w, h:img.h, name:img.name}; }};
 });

@@ -95,7 +95,7 @@ async function decodeShare(t){
 async function shareLink(){
   try{ const {url,dropped}=await encodeShare(); $('shareOut').value=url; $('shareBox').hidden=false; $('shareOut').select();
     let ok=false; try{ await navigator.clipboard.writeText(url); ok=true; }catch(e){}
-    toast((ok?'Lien copié':'Copiez le lien affiché')+(dropped?' · itinéraire non inclus (trop long)':'')); }
+    toast((ok?'Lien copié':'Copiez le lien affiché')+(dropped?' · itinéraire non inclus (trop long)':'')+(st.illus.img?' · l\'illustration n\'est pas dans le lien : le destinataire devra l\'importer':'')); }
   catch(e){ toast('Lien impossible : '+e.message,true); }
 }
 async function loadFromHash(){
@@ -334,6 +334,7 @@ function applyPhotoPalette(v){
 // fichier de sauvegarde de toutes les affiches. Tout ce qui est relu (navigateur ou fichier) est validé comme un lien
 // partagé : champs connus seulement, normState, tailles bornées ; une restauration est une étape annulable.
 // Ne sont pas inclus : le moteur cartographique (choix de l'appareil) et les données importées (fichier OSM).
+// Fichiers avec illustrations intégrées : version 2 et limites propres (CMS.illus.FILE) ; la version 1 reste lue.
 const SAVES_KEY='cityMapStudio.saves', SAVES_MAX=40, CFG_FORMAT='city-map-studio/configuration', BAK_FORMAT='city-map-studio/sauvegardes', CFG_VERSION=1;
 const CFG_MAX_BYTES=1024*1024, BAK_MAX_BYTES=16*1024*1024, THUMB_MAX=120*1024;
 const THUMB_RE=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;
@@ -381,30 +382,38 @@ function restoreSave(id){
 }
 function deleteSave(id){ const l=loadSaves(), e=l.find(x=>x.id===id); if(!e) return;
   try{ storeSaves(l.filter(x=>x.id!==id)); }catch(err){ toast(err.message,true); return; }
-  renderSaves(); toast(`« ${e.name} » supprimée`); }
+  renderSaves(); toast(`« ${e.name} » supprimée`); CMS.illus.gc().catch(()=>{}); }
 /** Téléchargement d'un fichier JSON (aucun envoi : lien local vers un Blob) */
 function downloadJson(obj,file){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,1)],{type:'application/json'})); a.download=file;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
 }
 const configOf=(name,state,savedAt)=>({format:CFG_FORMAT, version:CFG_VERSION, app:'City Map Studio', name, savedAt:savedAt||new Date().toISOString(), state});
-function downloadConfig(entry){
+async function downloadConfig(entry){
   const c = entry ? configOf(entry.name,entry.state,entry.savedAt) : configOf(defaultSaveName(),savedState());
-  downloadJson(c,`affiche-${slug(c.name)}.json`); toast('Configuration téléchargée');
+  const {o,note}=await CMS.illus.attachImages(c,[c.state],$('cfgImg').checked);
+  downloadJson(o,`affiche-${slug(c.name)}.json`); toast('Configuration téléchargée'+note);
 }
-function downloadBackup(){
+async function downloadBackup(){
   const saves=loadSaves(); if(!saves.length){ toast('Aucune affiche enregistrée à sauvegarder',true); return; }
-  downloadJson({format:BAK_FORMAT, version:CFG_VERSION, app:'City Map Studio', savedAt:new Date().toISOString(), saves}, `mes-affiches-${new Date().toISOString().slice(0,10)}.json`);
-  toast(`${saves.length} affiche${saves.length>1?'s':''} sauvegardée${saves.length>1?'s':''} dans un fichier`);
+  const {o,note}=await CMS.illus.attachImages({format:BAK_FORMAT, version:CFG_VERSION, app:'City Map Studio', savedAt:new Date().toISOString(), saves},saves.map(e=>e.state),$('cfgImg').checked);
+  downloadJson(o, `mes-affiches-${new Date().toISOString().slice(0,10)}.json`);
+  toast(`${saves.length} affiche${saves.length>1?'s':''} sauvegardée${saves.length>1?'s':''} dans un fichier`+note);
 }
 /** Ouvre un fichier : configuration d'une affiche (appliquée), sauvegarde complète (fusionnée dans Mes affiches),
  *  ou état brut (ancien format). Tout le reste est refusé sans rien modifier. */
 async function importConfigFile(file){
   try{
-    if(file.size>BAK_MAX_BYTES) throw new Error('fichier trop volumineux');
+    const F=CMS.illus.FILE;
+    if(file.size>F.bakMax) throw new Error('fichier trop volumineux');
     let o; try{ o=JSON.parse(await file.text()); }catch(e){ throw new Error('ce n\'est pas un fichier JSON'); }
     if(!o || typeof o!=='object' || Array.isArray(o)) throw new Error('contenu invalide');
-    const newer=typeof o.version==='number' && o.version>CFG_VERSION ? ' (créé par une version plus récente : réglages inconnus ignorés)' : '';
+    // Sans illustration, les limites habituelles ; avec, des limites propres (images vérifiées une à une)
+    const hasImg=!!o.images && typeof o.images==='object' && !Array.isArray(o.images);
+    if(file.size>(o.format===BAK_FORMAT ? (hasImg?F.bakMax:BAK_MAX_BYTES) : (hasImg?F.cfgMax:CFG_MAX_BYTES))) throw new Error('fichier trop volumineux');
+    const newer=typeof o.version==='number' && o.version>F.version ? ' (créé par une version plus récente : réglages inconnus ignorés)' : '';
+    let imgMsg='';
+    if(hasImg){ const r=await CMS.illus.importImages(o.images); imgMsg=(r.added?` · ${r.added} illustration${r.added>1?'s':''} ajoutée${r.added>1?'s':''}`:'')+(r.bad?` · ${r.bad} illustration${r.bad>1?'s':''} illisible${r.bad>1?'s':''} ignorée${r.bad>1?'s':''}`:''); }
     if(o.format===BAK_FORMAT){
       if(!Array.isArray(o.saves)) throw new Error('sauvegarde sans affiches');
       const list=loadSaves(), seen=new Set(list.map(x=>x.id+'|'+x.savedAt)); let added=0, full=false;
@@ -413,14 +422,13 @@ async function importConfigFile(file){
         if(list.some(x=>x.id===e.id)) e.id=newId();
         list.push(e); seen.add(e.id+'|'+e.savedAt); added++; }
       list.sort((a,b)=>b.savedAt.localeCompare(a.savedAt)); storeSaves(list); renderSaves();
-      toast(`${added} affiche${added>1?'s':''} ajoutée${added>1?'s':''} à Mes affiches`+(full?` · limite de ${SAVES_MAX} atteinte`:'')+newer);
+      toast(`${added} affiche${added>1?'s':''} ajoutée${added>1?'s':''} à Mes affiches`+(full?` · limite de ${SAVES_MAX} atteinte`:'')+imgMsg+newer);
       return;
     }
-    if(file.size>CFG_MAX_BYTES) throw new Error('fichier trop volumineux');
     const state = o.format===CFG_FORMAT ? o.state : (o.texts && o.layout ? o : null);   // état brut : ancien format
     if(!state || typeof state!=='object' || Array.isArray(state)) throw new Error('fichier non reconnu (ni configuration, ni sauvegarde City Map Studio)');
     closeDialog('saves');
-    applyConfig(state,`Configuration « ${V.str(o.name,'',80).trim()||file.name} » ouverte · « Annuler » pour revenir`+newer);
+    applyConfig(state,`Configuration « ${V.str(o.name,'',80).trim()||file.name} » ouverte · « Annuler » pour revenir`+imgMsg+newer);
   }catch(e){ toast('Ouverture impossible : '+e.message,true); }
 }
 const LAYOUT_NAME=k=>(LAYOUTS.find(l=>l[0]===k)||[,''])[1];
@@ -434,7 +442,7 @@ function renderSaves(){
     const res=h('button',{type:'button',className:'btn sm pri','aria-label':`Restaurer « ${e.name} »`},'Restaurer'); res.onclick=()=>restoreSave(e.id);
     const dl=h('button',{type:'button',className:'btn sm','aria-label':`Télécharger « ${e.name} »`,title:'Télécharger le fichier'},'⤓'); dl.onclick=()=>downloadConfig(e);
     const th=e.thumb ? h('img',{src:e.thumb,alt:'',width:56,height:79}) : h('span',{className:'nothumb','aria-hidden':'true'});
-    box.append(h('li',{className:'save'},th,h('div',{className:'meta'},h('b',{},e.name),h('small',{},`${fmt.format(new Date(e.savedAt))} · ${LAYOUT_NAME(e.state.layout)} · ${THEMES[e.state.theme]?.name||''}`)),h('div',{className:'acts'},res,dl,del)));
+    box.append(h('li',{className:'save'},th,h('div',{className:'meta'},h('b',{},e.name),h('small',{},`${fmt.format(new Date(e.savedAt))} · `+(e.state.mode==='illus' ? 'Affiche illustrée' : `${LAYOUT_NAME(e.state.layout)} · ${THEMES[e.state.theme]?.name||''}`))),h('div',{className:'acts'},res,dl,del)));
   }
 }
 function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); openDialog('saves'); setTimeout(()=>$('saveName').focus(),50); }

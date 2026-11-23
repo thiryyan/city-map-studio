@@ -168,6 +168,7 @@
             <label class="btn sm">Remplacer<input type="file" id="illusIn2" accept="image/png,image/jpeg,image/webp" hidden></label>
             <button class="btn sm" type="button" id="bIllusDel" aria-label="Retirer l'image">✕</button>
           </div>
+          <p class="fitnote" id="illusMissing" role="status" hidden></p>
           <p class="fitnote" id="illusErr" role="alert"></p>
           <div id="illusTools" hidden>
             <h3>Qualité d'impression</h3>
@@ -409,6 +410,8 @@
   <p class="hint" id="savesEmpty">Aucune affiche enregistrée pour l'instant. Astuce : Ctrl + S (⌘ + S) enregistre l'affiche en cours.</p>
   <div class="row"><button class="btn grow" type="button" id="bCfgExport">Télécharger l'affiche en cours</button><label class="btn grow">Ouvrir un fichier<input type="file" id="cfgIn" accept=".json,application/json" hidden></label></div>
   <button class="btn wide" type="button" id="bSavesBackup">Sauvegarder toutes mes affiches dans un fichier</button>
+  <label class="tog">Inclure les illustrations dans les fichiers<input type="checkbox" id="cfgImg" checked></label>
+  <p class="hint">Les affiches illustrées gardent leur image dans ce navigateur. Incluse dans le fichier, elle voyage avec lui (fichier plus lourd) ; sinon, il faudra la réimporter sur un autre appareil. Le lien partagé ne contient jamais l'image.</p>
   <button class="btn" type="button" id="savesClose">Fermer</button>
 </div></dialog>
 <dialog class="modal" id="result" aria-label="Affiche exportée"><div class="box">

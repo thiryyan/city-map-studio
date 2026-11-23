@@ -71,3 +71,12 @@ test('normState : mode et réglages de l\'illustration validés', () => {
   assert.equal(n.illusText.pos, 'bd'); assert.equal(n.illusText.shadow, ''); assert.equal(n.illusText.color, '#abcdef');
   assert.equal(J("normState({})").mode, 'map');
 });
+
+test('normState : référence de l\'illustration (empreinte SHA-256) validée', () => {
+  const ok = 'ab'.repeat(32);
+  assert.deepEqual(J(`normState({illus:{img:{ref:'${ok}',name:'blois.png',w:1696.4,h:2528,extra:1}}}).illus.img`), { ref: ok, name: 'blois.png', w: 1696, h: 2528 });
+  for (const bad of ["{ref:'AB'.repeat(32)}", "{ref:'ab'.repeat(31)}", "{ref:'<script>'}", "'x'", '42'])
+    assert.equal(J(`normState({illus:{img:${bad}}}).illus.img`), null, bad);
+  assert.equal(J(`normState({illus:{img:{ref:'${ok}',name:'x'.repeat(500),w:-5,h:1e9}}}).illus.img.name.length`), 120);
+  assert.deepEqual(J(`(({w,h})=>[w,h])(normState({illus:{img:{ref:'${ok}',w:-5,h:1e9}}}).illus.img)`), [1, 100000]);
+});

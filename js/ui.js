@@ -68,10 +68,10 @@ function updateMarkerTxt(){
   $('coordsManual').placeholder=coordText();
 }
 function syncZoomUI(){ $('zoom').value=st.zoom.toFixed(1); $('oZoom').textContent=st.zoom.toFixed(1); }
-function setZoom(z){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
+function setZoom(z){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'&&st.mode!=='illus'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
 function goTo(lat,lon,zoom){
   st.center={lat,lon}; if(zoom!=null) st.zoom=zoom; syncZoomUI();
-  if(mlMap&&st.engine==='maplibre'){ mlMap.jumpTo({center:[lon,lat],zoom:mlZoom(ui.slotCss.w)}); mlRestyle(); }
+  if(mlMap&&st.engine==='maplibre'&&st.mode!=='illus'){ mlMap.jumpTo({center:[lon,lat],zoom:mlZoom(ui.slotCss.w)}); mlRestyle(); }   // carte masquée : recadrée au retour en mode Carte
   renderMap(true); saveState(); updateMarkerTxt();
 }
 function setSeg(id,v){ document.querySelectorAll(`#${id} button`).forEach(b=>{ const on=b.dataset.v===String(v); b.classList.toggle('on',on);

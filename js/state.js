@@ -74,6 +74,8 @@ function normState(src){
       bright:V.num(o.bright,d.bright,-50,50), contrast:V.num(o.contrast,d.contrast,-50,50), satur:V.num(o.satur,d.satur,-50,50),
       vintage:V.oneOf(o.vintage,C.VINTAGE,d.vintage), grain:V.bool(o.grain,d.grain), paper:V.bool(o.paper,d.paper), flat:V.bool(o.flat,d.flat),
       upscale:V.bool(o.upscale,d.upscale),
+      img:(()=>{ const m=V.obj(o.img); return typeof m.ref==='string' && /^[0-9a-f]{64}$/.test(m.ref)
+        ? {ref:m.ref, name:V.str(m.name,'image',120)||'image', w:Math.round(V.num(m.w,1,1,100000)), h:Math.round(V.num(m.h,1,1,100000))} : null; })(),
       prompt:{pistes, moment:V.oneOf(p.moment,keys(C.MOMENTS),d.prompt.moment), saison:V.oneOf(p.saison,keys(C.SAISONS),d.prompt.saison),
         palette:V.oneOf(p.palette,C.PALETTES,d.prompt.palette), lang:V.oneOf(p.lang,C.LANGS,d.prompt.lang)}};
   }

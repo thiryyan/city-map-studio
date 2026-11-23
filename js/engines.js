@@ -315,7 +315,8 @@ function initMaplibre(){
       attributionControl:false,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,fadeDuration:0,renderWorldCopies:false});
   }catch(e){ console.error(e); mlMap=null; return false; }
   mlMap.touchZoomRotate.disableRotation(); mlMap.keyboard.disableRotation();
-  mlMap.on('move',()=>{ if(mlSync) return; const cc=mlMap.getCenter(); st.center={lat:cc.lat,lon:cc.lng}; st.zoom=mlMap.getZoom()-Math.log2(ui.slotCss.w/REF_W); scheduleOver(); syncZoomUI(); });
+  // carte masquée (mode Illustration) : cadre de largeur nulle, le zoom ne doit pas en être déduit
+  mlMap.on('move',()=>{ if(mlSync || st.mode==='illus' || !(ui.slotCss.w>0)) return; const cc=mlMap.getCenter(); st.center={lat:cc.lat,lon:cc.lng}; st.zoom=mlMap.getZoom()-Math.log2(ui.slotCss.w/REF_W); scheduleOver(); syncZoomUI(); });
   mlMap.on('styleimagemissing',e=>onImageMissing(mlMap,e));
   // Fin de geste : les épaisseurs suivent le zoom par expressions ; seul le disque du quartier (rayon en px de l'affiche) est recalculé
   mlMap.on('moveend',()=>{ mlUpdateQuarter(); saveState(); });
