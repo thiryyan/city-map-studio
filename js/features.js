@@ -127,24 +127,29 @@ function replaceState(next,extra){ for(const k of Object.keys(st)) delete st[k];
 const WELCOME_KEY='cityMapStudio.welcomed';
 const firstVisit=(()=>{ try{ return !localStorage.getItem(WELCOME_KEY) && !localStorage.getItem(STORE_KEY); }catch(e){ return false; } })();
 let welcomeDone=!firstVisit || /^#a=/.test(location.hash);
+/** Premier lancement (#59) : une proposition d'ambiance non bloquante en tête des réglages, après l'éventuelle demande d'accord.
+ *  L'affiche par défaut est visible tout de suite ; la proposition se ferme d'un toucher et ne revient plus, une fois fermée ou utilisée. */
 function maybeWelcome(){
   try{ if(localStorage.getItem(WELCOME_KEY)) welcomeDone=true; }catch(e){}   // choix fait dans un autre onglet ou depuis le démarrage
-  if(welcomeDone || $('welcome').classList.contains('show')) return;
+  if(welcomeDone || !$('welStrip').hidden) return;
   if($('consent').classList.contains('show')) return;   // repris après le choix d'accord (giveConsent / declineConsent)
   const box=$('welAmb'); box.textContent='';
-  AMBIANCES.forEach(([k,n])=>{ const b=h('button',{type:'button',dataset:{v:k},role:'listitem'},h('canvas',{width:70,height:99}),h('small',{},n));
-    b.onclick=()=>{ closeWelcome(); applyAmbiance(k); showTab('lieu'); toast(`Ambiance « ${n} » · cherchez maintenant votre lieu`); }; box.appendChild(b); });
+  AMBIANCES.forEach(([k,n])=>{ const b=h('button',{type:'button',dataset:{v:k},ariaPressed:'false'},h('canvas',{width:70,height:99}),h('small',{},n));
+    b.onclick=()=>{ closeWelcome(false); applyAmbiance(k); box.querySelectorAll('button').forEach(x=>pressed(x,x===b)); }; box.appendChild(b); });
   const draw=()=>box.querySelectorAll('button').forEach(b=>{ const p=AMBIANCES.find(a=>a[0]===b.dataset.v)[2];
     thumb(b.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
   draw();
   // polices des ambiances : chargées une fois (fichiers locaux), puis vignettes redessinées
   Promise.all(AMBIANCES.flatMap(([,,p])=>[p.font,p.fontTitle].filter(Boolean)).flatMap(f=>FONTS[f].load).map(f=>document.fonts.load(f).catch(()=>0))).then(draw);
-  openDialog('welcome');
-  setTimeout(()=>box.querySelector('button')?.focus(),50);
+  $('welStrip').hidden=false; document.querySelector('.tabbody').scrollTop=0;
 }
-function closeWelcome(){
-  welcomeDone=true; closeDialog('welcome');
-  try{ localStorage.setItem(WELCOME_KEY,'1'); }catch(e){}
+/** La proposition ne reviendra plus (utilisée ou fermée). hide=false : choix d'une ambiance, la proposition reste affichée
+ *  pour en essayer d'autres jusqu'à sa fermeture */
+function closeWelcome(hide=true){
+  welcomeDone=true; try{ localStorage.setItem(WELCOME_KEY,'1'); }catch(e){}
+  if(!hide) return;
+  const s=$('welStrip'), had=s.contains(document.activeElement); s.hidden=true;
+  if(had) document.querySelector('#tabs .on')?.focus();
 }
 
 // ---------- Ambiances et modèles de texte ----------
@@ -280,7 +285,7 @@ CMS.define('deps', () => {
       ()=>st.layers.buildings ? setTog('fx.outline',false) : setTog('layers.buildings',true)],
     ['glow', ()=>row('fx.glow'), ()=>st.fx.glow && lum(st.colors.paper)>=0.3,
       ()=>'Peu visible sur ce fond clair : la lueur est pensée pour les thèmes sombres.', 'Voir les thèmes sombres',
-      ()=>{ const c=document.querySelector('#themeCats [data-v=sombre]'); c.click(); $('themeCats').scrollIntoView({block:'start',behavior:'smooth'}); }],
+      ()=>{ const c=document.querySelector('#themeCats [data-v=sombre]'); c.click(); CMS.panelScroll.to($('themeCats'),'start',true); }],
     ['subtitle', ()=>row('textScale.subtitle'), ()=>st.mode==='map' && st.show.subtitle && ['souvenir','polaroid'].includes(st.layout),
       ()=>`Le gabarit « ${layName(st.layout)} » n'affiche pas le sous-titre.`, 'Passer au gabarit Cadre', ()=>setLayout('classic')],
     ['route', ()=>$('routeShow').closest('label'), ()=>st.layout==='diptych' && !!st.route?.pts?.length && st.route.show!==false,
@@ -306,6 +311,45 @@ CMS.define('deps', () => {
     update();
   }
   return {init, update};
+});
+
+// ---------- Zone de sécurité pour l'impression maison (issue #60) ----------
+// Trait pointillé à 5 mm du bord, dans l'aperçu seulement (élément HTML posé sur l'affiche : jamais dans l'export).
+// Les textes et repères relevés pendant le rendu de l'aperçu (CMS.ink) qui entrent dans cette bande sont signalés.
+// Réglage de l'appareil, hors de l'état de l'affiche (comme A− / A+).
+CMS.define('safe', () => {
+  const KEY='cityMapStudio.safeZone', MM=5;
+  const LABELS={title:'le titre',subtitle:'le sous-titre',coords:'les coordonnées',dedication:'la dédicace',names:'les noms',date:'la date',
+    legend:'la légende',marker:'un repère',attribution:'la mention des sources',text:'un texte'};
+  let on=(()=>{ try{ return localStorage.getItem(KEY)==='1'; }catch(e){ return false; } })(), prev='';
+  /** Bande de sécurité en px pour une affiche de largeur w px (le format donne la largeur en mm, orientation comprise) */
+  const inset=w=>MM/exportSpec().mm[0]*w;
+  function layout(){
+    const g=$('safeGuide'); g.hidden=!on; if(!on) return;
+    const i=inset(ui.posterCss.w)+'px'; Object.assign(g.style,{top:i,left:i,right:i,bottom:i});
+  }
+  function check(boxes,W,H){
+    let msg='', warn=false;
+    if(on && boxes){
+      const i=inset(W)-0.5, out=[...new Set(boxes.filter(b=>b.x2>b.x1 && (b.x1<i || b.y1<i || b.x2>W-i || b.y2>H-i)).map(b=>LABELS[b.k]||LABELS.text))];
+      warn=out.length>0;
+      // 10 × 15 cm : la mention des sources reste dans la bande même à la marge maximale (12 % de 10 cm × 0,38 < 5 mm)
+      const smallAttr=out.includes(LABELS.attribution) && exportSpec().key==='10x15', rest=out.filter(x=>!(smallAttr && x===LABELS.attribution));
+      const list=out.length>1?out.slice(0,-1).join(', ')+' et '+out[out.length-1]:out[0];
+      msg = !warn ? 'Textes et repères dans la zone imprimable.'
+        : `⚠ Trop près du bord pour une imprimante de bureau : ${list}.`
+          +(rest.length?' Augmentez la marge (onglet Style) ou réduisez la taille de ces textes.':'')
+          +(smallAttr?' Sur ce petit format, la mention des sources reste dans la marge basse : imprimez « sans marge » (papier photo) ou confiez le tirage à un laboratoire photo.':'');
+    }
+    if(msg===prev) return; prev=msg;
+    const n=$('safeWarn'); n.textContent=msg; n.className=warn?'fitnote':'hint';
+  }
+  function init(){
+    $('safeTog').checked=on;
+    $('safeTog').onchange=e=>{ on=e.target.checked; try{ on ? localStorage.setItem(KEY,'1') : localStorage.removeItem(KEY); }catch(_){} layout(); scheduleOver(); };
+    layout();
+  }
+  return {get on(){ return on; }, layout, check, init};
 });
 
 // ---------- Voir l'affiche seule (issue #56) ----------
@@ -362,7 +406,7 @@ function initSheet(){
   let restoreT=0, before=null;
   $('panel').addEventListener('focusin',e=>{ if(!isSheet() || !e.target.matches('input[type=text],input[type=search]')) return;
     clearTimeout(restoreT); if(before==null && ui.sheet!=='full'){ before=ui.sheet; setSheet('full'); }
-    setTimeout(()=>e.target.scrollIntoView({block:'nearest'}),50); });
+    setTimeout(()=>CMS.panelScroll.to(e.target,'nearest'),50); });
   $('panel').addEventListener('focusout',()=>{ clearTimeout(restoreT); restoreT=setTimeout(()=>{
     if(before!=null && !document.activeElement?.matches?.('input[type=text],input[type=search]')){ setSheet(before); before=null; } },200); });
   $('shield').onclick=()=>setFraming(true);
@@ -535,7 +579,7 @@ function renderSaves(){
   }
 }
 /** Mes affiches : section Sauvegarde de l'onglet Export (nom proposé, liste à jour, champ du nom sélectionné) */
-function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); showTab('export'); $('savesTitle').scrollIntoView?.({block:'start'}); setTimeout(()=>$('saveName').focus({preventScroll:true}),50); }
+function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); showTab('export'); CMS.panelScroll.to($('savesTitle')); setTimeout(()=>$('saveName').focus({preventScroll:true}),50); }
 function initSaves(){
   renderSaves();
   CMS.on('tab:export',()=>{ if(!$('saveName').value.trim()) $('saveName').value=defaultSaveName(); renderSaves(); });

@@ -44,8 +44,19 @@ function layoutPreview(){
   if(G.sky) ensureSky();
   drawTexture();
   CMS.surface.fit(vecC,g.w*ui.dpr,g.h*ui.dpr);
+  CMS.safe?.layout();
   drawUnder(); renderMap(true);
 }
+/** Amène un élément des réglages en vue en ne faisant défiler que la zone des réglages (.tabbody) : scrollIntoView
+ *  fait aussi défiler les ancêtres, page comprise, et sortait l'affiche de l'écran sur mobile (accord refusé, #59). */
+CMS.define('panelScroll', () => ({
+  to(el, block='start', smooth=false){
+    const tb=el?.closest?.('.tabbody'); if(!tb){ el?.scrollIntoView?.({block}); return; }
+    const r=el.getBoundingClientRect(), t=tb.getBoundingClientRect();
+    const d = block==='nearest' ? (r.top<t.top ? r.top-t.top : r.bottom>t.bottom ? Math.min(r.bottom-t.bottom, r.top-t.top) : 0) : r.top-t.top-8;
+    if(d) tb.scrollTo({top:tb.scrollTop+d, behavior:smooth?'smooth':'auto'});
+  }
+}));
 /** Surfaces de l'aperçu : redimensionnement sans réallocation inutile, suivi de la densité de pixels */
 CMS.define('surface', () => ({
   /** Redimensionne un canevas seulement si sa taille change : réaffecter width / height l'efface et réalloue sa mémoire */
@@ -100,7 +111,9 @@ function setActivePlace(i){
   layoutPreview(); if(mlMap) mlRestyle(); saveState();
   toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
 }
-function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; const g=drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); describePoster();
+function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; ui.inkSink=CMS.safe?.on?[]:null;
+  const g=drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); describePoster();
+  CMS.safe?.check(ui.inkSink,cvO.width,cvO.height); ui.inkSink=null;
   // Un texte peut déplacer la carte (dédicace passée sur deux lignes, ou revenue sur une) : son cadre est replacé
   // (comparaison en fraction de la hauteur : le canevas est arrondi au pixel, pas la taille CSS de l'affiche)
   const s=ui.slotCss, H=ui.posterCss.h, Hc=cvO.height;

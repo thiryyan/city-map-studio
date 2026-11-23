@@ -41,6 +41,7 @@
       <div class="illushit" id="illusHit" hidden aria-hidden="true"></div>
       <canvas id="cvTex" hidden aria-hidden="true"></canvas>
       <div class="cmpbadge" id="cmpBadge" role="status" hidden></div>
+      <div class="safeguide" id="safeGuide" aria-hidden="true" hidden></div>
       <button class="shield placeSwitch" id="placeSwitch" type="button" hidden><span>Modifier le lieu 2</span></button>
       <button class="shield" id="shield" type="button" aria-label="Cadrer la carte" hidden><span><svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16M2 10h16M10 2l-3 3M10 2l3 3M10 18l-3-3M10 18l3-3M2 10l3-3M2 10l3 3M18 10l-3-3M18 10l-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Toucher pour cadrer</span></button>
     </div>
@@ -79,6 +80,12 @@
       <button data-tab="export" role="tab" id="tb-export" aria-controls="tab-export" aria-selected="false" tabindex="-1">Export</button>
     </nav>
     <div class="tabbody">
+      <!-- Premier lancement (#59) : proposition d'ambiance non bloquante, fermée d'un toucher ; ne revient plus une fois fermée ou utilisée -->
+      <section class="welstrip" id="welStrip" aria-labelledby="welTitle" hidden>
+        <div class="welhead"><h2 id="welTitle">Essayer une ambiance</h2><button class="btn sm" type="button" id="welClose" aria-label="Fermer la proposition d'ambiance">✕</button></div>
+        <p class="hint">Thème, polices, gabarit, repère et papier assortis, en un toucher ; tout reste modifiable, et « Annuler » revient en arrière.</p>
+        <div class="fonts ambs" id="welAmb" role="group" aria-label="Ambiances proposées"></div>
+      </section>
       <!-- Téléphone (panneau coulissant) : sélecteur dans la zone défilante, pour garder la place des réglages -->
         <div class="modes inbody" id="modeSegM" role="group" aria-label="Type d'affiche">
         <button data-v="map" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Carte</button>
@@ -410,6 +417,8 @@
         <div class="seg" id="formatSeg" role="group" aria-label="Format d'impression"><button data-v="a4" type="button">A4</button><button data-v="a3" type="button">A3</button><button data-v="50x70" type="button">50 × 70 cm</button><button data-v="10x15" type="button">10 × 15 cm</button></div>
         <div class="seg mt6" id="fileSeg" role="group" aria-label="Fichier exporté"><button data-v="png" type="button">Image PNG</button><button data-v="pdf" type="button">Document PDF</button></div>
         <p class="hint" id="formatHint" aria-live="polite"></p>
+        <label class="tog">Afficher la zone de sécurité (5 mm du bord, imprimante de bureau)<input type="checkbox" id="safeTog"></label>
+        <p class="hint" id="safeWarn" aria-live="polite"></p>
         <button class="btn wide mt8" type="button" id="bMockup">Voir l'affiche au mur</button>
         <h2 class="sec" id="savesTitle">Sauvegarde : mes affiches</h2>
         <p class="hint">Enregistrez la configuration de l'affiche (lieu, cadrage, textes, style, effets) pour la retrouver plus tard. Les affiches restent dans ce navigateur ; téléchargez-les en fichier pour les garder ailleurs ou les ouvrir sur un autre appareil. Les données importées (moteur Fichier) ne sont pas incluses.</p>
@@ -424,6 +433,7 @@
         <button class="btn wide" type="button" id="bShare">Copier le lien de l'affiche</button>
         <div id="shareBox" hidden><input type="text" id="shareOut" readonly aria-label="Lien de l'affiche"><p class="hint">Le lien contient le lieu, les textes et les réglages, encodés dans l'adresse : rien n'est envoyé à un serveur. Partagez-le seulement avec des personnes de confiance.</p></div>
         <h2 class="sec">Export</h2>
+        <p class="hint">Pour imprimer chez vous, choisissez « Taille réelle » ou « 100 % » dans la fenêtre d'impression, et non « Ajuster à la page ».</p>
         <button class="btn pri" id="bExport" type="button"><span>Exporter l'affiche HD<span class="xl" id="exportDims">&nbsp;· 2480 × 3508 px</span><span class="nw" id="exportDpi">&nbsp;· 300 DPI</span></span></button>
         <div class="result" id="result" hidden role="region" aria-label="Affiche exportée">
           <img id="resImg" alt="Aperçu de l'affiche exportée">
@@ -444,12 +454,6 @@
   <p>Le fond de carte vient d'<b>OpenFreeMap</b> : l'afficher lui transmet votre adresse IP. Rien d'autre n'est envoyé, ni cookie ni mesure d'audience.</p>
   <details><summary>En savoir plus</summary><p>La recherche d'adresse (<b>Nominatim</b>), utilisée seulement à votre demande, reçoit aussi votre adresse IP. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p></details>
   <div class="row"><button class="btn pri" id="bConsentYes" type="button" autofocus>Afficher la carte</button><button class="btn" id="bConsentFile" type="button">Travailler hors ligne</button></div>
-</div></dialog>
-<dialog class="modal sheet" id="welcome" aria-labelledby="welTitle"><div class="box">
-  <h2 id="welTitle">Choisissez une ambiance</h2>
-  <p>Un point de départ assorti : thème, polices, gabarit, repère et papier. Vous pourrez tout modifier ensuite, et changer d'ambiance dans l'onglet Style.</p>
-  <div class="fonts ambs wel" id="welAmb" role="list"></div>
-  <button class="btn wide mt4" type="button" id="welSkip">Commencer sans ambiance</button>
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="busy" role="status" aria-live="polite"><div class="spin" aria-hidden="true"></div><div id="busyTxt">Génération de l'affiche…</div></div>

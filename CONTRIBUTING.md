@@ -64,7 +64,7 @@ python tests/saves.py            # Mes affiches : enregistrer, restaurer, fichie
 python tests/make_og.py          # régénère icons/og-image.jpg (aperçu des liens partagés) avec le rendu actuel
 python tests/art.py              # pistes artistiques : effets, dorure, ornements, Lettres, papiers, ciel, palette d'une photo
 python tests/compare.py          # comparer avant / après un changement de thème
-python tests/welcome.py          # ambiance proposée au premier lancement
+python tests/welcome.py          # ambiance proposée au premier lancement, sans fenêtre bloquante
 python tests/fonts.py            # polices auto-hébergées, aucun appel tiers
 python tests/consent.py          # accord préalable : aucune requête tierce sans accord
 python tests/reset.py            # réinitialisation des réglages par défaut
@@ -78,6 +78,7 @@ python tests/illustore.py        # illustrations conservées : IndexedDB, rechar
 python tests/illusmix.py         # Carte + illustration : médaillon, vignette, haut / bas, côte à côte, fondu ; prompt, qualité, harmonisation, gestes, pistes lues dans la carte, export
 python tests/illuspaste.py       # coller l'illustration depuis le presse-papiers (simulé) : image, GIF refusé, sans image, refus, API absente
 python tests/deps.py             # réglages dépendants d'un autre choix : masqués ou annotés, bascule annulable
+python tests/safezone.py         # zone de sécurité de 5 mm : repère par format et orientation, export inchangé, alertes
 python -m http.server 8000       # aperçu local : http://localhost:8000
 ```
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.

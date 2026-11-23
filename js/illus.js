@@ -487,7 +487,7 @@ CMS.define('illus', () => {
       drawBand(ctx,W,H,U,g,ink);
     }
     ctx.globalAlpha=0.55;
-    drawText(ctx,attributionText(false),W-g.m,H-g.m*0.38,{size:0.0085*U,align:'right',color:g.mix==='vig' ? c.text : T.color});
+    drawText(ctx,attributionText(false),W-g.m,H-g.m*0.38,{size:0.0085*U,align:'right',color:g.mix==='vig' ? c.text : T.color,ink:'attribution'});
     ctx.globalAlpha=1;
   }
   function placeholderIn(ctx, r, U){
@@ -721,7 +721,7 @@ CMS.define('illus', () => {
   function init(){
     document.querySelectorAll('.modes button').forEach(b=>b.onclick=()=>setMode(b.dataset.v));
     document.querySelectorAll('#illusStepSeg button').forEach(b=>b.onclick=()=>setStep(b.dataset.v));
-    $('bToImage').onclick=()=>{ setStep('image'); $('illusDrop').scrollIntoView?.({block:'nearest'}); };
+    $('bToImage').onclick=()=>{ setStep('image'); CMS.panelScroll.to($('illusDrop'),'nearest'); };
     const P=()=>st.illus.prompt;
     for(const [id,list,f] of [['momentSeg',C.MOMENTS,'moment'],['saisonSeg',C.SAISONS,'saison']])
       for(const [k,n] of list){ const b=h('button',{type:'button',dataset:{v:k}},n); b.onclick=()=>{ P()[f]=k; syncPrompt(); saveState(); }; $(id).append(b); }

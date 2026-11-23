@@ -233,7 +233,6 @@ details.adv>h3:first-of-type{margin-top:6px}
 .duos button{min-width:132px}.duos .t{font-size:1.2rem;line-height:1.2}.duos .d{font-size:1rem;color:var(--mut);line-height:1.3;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .ambs button{min-width:96px;padding:6px 6px 8px}.ambs canvas{display:block;width:84px;height:auto;border-radius:3px;box-shadow:0 1px 3px #0006}
 .ambs button.land canvas{width:110px}
-.wel{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;overflow:visible;margin:4px 0 10px;padding:0}
 .wel button{min-width:0;max-width:none;width:100%}.wel canvas{width:100%!important;max-width:96px}
 .prow{display:grid;grid-template-columns:28px 1fr auto auto;gap:6px;align-items:center;margin:6px 0}.prow b{width:26px;height:26px;border-radius:50%;background:var(--acc);color:#141414;display:flex;align-items:center;justify-content:center;font-size:.8125rem}
 .prow input{min-width:0}
@@ -352,7 +351,7 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 .tabs .ts{display:none}
 @media (max-width:420px){#app[data-mode=mix] .tabs .tl{display:none}#app[data-mode=mix] .tabs .ts{display:inline}}
 /* Voir l'affiche seule (#56) : rien sur l'aperçu, et sur mobile plus de panneau ; un toucher n'importe où ramène les réglages */
-#app.clean .fab,#app.clean #shield,#app.clean #placeSwitch,#app.clean .mapcredit,#app.clean .cmpbadge,#app.clean .stagebar,#app.clean .illushit{display:none!important}
+#app.clean .fab,#app.clean #shield,#app.clean #placeSwitch,#app.clean .mapcredit,#app.clean .cmpbadge,#app.clean .stagebar,#app.clean .illushit,#app.clean .safeguide{display:none!important}
 #app.clean.sheetmode #panel{display:none}
 .cleanexit{position:absolute;inset:0;z-index:20;border:0;padding:0;margin:0;background:none;cursor:zoom-out;display:flex;align-items:flex-end;justify-content:center;touch-action:none}
 .cleanexit:focus-visible{outline:2px solid var(--acc);outline-offset:-4px}
@@ -362,3 +361,10 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 /* Réglage activé mais empêché par un autre choix (#58) : une ligne d'explication et le bouton qui fait la bascule */
 .depnote{margin:-2px 0 8px;font-size:.8125rem;line-height:1.35;color:var(--mut);display:flex;flex-wrap:wrap;align-items:center;column-gap:4px}
 .depnote .lnk{color:var(--txt)}
+/* Proposition d'ambiance du premier lancement (#59) : en tête des réglages, sans bloquer l'affiche */
+.welstrip{margin:0 0 12px;padding:10px 12px 4px;border:1px solid #8a6a2a;border-radius:12px;background:#2a2418}
+.welhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.welhead h2{margin:0;font-size:1rem;font-weight:600}
+.welstrip .hint{margin:4px 0 8px}
+/* Zone de sécurité (#60) : aperçu seulement, lisible sur papier clair comme sombre */
+.safeguide{position:absolute;z-index:3;pointer-events:none;border:1px dashed #d4892a;box-shadow:0 0 0 1px #ffffff55}

@@ -85,7 +85,7 @@ function showTab(name, focus){
 }
 /** Section « Avancé » de l'onglet Lieu : ouverte à la demande, mémorisée ; ouverte d'office quand elle devient utile */
 const ADV_KEY='cityMapStudio.advOpen';
-function openAdvanced(scroll){ const d=$('adv'); if(!d.open) d.open=true; if(scroll){ showTab('lieu'); setTimeout(()=>d.scrollIntoView({block:'start',behavior:'smooth'}),60); } }
+function openAdvanced(scroll){ const d=$('adv'); if(!d.open) d.open=true; if(scroll){ showTab('lieu'); setTimeout(()=>CMS.panelScroll.to(d,'start',true),60); } }
 /** Aperçu des polices : chaque carte montre le titre saisi */
 function updateFontSamples(){
   const t=(st.texts.title||'').trim()||'Blois', x=(st.texts.names||'').trim()||(st.texts.dedication||'').trim()||'Aa';
@@ -231,7 +231,7 @@ function buildUI(){
   FRAMES.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent='Cadre '+n.toLowerCase(); b.onclick=()=>{ mock.frame=i; drawMockup(); }; $('mockFrames').appendChild(b); });
   $('mockMat').onchange=e=>{ mock.mat=e.target.checked; drawMockup(); };
   $('bShare').onclick=shareLink;
-  $('welSkip').onclick=()=>{ closeWelcome(); toast('Vous pourrez choisir une ambiance plus tard, dans l\'onglet Style'); };
+  $('welClose').onclick=()=>{ closeWelcome(); toast('Les ambiances restent proposées dans l\'onglet Style'); };
   // thèmes
   const th=$('themes');
   Object.entries(THEMES).forEach(([k,t])=>{

@@ -53,7 +53,7 @@ async def main():
             ev = page.evaluate
             await page.goto(base + '/index.html?test'); await page.wait_for_timeout(1500)
             await page.click('#bConsentYes'); await page.wait_for_timeout(800)          # accord : MapLibre (worker blob:) démarre
-            if await ev("document.getElementById('welcome').open"): await page.click('#welSkip')
+            if not await ev("document.getElementById('welStrip').hidden"): await page.click('#welClose')
             check(await ev("__cms.mlLib") == 'ok', f'{label} : MapLibre chargé depuis lib/')
             await ev("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(400)
             for tab in ['style', 'repere', 'textes', 'lieu']:
