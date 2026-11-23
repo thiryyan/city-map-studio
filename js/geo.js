@@ -71,6 +71,8 @@ function geom(s, W, H){
   const U=Math.min(W,H), m=U*s.margin/100, land=W>H, lay=s.layout;
   const below=(r,gap)=>{ const y0=r.y+r.h+gap*U; return {cx:W/2,maxW:W-2*m-0.04*U,y0,avail:H-y0-0.6*m-0.01*U,mode:'top'}; };
   const g={m,U,land,lay};
+  // Mode Illustration : pas de carte (cadre vide, aucune vue) ; l'image couvre l'affiche (CMS.illus.draw)
+  if(s.mode==='illus'){ g.illus={x:0,y:0,w:W,h:H}; g.map={x:0,y:0,w:0,h:0}; g.places=[]; return g; }
   if(!land){
     switch(lay){
       case 'classic': g.map={x:m,y:m,w:W-2*m,h:H-2*m-0.36*U}; g.text=below(g.map,0.014); break;

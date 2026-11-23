@@ -61,8 +61,30 @@ function normState(src){
     fx:V.each(s.fx,D.fx,V.bool),
     focusR:V.num(s.focusR,D.focusR,10,60),
     orn:V.each(s.orn,D.orn,V.bool),
-    folds:V.bool(s.folds,D.folds)
+    folds:V.bool(s.folds,D.folds),
+    mode:V.oneOf(s.mode,CMS.illusConf.MODES,D.mode),
+    illus:normIllus(s.illus,D.illus),
+    illusText:normIllusText(s.illusText,D.illusText)
   };
+  /** Illustration : cadrage, retouches, filtre et choix du prompt (pistes : textes courts, 8 au plus, sans doublon) */
+  function normIllus(src,d){
+    const o=V.obj(src), p=V.obj(o.prompt), C=CMS.illusConf, keys=a=>a.map(x=>x[0]);
+    const pistes=[...new Set((Array.isArray(p.pistes)?p.pistes:[]).filter(x=>typeof x==='string').map(x=>x.replace(/\s+/g,' ').trim().slice(0,80)).filter(Boolean))].slice(0,C.PISTES_MAX);
+    return {fit:V.oneOf(o.fit,C.FITS,d.fit), zoom:V.num(o.zoom,d.zoom,100,300), ox:V.num(o.ox,d.ox,-1,1), oy:V.num(o.oy,d.oy,-1,1),
+      bright:V.num(o.bright,d.bright,-50,50), contrast:V.num(o.contrast,d.contrast,-50,50), satur:V.num(o.satur,d.satur,-50,50),
+      vintage:V.oneOf(o.vintage,C.VINTAGE,d.vintage), grain:V.bool(o.grain,d.grain), paper:V.bool(o.paper,d.paper), flat:V.bool(o.flat,d.flat),
+      upscale:V.bool(o.upscale,d.upscale),
+      img:(()=>{ const m=V.obj(o.img); return typeof m.ref==='string' && /^[0-9a-f]{64}$/.test(m.ref)
+        ? {ref:m.ref, name:V.str(m.name,'image',120)||'image', w:Math.round(V.num(m.w,1,1,100000)), h:Math.round(V.num(m.h,1,1,100000))} : null; })(),
+      prompt:{pistes, moment:V.oneOf(p.moment,keys(C.MOMENTS),d.prompt.moment), saison:V.oneOf(p.saison,keys(C.SAISONS),d.prompt.saison),
+        palette:V.oneOf(p.palette,C.PALETTES,d.prompt.palette), lang:V.oneOf(p.lang,C.LANGS,d.prompt.lang)}};
+  }
+  /** Textes des modes illustrés : ombre et contour acceptent '' (aucun) */
+  function normIllusText(src,d){
+    const o=V.obj(src), hexOrNone=(v,dv)=>v==='' ? '' : V.hex(v,dv);
+    return {style:V.oneOf(o.style,CMS.illusConf.TSTYLES,d.style), color:V.hex(o.color,d.color), shadow:hexOrNone(o.shadow,d.shadow),
+      outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,CMS.illusConf.POS,d.pos)};
+  }
 }
 let st = loadState();
 const ui = {comparing:false, cmpKeep:null, placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};

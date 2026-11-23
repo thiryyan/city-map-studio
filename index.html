@@ -62,13 +62,23 @@
     <button class="grab" id="grab" type="button" aria-label="Agrandir le panneau des réglages"><i></i></button>
     <div class="brand">City Map Studio<small>Atelier d'affiches cartographiques</small></div>
     <div class="banner" id="banner" role="status"><span id="bannerTxt"></span><button class="btn sm on" id="bBanner" type="button" hidden></button></div>
+    <div class="modes top" id="modeSeg" role="group" aria-label="Type d'affiche">
+      <button data-v="map" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Carte</button>
+      <button data-v="illus" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Illustration</button>
+    </div>
     <nav class="tabs" id="tabs" role="tablist" aria-label="Étapes de création">
       <button data-tab="lieu" class="on" role="tab" id="tb-lieu" aria-controls="tab-lieu" aria-selected="true">Lieu</button>
       <button data-tab="repere" role="tab" id="tb-repere" aria-controls="tab-repere" aria-selected="false" tabindex="-1">Repère</button>
+      <button data-tab="illus" role="tab" id="tb-illus" aria-controls="tab-illus" aria-selected="false" tabindex="-1" hidden>Illustration</button>
       <button data-tab="textes" role="tab" id="tb-textes" aria-controls="tab-textes" aria-selected="false" tabindex="-1">Textes</button>
       <button data-tab="style" role="tab" id="tb-style" aria-controls="tab-style" aria-selected="false" tabindex="-1">Style</button>
     </nav>
     <div class="tabbody">
+      <!-- Téléphone (panneau coulissant) : sélecteur dans la zone défilante, pour garder la place des réglages -->
+        <div class="modes inbody" id="modeSegM" role="group" aria-label="Type d'affiche">
+        <button data-v="map" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Carte</button>
+        <button data-v="illus" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Illustration</button>
+      </div>
       <!-- LIEU -->
       <div class="tab on" id="tab-lieu" role="tabpanel" aria-labelledby="tb-lieu">
         <div class="warn" id="envWarn" hidden></div>
@@ -90,7 +100,7 @@
         <div class="chips" id="presets"></div>
         <h3>Lieu de rencontre</h3>
         <div class="cur" id="markerTxt"></div>
-        <div class="row mt8">
+        <div class="row mt8 maponly">
           <button class="btn grow" id="bPlace2">Placer le repère sur la carte</button>
           <button class="btn" id="bMarkerCenter">Au centre</button>
         </div>
@@ -99,8 +109,8 @@
           <button class="btn" type="submit">Placer</button>
         </form>
         <p class="hint">Décimal (47.5861, 1.3359 · 47,5861 ; 1,3359), DMS (47° 35′ 10″ N, 1° 20′ 09″ E) ou lien Google Maps / OpenStreetMap. La carte se recentre si le point sort du cadre.</p>
-        <h3>Cadrage</h3>
-        <div class="slider"><label for="zoom">Zoom</label><output id="oZoom"></output><input type="range" id="zoom" min="10" max="18" step="0.1"></div>
+        <h3 class="maponly">Cadrage</h3>
+        <div class="slider maponly"><label for="zoom">Zoom</label><output id="oZoom"></output><input type="range" id="zoom" min="10" max="18" step="0.1"></div>
         <details class="adv" id="adv">
           <summary><span>Avancé</span><small>moteur, connexion, hors ligne</small></summary>
           <h3>Moteur cartographique</h3>
@@ -120,20 +130,82 @@
           <p class="hint" id="consentInfo"></p>
           <div class="diag" id="diag"></div>
         </details>
-        <button class="btn next" type="button" data-next="repere">Étape suivante : le repère<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next maponly" type="button" data-next="repere">Étape suivante : le repère<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next illusonly" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <p class="credit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL) · Tuiles <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · Rendu MapLibre GL · Géocodage Nominatim</p>
+      </div>
+      <!-- ILLUSTRATION (modes illustrés) : prompt pour une IA externe, puis import et ajustement de l'image -->
+      <div class="tab" id="tab-illus" role="tabpanel" aria-labelledby="tb-illus">
+        <div class="seg mt6" id="illusStepSeg" role="group" aria-label="Étape de l'illustration"><button data-v="prompt" type="button">1 · Prompt</button><button data-v="image" type="button">2 · Image</button></div>
+        <div id="illusPrompt">
+          <p class="hint">L'illustration est créée par l'IA de votre choix (ChatGPT, Gemini…) : l'application rédige la demande, vous l'y collez, puis vous importez l'image obtenue à l'étape 2.</p>
+          <h3>Pistes à proposer à l'IA <small class="opt">facultatif</small></h3>
+          <div class="chips" id="pisteChips" role="group" aria-label="Pistes"></div>
+          <form class="row mt8" id="pisteForm" autocomplete="off"><input class="grow" type="text" id="pisteIn" maxlength="80" enterkeyhint="done" aria-label="Ajouter une piste" placeholder="Château, port, vignobles…"><button class="btn" type="submit">Ajouter</button></form>
+          <h3>Moment de la journée</h3>
+          <div class="seg wrap" id="momentSeg" role="group" aria-label="Moment de la journée"></div>
+          <h3>Saison</h3>
+          <div class="seg wrap" id="saisonSeg" role="group" aria-label="Saison"></div>
+          <h3>Palette</h3>
+          <div class="seg" id="paletteSeg" role="group" aria-label="Palette"><button data-v="ia" type="button">Proposée par l'IA</button><button data-v="theme" type="button">Thème de l'affiche</button><button data-v="photo" type="button">D'une photo</button></div>
+          <h3>Langue du prompt</h3>
+          <div class="seg" id="langSeg" role="group" aria-label="Langue du prompt"><button data-v="fr" type="button">Français</button><button data-v="en" type="button">English</button></div>
+          <p class="hint" id="promptInfo" aria-live="polite"></p>
+          <h3><label for="promptOut">Prompt</label></h3>
+          <textarea id="promptOut" class="prompt" readonly rows="8"></textarea>
+          <button class="btn pri wide mt8" id="bCopyPrompt" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Copier le prompt</button>
+          <p class="hint">Collez-le dans ChatGPT ou Gemini et répondez à ses questions. L'IA doit livrer une image sans aucun texte ni marge : le titre est posé ensuite par l'application.</p>
+          <button class="btn wide mt8" type="button" id="bToImage">J'ai mon image : l'importer</button>
+        </div>
+        <div id="illusImage" hidden>
+          <div class="drop" id="illusDrop">
+            <p><b>Glissez votre image ici</b><br>ou collez-la (Ctrl + V) · PNG, JPEG ou WebP</p>
+            <label class="btn">Choisir un fichier<input type="file" id="illusIn" accept="image/png,image/jpeg,image/webp" hidden></label>
+          </div>
+          <div class="illusfile" id="illusFile" hidden>
+            <img id="illusThumb" alt="Miniature de l'illustration importée">
+            <div class="grow"><span id="illusName"></span><small id="illusInfo"></small></div>
+            <label class="btn sm">Remplacer<input type="file" id="illusIn2" accept="image/png,image/jpeg,image/webp" hidden></label>
+            <button class="btn sm" type="button" id="bIllusDel" aria-label="Retirer l'image">✕</button>
+          </div>
+          <p class="fitnote" id="illusMissing" role="status" hidden></p>
+          <p class="fitnote" id="illusErr" role="alert"></p>
+          <div id="illusTools" hidden>
+            <h3>Qualité d'impression</h3>
+            <ul class="quality" id="illusQuality" aria-label="Qualité d'impression par format"></ul>
+            <label class="tog">Agrandir ×2 dans le navigateur<input type="checkbox" data-k="illus.upscale"></label>
+            <p class="hint" id="illusRatio"></p>
+            <h3>Cadrage</h3>
+            <div class="seg" id="illusFitSeg" role="group" aria-label="Cadrage de l'image"><button data-v="cover" type="button">Remplir l'affiche</button><button data-v="contain" type="button">Image entière</button></div>
+            <div class="slider"><label for="sIllusZoom">Zoom</label><output id="oIllusZoom"></output><input type="range" id="sIllusZoom" data-k="illus.zoom" min="100" max="300" step="5"></div>
+            <div class="row"><p class="hint grow">Glissez l'image sur l'aperçu pour la déplacer.</p><button class="btn sm" type="button" id="bIllusCenter">Recentrer</button></div>
+            <h3>Retouches</h3>
+            <div class="slider"><label for="sIllusBright">Luminosité</label><output id="oIllusBright"></output><input type="range" id="sIllusBright" data-k="illus.bright" min="-50" max="50" step="1"></div>
+            <div class="slider"><label for="sIllusContrast">Contraste</label><output id="oIllusContrast"></output><input type="range" id="sIllusContrast" data-k="illus.contrast" min="-50" max="50" step="1"></div>
+            <div class="slider"><label for="sIllusSatur">Saturation</label><output id="oIllusSatur"></output><input type="range" id="sIllusSatur" data-k="illus.satur" min="-50" max="50" step="1"></div>
+            <h3>Filtre vintage</h3>
+            <div class="seg" id="illusVintageSeg" role="group" aria-label="Filtre vintage"><button data-v="none" type="button">Aucun</button><button data-v="light" type="button">Léger</button><button data-v="strong" type="button">Marqué</button></div>
+            <label class="tog">Grain<input type="checkbox" data-k="illus.grain"></label>
+            <label class="tog">Papier jauni<input type="checkbox" data-k="illus.paper"></label>
+            <label class="tog">Aplats (couleurs réduites)<input type="checkbox" data-k="illus.flat"></label>
+          </div>
+        </div>
+        <button class="btn next" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- STYLE -->
       <div class="tab" id="tab-style" role="tabpanel" aria-labelledby="tb-style">
+        <div class="maponly">
         <h3>Ambiances</h3>
         <p class="hint">Un toucher pour un ensemble assorti (thème, polices, gabarit, repère, papier) ; tout reste modifiable ensuite.</p>
         <div class="fonts ambs" id="ambiances" role="group" aria-label="Ambiances"></div>
+        </div>
         <h3>Orientation</h3>
         <div class="seg" id="orientSeg"><button data-v="portrait" type="button">Portrait</button><button data-v="landscape" type="button">Paysage</button></div>
         <h3>Format d'impression</h3>
         <div class="seg" id="formatSeg" role="group" aria-label="Format d'impression"><button data-v="a4" type="button">A4</button><button data-v="a3" type="button">A3</button><button data-v="50x70" type="button">50 × 70 cm</button></div>
         <div class="seg mt6" id="fileSeg" role="group" aria-label="Fichier exporté"><button data-v="png" type="button">Image PNG</button><button data-v="pdf" type="button">Document PDF</button></div>
         <p class="hint" id="formatHint" aria-live="polite"></p>
+        <div class="maponly">
         <h3>Gabarit</h3>
         <div class="cards" id="layouts" role="group" aria-label="Gabarits"></div>
         <div class="slider"><label for="sMargin">Marge (passe-partout)</label><output id="oMargin"></output><input type="range" id="sMargin" data-k="margin" min="3" max="12" step="0.5"></div>
@@ -162,9 +234,11 @@
           <p class="hint">La photo reste sur votre appareil : seules ses couleurs sont gardées.</p>
         </div>
         <p class="fitnote" id="contrastWarn" aria-live="polite"></p>
+        </div>
         <h3>Papier</h3>
         <div class="chips" id="textures"></div>
         <label class="tog">Plis d'une carte dépliée<input type="checkbox" data-k="folds"></label>
+        <div class="maponly">
         <h3>Touche d'or</h3>
         <div class="chips">
           <button class="chip" data-gold="water">Fleuve</button>
@@ -203,6 +277,7 @@
         </details>
         <label class="tog mt8">Mention complète des sources sur l'affiche<input type="checkbox" data-k="attribution"></label>
         <p class="hint">« © OpenStreetMap » (et « © OpenMapTiles » avec le moteur Vectoriel GPU) reste toujours inscrit : les licences ODbL et CC-BY l'exigent.</p>
+        </div>
         <h3>Avant d'imprimer</h3>
         <div class="row"><button class="btn grow" type="button" id="bMockup">Voir l'affiche au mur</button><button class="btn grow" type="button" id="bShare">Copier le lien de l'affiche</button></div>
         <button class="btn wide mt8" type="button" id="bSaves">Mes affiches : enregistrer, restaurer, fichier</button>
@@ -244,6 +319,19 @@
       </div>
       <!-- TEXTES -->
       <div class="tab" id="tab-textes" role="tabpanel" aria-labelledby="tb-textes">
+        <div class="illusonly">
+          <h3>Style du titre</h3>
+          <div class="seg" id="tStyleSeg" role="group" aria-label="Style du titre"><button data-v="vintage" type="button">Vintage</button><button data-v="font" type="button">Police choisie ci-dessous</button></div>
+          <p class="hint">« Vintage » : grandes capitales condensées et ombre décalée, à la manière des affiches de voyage.</p>
+          <h3>Couleurs des textes</h3>
+          <div class="swrow"><span id="swTextLbl">Lettres</span><div class="swatches" id="swText" role="group" aria-labelledby="swTextLbl"></div></div>
+          <div class="swrow"><span id="swShadowLbl">Ombre</span><div class="swatches" id="swShadow" role="group" aria-labelledby="swShadowLbl"></div></div>
+          <div class="swrow"><span id="swOutlineLbl">Contour</span><div class="swatches" id="swOutline" role="group" aria-labelledby="swOutlineLbl"></div></div>
+          <div class="slider"><label for="sShadowOff">Décalage de l'ombre</label><output id="oShadowOff"></output><input type="range" id="sShadowOff" data-k="illusText.off" min="1" max="12" step="1"></div>
+          <h3>Position des textes</h3>
+          <div class="posgrid" id="tPosSeg" role="group" aria-label="Position du titre"></div>
+          <p class="hint">La position est reprise dans le prompt : l'IA laisse cette zone calme. Les autres lignes (dédicace, noms, date, coordonnées) se placent du côté opposé.</p>
+        </div>
         <h3>Modèles de texte</h3>
         <div class="chips" id="occasions"></div>
         <h3>Duos typographiques</h3>
@@ -282,7 +370,7 @@
         <label class="f show"><input type="checkbox" data-k="show.coords" aria-label="Afficher les coordonnées">Texte affiché (vide = automatique depuis le repère)</label>
         <input type="text" data-k="coordsManual" id="coordsManual" aria-label="Coordonnées affichées">
         <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.coords" min="60" max="150" step="5" aria-label="Taille des coordonnées"><output id="oTs-coords"></output></div>
-        <p class="hint">Le sous-titre s'affiche dans les gabarits Cadre, Fondu et Médaillon ; le gabarit Souvenir ne l'affiche pas (en-tête sur une ligne, dédicace et noms en pied).</p>
+        <p class="hint maponly">Le sous-titre s'affiche dans les gabarits Cadre, Fondu et Médaillon ; le gabarit Souvenir ne l'affiche pas (en-tête sur une ligne, dédicace et noms en pied).</p>
         <button class="btn next" type="button" data-next="style">Étape suivante : le style<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
     </div>
@@ -322,6 +410,8 @@
   <p class="hint" id="savesEmpty">Aucune affiche enregistrée pour l'instant. Astuce : Ctrl + S (⌘ + S) enregistre l'affiche en cours.</p>
   <div class="row"><button class="btn grow" type="button" id="bCfgExport">Télécharger l'affiche en cours</button><label class="btn grow">Ouvrir un fichier<input type="file" id="cfgIn" accept=".json,application/json" hidden></label></div>
   <button class="btn wide" type="button" id="bSavesBackup">Sauvegarder toutes mes affiches dans un fichier</button>
+  <label class="tog">Inclure les illustrations dans les fichiers<input type="checkbox" id="cfgImg" checked></label>
+  <p class="hint">Les affiches illustrées gardent leur image dans ce navigateur. Incluse dans le fichier, elle voyage avec lui (fichier plus lourd) ; sinon, il faudra la réimporter sur un autre appareil. Le lien partagé ne contient jamais l'image.</p>
   <button class="btn" type="button" id="savesClose">Fermer</button>
 </div></dialog>
 <dialog class="modal" id="result" aria-label="Affiche exportée"><div class="box">
@@ -344,6 +434,7 @@
 <script src="js/preview.js"></script>
 <script src="js/features.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/illus.js"></script>
 <script src="js/export.js"></script>
 <script src="js/main.js"></script>
 </body>

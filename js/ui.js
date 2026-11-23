@@ -68,10 +68,10 @@ function updateMarkerTxt(){
   $('coordsManual').placeholder=coordText();
 }
 function syncZoomUI(){ $('zoom').value=st.zoom.toFixed(1); $('oZoom').textContent=st.zoom.toFixed(1); }
-function setZoom(z){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
+function setZoom(z){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'&&st.mode!=='illus'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
 function goTo(lat,lon,zoom){
   st.center={lat,lon}; if(zoom!=null) st.zoom=zoom; syncZoomUI();
-  if(mlMap&&st.engine==='maplibre'){ mlMap.jumpTo({center:[lon,lat],zoom:mlZoom(ui.slotCss.w)}); mlRestyle(); }
+  if(mlMap&&st.engine==='maplibre'&&st.mode!=='illus'){ mlMap.jumpTo({center:[lon,lat],zoom:mlZoom(ui.slotCss.w)}); mlRestyle(); }   // carte masquée : recadrée au retour en mode Carte
   renderMap(true); saveState(); updateMarkerTxt();
 }
 function setSeg(id,v){ document.querySelectorAll(`#${id} button`).forEach(b=>{ const on=b.dataset.v===String(v); b.classList.toggle('on',on);
@@ -146,7 +146,7 @@ function buildUI(){
   });
   // clavier : flèches, Début, Fin (motif ARIA des onglets)
   $('tabs').addEventListener('keydown',e=>{
-    const bs=[...document.querySelectorAll('#tabs button')], i=bs.findIndex(x=>x.classList.contains('on'));
+    const bs=[...document.querySelectorAll('#tabs button:not([hidden])')], i=bs.findIndex(x=>x.classList.contains('on'));
     const j={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:bs.length-1}[e.key]; if(j==null) return;
     e.preventDefault(); showTab(bs[(j+bs.length)%bs.length].dataset.tab,true);
   });
@@ -268,6 +268,7 @@ function buildUI(){
       if(k==='folds'){ drawTexture(); saveState(); return; }
       if(k==='focusR'){ if(st.fx.quarter) redrawAll(true); else changed(); return; }
       if(k==='numbered'||k==='linkMarkers'){ changed(); return; }
+      if(k.startsWith('illus.')||k.startsWith('illusText.')){ CMS.emit('illus:input',k); return; }   // modes illustrés (js/illus.js)
       if(k.startsWith('layers.')||k.startsWith('fx.')){ ui.snap=null; redrawAll(true); }
       else if(k==='margin'){ layoutPreview(); saveState(); }
       else if(k==='stroke'||k==='waterMult'){ redrawAll(true); }
@@ -321,6 +322,7 @@ function syncInputs(){
   setSeg('orientSeg',st.orient); setSeg('formatSeg',st.format); setSeg('fileSeg',st.fileType); setSeg('dedWrapSeg',st.dedWrap);
   setSeg('textures',st.texture); updateExportLabel();
   syncZoomUI(); syncOutputs(); refreshColors(); refreshCards(); updateMarkerTxt(); updateEngineUI(); syncFonts(); updateLayoutUI(); renderRoute(); drawTexture();
+  CMS.emit('state:synced');   // modes illustrés : sélecteur de mode, onglet Illustration, style du titre
 }
 /** Polices : sélection des cartes (titre, texte, duo) et aperçus */
 function syncFonts(){
@@ -476,11 +478,14 @@ return {search, closeResults};
 const {search, closeResults} = CMS.searchUI;
 
 // ---------- Polices ----------
+/** Polices utilisées par l'affiche : titre, texte, police manuscrite éventuelle ; Bebas Neue pour le titre « Vintage » des modes illustrés */
 async function loadFonts(){
-  try{ await Promise.all([fontOf('title'),fontOf('','dedication'),fontOf('','date')].flatMap(f=>f.load).map(f=>document.fonts.load(f))); }catch(e){}
+  try{ await Promise.all(loadFonts.used().flatMap(f=>f.load).map(f=>document.fonts.load(f))); }catch(e){}
+  CMS.glyphs.clear();   // largeurs mesurées avec une police de secours pendant le chargement
 }
 /** true si toutes les variantes de la famille active sont chargées (sinon l'export utiliserait une police de secours) */
-function fontsReady(){ try{ return [fontOf('title'),fontOf('','dedication'),fontOf('','date')].flatMap(f=>f.load).every(f=>document.fonts.check(f)); }catch(e){ return true; } }
+loadFonts.used=()=>[fontOf('title'),fontOf('','dedication'),fontOf('','date'),...(st.mode!=='map' && st.illusText.style==='vintage' ? [FONTS.bebas] : [])];
+function fontsReady(){ try{ return loadFonts.used().flatMap(f=>f.load).every(f=>document.fonts.check(f)); }catch(e){ return true; } }
 
 // ---------- Comparer avant / après un changement de thème ----------
 /** Dernier changement de thème : couleurs d'avant, et couleurs appliquées (le bouton disparaît dès qu'elles changent :
