@@ -289,7 +289,7 @@ details.adv>h3:first-of-type{margin-top:6px}
    illusonly (modes illustrés), pureillus (illustration seule), mixonly (carte + illustration) */
 #app[data-mode=illus] .maponly,#app:not([data-mode=map]) .layoutonly,#app[data-mode=map] .illusonly,#app:not([data-mode=illus]) .pureillus,#app:not([data-mode=mix]) .mixonly{display:none!important}
 #app[data-mode=mix] #placeBox,#app[data-mode=mix] #labelsBox,#app[data-mode=mix] #skyBox{display:none!important}
-#app[data-mode=illus] #slot,#app[data-mode=illus] .fab,#app[data-mode=illus] .mapcredit,#app[data-mode=illus] #shield,#app[data-mode=illus] #placeSwitch{display:none!important}
+#app[data-mode=illus] #slot,#app[data-mode=illus] .fab button:not(#bClean),#app[data-mode=illus] .mapcredit,#app[data-mode=illus] #shield,#app[data-mode=illus] #placeSwitch{display:none!important}
 #app[data-mode=illus] #poster{touch-action:none;cursor:grab}
 #poster.dragging{cursor:grabbing}
 h3 .opt{text-transform:none;letter-spacing:0;font-weight:400}
@@ -299,6 +299,10 @@ h3 .opt{text-transform:none;letter-spacing:0;font-weight:400}
 .chip .x{color:var(--mut)}
 .drop{border:1.5px dashed var(--field);border-radius:12px;padding:16px 12px;text-align:center;margin-top:12px}
 .drop p{margin:0 0 10px;font-size:.875rem;color:var(--mut)}.drop b{color:var(--txt)}
+.droprow{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+/* Textes d'aide selon l'appareil : clavier et souris, ou écran tactile (pas de Ctrl + V ni de glisser-déposer) */
+.touchonly{display:none}
+@media (pointer:coarse){.drop .touchonly{display:block}.drop .kbonly{display:none}}
 .drop.over{border-color:var(--acc);background:#26221a}
 .illusfile{display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
 .illusfile img{width:44px;height:58px;object-fit:cover;border-radius:4px;flex:none;background:var(--line)}
@@ -347,3 +351,14 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 @media (max-width:420px){.tabs{gap:0;padding:0 4px}.tabs button{padding-left:1px;padding-right:1px;font-size:.8125rem}}
 .tabs .ts{display:none}
 @media (max-width:420px){#app[data-mode=mix] .tabs .tl{display:none}#app[data-mode=mix] .tabs .ts{display:inline}}
+/* Voir l'affiche seule (#56) : rien sur l'aperçu, et sur mobile plus de panneau ; un toucher n'importe où ramène les réglages */
+#app.clean .fab,#app.clean #shield,#app.clean #placeSwitch,#app.clean .mapcredit,#app.clean .cmpbadge,#app.clean .stagebar,#app.clean .illushit{display:none!important}
+#app.clean.sheetmode #panel{display:none}
+.cleanexit{position:absolute;inset:0;z-index:20;border:0;padding:0;margin:0;background:none;cursor:zoom-out;display:flex;align-items:flex-end;justify-content:center;touch-action:none}
+.cleanexit:focus-visible{outline:2px solid var(--acc);outline-offset:-4px}
+.cleanexit span{margin-bottom:calc(12px + var(--sab));background:#1e1e23e6;color:var(--txt);border:1px solid #ffffff22;border-radius:999px;padding:6px 12px;font-size:.8125rem;pointer-events:none;backdrop-filter:blur(6px)}
+.cleanexit.hinted span{animation:cleanHint 3.2s ease forwards}
+@keyframes cleanHint{0%,75%{opacity:1}100%{opacity:0}}
+/* Réglage activé mais empêché par un autre choix (#58) : une ligne d'explication et le bouton qui fait la bascule */
+.depnote{margin:-2px 0 8px;font-size:.8125rem;line-height:1.35;color:var(--mut);display:flex;flex-wrap:wrap;align-items:center;column-gap:4px}
+.depnote .lnk{color:var(--txt)}

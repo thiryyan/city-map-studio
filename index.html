@@ -52,7 +52,9 @@
       <button id="bZoomOut" title="Zoom arrière" aria-label="Zoom arrière"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button id="bPlace" title="Placer le repère" aria-label="Placer le repère"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 17.5S3.5 12.6 3.5 7.6A3.6 3.6 0 0 1 10 5.4a3.6 3.6 0 0 1 6.5 2.2c0 5-6.5 9.9-6.5 9.9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
       <button id="bToMarker" title="Centrer sur le repère" aria-label="Centrer sur le repère"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="1.8" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg></button>
+      <button id="bClean" title="Voir l'affiche seule" aria-label="Voir l'affiche seule"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M1.8 10S5 4.5 10 4.5 18.2 10 18.2 10 15 15.5 10 15.5 1.8 10 1.8 10z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
     </div>
+    <button class="cleanexit" id="cleanExit" type="button" aria-label="Revenir aux réglages" hidden><span>Toucher pour revenir aux réglages</span></button>
     <div class="stagebar">
       <div class="placehint" id="placeHint">Touchez la carte pour placer le repère</div>
       <div class="framebar" id="frameBar" role="status"><span>Glissez · pincez pour zoomer</span><button class="btn sm" id="bFrameDone" type="button">Terminer</button></div>
@@ -191,8 +193,10 @@
         </div>
         <div id="illusImage" hidden>
           <div class="drop" id="illusDrop">
-            <p><b>Glissez votre image ici</b><br>ou collez-la (Ctrl + V) · PNG, JPEG ou WebP</p>
-            <label class="btn">Choisir un fichier<input type="file" id="illusIn" accept="image/png,image/jpeg,image/webp" hidden></label>
+            <p class="kbonly"><b>Glissez votre image ici</b><br>ou collez-la (Ctrl + V) · PNG, JPEG ou WebP</p>
+            <p class="touchonly"><b>Importez l'image obtenue</b><br>copiée dans votre IA, ou enregistrée dans vos photos · PNG, JPEG ou WebP</p>
+            <div class="droprow"><button class="btn" type="button" id="bIllusPaste" hidden><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="11.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 3V2h4v1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Coller l'image</button>
+            <label class="btn">Choisir un fichier<input type="file" id="illusIn" accept="image/png,image/jpeg,image/webp" hidden></label></div>
           </div>
           <div class="illusfile" id="illusFile" hidden>
             <img id="illusThumb" alt="Miniature de l'illustration importée">
@@ -395,7 +399,6 @@
         <label class="f show"><input type="checkbox" data-k="show.coords" aria-label="Afficher les coordonnées">Texte affiché (vide = automatique depuis le repère)</label>
         <input type="text" data-k="coordsManual" id="coordsManual" aria-label="Coordonnées affichées">
         <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.coords" min="60" max="150" step="5" aria-label="Taille des coordonnées"><output id="oTs-coords"></output></div>
-        <p class="hint maponly">Le sous-titre s'affiche dans les gabarits Cadre, Fondu et Médaillon ; le gabarit Souvenir ne l'affiche pas (en-tête sur une ligne, dédicace et noms en pied).</p>
         <button class="btn next" type="button" data-next="style">Étape suivante : le style<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- EXPORT : rendu, sauvegarde, export (issue #51) -->

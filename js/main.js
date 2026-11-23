@@ -6,7 +6,7 @@
 // ou localStorage['cityMapStudio.debug']='1'. En usage normal, rien n'est exposé.
 const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ return localStorage.getItem('cityMapStudio.debug')==='1'; }catch(e){ return false; } })();
 async function boot(){
-  buildUI(); CMS.illus.init(); initSaves(); initSheet(); applyUiScale();
+  buildUI(); CMS.illus.init(); initSaves(); initSheet(); CMS.deps.init(); applyUiScale();
   $('bConsentYes').onclick=giveConsent; $('bConsentFile').onclick=declineConsent; updateConsentInfo();
   dlgCancel.consent=declineConsent; dlgCancel.welcome=()=>$('welSkip').click(); initDialogs();
   showEnvWarning();

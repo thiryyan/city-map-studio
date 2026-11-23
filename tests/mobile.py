@@ -151,6 +151,49 @@ async def main():
         check(not errs, f'360 px : aucune erreur de page {errs}')
         await ctx.close()
 
+        # ---------- Voir l'affiche seule (issue #56) ----------
+        ctx, page, errs = await open_page({'width': 360, 'height': 740})
+        await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
+        await page.evaluate("document.getElementById('banner').classList.remove('show')")
+        await page.evaluate("__cms.setSheet('full')"); await page.wait_for_timeout(200)
+        await page.evaluate("__cms.setSheet('half')"); await page.wait_for_timeout(200)
+        p0 = await rect(page, '#poster'); c0 = await center(page); m0 = await page.evaluate('JSON.stringify(__cms.st.marker)')
+        await page.tap('#bClean'); await page.wait_for_timeout(350)
+        p1 = await rect(page, '#poster')
+        covered = await page.evaluate("""['.fab','#shield','#placeSwitch','#mapCredit','.stagebar','#panel','#cmpBadge']
+          .filter(s=>{ const e=document.querySelector(s); return e && e.offsetParent!==null && getComputedStyle(e).display!=='none' && e.getBoundingClientRect().height>0; })""")
+        check(await page.evaluate("document.getElementById('app').classList.contains('clean')"), 'affiche seule : mode activé')
+        check(not covered, f'affiche seule : rien ne recouvre l\'affiche, panneau masqué {covered}')
+        check(p1['w'] > p0['w'] + 40, f"affiche seule : affiche agrandie ({round(p0['w'])} → {round(p1['w'])} px)")
+        check(await page.evaluate("document.activeElement.id") == 'cleanExit', 'affiche seule : focus sur la couche de sortie')
+        await page.screenshot(path=str(T / 'mobile-clean.png'))
+        # toucher au milieu de la carte : sortie, sans cadrage ni repère
+        await page.touchscreen.tap(p1['x'] + p1['w'] / 2, p1['y'] + p1['h'] / 2); await page.wait_for_timeout(350)
+        check(not await page.evaluate("document.getElementById('app').classList.contains('clean')"), 'toucher : retour aux réglages')
+        check(await sheet(page) == 'half' and not await page.evaluate('__cms.ui.framing') and not await page.evaluate('__cms.ui.placing'),
+              'toucher : cran d\'origine rétabli, ni Cadrer ni placement ouvert')
+        check(await center(page) == c0 and await page.evaluate('JSON.stringify(__cms.st.marker)') == m0, 'toucher : carte et repère inchangés')
+        check(await page.evaluate("document.activeElement.id") == 'bClean', 'sortie : focus rendu au bouton')
+        # Échap et bouton retour du système
+        await page.tap('#bClean'); await page.wait_for_timeout(200); await page.keyboard.press('Escape'); await page.wait_for_timeout(250)
+        check(not await page.evaluate("document.getElementById('app').classList.contains('clean')"), 'Échap : sortie')
+        await page.tap('#bClean'); await page.wait_for_timeout(200); await page.go_back(); await page.wait_for_timeout(350)
+        check(not await page.evaluate("document.getElementById('app').classList.contains('clean')") and await sheet(page) == 'half',
+              'bouton retour : sortie, sans quitter la page')
+        check(page.url.startswith(APP.split('?')[0]), 'bouton retour : toujours sur l\'application')
+        # depuis le mode Cadrer : le cadrage se referme
+        await page.evaluate("document.getElementById('shield').click()"); await page.wait_for_timeout(200)
+        await page.tap('#bClean'); await page.wait_for_timeout(200)
+        check(not await page.evaluate('__cms.ui.framing'), 'affiche seule depuis Cadrer : cadrage refermé')
+        await page.keyboard.press('Escape'); await page.wait_for_timeout(250)
+        check(await sheet(page) == 'half', 'affiche seule depuis Cadrer : retour au cran d\'avant le cadrage')
+        # mode Illustration : le bouton reste seul visible parmi les boutons flottants
+        await page.evaluate("CMS.illus.setMode('illus')"); await page.wait_for_timeout(250)
+        vis = await page.evaluate("[...document.querySelectorAll('.fab button')].filter(b=>b.offsetParent!==null).map(b=>b.id)")
+        check(vis == ['bClean'], f'mode Illustration : seul « Voir l\'affiche seule » est proposé {vis}')
+        check(not errs, f'affiche seule : aucune erreur de page {errs}')
+        await ctx.close()
+
         # ---------- Téléphone paysage ----------
         ctx, page, errs = await open_page({'width': 844, 'height': 390})
         pn, sg = await rect(page, '#panel'), await rect(page, '#stage')
