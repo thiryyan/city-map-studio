@@ -490,7 +490,7 @@ CMS.define('illus', () => {
       drawBand(ctx,W,H,U,g,ink);
     }
     ctx.globalAlpha=0.55;
-    drawText(ctx,attributionText(false),W-g.m,H-g.m*0.38,{size:0.0085*U,align:'right',color:g.mix==='vig' ? c.text : T.color});
+    drawText(ctx,attributionText(false),W-g.m,H-g.m*0.38,{size:0.0085*U,align:'right',color:g.mix==='vig' ? c.text : T.color,ink:'attribution'});
     ctx.globalAlpha=1;
   }
   function placeholderIn(ctx, r, U){
@@ -857,7 +857,7 @@ CMS.define('illus', () => {
   function init(){
     document.querySelectorAll('.modes button').forEach(b=>b.onclick=()=>setMode(b.dataset.v));
     document.querySelectorAll('#illusStepSeg button').forEach(b=>b.onclick=()=>setStep(b.dataset.v));
-    $('bToImage').onclick=()=>{ setStep('image'); $('illusDrop').scrollIntoView?.({block:'nearest'}); };
+    $('bToImage').onclick=()=>{ setStep('image'); CMS.panelScroll.to($('illusDrop'),'nearest'); };
     const P=()=>st.illus.prompt;
     for(const [id,list,f] of [['momentSeg',C.MOMENTS,'moment'],['saisonSeg',C.SAISONS,'saison']])
       for(const [k,n] of list){ const b=h('button',{type:'button',dataset:{v:k}},n); b.onclick=()=>{ P()[f]=k; syncPrompt(); saveState(); }; $(id).append(b); }
@@ -881,6 +881,22 @@ CMS.define('illus', () => {
         const f=e.dataTransfer?.files?.[0]; if(f){ if(ui.tab!=='illus') showTab('illus'); importFile(f); } });
     };
     dropOn($('illusDrop')); dropOn(stage);
+    // Coller l'image (#57) : lecture du presse-papiers au toucher seulement (geste requis par iOS et Android), même chemin que le fichier
+    const canRead=!!(window.isSecureContext && navigator.clipboard && typeof navigator.clipboard.read==='function');
+    $('bIllusPaste').hidden=!canRead;
+    $('bIllusPaste').onclick=async()=>{
+      const pick="choisissez l'image avec « Choisir un fichier »";
+      let items;
+      try{ items=await navigator.clipboard.read(); }
+      catch(e){ toast(e?.name==='NotAllowedError' ? `Accès au presse-papiers refusé : ${pick}.` : `Presse-papiers illisible : ${pick}.`,true); return; }
+      for(const it of items||[]){
+        const t=(it.types||[]).find(x=>/^image\/(png|jpeg|webp)$/.test(x)) || (it.types||[]).find(x=>x.startsWith('image/'));
+        if(!t) continue;
+        let blob; try{ blob=await it.getType(t); }catch(e){ toast(`Image du presse-papiers illisible : ${pick}.`,true); return; }
+        importFile(new File([blob],'image-collee.'+(t.split('/')[1]||'png').replace('jpeg','jpg'),{type:t})); return;
+      }
+      toast(`Aucune image dans le presse-papiers : dans votre IA, faites un appui long sur l'image puis « Copier », ou ${pick}.`,true);
+    };
     document.addEventListener('paste',e=>{
       if(st.mode==='map' || e.target.matches?.('input[type=text],input[type=search],textarea')) return;
       const it=[...(e.clipboardData?.items||[])].find(i=>i.kind==='file' && i.type.startsWith('image/'));

@@ -127,24 +127,29 @@ function replaceState(next,extra){ for(const k of Object.keys(st)) delete st[k];
 const WELCOME_KEY='cityMapStudio.welcomed';
 const firstVisit=(()=>{ try{ return !localStorage.getItem(WELCOME_KEY) && !localStorage.getItem(STORE_KEY); }catch(e){ return false; } })();
 let welcomeDone=!firstVisit || /^#a=/.test(location.hash);
+/** Premier lancement (#59) : une proposition d'ambiance non bloquante en tête des réglages, après l'éventuelle demande d'accord.
+ *  L'affiche par défaut est visible tout de suite ; la proposition se ferme d'un toucher et ne revient plus, une fois fermée ou utilisée. */
 function maybeWelcome(){
   try{ if(localStorage.getItem(WELCOME_KEY)) welcomeDone=true; }catch(e){}   // choix fait dans un autre onglet ou depuis le démarrage
-  if(welcomeDone || $('welcome').classList.contains('show')) return;
+  if(welcomeDone || !$('welStrip').hidden) return;
   if($('consent').classList.contains('show')) return;   // repris après le choix d'accord (giveConsent / declineConsent)
   const box=$('welAmb'); box.textContent='';
-  AMBIANCES.forEach(([k,n])=>{ const b=h('button',{type:'button',dataset:{v:k},role:'listitem'},h('canvas',{width:70,height:99}),h('small',{},n));
-    b.onclick=()=>{ closeWelcome(); applyAmbiance(k); showTab('lieu'); toast(`Ambiance « ${n} » · cherchez maintenant votre lieu`); }; box.appendChild(b); });
+  AMBIANCES.forEach(([k,n])=>{ const b=h('button',{type:'button',dataset:{v:k},ariaPressed:'false'},h('canvas',{width:70,height:99}),h('small',{},n));
+    b.onclick=()=>{ closeWelcome(false); applyAmbiance(k); box.querySelectorAll('button').forEach(x=>pressed(x,x===b)); }; box.appendChild(b); });
   const draw=()=>box.querySelectorAll('button').forEach(b=>{ const p=AMBIANCES.find(a=>a[0]===b.dataset.v)[2];
     thumb(b.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
   draw();
   // polices des ambiances : chargées une fois (fichiers locaux), puis vignettes redessinées
   Promise.all(AMBIANCES.flatMap(([,,p])=>[p.font,p.fontTitle].filter(Boolean)).flatMap(f=>FONTS[f].load).map(f=>document.fonts.load(f).catch(()=>0))).then(draw);
-  openDialog('welcome');
-  setTimeout(()=>box.querySelector('button')?.focus(),50);
+  $('welStrip').hidden=false; document.querySelector('.tabbody').scrollTop=0;
 }
-function closeWelcome(){
-  welcomeDone=true; closeDialog('welcome');
-  try{ localStorage.setItem(WELCOME_KEY,'1'); }catch(e){}
+/** La proposition ne reviendra plus (utilisée ou fermée). hide=false : choix d'une ambiance, la proposition reste affichée
+ *  pour en essayer d'autres jusqu'à sa fermeture */
+function closeWelcome(hide=true){
+  welcomeDone=true; try{ localStorage.setItem(WELCOME_KEY,'1'); }catch(e){}
+  if(!hide) return;
+  const s=$('welStrip'), had=s.contains(document.activeElement); s.hidden=true;
+  if(had) document.querySelector('#tabs .on')?.focus();
 }
 
 // ---------- Ambiances et modèles de texte ----------
@@ -235,6 +240,7 @@ function applySheet(px){
   const root=document.documentElement;
   app.classList.toggle('sheetmode',isSheet());
   if(!isSheet()){ root.style.removeProperty('--sheetH'); return; }
+  if(ui.clean){ root.style.setProperty('--sheetH','0px'); return; }   // affiche seule : plus de panneau
   const H=sheetHeights(), h=px!=null ? Math.max(H.peek,Math.min(H.max,px)) : H[ui.sheet];
   root.style.setProperty('--sheetH',h+'px');
   $('grab').setAttribute('aria-label', ui.sheet==='full' ? 'Réduire le panneau des réglages' : 'Agrandir le panneau des réglages');
@@ -250,6 +256,133 @@ function stageMode(){
   $('shield').hidden = !(isSheet() && !ui.framing && !ui.placing);
 }
 function setFraming(on){ ui.framing=!!on; stageMode(); }
+
+// ---------- Réglages dépendants d'un autre choix (issue #58) ----------
+// Une seule table, inventoriée dans le dossier technique (§ 6.1). Règle : un réglage qui n'a aucun sens dans le contexte
+// est masqué ; un réglage activé mais empêché par un autre choix reçoit une note d'une ligne et un bouton qui fait la bascule
+// (bascule annulable : elle passe par les mêmes chemins que l'interface, donc par l'historique).
+CMS.define('deps', () => {
+  const tog=k=>document.querySelector(`[data-k="${k}"]`);
+  const row=k=>tog(k).closest('label,.slider,.tsz');
+  const setTog=(k,v)=>{ const el=tog(k); el.checked=v; el.dispatchEvent(new Event('input',{bubbles:true})); };
+  const layName=k=>(LAYOUTS.find(x=>x[0]===k)||[,k])[1];
+  const extras=()=>(st.markers2||[]).length>0 && st.layout!=='diptych';
+  /** Réglages masqués quand ils n'ont aucun sens */
+  const HIDE=[
+    [()=>row('focusR'), ()=>!(st.fx.halo||st.fx.quarter)],          // rayon : seulement avec le halo ou le quartier
+    [()=>row('numbered'), ()=>!extras()],                             // numéroter, relier : au moins deux lieux sur une même carte
+    [()=>row('linkMarkers'), ()=>!extras()],
+  ];
+  /** Réglages activés mais empêchés : [id, ancre, condition, texte, bouton, action] */
+  const NOTES=[
+    ['parkHatch', ()=>row('fx.parkHatch'), ()=>st.fx.parkHatch && !st.layers.parks,
+      ()=>'Sans effet : le calque « Parcs et espaces verts » est masqué.', 'Afficher les parcs', ()=>setTog('layers.parks',true)],
+    ['outline', ()=>row('fx.outline'), ()=>st.fx.outline && !st.layers.buildings,
+      ()=>'Sans effet : le calque « Bâtiments » est masqué.', 'Afficher les bâtiments', ()=>setTog('layers.buildings',true)],
+    ['dots', ()=>row('fx.dots'), ()=>st.fx.dots && (!st.layers.buildings || st.fx.outline),
+      ()=>st.layers.buildings ? 'Sans effet avec « Bâtiments en contour », qui l\'emporte.' : 'Sans effet : le calque « Bâtiments » est masqué.',
+      ()=>st.layers.buildings ? 'Retirer le contour' : 'Afficher les bâtiments',
+      ()=>st.layers.buildings ? setTog('fx.outline',false) : setTog('layers.buildings',true)],
+    ['glow', ()=>row('fx.glow'), ()=>st.fx.glow && lum(st.colors.paper)>=0.3,
+      ()=>'Peu visible sur ce fond clair : la lueur est pensée pour les thèmes sombres.', 'Voir les thèmes sombres',
+      ()=>{ const c=document.querySelector('#themeCats [data-v=sombre]'); c.click(); CMS.panelScroll.to($('themeCats'),'start',true); }],
+    ['subtitle', ()=>row('textScale.subtitle'), ()=>st.mode==='map' && st.show.subtitle && ['souvenir','polaroid'].includes(st.layout),
+      ()=>`Le gabarit « ${layName(st.layout)} » n'affiche pas le sous-titre.`, 'Passer au gabarit Cadre', ()=>setLayout('classic')],
+    ['route', ()=>$('routeShow').closest('label'), ()=>st.layout==='diptych' && !!st.route?.pts?.length && st.route.show!==false,
+      ()=>'Le gabarit « Deux lieux » n\'affiche pas l\'itinéraire.', 'Passer au gabarit Souvenir', ()=>setLayout('souvenir')],
+  ];
+  const els={};
+  function update(){
+    for(const [at,when] of HIDE){ const e=at(); if(e) e.hidden=!!when(); }
+    for(const [id,,when,text,label] of NOTES){
+      const n=els[id]; if(!n) continue; const on=!!when();
+      n.hidden=!on; if(on){ n.firstChild.textContent=text()+' '; n.lastChild.textContent=typeof label==='function'?label():label; }
+    }
+  }
+  let raf=0; const schedule=()=>{ if(!raf) raf=requestAnimationFrame(()=>{ raf=0; update(); }); };
+  function init(){
+    for(const [id,at,,,,act] of NOTES){
+      const b=h('button',{type:'button',className:'lnk'}); b.onclick=()=>{ act(); schedule(); };
+      const n=h('p',{className:'depnote',id:'dep-'+id,hidden:true},h('span'),b);
+      at().after(n); els[id]=n;
+    }
+    CMS.on('state:saved',schedule); CMS.on('state:synced',schedule);
+    $('panel').addEventListener('input',schedule); $('panel').addEventListener('click',schedule);
+    update();
+  }
+  return {init, update};
+});
+
+// ---------- Zone de sécurité pour l'impression maison (issue #60) ----------
+// Trait pointillé à 5 mm du bord, dans l'aperçu seulement (élément HTML posé sur l'affiche : jamais dans l'export).
+// Les textes et repères relevés pendant le rendu de l'aperçu (CMS.ink) qui entrent dans cette bande sont signalés.
+// Réglage de l'appareil, hors de l'état de l'affiche (comme A− / A+).
+CMS.define('safe', () => {
+  const KEY='cityMapStudio.safeZone', MM=5;
+  const LABELS={title:'le titre',subtitle:'le sous-titre',coords:'les coordonnées',dedication:'la dédicace',names:'les noms',date:'la date',
+    legend:'la légende',marker:'un repère',attribution:'la mention des sources',text:'un texte'};
+  let on=(()=>{ try{ return localStorage.getItem(KEY)==='1'; }catch(e){ return false; } })(), prev='';
+  /** Bande de sécurité en px pour une affiche de largeur w px (le format donne la largeur en mm, orientation comprise) */
+  const inset=w=>MM/exportSpec().mm[0]*w;
+  function layout(){
+    const g=$('safeGuide'); g.hidden=!on; if(!on) return;
+    const i=inset(ui.posterCss.w)+'px'; Object.assign(g.style,{top:i,left:i,right:i,bottom:i});
+  }
+  function check(boxes,W,H){
+    let msg='', warn=false;
+    if(on && boxes){
+      const i=inset(W)-0.5, out=[...new Set(boxes.filter(b=>b.x2>b.x1 && (b.x1<i || b.y1<i || b.x2>W-i || b.y2>H-i)).map(b=>LABELS[b.k]||LABELS.text))];
+      warn=out.length>0;
+      // 10 × 15 cm : la mention des sources reste dans la bande même à la marge maximale (12 % de 10 cm × 0,38 < 5 mm)
+      const smallAttr=out.includes(LABELS.attribution) && exportSpec().key==='10x15', rest=out.filter(x=>!(smallAttr && x===LABELS.attribution));
+      const list=out.length>1?out.slice(0,-1).join(', ')+' et '+out[out.length-1]:out[0];
+      msg = !warn ? 'Textes et repères dans la zone imprimable.'
+        : `⚠ Trop près du bord pour une imprimante de bureau : ${list}.`
+          +(rest.length?' Augmentez la marge (onglet Style) ou réduisez la taille de ces textes.':'')
+          +(smallAttr?' Sur ce petit format, la mention des sources reste dans la marge basse : imprimez « sans marge » (papier photo) ou confiez le tirage à un laboratoire photo.':'');
+    }
+    if(msg===prev) return; prev=msg;
+    const n=$('safeWarn'); n.textContent=msg; n.className=warn?'fitnote':'hint';
+  }
+  function init(){
+    $('safeTog').checked=on;
+    $('safeTog').onchange=e=>{ on=e.target.checked; try{ on ? localStorage.setItem(KEY,'1') : localStorage.removeItem(KEY); }catch(_){} layout(); scheduleOver(); };
+    layout();
+  }
+  return {get on(){ return on; }, layout, check, init};
+});
+
+// ---------- Voir l'affiche seule (issue #56) ----------
+// Masque tout ce qui recouvre l'aperçu (boutons flottants, « Toucher pour cadrer », légende, badges) et, sur mobile,
+// le panneau : l'affiche occupe tout l'écran. Une couche transparente reçoit le toucher de sortie, qui ne déplace donc
+// pas la carte et ne pose aucun repère. Sortie aussi par Échap ou le bouton retour du système. Aucun état d'affiche modifié.
+CMS.define('clean', () => {
+  let before=null, pushed=false;
+  function enter(){
+    if(ui.clean) return;
+    setPlacing(false); setFraming(false);
+    before=ui.sheet; ui.clean=true; app.classList.add('clean'); applySheet();
+    const x=$('cleanExit'); x.hidden=false; x.classList.remove('hinted'); void x.offsetWidth; x.classList.add('hinted');
+    try{ history.pushState({cmsClean:1},''); pushed=true; }catch(e){ pushed=false; }
+    x.focus({preventScroll:true});
+  }
+  /** fromHistory : sortie déclenchée par le bouton retour (l'entrée d'historique est déjà retirée) */
+  function exit(fromHistory){
+    if(!ui.clean) return;
+    ui.clean=false; app.classList.remove('clean'); $('cleanExit').hidden=true;
+    if(before) setSheet(before); before=null;
+    if(pushed && !fromHistory){ pushed=false; try{ if(history.state?.cmsClean) history.back(); }catch(e){} }
+    pushed=false;
+    $('bClean').focus({preventScroll:true});
+  }
+  function init(){
+    $('bClean').onclick=enter;
+    $('cleanExit').onclick=()=>exit(false);
+    addEventListener('popstate',()=>{ if(ui.clean) exit(true); });
+    addEventListener('keydown',e=>{ if(e.key==='Escape' && ui.clean){ e.preventDefault(); exit(false); } });
+  }
+  return {enter, exit, init};
+});
 function initSheet(){
   const g=$('grab'); let drag=null, dragged=false;
   g.addEventListener('pointerdown',e=>{ if(!isSheet()) return; g.setPointerCapture(e.pointerId);
@@ -273,13 +406,14 @@ function initSheet(){
   let restoreT=0, before=null;
   $('panel').addEventListener('focusin',e=>{ if(!isSheet() || !e.target.matches('input[type=text],input[type=search]')) return;
     clearTimeout(restoreT); if(before==null && ui.sheet!=='full'){ before=ui.sheet; setSheet('full'); }
-    setTimeout(()=>e.target.scrollIntoView({block:'nearest'}),50); });
+    setTimeout(()=>CMS.panelScroll.to(e.target,'nearest'),50); });
   $('panel').addEventListener('focusout',()=>{ clearTimeout(restoreT); restoreT=setTimeout(()=>{
     if(before!=null && !document.activeElement?.matches?.('input[type=text],input[type=search]')){ setSheet(before); before=null; } },200); });
   $('shield').onclick=()=>setFraming(true);
   $('bFrame').onclick=()=>setFraming(!ui.framing);
   $('bFrameDone').onclick=()=>setFraming(false);
   TWO_COL.addEventListener('change',()=>{ setFraming(false); setPlacing(false); ui.sheetBefore=null; setSheet(ui.sheet); stageMode(); });
+  CMS.clean.init();
   setSheet('half'); stageMode();
 }
 
@@ -445,7 +579,7 @@ function renderSaves(){
   }
 }
 /** Mes affiches : section Sauvegarde de l'onglet Export (nom proposé, liste à jour, champ du nom sélectionné) */
-function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); showTab('export'); $('savesTitle').scrollIntoView?.({block:'start'}); setTimeout(()=>$('saveName').focus({preventScroll:true}),50); }
+function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); showTab('export'); CMS.panelScroll.to($('savesTitle')); setTimeout(()=>$('saveName').focus({preventScroll:true}),50); }
 function initSaves(){
   renderSaves();
   CMS.on('tab:export',()=>{ if(!$('saveName').value.trim()) $('saveName').value=defaultSaveName(); renderSaves(); });

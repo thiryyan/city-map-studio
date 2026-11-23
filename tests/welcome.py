@@ -1,9 +1,10 @@
-"""e2e : ambiance proposée au premier lancement.
+"""e2e : ambiance proposée au premier lancement (issue #59 : non bloquante).
 
-Première visite : la demande d'accord d'abord, puis le choix d'une ambiance (jamais les deux
-à la fois). Choisir une ambiance l'applique et ferme la fenêtre ; « Commencer sans ambiance »
-la ferme aussi ; dans les deux cas, elle ne revient plus. Pas de proposition pour un
-utilisateur qui a déjà une affiche enregistrée, ni à l'ouverture d'un lien partagé.
+Première visite : une seule fenêtre modale, la demande d'accord ; puis l'affiche par défaut est visible et une
+proposition d'ambiance s'affiche en tête des réglages, sans masquer l'affiche. Choisir une ambiance l'applique
+(annulable) et la proposition reste pour en essayer d'autres ; la fermer (✕) la retire ; utilisée ou fermée, elle
+ne revient plus. Pas de proposition pour un utilisateur qui a déjà une affiche enregistrée, ni à l'ouverture d'un
+lien partagé.
 Aucun script injecté : le stockage est écrit par la page elle-même (cf. tests/seed.py).
 """
 import pathlib, os, asyncio, json
@@ -12,6 +13,8 @@ T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 shown = lambda page, id_: page.evaluate(f"document.getElementById('{id_}').classList.contains('show')")
+strip = lambda page: page.evaluate("(()=>{ const s=document.getElementById('welStrip'); return !s.hidden && s.offsetParent!==null; })()")
+modals = lambda page: page.evaluate("[...document.querySelectorAll('dialog')].filter(d=>d.open).map(d=>d.id)")
 
 async def main():
     fails = []
@@ -27,36 +30,49 @@ async def main():
             await page.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
             return ctx, page, errs
 
-        # 1. Première visite : accord, puis ambiance
+        # 1. Première visite : accord (seule fenêtre modale), puis affiche et proposition non bloquante
         ctx, page, errs = await fresh()
         await page.goto(APP); await page.wait_for_timeout(1500)
-        check(await shown(page, 'consent') and not await shown(page, 'welcome'), 'premier lancement : demande d\'accord seule')
+        check(await modals(page) == ['consent'] and not await strip(page), 'premier lancement : demande d\'accord seule')
         await page.click('#bConsentFile'); await page.wait_for_timeout(600)
-        check(await shown(page, 'welcome'), 'après l\'accord : choix d\'une ambiance')
+        check(await modals(page) == [], 'après l\'accord : plus aucune fenêtre modale')
+        check(await strip(page), 'après l\'accord : proposition d\'ambiance en tête des réglages')
+        # hors ligne : les réglages défilent jusqu'à l'import (prioritaire) ; la proposition est dans le panneau, jamais sur l'affiche
+        po, pn = await page.evaluate("[document.getElementById('poster').getBoundingClientRect(), document.getElementById('panel').getBoundingClientRect()].map(r=>({t:r.top,b:r.bottom,h:r.height}))")
+        check(po['t'] >= 0 and po['h'] > 150 and pn['t'] >= po['b'] - 1 and await page.evaluate("!!document.getElementById('welStrip').closest('#panel')"),
+              f"l'affiche reste en place, la proposition est dans le panneau ({po}, {pn})")
         n = await page.evaluate("document.querySelectorAll('#welAmb button').length")
         drawn = await page.evaluate("[...document.querySelectorAll('#welAmb canvas')].map(c=>c.toDataURL()).filter((v,i,a)=>a.indexOf(v)===i).length")
         check(n == 13 and drawn == 13, f'13 ambiances avec leur vignette ({n}, {drawn} distinctes)')
         await page.screenshot(path=str(T / 'welcome.png'))
         await page.click('#welAmb [data-v=naissance]'); await page.wait_for_timeout(600)
-        st = await page.evaluate("[__cms.st.theme, __cms.st.layout, __cms.st.markerStyle, document.querySelector('#tabs .on').dataset.tab]")
-        check(st == ['sauge', 'arch', 'feet', 'lieu'] and not await shown(page, 'welcome'), f'ambiance appliquée, fenêtre fermée, onglet Lieu {st}')
+        st = await page.evaluate("[__cms.st.theme, __cms.st.layout, __cms.st.markerStyle]")
+        check(st == ['sauge', 'arch', 'feet'], f'ambiance appliquée {st}')
+        check(await strip(page) and await page.evaluate("document.querySelector('#welAmb [data-v=naissance]').getAttribute('aria-pressed')") == 'true',
+              'la proposition reste, ambiance choisie marquée (en essayer d\'autres)')
         check(await page.evaluate("localStorage.getItem('cityMapStudio.welcomed')") == '1', 'choix mémorisé')
         await page.click('#bUndo'); await page.wait_for_timeout(300)
         check(await page.evaluate("__cms.st.layout") == 'souvenir', '« Annuler » revient à l\'affiche de départ')
+        await page.click('#welClose'); await page.wait_for_timeout(200)
+        check(not await strip(page), '✕ : proposition fermée')
         await page.reload(); await page.wait_for_timeout(1500)
         # « Travailler hors ligne » n'est pas mémorisé (l'accord est redemandé) ; l'ambiance, elle, n'est plus proposée
         if await shown(page, 'consent'): await page.click('#bConsentFile'); await page.wait_for_timeout(500)
-        check(not await shown(page, 'welcome'), 'visite suivante : plus de proposition d\'ambiance')
+        check(not await strip(page), 'visite suivante : plus de proposition d\'ambiance')
         check(not errs, f'aucune erreur de page {errs}')
         await ctx.close()
 
-        # 2. « Commencer sans ambiance » (et touche Échap)
-        ctx, page, errs = await fresh()
+        # 2. Fermée sans rien choisir : affiche par défaut conservée, ne revient plus
+        ctx, page, errs = await fresh({'width': 360, 'height': 740})
         await page.goto(APP); await page.wait_for_timeout(1200)
-        await page.click('#bConsentFile'); await page.wait_for_timeout(500)
-        await page.keyboard.press('Escape'); await page.wait_for_timeout(300)
+        await page.click('#bConsentYes'); await page.wait_for_timeout(800)
+        inview = await page.evaluate("""(()=>{ const w=document.getElementById('welStrip').getBoundingClientRect(), t=document.querySelector('.tabbody').getBoundingClientRect(),
+          p=document.getElementById('poster').getBoundingClientRect(); return w.top>=t.top-1 && w.top<t.bottom-40 && p.top>=0 && w.top>=p.bottom; })()""")
+        check(await strip(page) and inview, '360 px, carte acceptée : proposition en vue au cran par défaut, sous l\'affiche')
+        await page.screenshot(path=str(T / 'welcome-360.png'))
+        await page.click('#welClose'); await page.wait_for_timeout(300)
         lay = await page.evaluate("__cms.st.layout")
-        check(not await shown(page, 'welcome') and lay == 'souvenir', 'Échap : fermée, affiche par défaut conservée')
+        check(not await strip(page) and lay == 'souvenir', 'fermée : affiche par défaut conservée')
         check(await page.evaluate("localStorage.getItem('cityMapStudio.welcomed')") == '1', 'fermeture mémorisée')
         check(not errs, f'aucune erreur de page {errs}')
         await ctx.close()
@@ -67,7 +83,7 @@ async def main():
         await page.evaluate("""s=>{ localStorage.setItem('cityMapStudio.consent','1'); localStorage.setItem('cityMapStudio.v2', s); }""",
                             json.dumps({'layout': 'classic', 'theme': 'souvenir'}))
         await page.reload(); await page.wait_for_timeout(1500)
-        check(not await shown(page, 'welcome') and await page.evaluate("__cms.st.layout") == 'classic', 'affiche existante : aucune proposition')
+        check(not await strip(page) and await page.evaluate("__cms.st.layout") == 'classic', 'affiche existante : aucune proposition')
         await ctx.close()
 
         # 4. Ouverture d'un lien partagé : pas de proposition
@@ -81,7 +97,7 @@ async def main():
         await page.goto(APP); await page.wait_for_timeout(800)
         await page.evaluate("localStorage.setItem('cityMapStudio.consent','1')")
         await page.goto(url); await page.reload(); await page.wait_for_timeout(1600)   # même page, seule l'ancre change : rechargement explicite
-        check(not await shown(page, 'welcome') and await page.evaluate("__cms.st.texts.title") == 'Chambord', 'lien partagé : affiche ouverte, aucune proposition')
+        check(not await strip(page) and await page.evaluate("__cms.st.texts.title") == 'Chambord', 'lien partagé : affiche ouverte, aucune proposition')
         check(not errs, f'aucune erreur de page {errs}')
         await ctx.close()
         await b.close()

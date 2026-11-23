@@ -80,7 +80,7 @@ async function exportPoster(){
     console.error(e); toast('Échec de l\'export : '+(e.message||e),true);
   }finally{ setBusy(false); }
   // Résultat dans l'onglet Export : aperçu, informations, téléchargement, partage
-  if(show){ showTab('export'); $('result').hidden=false; $('result').scrollIntoView?.({block:'nearest'}); $('resDl').focus({preventScroll:true}); }
+  if(show){ showTab('export'); $('result').hidden=false; CMS.panelScroll.to($('result'),'nearest'); $('resDl').focus({preventScroll:true}); }
 }
 
 // ---------- Contexte d'exécution ----------

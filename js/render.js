@@ -40,6 +40,15 @@ function tScale(k){ return (st.textScale?.[k]??100)/100 * (st.textScaleAll??100)
 let fitSink=null;
 const FIT_WARN=0.9;   // en deçà de 10 % de réduction, pas d'avertissement
 function noteFit(k,f){ if(fitSink && k && f<FIT_WARN) fitSink[k]=Math.min(fitSink[k]??1,f); }
+/** Emprise des textes et repères, relevée pendant le rendu de l'aperçu quand ui.inkSink est un tableau (zone de sécurité, #60).
+ *  Boîte en px du canevas (transformation courante appliquée) ; les jambages sous la ligne de base sont ignorés. */
+CMS.define('ink', () => ({
+  box(ctx,k,x1,y1,x2,y2){
+    const m=ctx.getTransform(), P=[[x1,y1],[x2,y1],[x1,y2],[x2,y2]].map(([x,y])=>[m.a*x+m.c*y+m.e, m.b*x+m.d*y+m.f]);
+    const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]);
+    ui.inkSink.push({k, x1:Math.min(...xs), y1:Math.min(...ys), x2:Math.max(...xs), y2:Math.max(...ys)});
+  }
+}));
 /** Dessine un texte avec interlettrage et réduction automatique ; renvoie la largeur dessinée.
  *  Une police manuscrite n'est jamais mise en capitales ni espacée.
  *  Options des modes illustrés : fk (police imposée, clé de FONTS), shadow {color, dx, dy} (ombre décalée, nette),
@@ -60,6 +69,7 @@ function drawText(ctx, t, x, y, o){
     pass((g,gx,gy)=>ctx.strokeText(g,gx,gy),0,0); ctx.restore(); }
   ctx.fillStyle=paint(o.color);
   pass((g,gx,gy)=>ctx.fillText(g,gx,gy),0,0);
+  if(ui.inkSink) CMS.ink.box(ctx,o.ink||o.key||'text',sx,y-size*0.75,sx+w,y);
   return w;
 }
 /** Dessine bout à bout plusieurs segments de tailles différentes, alignés sur la même ligne de base,
@@ -70,6 +80,7 @@ function drawRun(ctx, parts, x, y, o){
   let tot=ws.reduce((a,b)=>a+b,0), f=1;
   if(o.maxW && tot>o.maxW){ f=o.maxW/tot; parts.forEach(p=>(p.keys||[p.key]).forEach(k=>noteFit(k,f))); }
   let sx = o.align==='right' ? x-tot*f : o.align==='center' ? x-tot*f/2 : x;
+  if(ui.inkSink) CMS.ink.box(ctx,o.ink||parts.find(p=>p.key)?.key||parts.find(p=>p.keys)?.keys[0]||'text',sx,y-Math.max(...parts.map(p=>p.size))*f*0.75,sx+tot*f,y);
   ctx.fillStyle=paint(o.color); ctx.textBaseline='alphabetic'; ctx.textAlign='left';
   parts.forEach((p,i)=>{ ctx.font=fontStr(p.size*f,p); ctx.fillText(p.t,sx,y); sx+=ws[i]*f; });
   return tot*f;
@@ -285,7 +296,8 @@ function drawMarkers(ctx, r, view, U, W, main){
     if(st.linkMarkers && extra.length) drawRoute(ctx,[[view.marker.lat,view.marker.lon],...extra.map(p=>[p.lat,p.lon])],r,view,U,true);
   }
   const pts=[view.marker,...extra];
-  pts.forEach((p,i)=>{ const q=project(p.lat,p.lon,r,view); drawMarker(ctx,q.x,q.y,i?size*0.75:size,markerOpts());
+  pts.forEach((p,i)=>{ const q=project(p.lat,p.lon,r,view), s=i?size*0.75:size; drawMarker(ctx,q.x,q.y,s,markerOpts());
+    if(ui.inkSink && q.x>=r.x && q.x<=r.x+r.w && q.y>=r.y && q.y<=r.y+r.h) CMS.ink.box(ctx,'marker',q.x-s/2,q.y-s/2,q.x+s/2,q.y+s/2);
     if(st.numbered && extra.length){ const s=(i?size*0.75:size); drawBadge(ctx,q.x+s*0.55,q.y-s*0.55,i+1,Math.max(U*0.026,s*0.38)); } });
 }
 
@@ -636,7 +648,7 @@ function drawPosterAt(ctx, W, H, pass, mapFn){
   }
   // Attributions (ODbL, CC-BY 4.0) : la mention minimale est toujours inscrite ; la case « Mention complète » l'étend
   ctx.globalAlpha=0.55;
-  drawText(ctx,attributionText(!!g.sky),W-m,H-m*0.38,{size:0.0085*U,align:'right',color:c.text});
+  drawText(ctx,attributionText(!!g.sky),W-m,H-m*0.38,{size:0.0085*U,align:'right',color:c.text,ink:'attribution'});
   ctx.globalAlpha=1;
   return g;
 }

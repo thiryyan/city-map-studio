@@ -90,7 +90,7 @@ function normState(src){
   }
 }
 let st = loadState();
-const ui = {comparing:false, cmpKeep:null, placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
+const ui = {clean:false, inkSink:null, comparing:false, cmpKeep:null, placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
 let mlMap = null, osmData = null;
 let mlLib = 'loading', mlCdn = '', mlFailMsg = '';   // état de la librairie MapLibre
 
@@ -152,7 +152,7 @@ function giveConsent(){
 }
 function declineConsent(){
   consentNext=null; closeDialog('consent');
-  setEngine('file',true); openAdvanced(true); maybeWelcome();   // consigne d'import : ligne d'état et section Avancé (la bulle masquerait le choix d'ambiance)
+  setEngine('file',true); openAdvanced(true); maybeWelcome();   // consigne d'import : ligne d'état et section Avancé
   if(!osmData) setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
 }
 function withdrawConsent(){

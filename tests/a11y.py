@@ -37,9 +37,10 @@ async def main():
         check(set(seen) <= {'in', 'body'} and 'in' in seen, f'accord : le focus reste dans la fenêtre (Tab) {seen}')
         await page.keyboard.press('Escape'); await page.wait_for_timeout(500)
         check(not await ev("document.getElementById('consent').open") and await ev("__cms.st.engine") == 'file', 'accord : Échap = travailler hors ligne')
-        check(await ev("document.getElementById('welcome').open"), 'bienvenue : ouverte ensuite')
-        await page.keyboard.press('Escape'); await page.wait_for_timeout(300)
-        check(not await ev("document.getElementById('welcome').open"), 'bienvenue : Échap la ferme')
+        check(not await ev("[...document.querySelectorAll('dialog')].some(d=>d.open)") and not await ev("document.getElementById('welStrip').hidden"),
+              'bienvenue : proposition non bloquante (aucune fenêtre modale), ensuite')
+        check(await ev("document.getElementById('welClose').getAttribute('aria-label')") == "Fermer la proposition d'ambiance", 'bienvenue : bouton de fermeture nommé')
+        await page.click('#welClose'); await page.wait_for_timeout(200)
 
         # 2. Vignettes au clavier
         await ev("f=>__cms.importText(f,'osm.json')", FIX); await page.wait_for_timeout(400)
