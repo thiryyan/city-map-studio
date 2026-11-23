@@ -345,5 +345,9 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 /* Jusqu'à six onglets (Carte + illustration) : ils se partagent la largeur, sans défilement horizontal (360 px) */
 .tabs button{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:420px){.tabs{gap:0;padding:0 4px}.tabs button{padding-left:1px;padding-right:1px;font-size:.8125rem}}
-.tabs .ts{display:none}
-@media (max-width:420px){#app[data-mode=mix] .tabs .tl{display:none}#app[data-mode=mix] .tabs .ts{display:inline}}
+/* Cinq ou six onglets dans un panneau de 400 px au plus : « Illustration » ne tient pas, l'onglet affiche « Illus. » (nom accessible complet) */
+.tabs .tl{display:none}
+/* Zones de prise des textes (modes illustrés) : glisser, clavier */
+.texthit{position:absolute;z-index:5;cursor:move;touch-action:none;border-radius:6px}
+.texthit:hover,.texthit:focus-visible{outline:1.5px dashed var(--acc2);outline-offset:0;background:#c5a0590f}
+.texthit.dragging{cursor:grabbing;outline:1.5px solid var(--acc)}

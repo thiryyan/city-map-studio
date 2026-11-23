@@ -39,6 +39,8 @@
       <div id="slot"><div id="mlMap"></div><canvas id="vecCanvas" tabindex="0" role="application" aria-roledescription="carte" aria-label="Carte. Flèches : déplacer (Maj : plus loin). Plus et moins : zoomer. Entrée : placer le repère au centre en mode placement."></canvas></div>
       <canvas id="cvOver" role="img" aria-label="Aperçu de l'affiche"></canvas>
       <div class="illushit" id="illusHit" hidden aria-hidden="true"></div>
+      <div class="texthit" id="hitTitle" tabindex="0" role="button" hidden aria-label="Titre de l'affiche : glisser pour le déplacer, ou flèches (Maj : plus loin) ; Origine : revenir à la grille"></div>
+      <div class="texthit" id="hitFoot" tabindex="0" role="button" hidden aria-label="Lignes du bas (dédicace, noms, date, coordonnées) : glisser pour les déplacer, ou flèches (Maj : plus loin) ; Origine : placement automatique"></div>
       <canvas id="cvTex" hidden aria-hidden="true"></canvas>
       <div class="cmpbadge" id="cmpBadge" role="status" hidden></div>
       <button class="shield placeSwitch" id="placeSwitch" type="button" hidden><span>Modifier le lieu 2</span></button>
@@ -355,7 +357,13 @@
           <div class="slider"><label for="sShadowOff">Décalage de l'ombre</label><output id="oShadowOff"></output><input type="range" id="sShadowOff" data-k="illusText.off" min="1" max="12" step="1"></div>
           <h3>Position des textes</h3>
           <div class="posgrid" id="tPosSeg" role="group" aria-label="Position du titre"></div>
-          <p class="hint">La position est reprise dans le prompt : l'IA laisse cette zone calme. Les autres lignes (dédicace, noms, date, coordonnées) se placent du côté opposé.</p>
+          <p class="hint" id="tFreeNote"><span></span>Le titre se glisse aussi directement sur l'aperçu (aimanté sur ces positions et sur les axes du centre), ou au clavier (Tab puis flèches). La position est reprise dans le prompt : l'IA laisse cette zone calme.</p>
+          <h3>Position des lignes du bas</h3>
+          <p class="hint">Dédicace, noms, date et coordonnées, en un bloc.</p>
+          <div class="row"><button class="chip" type="button" id="fAutoBtn" aria-pressed="true">Auto : à l'opposé du titre</button></div>
+          <div class="posgrid mt8" id="fPosSeg" role="group" aria-label="Position des lignes du bas"></div>
+          <p class="hint" id="fFreeNote"><span></span>Ce bloc se glisse aussi sur l'aperçu. Vignette : titre et lignes se placent à gauche, au centre ou à droite de la bande.</p>
+          <p class="fitnote" id="textWarn" aria-live="polite"></p>
         </div>
         <h3>Modèles de texte</h3>
         <div class="chips" id="occasions"></div>
