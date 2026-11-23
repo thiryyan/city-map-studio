@@ -9,12 +9,12 @@
  * Changer VERSION à chaque modification de la liste APP ci-dessous ou de ce fichier.
  */
 'use strict';
-const VERSION = 'cms-2026-11-19c';
+const VERSION = 'cms-2026-11-23a';
 const APP = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png',
   'css/app.css',
   'js/core.js', 'js/config.js', 'js/maplibre-loader.js', 'js/geocoder.js', 'js/state.js', 'js/geo.js', 'js/render.js', 'js/engines.js', 'js/preview.js',
-  'js/features.js', 'js/ui.js', 'js/export.js', 'js/main.js',
+  'js/features.js', 'js/ui.js', 'js/illus.js', 'js/export.js', 'js/main.js',
   'lib/maplibre-gl.js', 'lib/maplibre-gl.css', 'lib/fonts/fonts.css'
 ];
 

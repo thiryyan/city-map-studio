@@ -162,5 +162,22 @@ const DEFAULT_STATE = {
   fx:{hatch:false,outline:false,pencil:false,glow:false,waterlines:false,dots:false,parkHatch:false,riso:false,halo:false,quarter:false,foil:false},
   focusR:30,                    // rayon du halo et du quartier en relief (% de la largeur de la carte)
   orn:{scale:false,compass:false,grid:false},     // ornements : échelle graphique, rose des vents, graduations
-  folds:false                   // papier : plis d'une carte dépliée
+  folds:false,                  // papier : plis d'une carte dépliée
+  mode:'map',                   // type d'affiche : 'map' (carte) | 'illus' (illustration importée, cf. js/illus.js)
+  // Illustration : cadrage (zoom en %, décalage en fraction de l'affiche), retouches, filtre vintage, choix du prompt.
+  // L'image elle-même n'est pas dans l'état (trop lourde) : elle est tenue par CMS.illus.
+  illus:{fit:'cover',zoom:100,ox:0,oy:0,bright:0,contrast:0,satur:0,vintage:'none',grain:false,paper:false,flat:false,upscale:false,
+    prompt:{pistes:[],moment:'any',saison:'any',palette:'ia',lang:'fr'}},
+  // Textes des modes illustrés : style du titre, couleurs (ombre et contour : '' = aucun), décalage de l'ombre, position (ILLUS_POS)
+  illusText:{style:'vintage',color:'#24365A',shadow:'#F3EAD8',outline:'',off:4,pos:'hc'}
 };
+// Modes illustrés : listes de valeurs (aussi utilisées par normState pour valider un état venu de l'extérieur)
+CMS.define('illusConf', () => ({
+  MODES:['map','illus'],
+  // positions du bloc de titre : h/m/b (haut, milieu, bas) × g/c/d (gauche, centre, droite)
+  POS:['hg','hc','hd','mg','mc','md','bg','bc','bd'],
+  MOMENTS:[['any','Au choix','any time'],['aube','Aube','dawn'],['matin','Matin','morning'],['midi','Midi','midday'],['couchant','Couchant','sunset'],['nuit','Nuit','night']],
+  SAISONS:[['any','Au choix','any season'],['printemps','Printemps','spring'],['ete','Été','summer'],['automne','Automne','autumn'],['hiver','Hiver','winter']],
+  PALETTES:['ia','theme','photo'], LANGS:['fr','en'], VINTAGE:['none','light','strong'], FITS:['cover','contain'], TSTYLES:['vintage','font'],
+  PISTES_MAX:8
+}));

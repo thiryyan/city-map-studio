@@ -48,9 +48,11 @@ const slug=s=>(s||'ville').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
 const toBlobP=(cv,type,q)=>new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('l\'image n\'a pas pu être encodée (mémoire insuffisante ?)')),type,q));
 let lastUrl=null, lastImgUrl=null;
 async function exportPoster(){
-  if(st.engine==='maplibre' && !needConsent(()=>exportPoster())) return;
-  if(st.engine!=='maplibre' && !osmData){ toast('Importez d\'abord un fichier de données.',true); return; }
-  if(st.engine==='maplibre' && ui.glLost){ toast('Carte GPU momentanément indisponible (mémoire graphique) : réessayez dans un instant.',true); return; }
+  const illus=st.mode==='illus';   // affiche illustrée : aucune carte, donc ni accord réseau ni données
+  if(illus && !CMS.illus.ready()){ toast('Importez d\'abord votre illustration (onglet Illustration, étape 2).',true); return; }
+  if(!illus && st.engine==='maplibre' && !needConsent(()=>exportPoster())) return;
+  if(!illus && st.engine!=='maplibre' && !osmData){ toast('Importez d\'abord un fichier de données.',true); return; }
+  if(!illus && st.engine==='maplibre' && ui.glLost){ toast('Carte GPU momentanément indisponible (mémoire graphique) : réessayez dans un instant.',true); return; }
   setBusy(true,'Chargement des polices…'); let show=false;
   try{
     const spec=exportSpec(), {W:EW,H:EH,dpi}=spec, pdf=st.fileType==='pdf';
@@ -59,7 +61,7 @@ async function exportPoster(){
     const blob0=await toBlobP(cv,pdf?'image/jpeg':'image/png',pdf?0.95:undefined);
     cv.width=cv.height=0;   // pixels libérés avant d'assembler le fichier final (limite mémoire des canevas sur iOS)
     const blob=pdf ? pdfFromJpeg(new Uint8Array(await blob0.arrayBuffer()),EW,EH,spec.mm,st.texts.title||'Affiche') : await withDpi(blob0,dpi);
-    const name=`affiche-carte-${slug(st.texts.title)}${spec.key==='a4'?'':'-'+spec.key}-${dpi}dpi.${pdf?'pdf':'png'}`;
+    const name=`affiche-${illus?'illustration':'carte'}-${slug(st.texts.title)}${spec.key==='a4'?'':'-'+spec.key}-${dpi}dpi.${pdf?'pdf':'png'}`;
     if(lastUrl) URL.revokeObjectURL(lastUrl);
     if(lastImgUrl){ URL.revokeObjectURL(lastImgUrl); lastImgUrl=null; }
     lastUrl=URL.createObjectURL(blob);

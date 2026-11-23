@@ -73,6 +73,7 @@ python tests/a11y.py             # fenêtres modales, clavier, cibles tactiles, 
 python tests/contrast.py         # contrastes de l'interface (WCAG 1.4.3 et 1.4.11), états inactifs compris
 python tests/csp.py              # aucune violation de la politique de sécurité du contenu
 python tests/pwa.py              # sous-chemin GitHub Pages, manifeste, service worker, hors ligne
+python tests/illus.py            # mode Illustration : prompt, import (refus GIF / fichier endommagé), qualité, cadrage, retouches, titre, export
 python -m http.server 8000       # aperçu local : http://localhost:8000
 ```
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.

@@ -11,7 +11,7 @@ function fontKey(role,key){
   return st.font;
 }
 function fontOf(role,key){ return FONTS[fontKey(role,key)]||FONTS.serif; }
-function fontStr(size, o={}){const f=fontOf(o.role,o.key); return `${o.italic&&!f.script?'italic ':''}${o.weight||f.weight||400} ${size*(f.scale||1)}px ${f.fam}`}
+function fontStr(size, o={}){const f=o.fk ? FONTS[o.fk] : fontOf(o.role,o.key); return `${o.italic&&!f.script?'italic ':''}${o.weight||f.weight||400} ${size*(f.scale||1)}px ${f.fam}`}
 /** Graphèmes d'un texte (ce que le lecteur voit comme un caractère : « é » décomposé, émoji composé, drapeau) :
  *  l'interlettrage les trace d'un bloc, jamais un signe combinant isolé. Repli sans Intl.Segmenter : NFC puis points de code.
  *  Largeurs mises en cache par police (l'aperçu redessine les mêmes lettres à chaque image). */
@@ -23,7 +23,9 @@ CMS.define('glyphs', () => {
     if(w===undefined){ w=ctx.measureText(g).width; if(cache.size>4000) cache.clear(); cache.set(k,w); } return w; };
   /** Parcourt les graphèmes d'une ligne espacée : fn(graphème, x) ; avance = largeur + spPx */
   const each=(ctx,t,x,spPx,fn)=>{ for(const g of graphemes(t)){ fn(g,x); x+=width(ctx,g)+spPx; } };
-  return {graphemes, width, each};
+  // Une police chargée après une première mesure (police de secours en attendant) : les largeurs mémorisées sont fausses
+  if(typeof document!=='undefined') document.fonts?.addEventListener?.('loadingdone',()=>cache.clear());
+  return {graphemes, width, each, clear:()=>cache.clear()};
 });
 /** Largeur dessinée : texte d'un bloc sans interlettrage ; sinon somme des graphèmes dessinés un à un (comme drawText),
  *  pour que le centrage et l'alignement à droite tombent juste (le crénage d'un bloc ne s'applique pas lettre à lettre). */
@@ -39,20 +41,25 @@ let fitSink=null;
 const FIT_WARN=0.9;   // en deçà de 10 % de réduction, pas d'avertissement
 function noteFit(k,f){ if(fitSink && k && f<FIT_WARN) fitSink[k]=Math.min(fitSink[k]??1,f); }
 /** Dessine un texte avec interlettrage et réduction automatique ; renvoie la largeur dessinée.
- *  Une police manuscrite n'est jamais mise en capitales ni espacée. */
+ *  Une police manuscrite n'est jamais mise en capitales ni espacée.
+ *  Options des modes illustrés : fk (police imposée, clé de FONTS), shadow {color, dx, dy} (ombre décalée, nette),
+ *  stroke {color, w} (contour des lettres, sous le remplissage). */
 function drawText(ctx, t, x, y, o){
   if(!t) return 0;
-  const F=fontOf(o.role,o.key);
+  const F=o.fk ? FONTS[o.fk] : fontOf(o.role,o.key);
   if(o.upper && !F.script) t=t.toUpperCase();
   let size=o.size; const sp=F.script?0:(o.spacing||0);
   ctx.font=fontStr(size,o);
   let w=textW(ctx,t,sp,size);
   if(o.maxW && w>o.maxW){ noteFit(o.key,o.maxW/w); size*=o.maxW/w; ctx.font=fontStr(size,o); w=textW(ctx,t,sp,size); }
-  ctx.fillStyle=paint(o.color); ctx.textBaseline='alphabetic';
+  ctx.textBaseline='alphabetic'; ctx.textAlign='left';
   let sx = o.align==='center' ? x-w/2 : o.align==='right' ? x-w : x;
-  if(!sp){ ctx.textAlign='left'; ctx.fillText(t,sx,y); return w; }
-  ctx.textAlign='left';
-  CMS.glyphs.each(ctx,t,sx,sp*size,(g,gx)=>ctx.fillText(g,gx,y));
+  const pass=(fn,dx,dy)=>{ if(!sp) fn(t,sx+dx,y+dy); else CMS.glyphs.each(ctx,t,sx+dx,sp*size,(g,gx)=>fn(g,gx,y+dy)); };
+  if(o.shadow){ ctx.fillStyle=o.shadow.color; pass((g,gx,gy)=>ctx.fillText(g,gx,gy),o.shadow.dx,o.shadow.dy); }
+  if(o.stroke){ ctx.save(); ctx.strokeStyle=o.stroke.color; ctx.lineWidth=o.stroke.w; ctx.lineJoin='round'; ctx.miterLimit=2;
+    pass((g,gx,gy)=>ctx.strokeText(g,gx,gy),0,0); ctx.restore(); }
+  ctx.fillStyle=paint(o.color);
+  pass((g,gx,gy)=>ctx.fillText(g,gx,gy),0,0);
   return w;
 }
 /** Dessine bout à bout plusieurs segments de tailles différentes, alignés sur la même ligne de base,
@@ -544,6 +551,7 @@ function drawPoster(ctx, W, H, pass, mapFn){
 }
 function drawPosterAt(ctx, W, H, pass, mapFn){
   const c=st.colors, g=geom(st,W,H), m=g.m, U=g.U, r=g.map;
+  if(g.illus){ CMS.illus.draw(ctx,W,H,pass,g); return g; }   // modes illustrés : image importée et textes (js/illus.js)
   if(pass!=='over'){ ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H); if(g.sky) drawSky(ctx,g.sky,U); }
   if(pass==='all' && mapFn) g.places.forEach((p,i)=>{ ctx.save(); clipMap(ctx,p.rect); ctx.fillStyle=c.land; ctx.fillRect(p.rect.x,p.rect.y,p.rect.w,p.rect.h); mapFn(ctx,p.rect,p.view,i); ctx.restore(); });
   if(pass==='under') return g;
