@@ -163,7 +163,8 @@ const DEFAULT_STATE = {
   focusR:30,                    // rayon du halo et du quartier en relief (% de la largeur de la carte)
   orn:{scale:false,compass:false,grid:false},     // ornements : échelle graphique, rose des vents, graduations
   folds:false,                  // papier : plis d'une carte dépliée
-  mode:'map',                   // type d'affiche : 'map' (carte) | 'illus' (illustration importée, cf. js/illus.js)
+  mode:'map',                   // type d'affiche : 'map' (carte) | 'illus' (illustration importée, cf. js/illus.js) | 'mix' (carte + illustration)
+  mix:{compo:'med',shape:'circle',pos:'bas'},   // carte + illustration : composition (médaillon, vignette), forme et position du médaillon
   // Illustration : cadrage (zoom en %, décalage en fraction de l'affiche), retouches, filtre vintage, choix du prompt.
   // L'image elle-même n'est pas dans l'état (trop lourde) : elle est tenue par CMS.illus.
   illus:{fit:'cover',zoom:100,ox:0,oy:0,bright:0,contrast:0,satur:0,vintage:'none',grain:false,paper:false,flat:false,upscale:false,
@@ -174,7 +175,9 @@ const DEFAULT_STATE = {
 };
 // Modes illustrés : listes de valeurs (aussi utilisées par normState pour valider un état venu de l'extérieur)
 CMS.define('illusConf', () => ({
-  MODES:['map','illus'],
+  MODES:['map','illus','mix'],
+  // mode Carte + illustration : compositions, forme et position du médaillon
+  COMPOS:['med','vig'], SHAPES:['circle','heart','arch'], MPOS:['haut','centre','bas'],
   // positions du bloc de titre : h/m/b (haut, milieu, bas) × g/c/d (gauche, centre, droite)
   POS:['hg','hc','hd','mg','mc','md','bg','bc','bd'],
   MOMENTS:[['any','Au choix','any time'],['aube','Aube','dawn'],['matin','Matin','morning'],['midi','Midi','midday'],['couchant','Couchant','sunset'],['nuit','Nuit','night']],

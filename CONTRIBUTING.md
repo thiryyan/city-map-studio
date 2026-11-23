@@ -75,6 +75,7 @@ python tests/csp.py              # aucune violation de la politique de sécurit�
 python tests/pwa.py              # sous-chemin GitHub Pages, manifeste, service worker, hors ligne
 python tests/illus.py            # mode Illustration : prompt, import (refus GIF / fichier endommagé), qualité, cadrage, retouches, titre, export
 python tests/illustore.py        # illustrations conservées : IndexedDB, rechargement, Mes affiches, fichiers avec images, lien, image manquante, nettoyage
+python tests/illusmix.py         # Carte + illustration : médaillon (formes, positions) et vignette, prompt, qualité, harmonisation, gestes, export
 python -m http.server 8000       # aperçu local : http://localhost:8000
 ```
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.

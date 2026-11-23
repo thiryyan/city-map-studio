@@ -280,10 +280,13 @@ details.adv>h3:first-of-type{margin-top:6px}
 /* ---------- Modes illustrés (js/illus.js) ---------- */
 /* Sélecteur du type d'affiche, au-dessus des onglets */
 .modes{display:flex;gap:6px;padding:8px 10px 6px;flex:none}
-.modes button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:6px 8px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--mut);font-weight:500;cursor:pointer}
+.modes button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:44px;padding:6px 4px;font-size:.8125rem;line-height:1.2;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--mut);font-weight:500;cursor:pointer}
 .modes button.on{border-color:var(--acc);color:var(--txt);box-shadow:inset 0 0 0 1px var(--acc)}
 .modes button:focus-visible{outline:2px solid var(--acc2);outline-offset:1px}
-#app[data-mode=illus] .maponly,#app:not([data-mode=illus]) .illusonly{display:none!important}
+/* Visibilité selon le type d'affiche : maponly (carte et carte + illustration), layoutonly (carte seule : ambiances, gabarits),
+   illusonly (modes illustrés), pureillus (illustration seule), mixonly (carte + illustration) */
+#app[data-mode=illus] .maponly,#app:not([data-mode=map]) .layoutonly,#app[data-mode=map] .illusonly,#app:not([data-mode=illus]) .pureillus,#app:not([data-mode=mix]) .mixonly{display:none!important}
+#app[data-mode=mix] #placeBox,#app[data-mode=mix] #labelsBox,#app[data-mode=mix] #skyBox{display:none!important}
 #app[data-mode=illus] #slot,#app[data-mode=illus] .fab,#app[data-mode=illus] .mapcredit,#app[data-mode=illus] #shield,#app[data-mode=illus] #placeSwitch{display:none!important}
 #app[data-mode=illus] #poster{touch-action:none;cursor:grab}
 #poster.dragging{cursor:grabbing}
@@ -319,3 +322,14 @@ h3 .opt{text-transform:none;letter-spacing:0;font-weight:400}
 .modes.inbody{display:none}
 #app.sheetmode .modes.top{display:none}
 #app.sheetmode .modes.inbody{display:flex;padding:10px 0 2px}
+/* Carte + illustration : compositions, zone de prise de la vignette */
+.compos{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.compos button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--txt);cursor:pointer;font-weight:500;min-height:44px}
+.compos button small{color:var(--mut);font-weight:400;font-size:.75rem;text-align:center}
+.compos button.on{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.compos .mini{width:46px;height:64px;position:relative;overflow:hidden;border-radius:2px;background:#d9cdb5;display:block}
+.compos .mini i{position:absolute;display:block}
+.compos .il{background:#7f9bb5}.compos .mp{background:#f4efe6 repeating-linear-gradient(35deg,#8c8681 0 1px,transparent 1px 6px)}
+.compos .full{inset:0}.compos .med{left:11px;top:34px;width:24px;height:24px;border-radius:50%;box-shadow:0 0 0 2px #f4efe6}
+.compos .vig{right:5px;top:5px;width:16px;height:22px;border-radius:8px 8px 0 0;box-shadow:0 0 0 2px #f4efe6}
+.illushit{position:absolute;z-index:4;cursor:grab;touch-action:none}

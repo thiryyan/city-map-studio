@@ -38,6 +38,7 @@
       <canvas id="cvUnder" aria-hidden="true"></canvas>
       <div id="slot"><div id="mlMap"></div><canvas id="vecCanvas" tabindex="0" role="application" aria-roledescription="carte" aria-label="Carte. Flèches : déplacer (Maj : plus loin). Plus et moins : zoomer. Entrée : placer le repère au centre en mode placement."></canvas></div>
       <canvas id="cvOver" role="img" aria-label="Aperçu de l'affiche"></canvas>
+      <div class="illushit" id="illusHit" hidden aria-hidden="true"></div>
       <canvas id="cvTex" hidden aria-hidden="true"></canvas>
       <div class="cmpbadge" id="cmpBadge" role="status" hidden></div>
       <button class="shield placeSwitch" id="placeSwitch" type="button" hidden><span>Modifier le lieu 2</span></button>
@@ -65,6 +66,7 @@
     <div class="modes top" id="modeSeg" role="group" aria-label="Type d'affiche">
       <button data-v="map" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Carte</button>
       <button data-v="illus" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Illustration</button>
+    <button data-v="mix" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 9l3-3 3 3 2-2 4 2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="10" cy="13" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Carte + illus.</button>
     </div>
     <nav class="tabs" id="tabs" role="tablist" aria-label="Étapes de création">
       <button data-tab="lieu" class="on" role="tab" id="tb-lieu" aria-controls="tab-lieu" aria-selected="true">Lieu</button>
@@ -78,6 +80,7 @@
         <div class="modes inbody" id="modeSegM" role="group" aria-label="Type d'affiche">
         <button data-v="map" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Carte</button>
         <button data-v="illus" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Illustration</button>
+      <button data-v="mix" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 9l3-3 3 3 2-2 4 2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="10" cy="13" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Carte + illus.</button>
       </div>
       <!-- LIEU -->
       <div class="tab on" id="tab-lieu" role="tabpanel" aria-labelledby="tb-lieu">
@@ -131,12 +134,30 @@
           <div class="diag" id="diag"></div>
         </details>
         <button class="btn next maponly" type="button" data-next="repere">Étape suivante : le repère<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button class="btn next illusonly" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next pureillus" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <p class="credit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL) · Tuiles <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · Rendu MapLibre GL · Géocodage Nominatim</p>
       </div>
       <!-- ILLUSTRATION (modes illustrés) : prompt pour une IA externe, puis import et ajustement de l'image -->
       <div class="tab" id="tab-illus" role="tabpanel" aria-labelledby="tb-illus">
-        <div class="seg mt6" id="illusStepSeg" role="group" aria-label="Étape de l'illustration"><button data-v="prompt" type="button">1 · Prompt</button><button data-v="image" type="button">2 · Image</button></div>
+        <div class="seg mt6" id="illusStepSeg" role="group" aria-label="Étape de l'illustration"><button data-v="compo" type="button" class="mixonly">Composition</button><button data-v="prompt" type="button">Prompt</button><button data-v="image" type="button">Image</button></div>
+        <div id="illusCompo" hidden>
+          <h3>Composition</h3>
+          <div class="compos" id="compoSeg" role="group" aria-label="Composition de l'affiche">
+            <button data-v="med" type="button"><span class="mini" aria-hidden="true"><i class="il full"></i><i class="mp med"></i></span>Médaillon<small>Illustration en pleine page, carte dans une forme</small></button>
+            <button data-v="vig" type="button"><span class="mini" aria-hidden="true"><i class="mp full"></i><i class="il vig"></i></span>Vignette<small>Carte encadrée, illustration en arche</small></button>
+          </div>
+          <div id="medOpts">
+            <h3>Forme de la carte</h3>
+            <div class="seg" id="mixShapeSeg" role="group" aria-label="Forme de la carte"><button data-v="circle" type="button">Rond</button><button data-v="heart" type="button">Cœur</button><button data-v="arch" type="button">Arche</button></div>
+            <h3>Position de la carte</h3>
+            <div class="seg" id="mixPosSeg" role="group" aria-label="Position de la carte"><button data-v="haut" type="button">Haut</button><button data-v="centre" type="button">Centre</button><button data-v="bas" type="button">Bas</button></div>
+          </div>
+          <div class="cur mt10"><b>Transmis au prompt</b><span class="mono" id="compoPrompt"></span></div>
+          <h3>Couleurs de la carte d'après l'illustration</h3>
+          <div class="seg" id="harmSeg" role="group" aria-label="Couleurs de la carte d'après l'illustration"><button data-v="light" type="button">Version claire</button><button data-v="dark" type="button">Version sombre</button></div>
+          <p class="hint">Les couleurs de la carte sont tirées de l'illustration (« Annuler » pour revenir). Dans l'autre sens, la palette « Thème de l'affiche » de l'étape Prompt transmet à l'IA les couleurs de la carte.</p>
+          <button class="btn wide mt8" type="button" id="bToPrompt">Étape suivante : le prompt</button>
+        </div>
         <div id="illusPrompt">
           <p class="hint">L'illustration est créée par l'IA de votre choix (ChatGPT, Gemini…) : l'application rédige la demande, vous l'y collez, puis vous importez l'image obtenue à l'étape 2.</p>
           <h3>Pistes à proposer à l'IA <small class="opt">facultatif</small></h3>
@@ -194,7 +215,7 @@
       </div>
       <!-- STYLE -->
       <div class="tab" id="tab-style" role="tabpanel" aria-labelledby="tb-style">
-        <div class="maponly">
+        <div class="layoutonly">
         <h3>Ambiances</h3>
         <p class="hint">Un toucher pour un ensemble assorti (thème, polices, gabarit, repère, papier) ; tout reste modifiable ensuite.</p>
         <div class="fonts ambs" id="ambiances" role="group" aria-label="Ambiances"></div>
@@ -205,7 +226,7 @@
         <div class="seg" id="formatSeg" role="group" aria-label="Format d'impression"><button data-v="a4" type="button">A4</button><button data-v="a3" type="button">A3</button><button data-v="50x70" type="button">50 × 70 cm</button></div>
         <div class="seg mt6" id="fileSeg" role="group" aria-label="Fichier exporté"><button data-v="png" type="button">Image PNG</button><button data-v="pdf" type="button">Document PDF</button></div>
         <p class="hint" id="formatHint" aria-live="polite"></p>
-        <div class="maponly">
+        <div class="layoutonly">
         <h3>Gabarit</h3>
         <div class="cards" id="layouts" role="group" aria-label="Gabarits"></div>
         <div class="slider"><label for="sMargin">Marge (passe-partout)</label><output id="oMargin"></output><input type="range" id="sMargin" data-k="margin" min="3" max="12" step="0.5"></div>
@@ -223,6 +244,8 @@
           <label class="tog">Planètes visibles<input type="checkbox" data-k="sky.planets"></label>
           <label class="tog">Voie lactée<input type="checkbox" data-k="sky.milky"></label>
         </div>
+        </div>
+        <div class="maponly">
         <h3>Thème</h3>
         <div class="chips fcats" id="themeCats" role="group" aria-label="Catégories de thèmes"></div>
         <div class="themes" id="themes" role="group" aria-label="Thèmes"></div>
@@ -315,7 +338,8 @@
           <label class="tog">Pointillés<input type="checkbox" id="routeDash"></label>
           <div class="row mt8"><button class="btn grow" type="button" id="bFitRoute">Cadrer sur l'itinéraire</button><button class="btn" type="button" id="bDelRoute">Retirer</button></div>
         </div>
-        <button class="btn next" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next layoutonly" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next mixonly" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- TEXTES -->
       <div class="tab" id="tab-textes" role="tabpanel" aria-labelledby="tb-textes">

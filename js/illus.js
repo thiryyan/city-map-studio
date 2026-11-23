@@ -12,10 +12,15 @@ CMS.define('illus', () => {
   // ---------- Fonctions pures (testées sans navigateur : tests/unit/illus.test.mjs) ----------
   const GRADES = {ok:'Bonne', mid:'Juste', bad:'Insuffisante'};
   /** Résolution d'impression de l'image pour chaque format (ppp), selon le cadrage ; agrandissement ×2 : lissage crédité de 45 % */
+  /** Part de l'affiche occupée par l'illustration (1 × 1, sauf la vignette du mode Carte + illustration) */
+  function region(s){
+    if(s.mode!=='mix') return {fw:1,fh:1};
+    const d=posterDims(s), g=geom(s,d.W,d.H); return {fw:g.illus.w/d.W, fh:g.illus.h/d.H};
+  }
   function quality(s, iw, ih){
-    const I=s.illus, land=s.orient==='landscape';
+    const I=s.illus, land=s.orient==='landscape', R=region(s);
     return FORMATS.map(([key,name,a,b])=>{
-      const Win=(land?b:a)/25.4, Hin=(land?a:b)/25.4;
+      const Win=(land?b:a)/25.4*R.fw, Hin=(land?a:b)/25.4*R.fh;
       const base=I.fit==='contain' ? Math.max(iw/Win,ih/Hin) : Math.min(iw/Win,ih/Hin);
       const dpi=Math.round(base/(I.zoom/100)), eff=I.upscale ? dpi*1.45 : dpi;
       return {key, name, dpi, grade: eff>=200 ? 'ok' : eff>=140 ? 'mid' : 'bad'};
@@ -23,7 +28,7 @@ CMS.define('illus', () => {
   }
   /** Part de l'image hors de l'affiche (cadrage « Remplir ») ou des bandes laissées vides (« Image entière »), en % */
   function cropPct(s, iw, ih){
-    const d=posterDims(s), a=iw/ih, b=d.W/d.H;
+    const d=posterDims(s), R=region(s), a=iw/ih, b=d.W*R.fw/(d.H*R.fh);
     return Math.round((1-Math.min(a,b)/Math.max(a,b))*100);
   }
   /** Rectangle de l'image dans une affiche W × H : remplir ou contenir, puis zoom et décalage (fractions de l'affiche) */
@@ -66,6 +71,9 @@ CMS.define('illus', () => {
       ratio:{p:'portrait, proportions 1:1,414 (A4) ; si ce format n’est pas disponible, 2:3', p57:'portrait, proportions 5:7 ; si ce format n’est pas disponible, 2:3',
         l:'paysage, proportions 1,414:1 (A4 couché) ; si ce format n’est pas disponible, 3:2', l57:'paysage, proportions 7:5 ; si ce format n’est pas disponible, 3:2'},
       fixed:'IMPOSÉ : ', moment:'moment de la journée : ', saison:'saison : ',
+      med:(pos,shape)=>`Laisser aussi une zone calme et peu détaillée ${{haut:'en haut',centre:'au centre',bas:'en bas'}[pos]} de l’image, au milieu de la largeur (${{circle:'un cercle',heart:'un cœur',arch:'une arche'}[shape]} d’environ 45 % de la largeur) : une carte y sera posée.`,
+      vig:'COMPOSITION : l’illustration sera affichée en petite vignette en forme d’arche, posée sur une carte : un sujet unique, centré, lisible de loin, sans détails fins ni zone réservée au titre.',
+      vratio:'portrait, proportions 3:4 ; si ce format n’est pas disponible, 2:3',
       theme:c=>`palette accordée à l'affiche : fond ${c.paper}, encre ${c.text}, eau ${c.water}, accent ${c.marker}`,
       photo:'je te fournirai une photo dont tu reprendras la palette',
       steps:'DÉROULEMENT (une étape à la fois) :',
@@ -87,6 +95,9 @@ CMS.define('illus', () => {
       ratio:{p:'portrait, aspect ratio 1:1.414 (A4); if unavailable, 2:3', p57:'portrait, aspect ratio 5:7; if unavailable, 2:3',
         l:'landscape, aspect ratio 1.414:1 (A4 landscape); if unavailable, 3:2', l57:'landscape, aspect ratio 7:5; if unavailable, 3:2'},
       fixed:'FIXED: ', moment:'time of day: ', saison:'season: ',
+      med:(pos,shape)=>`Also keep a calm, low-detail area ${{haut:'at the top',centre:'in the centre',bas:'at the bottom'}[pos]} of the image, horizontally centred (${{circle:'a circle',heart:'a heart',arch:'an arch'}[shape]} about 45% of the width wide): a map will be placed there.`,
+      vig:'COMPOSITION: the illustration will be shown as a small arch-shaped vignette over a map: one single, centred subject, readable from afar, no fine detail and no area reserved for a title.',
+      vratio:'portrait, aspect ratio 3:4; if unavailable, 2:3',
       theme:c=>`palette matching the poster: background ${c.paper}, ink ${c.text}, water ${c.water}, accent ${c.marker}`,
       photo:'I will give you a photo whose palette you will reuse',
       steps:'PROCESS (one step at a time):',
@@ -99,6 +110,8 @@ CMS.define('illus', () => {
   };
   /** Lignes de texte affichées en pied (dédicace, noms, date, coordonnées) : le prompt leur réserve une zone calme */
   const footLines=s=>['dedication','names','date','coords'].some(k=>s.show[k]!==false && (k==='coords' || (s.texts[k]||'').trim()));
+  /** Phrase du prompt propre à la composition (mode Carte + illustration), affichée dans l'étape Composition */
+  function compoLine(s, lang='fr'){ const L=L10N[lang]; return s.mix.compo==='vig' ? L.vig : L.med(s.mix.pos,s.mix.shape).replace(/^Laisser aussi/,'Laisser').replace(/^Also keep/,'Keep'); }
   /** Prompt complet pour l'IA externe, d'après l'état (ville, pistes, choix, format, position du titre) */
   function buildPrompt(s){
     const P=s.illus.prompt, L=L10N[P.lang]||L10N.fr, T=s.illusText;
@@ -107,9 +120,11 @@ CMS.define('illus', () => {
     const out=[L.rule, L.role(where)];
     if(P.pistes.length) out.push(L.pistes+P.pistes.join(', ')+'.');
     out.push(L.style);
-    out.push(L.comp+L.zone[T.pos[0]]+L.side[T.pos[1]]+L.compEnd+(footLines(s)?L.foot[T.pos[0]]:''));
+    const vig=s.mode==='mix' && s.mix.compo==='vig';
+    if(vig) out.push(L.vig);
+    else out.push(L.comp+L.zone[T.pos[0]]+L.side[T.pos[1]]+L.compEnd+(footLines(s)?L.foot[T.pos[0]]:'')+(s.mode==='mix'?' '+L.med(s.mix.pos,s.mix.shape):''));
     const r57=s.format==='50x70', land=s.orient==='landscape';
-    out.push(L.format+L.ratio[(land?'l':'p')+(r57?'57':'')]+L.res+(r57?L.big:'')+'.');
+    out.push(L.format+(vig ? L.vratio : L.ratio[(land?'l':'p')+(r57?'57':'')])+L.res+(r57?L.big:'')+'.');
     const idx=P.lang==='en'?2:1, label=(list,k)=>(list.find(x=>x[0]===k)||list[0])[idx].toLowerCase();
     const fixed=[];
     if(P.moment!=='any') fixed.push(L.moment+label(C.MOMENTS,P.moment));
@@ -335,19 +350,73 @@ CMS.define('illus', () => {
     const I=st.illus, U=g.U;
     if(pass!=='over'){
       ctx.fillStyle=st.colors.paper; ctx.fillRect(0,0,W,H);
-      if(ready()){
-        const r=placement(W,H,img.w,img.h,I);
-        ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
-        ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-        ctx.drawImage(processed(W,H),r.x,r.y,r.w,r.h);
-        ctx.beginPath(); ctx.rect(r.x,r.y,r.w,r.h); ctx.clip();
-        ctx.globalCompositeOperation='multiply';
-        if(I.paper){ ctx.globalAlpha=I.vintage==='strong'?0.42:0.28; ctx.fillStyle='#E7D6B0'; ctx.fillRect(r.x,r.y,r.w,r.h); }
-        if(I.grain){ ctx.globalAlpha=I.vintage==='strong'?0.6:0.42; ctx.drawImage(grain(W>H),0,0,W,H); }
-        ctx.restore();
-      } else placeholder(ctx,W,H,U,st.illus.img);
+      if(ready()) drawImageIn(ctx,g.illus,W,H); else placeholder(ctx,W,H,U,st.illus.img);
     }
     if(pass!=='under') drawTexts(ctx,W,H,U);
+  }
+  /** Image retouchée dans un cadre r (et sa forme : arche de la vignette), avec papier jauni et grain */
+  function drawImageIn(ctx, r, W, H){
+    const I=st.illus, P=placement(r.w,r.h,img.w,img.h,I), x=r.x+P.x, y=r.y+P.y;
+    ctx.save(); clipMap(ctx,r);
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+    ctx.drawImage(processed(r.w,r.h),x,y,P.w,P.h);
+    ctx.beginPath(); ctx.rect(x,y,P.w,P.h); ctx.clip();
+    ctx.globalCompositeOperation='multiply';
+    if(I.paper){ ctx.globalAlpha=I.vintage==='strong'?0.42:0.28; ctx.fillStyle='#E7D6B0'; ctx.fillRect(x,y,P.w,P.h); }
+    if(I.grain){ ctx.globalAlpha=I.vintage==='strong'?0.6:0.42; ctx.drawImage(grain(W>H),0,0,W,H); }
+    ctx.restore();
+  }
+  /** Carte + illustration (drawPoster) : médaillon (carte dans une forme sur l'illustration) ou vignette (illustration sur la carte) */
+  function drawMix(ctx, W, H, pass, g, mapFn){
+    const c=st.colors, U=g.U, T=st.illusText, med=g.mix==='med', r=g.map;
+    if(pass!=='over'){
+      ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H);
+      if(med){ if(ready()) drawImageIn(ctx,g.illus,W,H); else placeholder(ctx,W,H,U,st.illus.img); }
+    }
+    if(pass==='all' && mapFn) g.places.forEach((p,i)=>{ ctx.save(); clipMap(ctx,p.rect); ctx.fillStyle=c.land; ctx.fillRect(p.rect.x,p.rect.y,p.rect.w,p.rect.h); mapFn(ctx,p.rect,p.view,i); ctx.restore(); });
+    if(pass==='under') return;
+    for(const p of g.places){
+      if(st.fx?.halo){ ctx.save(); clipMap(ctx,p.rect); drawHalo(ctx,p.rect,p.view); ctx.restore(); }
+      ctx.save(); clipMap(ctx,p.rect); drawOrnaments(ctx,p.rect,p.view,U,true); ctx.restore();
+      ctx.save(); clipMap(ctx,p.rect); drawMarkers(ctx,p.rect,p.view,U,W,true); ctx.restore();
+    }
+    const ink=contrast(T.color,c.paper)>=2.5 ? T.color : c.text;   // sur le papier : couleur du titre si elle s'y lit
+    if(med){
+      ctx.save(); ctx.strokeStyle=c.paper; ctx.lineWidth=0.02*U; strokeShape(ctx,r,0.01*U);
+      ctx.strokeStyle=paint(ink); ctx.lineWidth=0.0022*U; strokeShape(ctx,r,0.021*U); ctx.restore();
+      drawTexts(ctx,W,H,U);
+    } else {
+      ctx.strokeStyle=paint(c.frame);
+      ctx.lineWidth=0.0025*U; const o1=0.014*U; ctx.strokeRect(r.x-o1,r.y-o1,r.w+2*o1,r.h+2*o1);
+      ctx.lineWidth=0.0009*U; const o2=0.006*U; ctx.strokeRect(r.x-o2,r.y-o2,r.w+2*o2,r.h+2*o2);
+      const v=g.illus, e=0.012*U, edge={...v,x:v.x-e,y:v.y-e,w:v.w+2*e,h:v.h+2*e};
+      ctx.save(); ctx.shadowColor='rgba(0,0,0,0.22)'; ctx.shadowBlur=0.02*U; ctx.shadowOffsetY=0.006*U; clipMap(ctx,{...edge,x:edge.x-0.04*U,y:edge.y-0.04*U,w:edge.w+0.08*U,h:edge.h+0.08*U,shape:null});
+      ctx.fillStyle=c.paper; const pth=new Path2D(); pth.addPath(new Path2D(shapeD('arch',edge.w,edge.h)),new DOMMatrix().translate(edge.x,edge.y)); ctx.fill(pth); ctx.restore();
+      if(ready()) drawImageIn(ctx,v,W,H); else placeholderIn(ctx,v,U);
+      drawBand(ctx,W,H,U,g,ink);
+    }
+    ctx.globalAlpha=0.55;
+    drawText(ctx,attributionText(false),W-g.m,H-g.m*0.38,{size:0.0085*U,align:'right',color:med?T.color:c.text});
+    ctx.globalAlpha=1;
+  }
+  function placeholderIn(ctx, r, U){
+    const ink=st.colors.text; ctx.save(); clipMap(ctx,r); ctx.fillStyle=hexA(ink)(0.08); ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.fillStyle=hexA(ink)(0.7); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=`600 ${0.026*U}px system-ui, sans-serif`;
+    ctx.fillText(st.illus.img && !loading ? 'Illustration à importer' : 'Illustration',r.x+r.w/2,r.y+r.h*0.6,r.w*0.9); ctx.restore();
+  }
+  /** Vignette : titre et lignes dans la bande sous la carte, centrés, réduits ensemble pour y tenir */
+  function drawBand(ctx, W, H, U, g, ink){
+    const T=st.illusText, vint=T.style==='vintage', b=g.band, maxW=W-2*g.m-0.04*U;
+    const shadow=T.shadow && contrast(T.shadow,st.colors.paper)>=1.3 ? {color:T.shadow, dx:T.off*0.001*U, dy:T.off*0.001*U} : null;
+    const rows=[[textLine('title'),(vint?0.13:0.075)*U*tScale('title'),{spacing:vint?0.04:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow},vint?0.84:0.72],
+      [textLine('subtitle'),0.021*U*tScale('subtitle'),{spacing:0.3,upper:true,key:'subtitle'},0.75],
+      [textLine('dedication'),0.03*U*tScale('dedication'),{italic:true,key:'dedication'},0.75],
+      [[textLine('date'),textLine('coords')].filter(Boolean).join('  ·  '),0.015*U*tScale('date'),{spacing:0.2,key:'date'},0.75]].filter(x=>x[0]);
+    if(!rows.length) return;
+    const gap=0.022*U; let total=rows.reduce((a,x)=>a+x[1]*x[3],0)+gap*(rows.length-1);
+    const f=Math.min(1,b.h*0.82/total); total*=f;
+    let y=b.y+(b.h-total)/2;
+    for(const [t,sz,o,cap] of rows){ y+=sz*cap*f; drawText(ctx,t,W/2,y,{...o,size:sz*f,align:'center',color:ink,maxW}); y+=gap*f; }
   }
   function placeholder(ctx, W, H, U, want){
     const m=0.06*U, ink=st.colors.text;
@@ -394,31 +463,59 @@ CMS.define('illus', () => {
   const ready=()=>!!img && img.ref===refOf(st);
   /** Rafraîchit l'affiche après un changement de l'image ou de son cadrage */
   let rafU=0;
-  function redraw(){ if(rafU) return; rafU=requestAnimationFrame(()=>{ rafU=0; drawUnder(); scheduleOver(); exportState(); }); }
+  function redraw(){ if(rafU) return; rafU=requestAnimationFrame(()=>{ rafU=0; drawUnder(); scheduleOver(); exportState(); placeHit(); }); }
+  /** Vignette : zone de prise au-dessus de la carte, pour déplacer l'illustration sans déplacer la carte */
+  function placeHit(){
+    const hit=$('illusHit'), on=st.mode==='mix' && st.mix.compo==='vig' && ready() && ui.posterCss.w>0;
+    hit.hidden=!on; if(!on) return;
+    const r=geom(st,ui.posterCss.w,ui.posterCss.h).illus;
+    Object.assign(hit.style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px',borderRadius:`${r.w/2}px ${r.w/2}px 0 0`});
+  }
+  /** Composition (mode Carte + illustration) */
+  function syncCompo(){
+    const M=st.mix; setSeg('compoSeg',M.compo); setSeg('mixShapeSeg',M.shape); setSeg('mixPosSeg',M.pos);
+    $('medOpts').hidden=M.compo!=='med'; $('compoPrompt').textContent='« '+compoLine(st)+' »';
+  }
+  /** Couleurs de la carte tirées de l'illustration (même calcul que la palette d'une photo) */
+  function harmonize(v){
+    if(!ready()){ toast('Importez d\u2019abord votre illustration (étape Image)',true); return; }
+    const k=80/Math.max(img.prev.width,img.prev.height), c=canvasOf(img.prev.width*k,img.prev.height*k), x=c.getContext('2d',{willReadFrequently:true});
+    x.drawImage(img.prev,0,0,c.width,c.height); const pal=paletteOf(x.getImageData(0,0,c.width,c.height).data);
+    if(!pal.length){ toast('Aucune couleur exploitable dans cette illustration.',true); return; }
+    const before={theme:st.theme,colors:{...st.colors}};
+    st.colors=photoTheme(pal,v==='dark'); setSeg('harmSeg',v);
+    noteThemeChange(before); refreshColors(); changed({all:true,cards:true});
+    toast('Couleurs de la carte tirées de l\u2019illustration · « Annuler » pour revenir');
+  }
   function exportState(){
-    const off=st.mode==='illus' && !ready();
+    const off=st.mode!=='map' && !ready();
     for(const id of ['bExport','bNextExport']){ const b=$(id); if(b){ b.disabled=off; b.title=off?'Importez d’abord votre illustration (onglet Illustration)':''; } }
-    if(st.mode==='illus') setStatus(ready() ? 'Prêt' : loading ? 'Chargement de l\u2019illustration…' : missing ? 'Illustration à réimporter' : 'Importez votre illustration pour exporter', ready() ? '' : loading ? 'busy' : 'wait');
+    const own=/illustration/i.test($('stTxt').textContent);   // message posé par ce module (sinon : état de la carte, à laisser)
+    if(st.mode==='mix' && ready()){ if(own) setStatus('Prêt'); return; }
+    if(st.mode==='map'){ if(own) setStatus('Prêt'); return; }
+    setStatus(ready() ? 'Prêt' : loading ? 'Chargement de l\u2019illustration…' : missing ? 'Illustration à réimporter' : 'Importez votre illustration pour exporter', ready() ? '' : loading ? 'busy' : 'wait');
   }
   function setMode(v){
     if(!C.MODES.includes(v) || st.mode===v) return;
-    st.mode=v; applyMode();
+    st.mode=v; if(v==='mix' && !ready()) step='compo';
+    applyMode(); sync();
     layoutPreview(); refreshCards(); loadFonts().then(()=>scheduleOver());
-    if(v==='map') updateEngineUI();
+    if(v!=='illus') updateEngineUI();
     saveState();
-    toast(v==='illus' ? 'Affiche illustrée : créez le prompt, puis importez votre image' : 'Affiche cartographique');
+    toast({illus:'Affiche illustrée : créez le prompt, puis importez votre image', mix:'Carte + illustration : choisissez la composition, puis créez le prompt', map:'Affiche cartographique'}[v]);
   }
   function applyMode(){
-    const ill=st.mode==='illus';
-    $('app').dataset.mode=st.mode; setSeg('modeSeg',st.mode); setSeg('modeSegM',st.mode);
-    $('tb-repere').hidden=ill; $('tb-illus').hidden=!ill;
+    const m=st.mode, ill=m==='illus';
+    $('app').dataset.mode=m; setSeg('modeSeg',m); setSeg('modeSegM',m);
+    $('tb-repere').hidden=ill; $('tb-illus').hidden=m==='map';
     if(ill && ui.tab==='repere') showTab('illus');
-    if(!ill && ui.tab==='illus') showTab('lieu');
-    exportState();
+    if(m==='map' && ui.tab==='illus') showTab('lieu');
+    if(m!=='mix' && step==='compo') step='prompt';
+    exportState(); placeHit();
   }
   function setStep(v){
     step=v; setSeg('illusStepSeg',v);
-    $('illusPrompt').hidden=v!=='prompt'; $('illusImage').hidden=v!=='image';
+    $('illusCompo').hidden=v!=='compo'; $('illusPrompt').hidden=v!=='prompt'; $('illusImage').hidden=v!=='image';
   }
   function swatches(id, list, field, custom){
     const box=$(id); box.replaceChildren();
@@ -486,7 +583,7 @@ CMS.define('illus', () => {
     const want=refOf(st);
     // Image déjà cherchée en vain (restauration, « Annuler ») : signalée tout de suite, sans nouvelle tentative
     if(want && want!==(img?.ref||'') && !loading && tried===want && st.mode!=='map') missing=true;
-    applyMode(); setStep(step); syncPrompt(); syncImage(); syncText();
+    applyMode(); setStep(step); syncCompo(); syncPrompt(); syncImage(); syncText();
     if(want!==(img?.ref||'') && !loading && tried!==want) ensureImage();
   }
 
@@ -511,14 +608,14 @@ CMS.define('illus', () => {
     // Import : fichier, glisser-déposer (zone et aperçu), collage
     for(const id of ['illusIn','illusIn2']) $(id).onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
     const dropOn=el=>{
-      el.addEventListener('dragover',e=>{ if(st.mode!=='illus') return; e.preventDefault(); $('illusDrop').classList.add('over'); });
+      el.addEventListener('dragover',e=>{ if(st.mode==='map') return; e.preventDefault(); $('illusDrop').classList.add('over'); });
       el.addEventListener('dragleave',()=>$('illusDrop').classList.remove('over'));
-      el.addEventListener('drop',e=>{ if(st.mode!=='illus') return; e.preventDefault(); $('illusDrop').classList.remove('over');
+      el.addEventListener('drop',e=>{ if(st.mode==='map') return; e.preventDefault(); $('illusDrop').classList.remove('over');
         const f=e.dataTransfer?.files?.[0]; if(f){ if(ui.tab!=='illus') showTab('illus'); importFile(f); } });
     };
     dropOn($('illusDrop')); dropOn(stage);
     document.addEventListener('paste',e=>{
-      if(st.mode!=='illus' || e.target.matches?.('input[type=text],input[type=search],textarea')) return;
+      if(st.mode==='map' || e.target.matches?.('input[type=text],input[type=search],textarea')) return;
       const it=[...(e.clipboardData?.items||[])].find(i=>i.kind==='file' && i.type.startsWith('image/'));
       if(it){ e.preventDefault(); if(ui.tab!=='illus') showTab('illus'); importFile(it.getAsFile()); }
     });
@@ -532,19 +629,30 @@ CMS.define('illus', () => {
       syncImage(); redraw(); saveState();
     });
     CMS.on('state:synced',sync);
-    CMS.on('state:saved',()=>{ if(st.mode==='illus' && ui.tab==='illus' && step==='prompt') updatePrompt(); });
+    CMS.on('state:saved',()=>{ if(st.mode!=='map' && ui.tab==='illus' && step==='prompt') updatePrompt(); });
     // Déplacer l'image en la glissant sur l'aperçu
     let drag=null;
     poster.addEventListener('pointerdown',e=>{
-      if(st.mode!=='illus' || !ready() || e.button>0 || e.target.closest('button')) return;
+      if(st.mode==='map' || !ready() || e.button>0 || e.target.closest('button')) return;
+      // Carte + illustration : la carte garde ses gestes ; la vignette se déplace par sa zone de prise
+      if(st.mode==='mix' && (st.mix.compo==='vig' ? e.target.id!=='illusHit' : e.target.closest('#slot'))) return;
       drag={x:e.clientX,y:e.clientY,ox:st.illus.ox,oy:st.illus.oy,id:e.pointerId}; poster.setPointerCapture(e.pointerId); poster.classList.add('dragging');
     });
     poster.addEventListener('pointermove',e=>{
       if(!drag || e.pointerId!==drag.id) return;
-      st.illus.ox=clamp(drag.ox+(e.clientX-drag.x)/ui.posterCss.w,-1,1); st.illus.oy=clamp(drag.oy+(e.clientY-drag.y)/ui.posterCss.h,-1,1); redraw();
+      const r=geom(st,ui.posterCss.w,ui.posterCss.h).illus;   // décalage en fraction du cadre de l'illustration
+      st.illus.ox=clamp(drag.ox+(e.clientX-drag.x)/r.w,-1,1); st.illus.oy=clamp(drag.oy+(e.clientY-drag.y)/r.h,-1,1); redraw();
     });
     const end=e=>{ if(!drag || e.pointerId!==drag.id) return; drag=null; poster.classList.remove('dragging'); saveState(); };
     poster.addEventListener('pointerup',end); poster.addEventListener('pointercancel',end);
+    // Composition (Carte + illustration)
+    const mixSet=(f,v)=>{ st.mix[f]=v; syncCompo(); syncImage(); ui.snap=null; layoutPreview(); placeHit(); saveState(); };
+    document.querySelectorAll('#compoSeg button').forEach(b=>b.onclick=()=>mixSet('compo',b.dataset.v));
+    document.querySelectorAll('#mixShapeSeg button').forEach(b=>b.onclick=()=>mixSet('shape',b.dataset.v));
+    document.querySelectorAll('#mixPosSeg button').forEach(b=>b.onclick=()=>mixSet('pos',b.dataset.v));
+    document.querySelectorAll('#harmSeg button').forEach(b=>b.onclick=()=>harmonize(b.dataset.v));
+    $('bToPrompt').onclick=()=>setStep('prompt');
+    new ResizeObserver(()=>placeHit()).observe(poster);
     // Style du titre
     document.querySelectorAll('#tStyleSeg button').forEach(b=>b.onclick=async()=>{ st.illusText.style=b.dataset.v; syncText(); saveState(); await loadFonts(); scheduleOver(); });
     swatches('swText',SW_TEXT,'color',true); swatches('swShadow',SW_SHADOW,'shadow'); swatches('swOutline',SW_OUTLINE,'outline');
@@ -553,7 +661,7 @@ CMS.define('illus', () => {
     sync();
     setTimeout(()=>gc().catch(()=>{}),2000);   // images orphelines (affiches supprimées, autre image importée)
   }
-  return {init, draw, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
+  return {init, draw, drawMix, harmonize, compoLine, region, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
     get missing(){ return missing; }, get loading(){ return !!loading; }, buildPrompt, quality, cropPct, placement, adjust, processPixels,
     get step(){ return step; }, get image(){ return img && {w:img.w, h:img.h, name:img.name}; }};
 });

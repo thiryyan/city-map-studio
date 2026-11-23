@@ -107,8 +107,8 @@ function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width
   if(s && H && Hc && (Math.abs(g.map.h/Hc-s.h/H)>0.002 || Math.abs(g.map.y/Hc-s.y/H)>0.002)) layoutPreview(); }
 /** Texte de remplacement de l'aperçu (lecteurs d'écran) : gabarit, thème, orientation et textes affichés */
 function describePoster(){
-  if(st.mode==='illus'){ const txt=['title','subtitle'].map(textLine).filter(Boolean).join(', ');
-    const d=`Aperçu de l'affiche illustrée${CMS.illus.ready()?'':' (illustration à importer)'}${txt?' : '+txt:''}`; if(cvO.getAttribute('aria-label')!==d) cvO.setAttribute('aria-label',d); return; }
+  if(st.mode!=='map'){ const txt=['title','subtitle'].map(textLine).filter(Boolean).join(', ');
+    const d=`Aperçu de l'affiche ${st.mode==='mix'?'carte et illustration':'illustrée'}${CMS.illus.ready()?'':' (illustration à importer)'}${txt?' : '+txt:''}`; if(cvO.getAttribute('aria-label')!==d) cvO.setAttribute('aria-label',d); return; }
   const lay=(LAYOUTS.find(l=>l[0]===st.layout)||[,''])[1], th=THEMES[st.theme]?.name||'personnalisé';
   const txt=['title','subtitle','dedication','names','date'].map(textLine).filter(Boolean).join(', ');
   const d=`Aperçu de l'affiche, gabarit ${lay}, thème ${th}, ${st.orient==='landscape'?'paysage':'portrait'}${txt?' : '+txt:''}`;

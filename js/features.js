@@ -442,7 +442,7 @@ function renderSaves(){
     const res=h('button',{type:'button',className:'btn sm pri','aria-label':`Restaurer « ${e.name} »`},'Restaurer'); res.onclick=()=>restoreSave(e.id);
     const dl=h('button',{type:'button',className:'btn sm','aria-label':`Télécharger « ${e.name} »`,title:'Télécharger le fichier'},'⤓'); dl.onclick=()=>downloadConfig(e);
     const th=e.thumb ? h('img',{src:e.thumb,alt:'',width:56,height:79}) : h('span',{className:'nothumb','aria-hidden':'true'});
-    box.append(h('li',{className:'save'},th,h('div',{className:'meta'},h('b',{},e.name),h('small',{},`${fmt.format(new Date(e.savedAt))} · `+(e.state.mode==='illus' ? 'Affiche illustrée' : `${LAYOUT_NAME(e.state.layout)} · ${THEMES[e.state.theme]?.name||''}`))),h('div',{className:'acts'},res,dl,del)));
+    box.append(h('li',{className:'save'},th,h('div',{className:'meta'},h('b',{},e.name),h('small',{},`${fmt.format(new Date(e.savedAt))} · `+(e.state.mode==='illus' ? 'Affiche illustrée' : e.state.mode==='mix' ? 'Carte + illustration' : `${LAYOUT_NAME(e.state.layout)} · ${THEMES[e.state.theme]?.name||''}`))),h('div',{className:'acts'},res,dl,del)));
   }
 }
 function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); openDialog('saves'); setTimeout(()=>$('saveName').focus(),50); }

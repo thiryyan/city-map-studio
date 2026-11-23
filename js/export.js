@@ -49,7 +49,7 @@ const toBlobP=(cv,type,q)=>new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new 
 let lastUrl=null, lastImgUrl=null;
 async function exportPoster(){
   const illus=st.mode==='illus';   // affiche illustrée : aucune carte, donc ni accord réseau ni données
-  if(illus && !CMS.illus.ready()){ toast('Importez d\'abord votre illustration (onglet Illustration, étape 2).',true); return; }
+  if(st.mode!=='map' && !CMS.illus.ready()){ toast('Importez d\'abord votre illustration (onglet Illustration, étape 2).',true); return; }
   if(!illus && st.engine==='maplibre' && !needConsent(()=>exportPoster())) return;
   if(!illus && st.engine!=='maplibre' && !osmData){ toast('Importez d\'abord un fichier de données.',true); return; }
   if(!illus && st.engine==='maplibre' && ui.glLost){ toast('Carte GPU momentanément indisponible (mémoire graphique) : réessayez dans un instant.',true); return; }

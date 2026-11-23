@@ -73,6 +73,21 @@ function geom(s, W, H){
   const g={m,U,land,lay};
   // Mode Illustration : pas de carte (cadre vide, aucune vue) ; l'image couvre l'affiche (CMS.illus.draw)
   if(s.mode==='illus'){ g.illus={x:0,y:0,w:W,h:H}; g.map={x:0,y:0,w:0,h:0}; g.places=[]; return g; }
+  // Carte + illustration : médaillon (illustration pleine page, carte dans une forme) ou vignette (carte encadrée, illustration en arche)
+  if(s.mode==='mix'){
+    const M=s.mix||{}; g.mix=M.compo==='vig' ? 'vig' : 'med';
+    if(g.mix==='med'){
+      const d=(land?H:W)*0.45, sh=M.shape||'circle', h=sh==='heart' ? d*0.92 : sh==='arch' ? d*1.2 : d;
+      const y=M.pos==='haut' ? H*0.24 : M.pos==='centre' ? (H-h)/2 : H-h-H*0.12;
+      g.illus={x:0,y:0,w:W,h:H}; g.map={x:(W-d)/2,y,w:d,h,shape:sh};
+    } else {
+      const band=0.24*U; g.map={x:m,y:m,w:W-2*m,h:H-2*m-band};
+      let w=(land?0.22:0.3)*W; const pad=0.035*U; w=Math.min(w,(g.map.h-2*pad)/1.34);
+      g.illus={x:W-m-pad-w,y:m+pad,w,h:w*1.34,shape:'arch'}; g.band={y:g.map.y+g.map.h,h:H-m-(g.map.y+g.map.h)};
+    }
+    g.places=[{rect:g.map,view:s,main:true}]; g.map.circle=g.map.shape==='circle';
+    return g;
+  }
   if(!land){
     switch(lay){
       case 'classic': g.map={x:m,y:m,w:W-2*m,h:H-2*m-0.36*U}; g.text=below(g.map,0.014); break;

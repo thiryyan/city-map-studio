@@ -80,3 +80,16 @@ test('normState : référence de l\'illustration (empreinte SHA-256) validée', 
   assert.equal(J(`normState({illus:{img:{ref:'${ok}',name:'x'.repeat(500),w:-5,h:1e9}}}).illus.img.name.length`), 120);
   assert.deepEqual(J(`(({w,h})=>[w,h])(normState({illus:{img:{ref:'${ok}',w:-5,h:1e9}}}).illus.img)`), [1, 100000]);
 });
+
+test('Carte + illustration : prompt et zone de l\'illustration selon la composition', () => {
+  const med = S("{mode:'mix',mix:{compo:'med',shape:'arch',pos:'centre'}}"), vig = S("{mode:'mix',mix:{compo:'vig',shape:'circle',pos:'bas'}}");
+  const pm = ev(ctx, `CMS.illus.buildPrompt(${med})`), pv = ev(ctx, `CMS.illus.buildPrompt(${vig})`);
+  assert.match(pm, /pour le titre\..*Laisser aussi une zone calme et peu détaillée au centre de l’image.*une arche d’environ 45 %/s);
+  assert.match(pv, /petite vignette en forme d’arche/);
+  assert.match(pv, /FORMAT : portrait, proportions 3:4/);
+  assert.doesNotMatch(pv, /pour le titre/);
+  assert.deepEqual(J(`CMS.illus.region(${med})`), { fw: 1, fh: 1 });
+  const r = J(`CMS.illus.region(${vig})`);
+  assert.ok(r.fw > 0.25 && r.fw < 0.35 && Math.abs(r.fh / r.fw * 1.4142 - 1.34) < 0.02, JSON.stringify(r));
+  assert.equal(ev(ctx, `CMS.illus.compoLine(${med})`).startsWith('Laisser une zone calme'), true);
+});
