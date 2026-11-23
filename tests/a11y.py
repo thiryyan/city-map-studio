@@ -54,21 +54,22 @@ async def main():
         check('Arche' in alt and 'Nuit boréale' in alt and 'BLOIS' not in alt and 'Blois' in alt, f'aperçu : texte de remplacement à jour ({alt})')
 
         # 3. Aperçu au mur : focus retenu, Échap, retour du focus sur le bouton d'origine
-        await page.focus('#bMockup'); await page.keyboard.press('Enter'); await page.wait_for_timeout(1500)
+        await ev("__cms.showTab('export')"); await page.focus('#bMockup'); await page.keyboard.press('Enter'); await page.wait_for_timeout(1500)
         check(await ev("document.getElementById('mockup').open && !!document.activeElement.closest('#mockup')"), 'aperçu au mur : fenêtre ouverte, focus dedans')
         check(await ev("document.getElementById('app').matches(':modal')") is False and await ev("(()=>{ const r=document.getElementById('bExport').getBoundingClientRect(); return document.elementFromPoint(r.x+5,r.y+5)?.id!=='bExport'; })()"),
               'aperçu au mur : arrière-plan inaccessible')
         await page.keyboard.press('Escape'); await page.wait_for_timeout(300)
         check(not await ev("document.getElementById('mockup').open") and await ev("document.activeElement.id") == 'bMockup', 'aperçu au mur : Échap, focus rendu au bouton')
 
-        # 4. Export : fenêtre de résultat, Échap
+        # 4. Export (onglet Export) : résultat dans l'onglet, focus sur « Télécharger », « Masquer l'aperçu » rend le focus
         async with page.expect_download():
             await page.focus('#bExport'); await page.keyboard.press('Enter')
         await page.wait_for_timeout(800)
-        check(await ev("document.getElementById('result').open && document.getElementById('busy').getAttribute('role')==='status'"), 'export : fenêtre de résultat ; attente annoncée (role=status)')
+        check(await ev("!document.getElementById('result').hidden && document.getElementById('busy').getAttribute('role')==='status'"), 'export : résultat affiché dans l\'onglet ; attente annoncée (role=status)')
         check(not await ev("document.getElementById('app').inert"), 'export terminé : page de nouveau active')
-        await page.keyboard.press('Escape'); await page.wait_for_timeout(300)
-        check(not await ev("document.getElementById('result').open") and await ev("document.activeElement.id") == 'bExport', 'export : Échap ferme, focus rendu')
+        check(await ev("document.activeElement.id") == 'resDl', 'export : focus sur « Télécharger »')
+        await page.focus('#resClose'); await page.keyboard.press('Enter'); await page.wait_for_timeout(200)
+        check(await ev("document.getElementById('result').hidden") and await ev("document.activeElement.id") == 'bExport', 'export : « Masquer l\'aperçu », focus rendu au bouton d\'export')
 
         # 5. Cibles tactiles et noms accessibles
         small = await ev("[...document.querySelectorAll('.hist button,.uisz button,#bReset')].filter(e=>e.getBoundingClientRect().height<44).map(e=>e.id)")

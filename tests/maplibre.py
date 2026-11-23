@@ -155,7 +155,7 @@ async def main():
             diag = await page.inner_text('#diag')
             print('  diag MapLibre :', 'copie locale (lib/)' in diag)
             async with page.expect_download(timeout=90000) as dl:
-                await page.click('#bExport')
+                await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
             d = await dl.value; path = str(T / f'ml-export-{name}.png'); await d.save_as(path)
             data = open(path, 'rb').read(); i = data.find(b'pHYs')
             w, h, water, dark = png_stats(path)
@@ -178,7 +178,7 @@ async def main():
                 print('  effets (aperçu) :', fx)
                 assert fx['pat'] and fx['img'] and fx['building'] == 'line' and len(fx['passes']) == 2 and fx['passes'][0] != fx['passes'][1], fx
                 async with page.expect_download(timeout=90000) as dl:
-                    await page.click('#resClose'); await page.click('#bExport')
+                    await page.click('#resClose'); await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
                 d = await dl.value; path = str(T / 'ml-export-fx.png'); await d.save_as(path)
                 w2, h2, water2, dark2 = png_stats(path)
                 print('  export avec effets', w2, h2, '| pixels eau', water2, f'(sans effet : {water})')
@@ -195,7 +195,7 @@ async def main():
                 print('  pistes artistiques (aperçu) :', art)
                 assert art['glow'] == 24 and art['wl'] == 5 and art['q'] == 8 and art['plate'] and art['dots'] and art['cross'] and art['rendered'] > 0, art
                 async with page.expect_download(timeout=90000) as dl:
-                    await page.click('#resClose'); await page.click('#bExport')
+                    await page.click('#resClose'); await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
                 d = await dl.value; path = str(T / 'ml-export-art.png'); await d.save_as(path)
                 w3, h3, _, _ = png_stats(path)
                 print('  export avec les pistes artistiques', w3, h3)
@@ -220,7 +220,7 @@ async def main():
                 # Export A3 (3508 × 4961) : carte de plus de 4096 px de haut, rendue en tuiles
                 await page.evaluate("__cms.setFormat('a3')")
                 async with page.expect_download(timeout=180000) as dl:
-                    await page.click('#resClose'); await page.click('#bExport')
+                    await page.click('#resClose'); await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
                 d = await dl.value; path = str(T / 'ml-export-a3.png'); await d.save_as(path)
                 w4, h4, water4, dark4 = png_stats(path)
                 print('  export A3', w4, h4, '| pixels eau', water4, '| pixels axes', dark4)

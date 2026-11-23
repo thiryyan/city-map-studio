@@ -54,7 +54,7 @@ async def main():
         # Mode et onglets
         await page.click('#modeSeg button[data-v=mix]'); await page.wait_for_timeout(400)
         tabs = await page.evaluate("[...document.querySelectorAll('#tabs button:not([hidden])')].map(b=>b.dataset.tab)")
-        check(tabs == ['lieu', 'repere', 'illus', 'textes', 'style'], f'onglets du mode Carte + illustration {tabs}')
+        check(tabs == ['lieu', 'repere', 'illus', 'textes', 'style', 'export'], f'onglets du mode Carte + illustration {tabs}')
         await page.evaluate("__cms.showTab('illus')")
         check(await page.is_visible('#illusCompo') and await page.evaluate("CMS.illus.step") == 'compo', 'étape Composition ouverte en premier (sans image)')
         await page.evaluate("__cms.showTab('style')")
@@ -133,12 +133,12 @@ async def main():
 
         # Export A4
         await page.evaluate("__cms.exportPoster()")
-        await wait_js(page, "$('result').open", 30000)
+        await wait_js(page, "!$('result').hidden", 30000)
         check('2480 × 3508 px' in await page.text_content('#resInfo'), 'export A4 : 2480 × 3508 px')
         await page.click('#resClose')
 
         # Haut / bas (moitié, deux tiers), côte à côte (paysage), fondu (issue #45)
-        await page.click('#illusStepSeg button[data-v=compo]'); await page.click('#compoSeg button[data-v=hb]'); await page.wait_for_timeout(300)
+        await page.evaluate("__cms.showTab('illus')"); await page.click('#illusStepSeg button[data-v=compo]'); await page.click('#compoSeg button[data-v=hb]'); await page.wait_for_timeout(300)
         check(await page.is_visible('#hbOpts') and await page.is_hidden('#medOpts'), 'haut / bas : choix du partage')
         g = await page.evaluate("(()=>{ const g=__cms.geom(__cms.st,1000,1414); return [g.illus.h, g.map.y, g.map.h]; })()")
         check(abs(g[0] - 707) < 1 and g[1] > g[0] and abs(g[1] + g[2] - 1414) < 1, f'haut / bas : illustration sur la moitié haute {g}')
@@ -194,7 +194,6 @@ async def main():
 
         # Mes affiches : le type est affiché ; état forgé ; retour au mode Carte
         check('Carte + illustration' in await page.evaluate("(__cms.saveCurrent('Mix'), openSaves(), $('savesList').textContent)"), 'Mes affiches : « Carte + illustration »')
-        await page.evaluate("closeDialog('saves')")
         n = await page.evaluate("normState({mode:'mix',mix:{compo:'xx',shape:'star',pos:'gauche',split:'3/4'}}).mix")
         check(n == {'compo': 'med', 'shape': 'circle', 'pos': 'bas', 'split': 'half'}, f'état forgé : composition corrigée {n}')
         await page.click('#modeSeg button[data-v=map]'); await page.wait_for_timeout(300)

@@ -11,7 +11,9 @@ CMS.define('illus', () => {
   const C = CMS.illusConf;
   // ---------- Fonctions pures (testées sans navigateur : tests/unit/illus.test.mjs) ----------
   const GRADES = {ok:'Bonne', mid:'Juste', bad:'Insuffisante'};
-  /** Résolution d'impression de l'image pour chaque format (ppp), selon le cadrage ; agrandissement ×2 : lissage crédité de 45 % */
+  /** Résolution d'impression de l'image pour chaque format (ppp), selon le cadrage ; agrandissement ×2 : lissage crédité de 45 %.
+   *  Seuils (bonne, juste) : 200 / 140 ppp ; 300 / 200 pour le 10 × 15 cm, petite photo regardée de près. */
+  const SEUILS={'10x15':[300,200]};
   /** Part de l'affiche occupée par l'illustration (1 × 1, sauf la vignette du mode Carte + illustration) */
   function region(s){
     if(s.mode!=='mix' || s.mix.compo==='med' || s.mix.compo==='fondu') return {fw:1,fh:1};
@@ -23,7 +25,8 @@ CMS.define('illus', () => {
       const Win=(land?b:a)/25.4*R.fw, Hin=(land?a:b)/25.4*R.fh;
       const base=I.fit==='contain' ? Math.max(iw/Win,ih/Hin) : Math.min(iw/Win,ih/Hin);
       const dpi=Math.round(base/(I.zoom/100)), eff=I.upscale ? dpi*1.45 : dpi;
-      return {key, name, dpi, grade: eff>=200 ? 'ok' : eff>=140 ? 'mid' : 'bad'};
+      const [ok,mid]=SEUILS[key]||[200,140];
+      return {key, name, dpi, grade: eff>=ok ? 'ok' : eff>=mid ? 'mid' : 'bad'};
     });
   }
   /** Part de l'image hors de l'affiche (cadrage « Remplir ») ou des bandes laissées vides (« Image entière »), en % */
@@ -118,7 +121,8 @@ CMS.define('illus', () => {
       side:{g:', plutôt à gauche', c:'', d:', plutôt à droite'},
       foot:{h:' Garder aussi le bas de l’image assez simple pour quelques lignes de texte discrètes.', m:' Garder aussi le bas de l’image assez simple pour quelques lignes de texte discrètes.', b:' Garder aussi le haut de l’image assez simple pour quelques lignes de texte discrètes.'},
       format:'FORMAT : ', res:', dans la plus haute résolution possible', big:' ; au moins 4000 px sur le grand côté si possible',
-      ratio:{p:'portrait, proportions 1:1,414 (A4) ; si ce format n’est pas disponible, 2:3', p57:'portrait, proportions 5:7 ; si ce format n’est pas disponible, 2:3',
+      ratio:{p:'portrait, proportions 1:1,414 (A4) ; si ce format n\u2019est pas disponible, 2:3', p57:'portrait, proportions 5:7 ; si ce format n\u2019est pas disponible, 2:3',
+        p23:'portrait, proportions 2:3', l23:'paysage, proportions 3:2',
         l:'paysage, proportions 1,414:1 (A4 couché) ; si ce format n’est pas disponible, 3:2', l57:'paysage, proportions 7:5 ; si ce format n’est pas disponible, 3:2'},
       fixed:'IMPOSÉ : ', moment:'moment de la journée : ', saison:'saison : ',
       med:(pos,shape)=>`Laisser aussi une zone calme et peu détaillée ${{haut:'en haut',centre:'au centre',bas:'en bas'}[pos]} de l’image, au milieu de la largeur (${{circle:'un cercle',heart:'un cœur',arch:'une arche'}[shape]} d’environ 45 % de la largeur) : une carte y sera posée.`,
@@ -147,6 +151,7 @@ CMS.define('illus', () => {
       foot:{h:' Also keep the bottom of the image simple enough for a few discreet lines of text.', m:' Also keep the bottom of the image simple enough for a few discreet lines of text.', b:' Also keep the top of the image simple enough for a few discreet lines of text.'},
       format:'FORMAT: ', res:', in the highest resolution available', big:'; at least 4000 px on the long side if possible',
       ratio:{p:'portrait, aspect ratio 1:1.414 (A4); if unavailable, 2:3', p57:'portrait, aspect ratio 5:7; if unavailable, 2:3',
+        p23:'portrait, aspect ratio 2:3', l23:'landscape, aspect ratio 3:2',
         l:'landscape, aspect ratio 1.414:1 (A4 landscape); if unavailable, 3:2', l57:'landscape, aspect ratio 7:5; if unavailable, 3:2'},
       fixed:'FIXED: ', moment:'time of day: ', saison:'season: ',
       med:(pos,shape)=>`Also keep a calm, low-detail area ${{haut:'at the top',centre:'in the centre',bas:'at the bottom'}[pos]} of the image, horizontally centred (${{circle:'a circle',heart:'a heart',arch:'an arch'}[shape]} about 45% of the width wide): a map will be placed there.`,
@@ -198,7 +203,7 @@ CMS.define('illus', () => {
     else out.push(L.comp+L.zone[T.pos[0]]+L.side[T.pos[1]]+L.compEnd+(footLines(s)?L.foot[T.pos[0]]:'')
       +(cp==='med'?' '+L.med(s.mix.pos,s.mix.shape):'')+(cp==='fondu'?' '+L.fondu:''));
     const r57=s.format==='50x70', land=s.orient==='landscape';
-    let fmt=vig ? L.vratio : L.ratio[(land?'l':'p')+(r57?'57':'')];
+    let fmt=vig ? L.vratio : L.ratio[(land?'l':'p')+(r57?'57':s.format==='10x15'?'23':'')];
     if(cp==='hb' || cp==='cote'){ const d=posterDims(s), R=region(s); fmt=ratioText(d.W*R.fw/(d.H*R.fh),L,P.lang==='en'); }
     out.push(L.format+fmt+L.res+(r57?L.big:'')+'.');
     const idx=P.lang==='en'?2:1, label=(list,k)=>(list.find(x=>x[0]===k)||list[0])[idx].toLowerCase();
@@ -612,7 +617,7 @@ CMS.define('illus', () => {
   }
   function exportState(){
     const off=st.mode!=='map' && !ready();
-    for(const id of ['bExport','bNextExport']){ const b=$(id); if(b){ b.disabled=off; b.title=off?'Importez d’abord votre illustration (onglet Illustration)':''; } }
+    for(const id of ['bExport']){ const b=$(id); if(b){ b.disabled=off; b.title=off?'Importez d’abord votre illustration (onglet Illustration)':''; } }
     const own=/illustration/i.test($('stTxt').textContent);   // message posé par ce module (sinon : état de la carte, à laisser)
     if(st.mode==='mix' && ready()){ if(own) setStatus('Prêt'); return; }
     if(st.mode==='map'){ if(own) setStatus('Prêt'); return; }

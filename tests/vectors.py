@@ -81,7 +81,7 @@ async def main():
         check(dark[1] < 230 and abs(dark[0] - dark[1]) <= 8, f'tunnels : croisement de même teinte que la rue ({dark[0]} contre {dark[1]})')
 
         # 5. Export
-        async with page.expect_download() as dl: await page.click('#bExport')
+        async with page.expect_download() as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d = await dl.value; path = str(T / 'vectors-export.png'); await d.save_as(path)
         w, h = struct.unpack('>II', open(path, 'rb').read()[16:24])
         check((w, h) == (2480, 3508), f'export {w} × {h}')

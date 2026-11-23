@@ -54,7 +54,7 @@ python tests/coords.py           # saisie des coordonnées du repère
 python tests/texts.py            # lignes de texte optionnelles
 python tests/textsize.py         # taille des textes de l'affiche (par ligne et globale)
 python tests/dedication.py       # dédicace sur deux lignes : Auto, Une ligne, Deux lignes ; la carte fait de la place
-python tests/formats.py          # formats A4, A3, 50 × 70 cm, limites des canevas (ordinateur, iPhone), export PDF
+python tests/formats.py          # formats A4, A3, 50 × 70 cm, 10 × 15 cm, limites des canevas (ordinateur, iPhone), export PDF
 python tests/mobile.py           # panneau coulissant, mode Cadrer, paysage, A− / A+
 python tests/ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
 python tests/design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, mur, lien, paysage, GPX, ciel

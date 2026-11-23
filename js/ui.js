@@ -81,6 +81,7 @@ function showTab(name, focus){
   document.querySelectorAll('#tabs button').forEach(x=>{ const on=x.dataset.tab===name; x.classList.toggle('on',on); x.setAttribute('aria-selected',String(on)); x.tabIndex=on?0:-1; if(on&&focus) x.focus(); });
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));
   ui.tab=name; drawCards(name);
+  if(name==='export') CMS.emit('tab:export');   // Mes affiches : nom proposé, liste à jour (features.js)
 }
 /** Section « Avancé » de l'onglet Lieu : ouverte à la demande, mémorisée ; ouverte d'office quand elle devient utile */
 const ADV_KEY='cityMapStudio.advOpen';
@@ -152,7 +153,7 @@ function buildUI(){
   });
   // parcours guidé : Lieu → Repère → Textes → Style → Exporter
   document.querySelectorAll('[data-next]').forEach(b=>b.onclick=()=>{ showTab(b.dataset.next); document.querySelector('.tabbody').scrollTop=0; if(isSheet()&&ui.sheet==='peek') setSheet('half'); });
-  $('bNextExport').onclick=()=>$('bExport').click();
+  $('bNextExport').onclick=()=>{ showTab('export'); document.querySelector('.tabbody').scrollTop=0; if(isSheet()&&ui.sheet==='peek') setSheet('half'); };
   // section Avancé
   try{ if(localStorage.getItem(ADV_KEY)==='1') $('adv').open=true; }catch(e){}
   $('adv').addEventListener('toggle',()=>{ try{ $('adv').open ? localStorage.setItem(ADV_KEY,'1') : localStorage.removeItem(ADV_KEY); }catch(e){} });
@@ -290,7 +291,7 @@ function buildUI(){
   $('searchForm').onsubmit=e=>{ e.preventDefault(); submitSearch($('q').value); };
   $('results').addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeResults(); } });
   $('bExport').onclick=exportPoster;
-  $('resClose').onclick=()=>closeDialog('result');
+  $('resClose').onclick=()=>{ $('result').hidden=true; $('bExport').focus(); };
 }
 /** Réinitialisation : un premier appui demande confirmation (pas de confirm(), bloqué dans les aperçus intégrés) */
 let resetT=0;

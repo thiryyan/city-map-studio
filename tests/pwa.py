@@ -79,7 +79,7 @@ async def main():
         check(ok, 'hors ligne : l\'application démarre depuis le cache')
         await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
         async with page.expect_download() as dl:
-            await page.click('#bExport')
+            await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d = await dl.value
         check(d.suggested_filename.endswith('300dpi.png'), 'hors ligne : export du moteur Fichier')
         check(not errs, f'hors ligne : aucune erreur de page {errs}')

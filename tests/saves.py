@@ -33,7 +33,7 @@ async def main():
         await page.click('#tb-style'); await page.wait_for_timeout(200)
 
         # 1. Fenêtre, enregistrement nommé, vignette
-        await page.click('#bSaves'); await wait_js(page, "document.getElementById('saves').open")
+        await page.click('#tb-export'); await wait_js(page, "document.getElementById('tab-export').classList.contains('on')")
         check(await ev("!document.getElementById('savesEmpty').hidden && document.getElementById('bSavesBackup').disabled"), 'liste vide : message et sauvegarde complète désactivée')
         check(await ev("document.getElementById('saveName').value") == 'Blois · Alice & Mathias', 'nom proposé : titre et noms')
         await ev("()=>__cms.applyAmbiance('ancienne')")
@@ -53,7 +53,7 @@ async def main():
         # 2. Restauration fidèle et annulable
         await page.click('#savesList button[aria-label="Restaurer « Carte ancienne »"]'); await page.wait_for_timeout(600)
         check(await ev(SNAP) == a_snap, 'restauration : état identique à l\'enregistrement')
-        check(not await ev("document.getElementById('saves').open"), 'restauration : fenêtre refermée')
+        check(await page.is_visible('#savesList'), 'restauration : la liste reste affichée (onglet Export)')
         check(await ev("__cms.st.engine") == 'file', 'restauration : moteur de l\'appareil conservé')
         await page.click('#bUndo'); await page.wait_for_timeout(600)
         check(await ev(SNAP) == b_snap, 'restauration annulable (retour à l\'affiche en cours)')
@@ -67,7 +67,7 @@ async def main():
         # 4. Ctrl + S, suppression en deux temps
         await page.keyboard.press('Control+s'); await page.wait_for_timeout(300)
         check(len(await ev("__cms.loadSaves()")) == 3, 'Ctrl + S : affiche en cours enregistrée')
-        await page.click('#tb-style'); await page.click('#bSaves'); await wait_js(page, "document.getElementById('saves').open")
+        await page.click('#tb-export'); await wait_js(page, "document.getElementById('tab-export').classList.contains('on')")
         first = await ev("__cms.loadSaves()[0].name")
         sel = f'#savesList button[aria-label="Supprimer « {first} »"]'
         await page.click(sel); await page.wait_for_timeout(150)
@@ -85,7 +85,7 @@ async def main():
         await page.set_input_files('#cfgIn', cfg_path); await page.wait_for_timeout(700)
         check(await ev(SNAP) == a_snap, 'fichier rouvert : affiche restaurée à l\'identique')
         async with page.expect_download() as dl:
-            await page.click('#tb-style'); await page.click('#bSaves'); await page.click('#bCfgExport')
+            await page.click('#tb-export'); await page.click('#bCfgExport')
         cur = json.loads(open(await (await dl.value).path()).read())
         check(cur['state']['texts']['title'] == 'Blois' and cur['state']['layout'] == 'classic', 'affiche en cours téléchargée')
 
@@ -138,10 +138,9 @@ async def main():
         check(full['ok'] is False and 'plein' in full['toast'] and full['n'] == 1, f'navigateur plein : refus expliqué, aucune perte ({full["toast"][:60]})')
 
         # 9. Accessibilité : noms accessibles, fenêtre modale, Échap
-        a11y = await ev("""[...document.querySelectorAll('#saves button, #saves input')].every(e=>(e.getAttribute('aria-label')||e.textContent.trim()||e.labels?.[0]?.textContent.trim()||e.closest('label')?.textContent.trim()))""")
-        check(a11y, 'commandes de la fenêtre nommées')
-        await page.keyboard.press('Escape'); await page.wait_for_timeout(200)
-        check(not await ev("document.getElementById('saves').open"), 'Échap ferme la fenêtre')
+        a11y = await ev("""[...document.querySelectorAll('#tab-export button, #tab-export input')].every(e=>(e.getAttribute('aria-label')||e.textContent.trim()||e.labels?.[0]?.textContent.trim()||e.closest('label')?.textContent.trim()))""")
+        check(a11y, 'commandes de l\'onglet Export nommées')
+        check(await ev("document.querySelectorAll('dialog#saves,dialog#result').length") == 0, 'Mes affiches et résultat : plus de fenêtre modale (onglet Export)')
         check(not errs, f'aucune erreur de page {errs}')
         await b.close()
     for f in T.glob('saves-*.json'): f.unlink()

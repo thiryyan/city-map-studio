@@ -9,7 +9,7 @@ const S = patch => `Object.assign(structuredClone(DEFAULT_STATE), ${patch})`;
 
 test('qualité d\'impression : 1696 × 2528 px → A4 bonne, A3 juste, 50 × 70 insuffisante', () => {
   const q = J(`CMS.illus.quality(${S('{}')},1696,2528)`);
-  assert.deepEqual(q.map(f => [f.key, f.dpi, f.grade]), [['a4', 205, 'ok'], ['a3', 145, 'mid'], ['50x70', 86, 'bad']]);
+  assert.deepEqual(q.map(f => [f.key, f.dpi, f.grade]), [['a4', 205, 'ok'], ['a3', 145, 'mid'], ['50x70', 86, 'bad'], ['10x15', 428, 'ok']]);
 });
 
 test('qualité : zoom (ppp divisés), image entière (côté le moins contraint), agrandissement ×2 (lissage crédité)', () => {
@@ -18,7 +18,15 @@ test('qualité : zoom (ppp divisés), image entière (côté le moins contraint)
   const c = J(`CMS.illus.quality(${S("{illus:{...DEFAULT_STATE.illus,fit:'contain'}}")},1696,2528)`);
   assert.equal(c[0].dpi, 216);
   const u = J(`CMS.illus.quality(${S("{illus:{...DEFAULT_STATE.illus,upscale:true}}")},1696,2528)`);
-  assert.deepEqual(u.map(f => f.grade), ['ok', 'ok', 'bad']);
+  assert.deepEqual(u.map(f => f.grade), ['ok', 'ok', 'bad', 'ok']);
+});
+
+test('qualité 10 × 15 cm : seuils 300 / 200 ppp (petite photo regardée de près)', () => {
+  // 1000 × 1500 px : 254 ppp en 10 × 15 (juste, alors qu\'il serait « bonne » avec les seuils 200 / 140), 121 ppp en A4
+  const q = J(`CMS.illus.quality(${S('{}')},1000,1500)`);
+  assert.deepEqual(q.map(f => [f.key, f.dpi, f.grade]), [['a4', 121, 'bad'], ['a3', 86, 'bad'], ['50x70', 51, 'bad'], ['10x15', 254, 'mid']]);
+  assert.equal(J(`CMS.illus.quality(${S('{}')},1200,1800)`)[3].grade, 'ok');
+  assert.equal(J(`CMS.illus.quality(${S('{}')},700,1050)`)[3].grade, 'bad');
 });
 
 test('placement : remplir, contenir, zoom et décalage', () => {
@@ -84,6 +92,7 @@ test('normState : référence de l\'illustration (empreinte SHA-256) validée', 
 test('Carte + illustration : prompt et zone de l\'illustration selon la composition', () => {
   const med = S("{mode:'mix',mix:{compo:'med',shape:'arch',pos:'centre'}}"), vig = S("{mode:'mix',mix:{compo:'vig',shape:'circle',pos:'bas'}}");
   const pm = ev(ctx, `CMS.illus.buildPrompt(${med})`), pv = ev(ctx, `CMS.illus.buildPrompt(${vig})`);
+  assert.match(ev(ctx, `CMS.illus.buildPrompt(${S("{format:'10x15'}")})`), /FORMAT : portrait, proportions 2:3, dans la plus haute/);
   assert.match(pm, /pour le titre\..*Laisser aussi une zone calme et peu détaillée au centre de l’image.*une arche d’environ 45 %/s);
   assert.match(pv, /petite vignette en forme d’arche/);
   assert.match(pv, /FORMAT : portrait, proportions 3:4/);

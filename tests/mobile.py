@@ -63,7 +63,7 @@ async def main():
         peek = await rect(page, '#poster')
         check(await sheet(page) == 'peek', 'glisser vers le bas : panneau réduit')
         check(peek['h'] > half['poster']['h'] * 1.3, f"panneau réduit : affiche agrandie ({round(half['poster']['h'])} → {round(peek['h'])} px)")
-        check(await page.is_visible('#bExport') and await page.is_visible('#tabs'), 'panneau réduit : onglets et export visibles')
+        check(await page.is_visible('#tb-export') and await page.is_visible('#tabs') and await page.is_hidden('.foot #bExport'), 'panneau réduit : onglets visibles, onglet Export (plus de bouton d\'export dans le pied)')
         await page.screenshot(path=str(T / 'mobile-peek.png'))
         await page.tap('#tabs [data-tab=style]'); await page.wait_for_timeout(250)
         check(await sheet(page) == 'half', 'onglet touché depuis le cran réduit : mi-hauteur')
@@ -138,6 +138,17 @@ async def main():
         await page.tap('#bUiSmaller'); await page.tap('#bUiSmaller'); await page.wait_for_timeout(200)
         check(await page.evaluate("!localStorage.getItem('cityMapStudio.uiScale')"), 'retour à 100 % : préférence effacée (taille du système)')
         check(not errs, f'portrait : aucune erreur de page {errs}')
+        await ctx.close()
+
+        # ---------- Petit téléphone (360 px) : jusqu'à six onglets, sans défilement ni libellé tronqué (issue #51) ----------
+        ctx, page, errs = await open_page({'width': 360, 'height': 740})
+        for mode, n in [('map', 5), ('illus', 5), ('mix', 6)]:
+            await page.evaluate(f"CMS.illus.setMode('{mode}')"); await page.wait_for_timeout(250)
+            t = await page.evaluate("""(()=>{ const bs=[...document.querySelectorAll('#tabs button:not([hidden])')];
+              return {n:bs.length, cut:bs.filter(b=>[...b.querySelectorAll('span')].concat(b.children.length?[]:[b]).some(e=>e.offsetParent!==null && e.scrollWidth>e.clientWidth+1)).map(b=>b.textContent),
+                small:bs.filter(b=>b.getBoundingClientRect().height<44).length, last:bs[bs.length-1].dataset.tab, over:document.documentElement.scrollWidth>innerWidth}; })()""")
+            check(t['n'] == n and not t['cut'] and not t['small'] and t['last'] == 'export' and not t['over'], f'360 px, mode {mode} : {n} onglets lisibles, Export en dernier, sans défilement {t}')
+        check(not errs, f'360 px : aucune erreur de page {errs}')
         await ctx.close()
 
         # ---------- Téléphone paysage ----------

@@ -82,10 +82,10 @@ async def main():
 
         # Export (Souvenir, deux lignes), puis persistance
         await ev("__cms.setLayout('souvenir')"); await ded.fill(LONG); await page.wait_for_timeout(300)
-        async with page.expect_download(timeout=120000) as dl: await page.click('#bExport')
+        async with page.expect_download(timeout=120000) as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d = await dl.value; data = open(await d.path(), 'rb').read(); w, h = struct.unpack('>II', data[16:24])
         check((w, h) == (2480, 3508), f'export avec la dédicace sur deux lignes : {w} × {h}')
-        await page.click('#resClose')
+        await page.click('#resClose'); await page.evaluate("__cms.showTab('textes')")
         await page.click('#dedWrapSeg [data-v=one]'); await page.wait_for_timeout(1500)
         await page.reload(); await page.wait_for_timeout(1500)
         check(await ev("__cms.st.dedWrap") == 'one' and await ev("document.querySelector('#dedWrapSeg [data-v=one]').getAttribute('aria-pressed')") == 'true',

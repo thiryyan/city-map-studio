@@ -87,7 +87,7 @@ async def main():
         for name, js in (('Souvenir', ''), ('pistes artistiques', "__cms.st.fx={hatch:true,glow:true,waterlines:true,dots:true,parkHatch:true,riso:true,halo:true,quarter:true,foil:true}; __cms.st.orn={scale:true,compass:true,grid:true}; __cms.st.folds=true")):
             if js: await ev(f"()=>{{ {js} }}")
             t0 = await ev("performance.now()")
-            async with page.expect_download(timeout=120000) as dl: await page.click('#bExport')
+            async with page.expect_download(timeout=120000) as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
             d = await dl.value; path = str(T / 'city-export.png'); await d.save_as(path)
             secs = (await ev("performance.now()") - t0) / 1000
             w, h = struct.unpack('>II', open(path, 'rb').read()[16:24])

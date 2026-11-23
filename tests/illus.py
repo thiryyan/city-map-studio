@@ -96,11 +96,11 @@ async def main():
         check(ok and await page.evaluate("CMS.illus.image.w") == 1696, 'PNG 1696 × 2528 importé')
         check(await page.text_content('#illusErr') == '', 'message d\'erreur effacé')
         q = await page.evaluate("[...$('illusQuality').children].map(li=>li.className+' '+li.textContent)")
-        check(len(q) == 3 and 'ok' in q[0] and '205 ppp' in q[0] and 'mid' in q[1] and '145 ppp' in q[1] and 'bad' in q[2] and '86 ppp' in q[2], f'qualité : A4 bonne, A3 juste, 50 × 70 insuffisante {q}')
+        check(len(q) == 4 and 'ok' in q[3] and '10 × 15' in q[3] and 'ok' in q[0] and '205 ppp' in q[0] and 'mid' in q[1] and '145 ppp' in q[1] and 'bad' in q[2] and '86 ppp' in q[2], f'qualité : A4 bonne, A3 juste, 50 × 70 insuffisante {q}')
         check('cur' in q[0] and 'format choisi' in q[0], 'qualité : format courant mis en avant')
         await page.check('input[data-k="illus.upscale"]')
         q = await page.evaluate("CMS.illus.quality(__cms.st,1696,2528).map(f=>f.grade)")
-        check(q == ['ok', 'ok', 'bad'], f'agrandissement ×2 : A3 devient bonne, 50 × 70 reste insuffisante {q}')
+        check(q == ['ok', 'ok', 'bad', 'ok'], f'agrandissement ×2 : A3 devient bonne, 50 × 70 reste insuffisante {q}')
         await page.uncheck('input[data-k="illus.upscale"]')
         check(not await page.evaluate("$('bExport').disabled"), 'export réactivé avec une image')
         await page.evaluate(MAKE, [800, 1200, 'image/jpeg', 'collee.jpg'])
@@ -143,10 +143,10 @@ async def main():
 
         # Export
         async with page.expect_download() as dl:
-            await page.click('#bExport')
+            await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d = await dl.value
         check(d.suggested_filename.startswith('affiche-illustration-blois') and d.suggested_filename.endswith('.png'), f'fichier exporté : {d.suggested_filename}')
-        await wait_js(page, "$('result').open", 20000)
+        await wait_js(page, "!$('result').hidden", 20000)
         info = await page.text_content('#resInfo')
         check('2480 × 3508 px' in info, f'export A4 : 2480 × 3508 px ({info[:80]})')
         await page.click('#resClose')

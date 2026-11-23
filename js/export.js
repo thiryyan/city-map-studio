@@ -68,7 +68,7 @@ async function exportPoster(){
     if(pdf) lastImgUrl=URL.createObjectURL(blob0);   // aperçu : l'image du PDF
     $('resImg').src=lastImgUrl||lastUrl; $('resDl').href=lastUrl; $('resDl').download=name;
     const cm=v=>(v/10).toLocaleString('fr-FR');
-    $('resInfo').textContent=`${name} · ${spec.key==='50x70'?'':`${spec.name} `}(${cm(spec.mm[0])} × ${cm(spec.mm[1])} cm) · ${EW} × ${EH} px · ${dpi} DPI · ${(blob.size/1048576).toFixed(1)} Mo`+(warn?' · ⚠ certaines tuiles ont pu manquer (délai dépassé)':'')+(fontWarn?' · ⚠ police non chargée : une police de secours a été utilisée':'');
+    $('resInfo').textContent=`${name} · ${/^a\d/.test(spec.key)?`${spec.name} `:''}(${cm(spec.mm[0])} × ${cm(spec.mm[1])} cm) · ${EW} × ${EH} px · ${dpi} DPI · ${(blob.size/1048576).toFixed(1)} Mo`+(warn?' · ⚠ certaines tuiles ont pu manquer (délai dépassé)':'')+(fontWarn?' · ⚠ police non chargée : une police de secours a été utilisée':'');
     // Partage : le fichier n'est créé qu'au moment du partage (pas de copie gardée en mémoire avec la fenêtre)
     const asFile=()=>new File([blob],name,{type:blob.type});
     const canShare=!!(navigator.canShare && navigator.canShare({files:[asFile()]}));
@@ -79,7 +79,8 @@ async function exportPoster(){
   }catch(e){
     console.error(e); toast('Échec de l\'export : '+(e.message||e),true);
   }finally{ setBusy(false); }
-  if(show) openDialog('result');
+  // Résultat dans l'onglet Export : aperçu, informations, téléchargement, partage
+  if(show){ showTab('export'); $('result').hidden=false; $('result').scrollIntoView?.({block:'nearest'}); $('resDl').focus({preventScroll:true}); }
 }
 
 // ---------- Contexte d'exécution ----------

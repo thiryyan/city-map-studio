@@ -1,4 +1,4 @@
-"""e2e : formats d'impression (A4, A3, 50 × 70 cm) et export PDF.
+"""e2e : formats d'impression (A4, A3, 50 × 70 cm, 10 × 15 cm) et export PDF.
 
 Vérifie :
 - les dimensions et la résolution de chaque format, en portrait et en paysage, sur ordinateur (300 DPI tant que le
@@ -71,10 +71,11 @@ async def main():
         ctx = await b.new_context(viewport={'width': 390, 'height': 844}, user_agent=IPHONE, is_mobile=True, has_touch=True)
         page = await ctx.new_page(); await page.route('**/*', route)
         await seed(page, APP)
-        specs = await page.evaluate("['a4','a3','50x70'].map(f=>__cms.exportSpec({...__cms.st, format:f}))")
+        specs = await page.evaluate("['a4','a3','50x70','10x15'].map(f=>__cms.exportSpec({...__cms.st, format:f}))")
         print('  iPhone :', [(s['key'], s['W'], s['H'], s['dpi']) for s in specs])
         check(specs[0]['W'] == 2480 and specs[0]['H'] == 3508 and specs[0]['dpi'] == 300, 'iPhone : A4 à 300 DPI')
         check(all(s['W'] * s['H'] <= 16777216 for s in specs), 'iPhone : chaque format tient dans 16,7 Mpx')
+        check((specs[3]['W'], specs[3]['H'], specs[3]['dpi']) == (1181, 1772, 300), 'iPhone : 10 × 15 cm à 300 DPI')
         check(specs[1]['dpi'] == 290 and specs[2]['dpi'] == 170, f"iPhone : A3 à 290 DPI, 50 × 70 à 170 DPI ({specs[1]['dpi']}, {specs[2]['dpi']})")
         await ctx.close()
 
@@ -86,15 +87,15 @@ async def main():
         await seed(page, APP)
         await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
         ev = page.evaluate
-        dims = await ev("""['a4','a3','50x70'].flatMap(f=>['portrait','landscape'].map(o=>{ const s=__cms.exportSpec({...__cms.st,format:f,orient:o}); return [f,o,s.W,s.H,s.dpi,s.mm]; }))""")
-        exp = {('a4', 'portrait'): (2480, 3508, 300), ('a3', 'portrait'): (3508, 4961, 300), ('50x70', 'portrait'): (5315, 7441, 270)}
+        dims = await ev("""['a4','a3','50x70','10x15'].flatMap(f=>['portrait','landscape'].map(o=>{ const s=__cms.exportSpec({...__cms.st,format:f,orient:o}); return [f,o,s.W,s.H,s.dpi,s.mm]; }))""")
+        exp = {('a4', 'portrait'): (2480, 3508, 300), ('a3', 'portrait'): (3508, 4961, 300), ('50x70', 'portrait'): (5315, 7441, 270), ('10x15', 'portrait'): (1181, 1772, 300)}
         for f, o, w, h, dpi, mm in dims:
             W, H, D = exp[(f, 'portrait')]
             if o == 'landscape': W, H = H, W
             check((w, h, dpi) == (W, H, D) and (mm[0] > mm[1]) == (o == 'landscape'), f'{f} {o} : {w} × {h} px à {dpi} DPI, {mm[0]} × {mm[1]} mm')
 
-        # Choix dans l'onglet Style : bouton d'export, indication, rapport de l'aperçu
-        await page.click('#tabs [data-tab=style]')
+        # Choix dans l'onglet Export : bouton d'export, indication, rapport de l'aperçu
+        await page.click('#tabs [data-tab=export]')
         await page.click('#formatSeg [data-v=a3]'); await page.wait_for_timeout(300)
         lab = await page.inner_text('#bExport')
         check('3508 × 4961' in lab and 'A3' in lab and '300 DPI' in lab, f'A3 : bouton d\'export « {lab.strip()} »')
@@ -104,6 +105,11 @@ async def main():
         check('270 DPI' in hint and 'abaissée' in hint, f'50 × 70 : résolution abaissée signalée « {hint[:70]}… »')
         ratio = await ev("(()=>{ const r=document.getElementById('poster').getBoundingClientRect(); return r.height/r.width; })()")
         check(abs(ratio - 1.4) < 0.01, f'50 × 70 : aperçu au rapport 7/5 ({ratio:.4f})')
+        await page.click('#formatSeg [data-v="10x15"]'); await page.wait_for_timeout(400)
+        lab = await page.inner_text('#bExport'); hint = await page.inner_text('#formatHint')
+        ratio = await ev("(()=>{ const r=document.getElementById('poster').getBoundingClientRect(); return r.height/r.width; })()")
+        check('1181 × 1772' in lab and '10 × 15 cm' in lab and '300 DPI' in lab and abs(ratio - 1.5) < 0.01 and 'fond perdu' in hint,
+              f'10 × 15 cm : bouton « {lab.strip()} », aperçu au rapport 3/2 ({ratio:.3f}), tirage photo signalé')
         await page.click('#formatSeg [data-v=a4]'); await page.wait_for_timeout(300)
         ratio = await ev("(()=>{ const r=document.getElementById('poster').getBoundingClientRect(); return r.height/r.width; })()")
         check(abs(ratio - 3508 / 2480) < 0.01, f'A4 : aperçu au rapport √2 ({ratio:.4f})')
@@ -116,7 +122,7 @@ async def main():
 
         # Export PNG A3
         await ev("__cms.setFileType('png'); __cms.setFormat('a3')")
-        async with page.expect_download(timeout=180000) as dl: await page.click('#bExport')
+        async with page.expect_download(timeout=180000) as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d = await dl.value; path = T / 'export-a3.png'; await d.save_as(path)
         data = open(path, 'rb').read(); w, h = struct.unpack('>II', data[16:24]); i = data.find(b'pHYs')
         ppm = struct.unpack('>II', data[i + 4:i + 12]) if i > 0 else None
@@ -126,10 +132,25 @@ async def main():
         check('29,7 × 42 cm' in info, f'export A3 : taille d\'impression affichée « {info[:90]} »')
         await page.click('#resClose')
 
+        # Export PNG et PDF 10 × 15 cm (tirage photo, issue #50)
+        await ev("__cms.setFormat('10x15')")
+        async with page.expect_download(timeout=120000) as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
+        d = await dl.value; data = open(await d.path(), 'rb').read(); w, h = struct.unpack('>II', data[16:24]); i = data.find(b'pHYs')
+        ppm = struct.unpack('>II', data[i + 4:i + 12]) if i > 0 else None
+        check((w, h) == (1181, 1772) and ppm == (11811, 11811) and d.suggested_filename.endswith('-10x15-300dpi.png'), f'export 10 × 15 cm : {w} × {h} px, pHYs {ppm}, {d.suggested_filename}')
+        info = await page.inner_text('#resInfo')
+        check('(10 × 15 cm)' in info and '10 × 15 cm (10' not in info, f'export 10 × 15 cm : taille affichée une seule fois « {info[:80]} »')
+        await page.click('#resClose'); await page.click('#fileSeg [data-v=pdf]')
+        async with page.expect_download(timeout=120000) as dl: await page.click('#bExport')
+        d = await dl.value; data = open(await d.path(), 'rb').read()
+        bad = check_pdf(data, 1181, 1772, (100, 150))
+        check(not bad and d.suggested_filename.endswith('-10x15-300dpi.pdf') and b'283.46 425.20' in data, f'PDF 10 × 15 cm : page de 283,46 × 425,20 pt {bad}')
+        await page.click('#resClose'); await page.click('#fileSeg [data-v=png]')
+
         # Export PDF 50 × 70 cm
         await page.click('#fileSeg [data-v=pdf]'); await ev("__cms.setFormat('50x70')")
         lab = await page.inner_text('#bExport'); check('PDF' in lab, 'PDF : signalé sur le bouton d\'export')
-        async with page.expect_download(timeout=240000) as dl: await page.click('#bExport')
+        async with page.expect_download(timeout=240000) as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d = await dl.value; path = T / 'export-50x70.pdf'; await d.save_as(path)
         data = open(path, 'rb').read()
         bad = check_pdf(data, 5315, 7441, (500, 700))
@@ -139,7 +160,7 @@ async def main():
 
         # Export PDF A4 paysage
         await ev("__cms.setFormat('a4'); __cms.setOrient('landscape')")
-        async with page.expect_download(timeout=120000) as dl: await page.click('#bExport')
+        async with page.expect_download(timeout=120000) as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d = await dl.value; data = open(await d.path(), 'rb').read()
         bad = check_pdf(data, 3508, 2480, (297, 210))
         check(not bad, f'PDF A4 paysage : page de 841,89 × 595,28 pt {bad}')

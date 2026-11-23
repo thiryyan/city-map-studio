@@ -9,8 +9,9 @@
 
 // ---------- Constantes ----------
 const EXPORT_W = 2480, EXPORT_H = 3508;   // A4 à 300 DPI, en portrait ; inversé en paysage (posterDims)
-// Formats d'impression : [clé, nom, petit côté, grand côté (mm)]. A4 et A3 ont le rapport √2 ; 50 × 70 cm, le rapport 7/5.
-const FORMATS = [['a4','A4',210,297],['a3','A3',297,420],['50x70','50 × 70 cm',500,700]];
+// Formats d'impression : [clé, nom, petit côté, grand côté (mm)]. A4 et A3 ont le rapport √2 ; 50 × 70 cm, le rapport 7/5 ;
+// 10 × 15 cm (tirage photo chez un labo, sans fond perdu), le rapport 3/2.
+const FORMATS = [['a4','A4',210,297],['a3','A3',297,420],['50x70','50 × 70 cm',500,700],['10x15','10 × 15 cm',100,150]];
 const EXPORT_MAX_DPI = 300;
 // Surface maximale d'un canevas d'export : 16,7 Mpx sous Safari iOS (au-delà, le canevas reste vide) ; même prudence
 // sur Android (mémoire) ; 40 Mpx ailleurs. La résolution d'un grand format est abaissée (par pas de 10 DPI) pour tenir.
