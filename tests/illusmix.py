@@ -7,7 +7,7 @@ attribution OSM) ; qualité calculée sur la zone de l'illustration ; couleurs d
 (annulable) ; glisser : l'image hors de la carte, la carte dans le médaillon, la vignette par sa zone de prise ;
 export A4 ; export bloqué sans image ; validation de l'état.
 """
-import asyncio, os, pathlib
+import asyncio, json, os, pathlib
 from playwright.async_api import async_playwright
 from jswait import wait_js
 
@@ -25,6 +25,8 @@ RENDER = """async (pts)=>{ const seen=[], f=CanvasRenderingContext2D.prototype.f
   let px=[]; try{ const r=await __cms.composePoster(620,877), c=r.canvas.getContext('2d');
     px=pts.map(([x,y])=>[...c.getImageData(Math.round(x*620),Math.round(y*877),1,1).data].slice(0,3)); r.canvas.width=0; }
   finally{ CanvasRenderingContext2D.prototype.fillText=f; } return {px, seen}; }"""
+COTE = '''async ()=>{ const r=await __cms.composePoster(877,620), c=r.canvas.getContext('2d');
+  const px=[[0.25,0.2],[0.75,0.5]].map(([x,y])=>[...c.getImageData(Math.round(x*877),Math.round(y*620),1,1).data].slice(0,3)); r.canvas.width=0; return px; }'''
 red = lambda p: p[0] > 150 and p[1] < 90 and p[2] < 90
 blue = lambda p: p[2] > 150 and p[0] < 90
 
@@ -135,11 +137,66 @@ async def main():
         check('2480 × 3508 px' in await page.text_content('#resInfo'), 'export A4 : 2480 × 3508 px')
         await page.click('#resClose')
 
+        # Haut / bas (moitié, deux tiers), côte à côte (paysage), fondu (issue #45)
+        await page.click('#illusStepSeg button[data-v=compo]'); await page.click('#compoSeg button[data-v=hb]'); await page.wait_for_timeout(300)
+        check(await page.is_visible('#hbOpts') and await page.is_hidden('#medOpts'), 'haut / bas : choix du partage')
+        g = await page.evaluate("(()=>{ const g=__cms.geom(__cms.st,1000,1414); return [g.illus.h, g.map.y, g.map.h]; })()")
+        check(abs(g[0] - 707) < 1 and g[1] > g[0] and abs(g[1] + g[2] - 1414) < 1, f'haut / bas : illustration sur la moitié haute {g}')
+        pr = await page.evaluate("CMS.illus.buildPrompt(__cms.st)")
+        check('la moitié haute de l’affiche' in pr and 'paysage, proportions 1,414:1' in pr, 'prompt haut / bas : partage et proportions de la zone')
+        r = await page.evaluate(RENDER, [[0.5, 0.25], [0.5, 0.8]])
+        check(red(r['px'][0]) or blue(r['px'][0]), f'haut / bas : illustration en haut {r["px"][0]}')
+        check(not red(r['px'][1]) and not blue(r['px'][1]), f'haut / bas : carte en bas {r["px"][1]}')
+        await page.click('#mixSplitSeg button[data-v=two]'); await page.wait_for_timeout(200)
+        check(abs(await page.evaluate("__cms.geom(__cms.st,1000,1414).illus.h") - 1414 * 2 / 3) < 1 and 'deux tiers du haut' in await page.evaluate("CMS.illus.buildPrompt(__cms.st)"), 'haut / bas : deux tiers')
+        await page.click('#compoSeg button[data-v=cote]'); await page.wait_for_timeout(400)
+        check(await page.evaluate("__cms.st.orient") == 'landscape', 'côte à côte : affiche passée en paysage')
+        dims = await page.evaluate("['a4','a3','50x70'].map(f=>{ const d=__cms.exportSpec({...__cms.st,format:f}); return [d.W,d.H]; })")
+        check(dims[0] == [3508, 2480] and all(w > h for w, h in dims), f'côte à côte : export paysage en A4, A3, 50 × 70 {dims}')
+        g = await page.evaluate("(()=>{ const g=__cms.geom(__cms.st,1414,1000); return [Math.round(g.illus.w), Math.round(g.map.x), Math.round(g.map.w)]; })()")
+        check(g[0] == g[2] and g[1] > g[0], f'côte à côte : illustration à gauche, carte à droite {g}')
+        pr = await page.evaluate("CMS.illus.buildPrompt(__cms.st)")
+        check('moitié gauche d’une affiche en paysage' in pr and 'portrait, proportions 1:1,414' in pr, 'prompt côte à côte : zone en portrait')
+        r = await page.evaluate(COTE)
+        check(red(r[0]) and not red(r[1]) and not blue(r[1]), f'côte à côte : rendu (illustration, carte) {r}')
+        await page.evaluate("__cms.setOrient('portrait')")
+        await page.click('#compoSeg button[data-v=fondu]'); await page.wait_for_timeout(400)
+        check('linear-gradient' in await page.evaluate("document.getElementById('slot').style.maskImage"), "fondu : carte de l'aperçu effacée vers le haut (masque)")
+        check('se fondra dans une carte' in await page.evaluate("CMS.illus.buildPrompt(__cms.st)"), "prompt fondu : bas de l'image simple")
+        r = await page.evaluate(RENDER, [[0.5, 0.6], [0.5, 0.95]])
+        check(blue(r['px'][0]), f'fondu : illustration visible en haut de la carte {r["px"][0]}')
+        check(not blue(r['px'][1]) and not red(r['px'][1]), f'fondu : carte pleine en bas {r["px"][1]}')
+        await page.click('#compoSeg button[data-v=med]'); await page.wait_for_timeout(200)
+        check(await page.evaluate("document.getElementById('slot').style.maskImage") in ('', 'none'), 'médaillon : plus de masque')
+
+        # Pistes lues dans les données importées (moteur Fichier)
+        lat0, lon0 = 47.5861, 1.3359
+        named = {'elements': [
+          {'type': 'node', 'id': 1, 'lat': lat0 + 0.002, 'lon': lon0, 'tags': {'historic': 'castle', 'name': 'Château royal de Blois'}},
+          {'type': 'way', 'id': 2, 'tags': {'amenity': 'place_of_worship', 'name': 'Cathédrale Saint-Louis'}, 'geometry': [{'lat': lat0 + 0.004, 'lon': lon0 + 0.001}, {'lat': lat0 + 0.0042, 'lon': lon0 + 0.0012}]},
+          {'type': 'node', 'id': 3, 'lat': lat0, 'lon': lon0 + 0.003, 'tags': {'amenity': 'place_of_worship', 'name': 'Chapelle du quartier'}},
+          {'type': 'way', 'id': 4, 'tags': {'waterway': 'river', 'name': 'La Loire'}, 'geometry': [{'lat': lat0 - 0.004, 'lon': lon0 - 0.02}, {'lat': lat0 - 0.004, 'lon': lon0 + 0.02}]},
+          {'type': 'way', 'id': 5, 'tags': {'landuse': 'vineyard'}, 'geometry': [{'lat': lat0 + 0.01, 'lon': lon0}, {'lat': lat0 + 0.011, 'lon': lon0 + 0.001}]},
+          {'type': 'node', 'id': 6, 'lat': lat0, 'lon': lon0, 'tags': {'amenity': 'bench', 'name': 'Banc'}},
+          {'type': 'way', 'id': 7, 'tags': {'highway': 'primary', 'name': 'Rue Denis Papin'}, 'geometry': [{'lat': lat0, 'lon': lon0}, {'lat': lat0 + 0.001, 'lon': lon0}]}]}
+        await page.evaluate("t=>__cms.importText(t,'noms.json')", json.dumps(named)); await wait_js(page, "!!__cms.osmData && !!__cms.osmData.named", 5000)
+        await page.evaluate("__cms.showTab('illus')"); await page.click('#illusStepSeg button[data-v=prompt]')
+        await page.click('#bScanPistes'); await page.wait_for_timeout(300)
+        f = await page.evaluate("CMS.illus.found")
+        check(f[:2] == ['Château royal de Blois', 'Cathédrale Saint-Louis'] and 'La Loire' in f and 'Vignobles' in f and 'Banc' not in f and 'Rue Denis Papin' not in f,
+              f"pistes (moteur Fichier) : monuments et cours d'eau d'abord, rues et bancs écartés {f}")
+        sugg = await page.evaluate("[...$('pisteSugg').querySelectorAll('button')].map(b=>b.textContent)")
+        check(sugg[0] == '+ Château royal de Blois', f'pistes proposées en puces {sugg[:2]}')
+        await page.click('#pisteSugg button >> nth=0')
+        check(await page.evaluate("__cms.st.illus.prompt.pistes") == ['Château royal de Blois'] and 'PISTES À PRIVILÉGIER (choisies par moi) : Château royal de Blois.' in await page.input_value('#promptOut'),
+              "piste ajoutée au prompt d'un toucher")
+        check(not await page.evaluate("[...$('pisteSugg').querySelectorAll('button')].some(b=>b.textContent.includes('Château'))"), 'piste retenue retirée des propositions')
+
         # Mes affiches : le type est affiché ; état forgé ; retour au mode Carte
         check('Carte + illustration' in await page.evaluate("(__cms.saveCurrent('Mix'), openSaves(), $('savesList').textContent)"), 'Mes affiches : « Carte + illustration »')
         await page.evaluate("closeDialog('saves')")
-        n = await page.evaluate("normState({mode:'mix',mix:{compo:'xx',shape:'star',pos:'gauche'}}).mix")
-        check(n == {'compo': 'med', 'shape': 'circle', 'pos': 'bas'}, f'état forgé : composition corrigée {n}')
+        n = await page.evaluate("normState({mode:'mix',mix:{compo:'xx',shape:'star',pos:'gauche',split:'3/4'}}).mix")
+        check(n == {'compo': 'med', 'shape': 'circle', 'pos': 'bas', 'split': 'half'}, f'état forgé : composition corrigée {n}')
         await page.click('#modeSeg button[data-v=map]'); await page.wait_for_timeout(300)
         await page.evaluate("__cms.showTab('style')")
         check(await page.is_hidden('#tb-illus') and await page.is_visible('#tb-repere') and await page.is_visible('#layouts'), 'retour au mode Carte : onglets et gabarits')

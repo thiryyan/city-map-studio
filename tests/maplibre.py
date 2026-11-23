@@ -17,7 +17,7 @@ import pathlib, os, json, math, struct, threading, asyncio, zlib, re
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from functools import partial
 import mapbox_vector_tile
-from shapely.geometry import LineString, Polygon, box
+from shapely.geometry import LineString, Point, Polygon, box
 from shapely.ops import polygonize, unary_union, transform
 from playwright.async_api import async_playwright
 from jswait import wait_js
@@ -53,11 +53,16 @@ def load_features():
         elif t.get('railway') == 'rail':
             L['transportation'].append((transform(mproj, LineString(pts)), {'class': 'rail'}))
         elif t.get('waterway') in ('river', 'canal', 'stream'):
-            L['waterway'].append((transform(mproj, LineString(pts)), {'class': t['waterway']}))
+            L['waterway'].append((transform(mproj, LineString(pts)), {'class': t['waterway'], **({'name': 'La Loire'} if t['waterway'] == 'river' else {})}))
         elif 'building' in t:
             L['building'].append((transform(mproj, Polygon(pts)), {}))
         elif t.get('leisure') == 'park':
             L['park'].append((transform(mproj, Polygon(pts)), {'class': 'park'}))
+    # Éléments nommés (pistes du prompt des modes illustrés, issue #45) : un château, une cathédrale, un musée
+    lat0, lon0 = 47.5861, 1.3359
+    L['poi'] = [(Point(m(lon0 + 0.002, lat0 + 0.003)), {'class': 'castle', 'name': 'Château royal de Blois', 'rank': 1}),
+                (Point(m(lon0 - 0.004, lat0 + 0.005)), {'class': 'place_of_worship', 'name': 'Cathédrale Saint-Louis', 'rank': 3}),
+                (Point(m(lon0 + 0.006, lat0 - 0.001)), {'class': 'museum', 'name': 'Maison de la magie', 'rank': 8})]
     return L
 FEATS = load_features()
 
@@ -197,6 +202,10 @@ async def main():
                 assert (w3, h3) == (2480, 3508)
                 bad = [l for l in logs if 'PAGEERROR' in l or 'could not be loaded' in l or ('MapLibre' in l and 'warn' in l)]
                 assert not bad, bad[-5:]
+                # Pistes du prompt lues dans les tuiles (carte hors écran du lieu, issue #45)
+                pist = await page.evaluate("CMS.illus.scanPistes().then(()=>CMS.illus.found)")
+                print('  pistes lues dans la carte :', pist)
+                assert pist[:2] == ['Château royal de Blois', 'Cathédrale Saint-Louis'] and 'La Loire' in pist and 'Maison de la magie' in pist, pist
                 # Grands formats : au-delà du côté maximal d'un canevas WebGL, carte rendue en tuiles recollées.
                 # Rendu d'un seul tenant comparé au même rendu en 2 × 3 tuiles (côté maximal forcé à 1024 px).
                 cmp = await page.evaluate("""(async()=>{

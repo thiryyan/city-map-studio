@@ -14,7 +14,7 @@ CMS.define('illus', () => {
   /** Résolution d'impression de l'image pour chaque format (ppp), selon le cadrage ; agrandissement ×2 : lissage crédité de 45 % */
   /** Part de l'affiche occupée par l'illustration (1 × 1, sauf la vignette du mode Carte + illustration) */
   function region(s){
-    if(s.mode!=='mix') return {fw:1,fh:1};
+    if(s.mode!=='mix' || s.mix.compo==='med' || s.mix.compo==='fondu') return {fw:1,fh:1};
     const d=posterDims(s), g=geom(s,d.W,d.H); return {fw:g.illus.w/d.W, fh:g.illus.h/d.H};
   }
   function quality(s, iw, ih){
@@ -58,6 +58,56 @@ CMS.define('illus', () => {
     }
     return d;
   }
+  // ---------- Pistes lues dans la carte (monuments, cours d'eau, paysages) ----------
+  const POI_W={castle:10,palace:9,lighthouse:9,monument:7,fort:7,city_gate:6,attraction:7,ruins:6,viewpoint:5,museum:5,harbor:5,marina:5,townhall:4,zoo:3,theatre:3};
+  const BIG_WORSHIP=/cath[ée]drale|basilique|abbaye|abbatiale|collégiale|cathedral|basilica|abbey|minster/i;
+  /** Étiquettes OSM (moteur Fichier) → piste {name, w} pondérée, ou null */
+  function osmPiste(t){
+    const n=(t['name:fr']||t.name||'').trim();
+    if(t.landuse==='vineyard') return {name:'Vignobles',w:6};
+    if(t.natural==='coastline') return {name:'Bord de mer',w:7};
+    if(t.leisure==='marina' || t.landuse==='harbour') return {name:n||'Port',w:6};
+    if(!n) return null;
+    let w=0;
+    if(t.historic==='castle' || t.building==='castle') w=10;
+    else if(t.man_made==='lighthouse') w=9;
+    else if(['monument','fort','city_gate'].includes(t.historic)) w=7;
+    else if(t.historic==='ruins') w=6;
+    else if(t.amenity==='place_of_worship' || ['cathedral','church','chapel','basilica'].includes(t.building)) w=BIG_WORSHIP.test(n) || t.building==='cathedral' ? 9 : 4;
+    else if(t.tourism==='attraction') w=7;
+    else if(t.tourism==='viewpoint' || t.tourism==='museum') w=5;
+    else if(t.waterway==='river') w=8;
+    else if(t.waterway==='canal' || t.natural==='water' || t.place==='island') w=4;
+    else if(t.natural==='peak') w=5;
+    else if(t.amenity==='townhall') w=4;
+    else if(t.leisure==='park' || t.leisure==='garden') w=3;
+    return w ? {name:n,w} : null;
+  }
+  /** Élément d'une couche OpenMapTiles (moteur GPU) → piste {name, w, rank}, ou null */
+  function omtPiste(layer, p){
+    const n=String(p['name:fr']||p.name||'').trim();
+    switch(layer){
+      case 'poi': { if(!n) return null; let w=POI_W[p.subclass]||POI_W[p.class]||0; if(p.class==='place_of_worship') w=BIG_WORSHIP.test(n)?9:4; return w ? {name:n,w,rank:p.rank} : null; }
+      case 'waterway': return n && p.class==='river' ? {name:n,w:8} : null;
+      case 'water_name': return n ? {name:n,w:['ocean','sea','bay'].includes(p.class)?8:6} : null;
+      case 'mountain_peak': return n ? {name:n,w:5,rank:p.rank} : null;
+      case 'park': return n ? {name:n,w:3} : null;
+      case 'landcover': return p.subclass==='vineyard' ? {name:'Vignobles',w:6} : null;
+      case 'water': return p.class==='ocean' ? {name:'Bord de mer',w:7} : null;
+    }
+    return null;
+  }
+  const OMT_LAYERS=['poi','waterway','water_name','mountain_peak','park','landcover','water'];
+  /** Distance approchée (km) entre deux points {lat, lon} */
+  const distKm=(a,b)=>Math.hypot((a.lon-b.lon)*111.32*Math.cos(b.lat*Math.PI/180),(a.lat-b.lat)*110.57);
+  /** Meilleures pistes : poids, rang OpenMapTiles (importance), distance au centre ; un seul exemplaire par nom */
+  function rankPistes(cands, max=6){
+    const best=new Map();
+    for(const c of cands){ if(!c || !c.name) continue;
+      const sc=c.w*10-Math.min(c.rank??10,30)*0.3-Math.min(c.d||0,20)*1.5, k=c.name.toLowerCase();
+      if(!best.has(k) || best.get(k).sc<sc) best.set(k,{name:c.name.slice(0,80),sc}); }
+    return [...best.values()].sort((a,b)=>b.sc-a.sc).slice(0,max).map(x=>x.name);
+  }
   const L10N={
     fr:{rule:"RÈGLE ABSOLUE, À RESPECTER JUSQU'À LA FIN : l'image finale ne contient AUCUN texte (ni titre, ni nom de ville, ni lettre, chiffre, signature, logo ou filigrane) et AUCUN cadre, marge ou bordure : l'illustration va jusqu'aux bords. Le titre sera ajouté ensuite par un autre logiciel ; tout texte dans l'image la rendrait inutilisable, même si les affiches vintage en ont habituellement un.",
       role:w=>`Tu es illustrateur spécialisé dans les affiches touristiques vintage. Nous allons créer ensemble une illustration de ${w}, destinée à être imprimée en affiche.`,
@@ -73,7 +123,11 @@ CMS.define('illus', () => {
       fixed:'IMPOSÉ : ', moment:'moment de la journée : ', saison:'saison : ',
       med:(pos,shape)=>`Laisser aussi une zone calme et peu détaillée ${{haut:'en haut',centre:'au centre',bas:'en bas'}[pos]} de l’image, au milieu de la largeur (${{circle:'un cercle',heart:'un cœur',arch:'une arche'}[shape]} d’environ 45 % de la largeur) : une carte y sera posée.`,
       vig:'COMPOSITION : l’illustration sera affichée en petite vignette en forme d’arche, posée sur une carte : un sujet unique, centré, lisible de loin, sans détails fins ni zone réservée au titre.',
-      vratio:'portrait, proportions 3:4 ; si ce format n’est pas disponible, 2:3',
+      vratio:'portrait, proportions 3:4 ; si ce format n\u2019est pas disponible, 2:3',
+      hb:f=>`COMPOSITION DE L\u2019AFFICHE : l\u2019illustration n\u2019occupera que ${f==='two'?'les deux tiers du haut':'la moitié haute'} de l\u2019affiche, une carte occupant le bas : composition en largeur, sans élément important coupé par le bas de l\u2019image.`,
+      cote:'COMPOSITION DE L\u2019AFFICHE : l\u2019illustration occupera la moitié gauche d\u2019une affiche en paysage, une carte occupant la moitié droite : composition en hauteur.',
+      fondu:'Le bas de l\u2019image (environ 40 %) se fondra dans une carte : n\u2019y placer que des éléments simples (eau, prairie, chemin), sans sujet important.',
+      ratioOf:(o,lab,alt)=>`${o}, proportions ${lab}${alt?` ; si ce format n\u2019est pas disponible, ${alt}`:''}`, orient:{p:'portrait',l:'paysage',c:'carré',w:'panoramique'},
       theme:c=>`palette accordée à l'affiche : fond ${c.paper}, encre ${c.text}, eau ${c.water}, accent ${c.marker}`,
       photo:'je te fournirai une photo dont tu reprendras la palette',
       steps:'DÉROULEMENT (une étape à la fois) :',
@@ -98,6 +152,10 @@ CMS.define('illus', () => {
       med:(pos,shape)=>`Also keep a calm, low-detail area ${{haut:'at the top',centre:'in the centre',bas:'at the bottom'}[pos]} of the image, horizontally centred (${{circle:'a circle',heart:'a heart',arch:'an arch'}[shape]} about 45% of the width wide): a map will be placed there.`,
       vig:'COMPOSITION: the illustration will be shown as a small arch-shaped vignette over a map: one single, centred subject, readable from afar, no fine detail and no area reserved for a title.',
       vratio:'portrait, aspect ratio 3:4; if unavailable, 2:3',
+      hb:f=>`POSTER LAYOUT: the illustration will fill only ${f==='two'?'the top two thirds':'the top half'} of the poster, with a map below it: use a wide composition, with nothing important cut by the bottom edge.`,
+      cote:'POSTER LAYOUT: the illustration will fill the left half of a landscape poster, with a map on the right half: use a tall composition.',
+      fondu:'The bottom of the image (about 40%) will fade into a map: put only simple elements there (water, meadow, path), no important subject.',
+      ratioOf:(o,lab,alt)=>`${o}, aspect ratio ${lab}${alt?`; if unavailable, ${alt}`:''}`, orient:{p:'portrait',l:'landscape',c:'square',w:'panoramic'},
       theme:c=>`palette matching the poster: background ${c.paper}, ink ${c.text}, water ${c.water}, accent ${c.marker}`,
       photo:'I will give you a photo whose palette you will reuse',
       steps:'PROCESS (one step at a time):',
@@ -111,20 +169,38 @@ CMS.define('illus', () => {
   /** Lignes de texte affichées en pied (dédicace, noms, date, coordonnées) : le prompt leur réserve une zone calme */
   const footLines=s=>['dedication','names','date','coords'].some(k=>s.show[k]!==false && (k==='coords' || (s.texts[k]||'').trim()));
   /** Phrase du prompt propre à la composition (mode Carte + illustration), affichée dans l'étape Composition */
-  function compoLine(s, lang='fr'){ const L=L10N[lang]; return s.mix.compo==='vig' ? L.vig : L.med(s.mix.pos,s.mix.shape).replace(/^Laisser aussi/,'Laisser').replace(/^Also keep/,'Keep'); }
+  function compoLine(s, lang='fr'){
+    const L=L10N[lang], M=s.mix;
+    return M.compo==='vig' ? L.vig : M.compo==='hb' ? L.hb(M.split) : M.compo==='cote' ? L.cote : M.compo==='fondu' ? L.fondu
+      : L.med(M.pos,M.shape).replace(/^Laisser aussi/,'Laisser').replace(/^Also keep/,'Keep');
+  }
+  /** Proportions demandées pour une zone d'illustration de rapport r (largeur / hauteur) : la plus proche d'une liste
+   *  usuelle, et en secours la plus proche de celles que proposent les générateurs (2:3, 3:4, 1:1, 4:3, 3:2, 16:9) */
+  const RATIOS=[[1/1.4142,'1:1,414','1:1.414','p'],[2/3,'2:3','2:3','p'],[3/4,'3:4','3:4','p'],[1,'1:1','1:1','c'],[4/3,'4:3','4:3','l'],
+    [1.4142,'1,414:1','1.414:1','l'],[3/2,'3:2','3:2','l'],[16/9,'16:9','16:9','l'],[2.5,'5:2','5:2','w'],[3,'3:1','3:1','w']];
+  const GEN=['2:3','3:4','1:1','4:3','3:2','16:9'];
+  function ratioText(r, L, en){
+    const near=list=>list.reduce((a,b)=>Math.abs(Math.log(b[0]/r))<Math.abs(Math.log(a[0]/r))?b:a);
+    const best=near(RATIOS), alt=near(RATIOS.filter(x=>GEN.includes(x[1])));
+    return L.ratioOf(L.orient[best[3]], en?best[2]:best[1], alt===best ? '' : en?alt[2]:alt[1]);
+  }
   /** Prompt complet pour l'IA externe, d'après l'état (ville, pistes, choix, format, position du titre) */
   function buildPrompt(s){
     const P=s.illus.prompt, L=L10N[P.lang]||L10N.fr, T=s.illusText;
-    const city=(s.texts.title||'').trim()||L.city, region=(s.texts.subtitle||'').trim();
-    const where=(s.texts.title||'').trim() ? city.toUpperCase()+(region?` (${region})`:'') : city;
+    const city=(s.texts.title||'').trim()||L.city, area=(s.texts.subtitle||'').trim();
+    const where=(s.texts.title||'').trim() ? city.toUpperCase()+(area?` (${area})`:'') : city;
     const out=[L.rule, L.role(where)];
     if(P.pistes.length) out.push(L.pistes+P.pistes.join(', ')+'.');
     out.push(L.style);
-    const vig=s.mode==='mix' && s.mix.compo==='vig';
+    const cp=s.mode==='mix' ? s.mix.compo : '', vig=cp==='vig';
+    if(cp==='hb') out.push(L.hb(s.mix.split)); else if(cp==='cote') out.push(L.cote);
     if(vig) out.push(L.vig);
-    else out.push(L.comp+L.zone[T.pos[0]]+L.side[T.pos[1]]+L.compEnd+(footLines(s)?L.foot[T.pos[0]]:'')+(s.mode==='mix'?' '+L.med(s.mix.pos,s.mix.shape):''));
+    else out.push(L.comp+L.zone[T.pos[0]]+L.side[T.pos[1]]+L.compEnd+(footLines(s)?L.foot[T.pos[0]]:'')
+      +(cp==='med'?' '+L.med(s.mix.pos,s.mix.shape):'')+(cp==='fondu'?' '+L.fondu:''));
     const r57=s.format==='50x70', land=s.orient==='landscape';
-    out.push(L.format+(vig ? L.vratio : L.ratio[(land?'l':'p')+(r57?'57':'')])+L.res+(r57?L.big:'')+'.');
+    let fmt=vig ? L.vratio : L.ratio[(land?'l':'p')+(r57?'57':'')];
+    if(cp==='hb' || cp==='cote'){ const d=posterDims(s), R=region(s); fmt=ratioText(d.W*R.fw/(d.H*R.fh),L,P.lang==='en'); }
+    out.push(L.format+fmt+L.res+(r57?L.big:'')+'.');
     const idx=P.lang==='en'?2:1, label=(list,k)=>(list.find(x=>x[0]===k)||list[0])[idx].toLowerCase();
     const fixed=[];
     if(P.moment!=='any') fixed.push(L.moment+label(C.MOMENTS,P.moment));
@@ -146,7 +222,7 @@ CMS.define('illus', () => {
   const MAX_BYTES=40*1024*1024, MIN_SIDE=64, PREV_SIDE=1600;
   const MAX_PX=Math.min(36e6, CANVAS_MAX_PX*0.6);   // laisse de la place au canevas d'export (iOS : 16,7 Mpx au total)
   let img=null;          // {full, prev, w, h, name, size, ref, url}
-  let step='prompt';
+  let step='prompt', found=[];   // found : pistes trouvées dans la carte (proposées, non retenues)
   const cache={key:'', canvas:null};   // dernière image retouchée (aperçu ou export)
   let grainTex=null;
   const canvasOf=(w,h)=>{ const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w)); c.height=Math.max(1,Math.round(h)); return c; };
@@ -354,6 +430,7 @@ CMS.define('illus', () => {
     }
     if(pass!=='under') drawTexts(ctx,W,H,U);
   }
+  const FADE_STOP=0.45;   // fondu : la carte est pleinement visible à partir de 45 % de sa hauteur
   /** Image retouchée dans un cadre r (et sa forme : arche de la vignette), avec papier jauni et grain */
   function drawImageIn(ctx, r, W, H){
     const I=st.illus, P=placement(r.w,r.h,img.w,img.h,I), x=r.x+P.x, y=r.y+P.y;
@@ -371,9 +448,16 @@ CMS.define('illus', () => {
     const c=st.colors, U=g.U, T=st.illusText, med=g.mix==='med', r=g.map;
     if(pass!=='over'){
       ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H);
-      if(med){ if(ready()) drawImageIn(ctx,g.illus,W,H); else placeholder(ctx,W,H,U,st.illus.img); }
+      if(g.mix!=='vig'){ if(ready()) drawImageIn(ctx,g.illus,W,H); else if(med || g.mix==='fondu') placeholder(ctx,W,H,U,st.illus.img); else placeholderIn(ctx,g.illus,U); }
     }
-    if(pass==='all' && mapFn) g.places.forEach((p,i)=>{ ctx.save(); clipMap(ctx,p.rect); ctx.fillStyle=c.land; ctx.fillRect(p.rect.x,p.rect.y,p.rect.w,p.rect.h); mapFn(ctx,p.rect,p.view,i); ctx.restore(); });
+    if(pass==='all' && mapFn) g.places.forEach((p,i)=>{
+      if(p.rect.fade){   // fondu : carte rendue à part, puis effacée vers le haut (même dégradé que le masque de l'aperçu)
+        const R=p.rect, t=canvasOf(R.w,R.h), x=t.getContext('2d'), loc={x:0,y:0,w:t.width,h:t.height};
+        x.fillStyle=c.land; x.fillRect(0,0,t.width,t.height); mapFn(x,loc,p.view,i);
+        x.globalCompositeOperation='destination-in'; const gr=x.createLinearGradient(0,0,0,t.height); gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(FADE_STOP,'rgba(0,0,0,1)');
+        x.fillStyle=gr; x.fillRect(0,0,t.width,t.height); ctx.drawImage(t,R.x,R.y,R.w,R.h); t.width=t.height=0; return;
+      }
+      ctx.save(); clipMap(ctx,p.rect); ctx.fillStyle=c.land; ctx.fillRect(p.rect.x,p.rect.y,p.rect.w,p.rect.h); mapFn(ctx,p.rect,p.view,i); ctx.restore(); });
     if(pass==='under') return;
     for(const p of g.places){
       if(st.fx?.halo){ ctx.save(); clipMap(ctx,p.rect); drawHalo(ctx,p.rect,p.view); ctx.restore(); }
@@ -385,6 +469,8 @@ CMS.define('illus', () => {
       ctx.save(); ctx.strokeStyle=c.paper; ctx.lineWidth=0.02*U; strokeShape(ctx,r,0.01*U);
       ctx.strokeStyle=paint(ink); ctx.lineWidth=0.0022*U; strokeShape(ctx,r,0.021*U); ctx.restore();
       drawTexts(ctx,W,H,U);
+    } else if(g.mix!=='vig'){
+      drawTexts(ctx,W,H,U,g.textArea);
     } else {
       ctx.strokeStyle=paint(c.frame);
       ctx.lineWidth=0.0025*U; const o1=0.014*U; ctx.strokeRect(r.x-o1,r.y-o1,r.w+2*o1,r.h+2*o1);
@@ -396,7 +482,7 @@ CMS.define('illus', () => {
       drawBand(ctx,W,H,U,g,ink);
     }
     ctx.globalAlpha=0.55;
-    drawText(ctx,attributionText(false),W-g.m,H-g.m*0.38,{size:0.0085*U,align:'right',color:med?T.color:c.text});
+    drawText(ctx,attributionText(false),W-g.m,H-g.m*0.38,{size:0.0085*U,align:'right',color:g.mix==='vig' ? c.text : T.color});
     ctx.globalAlpha=1;
   }
   function placeholderIn(ctx, r, U){
@@ -430,11 +516,16 @@ CMS.define('illus', () => {
     ctx.restore();
   }
   /** Titre et sous-titre à la position choisie ; dédicace, noms, date et coordonnées du côté opposé */
-  function drawTexts(ctx, W, H, U){
+  function drawTexts(ctx, PW, PH, U, area){
+    const A=area||{x:0,y:0,w:PW,h:PH};   // zone des textes : l'affiche, ou l'illustration (Carte + illustration)
+    ctx.save(); ctx.translate(A.x,A.y);
+    try{ drawTextsIn(ctx,A.w,A.h,U); } finally{ ctx.restore(); }
+  }
+  function drawTextsIn(ctx, W, H, U){
     const T=st.illusText, m=0.06*U, vint=T.style==='vintage', col=T.color, row=T.pos[0], cpos=T.pos[1];
     const align=cpos==='g'?'left':cpos==='d'?'right':'center', x=cpos==='g'?m:cpos==='d'?W-m:W/2, maxW=W-2*m;
     const title=textLine('title'), sub=textLine('subtitle');
-    const ts=(vint?0.2:0.11)*U*tScale('title'), ss=0.024*U*tScale('subtitle'), gap=0.03*U;
+    const k=Math.min(1,W/U), ts=(vint?0.2:0.11)*U*k*tScale('title'), ss=0.024*U*tScale('subtitle'), gap=0.03*U;   // zone étroite (côte à côte) : titre réduit
     const capT=ts*(vint?0.84:0.72), capS=ss*0.75;
     const blockH=(title?capT:0)+(title&&sub?gap:0)+(sub?capS:0);
     const top=row==='h' ? 0.065*H : row==='m' ? (H-blockH)/2 : H-0.075*H-blockH;
@@ -471,10 +562,42 @@ CMS.define('illus', () => {
     const r=geom(st,ui.posterCss.w,ui.posterCss.h).illus;
     Object.assign(hit.style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px',borderRadius:`${r.w/2}px ${r.w/2}px 0 0`});
   }
+  /** Pistes lues dans la carte : données importées (moteur Fichier) ou tuiles du lieu (moteur GPU, carte hors écran) */
+  async function scanPistes(){
+    const btn=$('bScanPistes'), lab=btn.querySelector('span'), center=st.center;
+    const done=list=>{ found=list; syncPrompt();
+      toast(list.length ? `${list.length} piste${list.length>1?'s':''} trouvée${list.length>1?'s':''} dans la carte : touchez-les pour les ajouter`
+        : 'Aucune piste nommée autour du lieu : dézoomez la carte ou ajoutez vos pistes', !list.length); };
+    if(st.engine==='file'){
+      if(!osmData){ toast('Importez d\u2019abord un fichier de données (onglet Lieu, section Avancé)',true); return; }
+      done(rankPistes((osmData.named||[]).map(x=>{ const c=osmPiste(x.t); return c && {...c, d:distKm(x,center)}; }))); return;
+    }
+    if(!needConsent(()=>scanPistes())) return;
+    btn.disabled=true; lab.textContent='Lecture de la carte…';
+    try{
+      if(!CMS.maplibre.lib) await loadMaplibre();
+      if(!CMS.maplibre.lib) throw new Error('librairie cartographique indisponible');
+      const cands=await CMS.engines.mlQuery(st, map=>{
+        const out=[];
+        for(const L of OMT_LAYERS){ let fs=[]; try{ fs=map.querySourceFeatures('omt',{sourceLayer:L}); }catch(e){}
+          for(const f of fs){ const c=omtPiste(L,f.properties||{}); if(!c) continue;
+            const g=f.geometry; if(g?.type==='Point') c.d=distKm({lon:g.coordinates[0],lat:g.coordinates[1]},center); out.push(c); } }
+        return out;
+      });
+      done(rankPistes(cands||[]));
+    }catch(e){ toast('Lecture de la carte impossible : '+(e.message||e),true); }
+    finally{ btn.disabled=false; lab.textContent='Trouver des pistes dans la carte'; }
+  }
+  /** Fondu : la carte de l'aperçu s'efface vers le haut, comme à l'export */
+  function applyFade(){
+    const on=st.mode==='mix' && st.mix.compo==='fondu', m=on ? `linear-gradient(to bottom, transparent, #000 ${FADE_STOP*100}%)` : '';
+    slot.style.webkitMaskImage=m; slot.style.maskImage=m;
+  }
   /** Composition (mode Carte + illustration) */
   function syncCompo(){
     const M=st.mix; setSeg('compoSeg',M.compo); setSeg('mixShapeSeg',M.shape); setSeg('mixPosSeg',M.pos);
-    $('medOpts').hidden=M.compo!=='med'; $('compoPrompt').textContent='« '+compoLine(st)+' »';
+    $('medOpts').hidden=M.compo!=='med'; $('hbOpts').hidden=M.compo!=='hb'; setSeg('mixSplitSeg',M.split); applyFade();
+    $('compoPrompt').textContent='« '+compoLine(st)+' »';
   }
   /** Couleurs de la carte tirées de l'illustration (même calcul que la palette d'une photo) */
   function harmonize(v){
@@ -511,7 +634,7 @@ CMS.define('illus', () => {
     if(ill && ui.tab==='repere') showTab('illus');
     if(m==='map' && ui.tab==='illus') showTab('lieu');
     if(m!=='mix' && step==='compo') step='prompt';
-    exportState(); placeHit();
+    exportState(); placeHit(); applyFade();
   }
   function setStep(v){
     step=v; setSeg('illusStepSeg',v);
@@ -552,6 +675,9 @@ CMS.define('illus', () => {
       b.onclick=()=>{ P.pistes=P.pistes.filter(x=>x!==p); syncPrompt(); saveState(); }; box.append(b);
     }
     $('pisteIn').disabled=P.pistes.length>=C.PISTES_MAX;
+    const sug=found.filter(x=>!P.pistes.includes(x)), sb=$('pisteSugg'); sb.hidden=!sug.length;
+    sb.replaceChildren(...sug.map(x=>{ const b=h('button',{type:'button',className:'chip','aria-label':`Ajouter la piste « ${x} »`},'+ '+x);
+      b.onclick=()=>{ if(P.pistes.length<C.PISTES_MAX && !P.pistes.includes(x)){ P.pistes.push(x); syncPrompt(); saveState(); } else toast(`${C.PISTES_MAX} pistes au plus`,true); }; return b; }));
     updatePrompt();
   }
   function updatePrompt(){
@@ -646,7 +772,11 @@ CMS.define('illus', () => {
     const end=e=>{ if(!drag || e.pointerId!==drag.id) return; drag=null; poster.classList.remove('dragging'); saveState(); };
     poster.addEventListener('pointerup',end); poster.addEventListener('pointercancel',end);
     // Composition (Carte + illustration)
-    const mixSet=(f,v)=>{ st.mix[f]=v; syncCompo(); syncImage(); ui.snap=null; layoutPreview(); placeHit(); saveState(); };
+    const mixSet=(f,v)=>{ st.mix[f]=v;
+      if(f==='compo' && v==='cote' && st.orient!=='landscape'){ setOrient('landscape'); toast('Côte à côte : affiche passée en paysage'); }
+      syncCompo(); syncImage(); ui.snap=null; layoutPreview(); placeHit(); saveState(); };
+    document.querySelectorAll('#mixSplitSeg button').forEach(b=>b.onclick=()=>mixSet('split',b.dataset.v));
+    $('bScanPistes').onclick=scanPistes;
     document.querySelectorAll('#compoSeg button').forEach(b=>b.onclick=()=>mixSet('compo',b.dataset.v));
     document.querySelectorAll('#mixShapeSeg button').forEach(b=>b.onclick=()=>mixSet('shape',b.dataset.v));
     document.querySelectorAll('#mixPosSeg button').forEach(b=>b.onclick=()=>mixSet('pos',b.dataset.v));
@@ -661,7 +791,7 @@ CMS.define('illus', () => {
     sync();
     setTimeout(()=>gc().catch(()=>{}),2000);   // images orphelines (affiches supprimées, autre image importée)
   }
-  return {init, draw, drawMix, harmonize, compoLine, region, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
+  return {init, draw, drawMix, harmonize, compoLine, region, ratioText, osmPiste, omtPiste, rankPistes, scanPistes, get found(){ return found; }, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
     get missing(){ return missing; }, get loading(){ return !!loading; }, buildPrompt, quality, cropPct, placement, adjust, processPixels,
     get step(){ return step; }, get image(){ return img && {w:img.w, h:img.h, name:img.name}; }};
 });

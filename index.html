@@ -145,6 +145,13 @@
           <div class="compos" id="compoSeg" role="group" aria-label="Composition de l'affiche">
             <button data-v="med" type="button"><span class="mini" aria-hidden="true"><i class="il full"></i><i class="mp med"></i></span>Médaillon<small>Illustration en pleine page, carte dans une forme</small></button>
             <button data-v="vig" type="button"><span class="mini" aria-hidden="true"><i class="mp full"></i><i class="il vig"></i></span>Vignette<small>Carte encadrée, illustration en arche</small></button>
+            <button data-v="hb" type="button"><span class="mini" aria-hidden="true"><i class="il top"></i><i class="mp bot"></i></span>Haut / bas<small>Illustration en haut, carte en bas</small></button>
+            <button data-v="cote" type="button"><span class="mini land" aria-hidden="true"><i class="il left"></i><i class="mp right"></i></span>Côte à côte<small>Affiche en paysage</small></button>
+            <button data-v="fondu" type="button"><span class="mini" aria-hidden="true"><i class="il full"></i><i class="mp fade"></i></span>Fondu<small>La carte émerge de l'illustration</small></button>
+          </div>
+          <div id="hbOpts">
+            <h3>Partage de l'affiche</h3>
+            <div class="seg" id="mixSplitSeg" role="group" aria-label="Part de l'illustration"><button data-v="half" type="button">Moitié · moitié</button><button data-v="two" type="button">Deux tiers · un tiers</button></div>
           </div>
           <div id="medOpts">
             <h3>Forme de la carte</h3>
@@ -162,6 +169,9 @@
           <p class="hint">L'illustration est créée par l'IA de votre choix (ChatGPT, Gemini…) : l'application rédige la demande, vous l'y collez, puis vous importez l'image obtenue à l'étape 2.</p>
           <h3>Pistes à proposer à l'IA <small class="opt">facultatif</small></h3>
           <div class="chips" id="pisteChips" role="group" aria-label="Pistes"></div>
+          <button class="btn wide mt8" type="button" id="bScanPistes"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Trouver des pistes dans la carte</span></button>
+          <div class="chips mt8" id="pisteSugg" role="group" aria-label="Pistes trouvées dans la carte" hidden></div>
+          <p class="hint">Monuments, cours d'eau, sommets et paysages autour du lieu, lus dans la carte (avec le moteur Fichier : dans les données importées). Touchez une piste pour l'ajouter.</p>
           <form class="row mt8" id="pisteForm" autocomplete="off"><input class="grow" type="text" id="pisteIn" maxlength="80" enterkeyhint="done" aria-label="Ajouter une piste" placeholder="Château, port, vignobles…"><button class="btn" type="submit">Ajouter</button></form>
           <h3>Moment de la journée</h3>
           <div class="seg wrap" id="momentSeg" role="group" aria-label="Moment de la journée"></div>
