@@ -76,6 +76,7 @@ python tests/pwa.py              # sous-chemin GitHub Pages, manifeste, service 
 python tests/illus.py            # mode Illustration : prompt, import (refus GIF / fichier endommagé), qualité, cadrage, retouches, titre, export
 python tests/illustore.py        # illustrations conservées : IndexedDB, rechargement, Mes affiches, fichiers avec images, lien, image manquante, nettoyage
 python tests/illusmix.py         # Carte + illustration : médaillon, vignette, haut / bas, côte à côte, fondu ; prompt, qualité, harmonisation, gestes, pistes lues dans la carte, export
+python tests/illustext.py        # déplacer les textes (titre, bloc du bas) : positions, glisser, aimantation, clavier, chevauchement, vignette, prompt
 python tests/illuspaste.py       # coller l'illustration depuis le presse-papiers (simulé) : image, GIF refusé, sans image, refus, API absente
 python tests/deps.py             # réglages dépendants d'un autre choix : masqués ou annotés, bascule annulable
 python tests/safezone.py         # zone de sécurité de 5 mm : repère par format et orientation, export inchangé, alertes

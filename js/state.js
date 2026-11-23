@@ -83,8 +83,10 @@ function normState(src){
   /** Textes des modes illustrés : ombre et contour acceptent '' (aucun) */
   function normIllusText(src,d){
     const o=V.obj(src), hexOrNone=(v,dv)=>v==='' ? '' : V.hex(v,dv);
+    const pt=p=>{ const q=V.obj(p); return Number.isFinite(q.x) && Number.isFinite(q.y) ? {x:V.num(q.x,0.5,0,1), y:V.num(q.y,0.5,0,1)} : null; };   // position libre
     return {style:V.oneOf(o.style,CMS.illusConf.TSTYLES,d.style), color:V.hex(o.color,d.color), shadow:hexOrNone(o.shadow,d.shadow),
-      outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,CMS.illusConf.POS,d.pos)};
+      outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,CMS.illusConf.POS,d.pos),
+      free:pt(o.free), fpos:V.oneOf(o.fpos,['auto',...CMS.illusConf.POS],d.fpos), ffree:pt(o.ffree)};
   }
 }
 let st = loadState();

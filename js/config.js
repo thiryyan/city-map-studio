@@ -172,7 +172,9 @@ const DEFAULT_STATE = {
     img:null,   // image importée : {ref (empreinte SHA-256), name, w, h} ; l'image est dans IndexedDB (js/illus.js)
     prompt:{pistes:[],moment:'any',saison:'any',palette:'ia',lang:'fr'}},
   // Textes des modes illustrés : style du titre, couleurs (ombre et contour : '' = aucun), décalage de l'ombre, position (ILLUS_POS)
-  illusText:{style:'vintage',color:'#24365A',shadow:'#F3EAD8',outline:'',off:4,pos:'hc'}
+  // free / ffree : position libre (glissée) du bloc de titre / du bloc du bas, centre en fraction de la zone des textes ({x, y}) ou null ;
+  // fpos : bloc du bas (dédicace, noms, date, coordonnées) : 'auto' (côté opposé au titre) ou une des 9 positions
+  illusText:{style:'vintage',color:'#24365A',shadow:'#F3EAD8',outline:'',off:4,pos:'hc',free:null,fpos:'auto',ffree:null}
 };
 // Modes illustrés : listes de valeurs (aussi utilisées par normState pour valider un état venu de l'extérieur)
 CMS.define('illusConf', () => ({

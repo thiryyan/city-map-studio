@@ -119,7 +119,8 @@ CMS.define('illus', () => {
       comp:'COMPOSITION : garder une zone de ciel ou de fond calme et peu détaillée ', compEnd:' pour le titre.',
       zone:{h:'EN HAUT (environ 25 % de la hauteur)', m:'AU MILIEU (bande horizontale d’environ 20 % de la hauteur)', b:'EN BAS (environ 25 % de la hauteur)'},
       side:{g:', plutôt à gauche', c:'', d:', plutôt à droite'},
-      foot:{h:' Garder aussi le bas de l’image assez simple pour quelques lignes de texte discrètes.', m:' Garder aussi le bas de l’image assez simple pour quelques lignes de texte discrètes.', b:' Garder aussi le haut de l’image assez simple pour quelques lignes de texte discrètes.'},
+      footAt:{h:' Garder aussi le haut de l\u2019image assez simple pour quelques lignes de texte discrètes.', m:' Garder aussi le milieu de l\u2019image assez simple pour quelques lignes de texte discrètes.', b:' Garder aussi le bas de l\u2019image assez simple pour quelques lignes de texte discrètes.'},
+      foot:{h:' Garder aussi le bas de l\u2019image assez simple pour quelques lignes de texte discrètes.', m:' Garder aussi le bas de l’image assez simple pour quelques lignes de texte discrètes.', b:' Garder aussi le haut de l’image assez simple pour quelques lignes de texte discrètes.'},
       format:'FORMAT : ', res:', dans la plus haute résolution possible', big:' ; au moins 4000 px sur le grand côté si possible',
       ratio:{p:'portrait, proportions 1:1,414 (A4) ; si ce format n\u2019est pas disponible, 2:3', p57:'portrait, proportions 5:7 ; si ce format n\u2019est pas disponible, 2:3',
         p23:'portrait, proportions 2:3', l23:'paysage, proportions 3:2',
@@ -148,6 +149,7 @@ CMS.define('illus', () => {
       comp:'COMPOSITION: keep a calm, low-detail sky or background area ', compEnd:' for the title.',
       zone:{h:'at the TOP (about 25% of the height)', m:'in the MIDDLE (a horizontal band of about 20% of the height)', b:'at the BOTTOM (about 25% of the height)'},
       side:{g:', towards the left', c:'', d:', towards the right'},
+      footAt:{h:' Also keep the top of the image simple enough for a few discreet lines of text.', m:' Also keep the middle of the image simple enough for a few discreet lines of text.', b:' Also keep the bottom of the image simple enough for a few discreet lines of text.'},
       foot:{h:' Also keep the bottom of the image simple enough for a few discreet lines of text.', m:' Also keep the bottom of the image simple enough for a few discreet lines of text.', b:' Also keep the top of the image simple enough for a few discreet lines of text.'},
       format:'FORMAT: ', res:', in the highest resolution available', big:'; at least 4000 px on the long side if possible',
       ratio:{p:'portrait, aspect ratio 1:1.414 (A4); if unavailable, 2:3', p57:'portrait, aspect ratio 5:7; if unavailable, 2:3',
@@ -200,7 +202,8 @@ CMS.define('illus', () => {
     const cp=s.mode==='mix' ? s.mix.compo : '', vig=cp==='vig';
     if(cp==='hb') out.push(L.hb(s.mix.split)); else if(cp==='cote') out.push(L.cote);
     if(vig) out.push(L.vig);
-    else out.push(L.comp+L.zone[T.pos[0]]+L.side[T.pos[1]]+L.compEnd+(footLines(s)?L.foot[T.pos[0]]:'')
+    const rc=titleRC(T), auto=T.fpos==='auto' && !T.ffree;   // positions réelles (glissées) des deux blocs
+    if(!vig) out.push(L.comp+L.zone[rc[0]]+L.side[rc[1]]+L.compEnd+(footLines(s)?(auto ? L.foot[rc[0]] : L.footAt[footRC(T)[0]]):'')
       +(cp==='med'?' '+L.med(s.mix.pos,s.mix.shape):'')+(cp==='fondu'?' '+L.fondu:''));
     const r57=s.format==='50x70', land=s.orient==='landscape';
     let fmt=vig ? L.vratio : L.ratio[(land?'l':'p')+(r57?'57':s.format==='10x15'?'23':'')];
@@ -473,7 +476,7 @@ CMS.define('illus', () => {
     if(med){
       ctx.save(); ctx.strokeStyle=c.paper; ctx.lineWidth=0.02*U; strokeShape(ctx,r,0.01*U);
       ctx.strokeStyle=paint(ink); ctx.lineWidth=0.0022*U; strokeShape(ctx,r,0.021*U); ctx.restore();
-      drawTexts(ctx,W,H,U);
+      drawTexts(ctx,W,H,U,null,r);
     } else if(g.mix!=='vig'){
       drawTexts(ctx,W,H,U,g.textArea);
     } else {
@@ -496,19 +499,6 @@ CMS.define('illus', () => {
     ctx.fillText(st.illus.img && !loading ? 'Illustration à importer' : 'Illustration',r.x+r.w/2,r.y+r.h*0.6,r.w*0.9); ctx.restore();
   }
   /** Vignette : titre et lignes dans la bande sous la carte, centrés, réduits ensemble pour y tenir */
-  function drawBand(ctx, W, H, U, g, ink){
-    const T=st.illusText, vint=T.style==='vintage', b=g.band, maxW=W-2*g.m-0.04*U;
-    const shadow=T.shadow && contrast(T.shadow,st.colors.paper)>=1.3 ? {color:T.shadow, dx:T.off*0.001*U, dy:T.off*0.001*U} : null;
-    const rows=[[textLine('title'),(vint?0.13:0.075)*U*tScale('title'),{spacing:vint?0.04:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow},vint?0.84:0.72],
-      [textLine('subtitle'),0.021*U*tScale('subtitle'),{spacing:0.3,upper:true,key:'subtitle'},0.75],
-      [textLine('dedication'),0.03*U*tScale('dedication'),{italic:true,key:'dedication'},0.75],
-      [[textLine('date'),textLine('coords')].filter(Boolean).join('  ·  '),0.015*U*tScale('date'),{spacing:0.2,key:'date'},0.75]].filter(x=>x[0]);
-    if(!rows.length) return;
-    const gap=0.022*U; let total=rows.reduce((a,x)=>a+x[1]*x[3],0)+gap*(rows.length-1);
-    const f=Math.min(1,b.h*0.82/total); total*=f;
-    let y=b.y+(b.h-total)/2;
-    for(const [t,sz,o,cap] of rows){ y+=sz*cap*f; drawText(ctx,t,W/2,y,{...o,size:sz*f,align:'center',color:ink,maxW}); y+=gap*f; }
-  }
   function placeholder(ctx, W, H, U, want){
     const m=0.06*U, ink=st.colors.text;
     ctx.save(); ctx.strokeStyle=hexA(ink)(0.35); ctx.lineWidth=Math.max(1,0.003*U); ctx.setLineDash([0.012*U,0.009*U]);
@@ -520,34 +510,176 @@ CMS.define('illus', () => {
     ctx.font=`400 ${0.024*U}px system-ui, sans-serif`; ctx.fillText(l2,W/2,H*0.58+0.05*U,W-0.16*U);
     ctx.restore();
   }
-  /** Titre et sous-titre à la position choisie ; dédicace, noms, date et coordonnées du côté opposé */
-  function drawTexts(ctx, PW, PH, U, area){
-    const A=area||{x:0,y:0,w:PW,h:PH};   // zone des textes : l'affiche, ou l'illustration (Carte + illustration)
-    ctx.save(); ctx.translate(A.x,A.y);
-    try{ drawTextsIn(ctx,A.w,A.h,U); } finally{ ctx.restore(); }
+  // ---------- Textes des modes illustrés : mise en page des deux blocs (titre, bas), commune au rendu, aux zones de prise et au prompt ----------
+  // Bloc de titre (titre + sous-titre) : 9 positions (pos) ou position libre (free). Bloc du bas (dédicace, noms, date et
+  // coordonnées) : « Auto » (côté opposé au titre, centré), 9 positions (fpos) ou position libre (ffree). Position libre :
+  // centre du bloc en fraction de la zone des textes ; alignement des lignes selon le tiers (gauche, centre, droite).
+  const third=v=>v<1/3 ? 0 : v>2/3 ? 2 : 1;
+  const rowOf=y=>'hmb'[third(y)], colOf=x=>'gcd'[third(x)];
+  /** Largeur dessinée d'une ligne (mêmes règles que drawText : capitales, interlettrage, réduction à maxW) */
+  function measure(ctx, t, o){
+    if(!t) return 0;
+    const F=o.fk ? FONTS[o.fk] : fontOf(o.role,o.key); if(o.upper && !F.script) t=t.toUpperCase();
+    ctx.save(); ctx.font=fontStr(o.size,o); const w=textW(ctx,t,F.script?0:(o.spacing||0),o.size); ctx.restore();
+    return Math.min(w,o.maxW||Infinity);
   }
-  function drawTextsIn(ctx, W, H, U){
-    const T=st.illusText, m=0.06*U, vint=T.style==='vintage', col=T.color, row=T.pos[0], cpos=T.pos[1];
-    const align=cpos==='g'?'left':cpos==='d'?'right':'center', x=cpos==='g'?m:cpos==='d'?W-m:W/2, maxW=W-2*m;
-    const title=textLine('title'), sub=textLine('subtitle');
-    const k=Math.min(1,W/U), ts=(vint?0.2:0.11)*U*k*tScale('title'), ss=0.024*U*tScale('subtitle'), gap=0.03*U;   // zone étroite (côte à côte) : titre réduit
-    const capT=ts*(vint?0.84:0.72), capS=ss*0.75;
-    const blockH=(title?capT:0)+(title&&sub?gap:0)+(sub?capS:0);
-    const top=row==='h' ? 0.065*H : row==='m' ? (H-blockH)/2 : H-0.075*H-blockH;
+  /** Rangée d'une ligne : lignes [{t, o, at}] (at : ligne de base depuis le haut du bloc) → bloc {lines, w, h} */
+  function blockOf(ctx, lines, h){ return {lines, w:Math.max(0,...lines.map(l=>measure(ctx,l.t,l.o))), h}; }
+  /** Place un bloc : position prédéfinie (row, col) avec ses marges, ou centre libre {x, y} ; renvoie {left, top, align} */
+  function placeBlock(b, W, H, m, spec, kind){
+    let left, top, align;
+    if(spec.free){
+      const cx=b.w>=W ? W/2 : clamp(spec.free.x*W,b.w/2,W-b.w/2), cy=b.h>=H ? H/2 : clamp(spec.free.y*H,b.h/2,H-b.h/2);
+      left=cx-b.w/2; top=cy-b.h/2; align=['left','center','right'][third(spec.free.x)];
+    } else {
+      const [row,col]=spec.pos;
+      top = kind==='title' ? (row==='h' ? 0.065*H : row==='m' ? (H-b.h)/2 : H-0.075*H-b.h)
+                           : (row==='h' ? 0.05*H : row==='m' ? (H-b.h)/2 : H-0.045*H-b.h);
+      align=col==='g' ? 'left' : col==='d' ? 'right' : 'center';
+      left=col==='g' ? m : col==='d' ? W-m-b.w : (W-b.w)/2;
+    }
+    const ax=align==='left' ? left : align==='right' ? left+b.w : left+b.w/2;
+    return {left, top, align, ax, rect:{x:left,y:top,w:b.w,h:b.h}};
+  }
+  /** Position effective (ligne, colonne) d'un bloc, pour le prompt et le bloc du bas « Auto » */
+  const titleRC=T=>T.free ? rowOf(T.free.y)+colOf(T.free.x) : T.pos;
+  const footSpec=T=>T.ffree ? {free:T.ffree} : {pos:T.fpos==='auto' ? (titleRC(T)[0]==='b' ? 'hc' : 'bc') : T.fpos};
+  const footRC=T=>T.ffree ? rowOf(T.ffree.y)+colOf(T.ffree.x) : footSpec(T).pos;
+  /** Mise en page des deux blocs dans une zone W × H (coordonnées de la zone) */
+  function textLayout(ctx, W, H, U, over){
+    const T={...st.illusText,...(over||{})}, m=0.06*U, vint=T.style==='vintage', maxW=W-2*m;
     const shadow=T.shadow ? {color:T.shadow, dx:T.off*0.0016*U, dy:T.off*0.0016*U} : null;
     const stroke=w=>T.outline ? {color:T.outline, w:Math.max(1,w*U)} : null;
-    let y=top;
-    if(title){ y+=capT; drawText(ctx,title,x,y,{size:ts,spacing:vint?0.03:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,align,color:col,maxW,shadow,stroke:stroke(0.004)}); y+=gap; }
-    if(sub){ y+=capS; drawText(ctx,sub,x,y,{size:ss,spacing:0.3,upper:true,key:'subtitle',align,color:col,maxW,stroke:stroke(0.0012),
-      shadow:shadow && {color:shadow.color,dx:shadow.dx*0.3,dy:shadow.dy*0.3}}); }
-    // Pied (ou tête si le titre est en bas) : lignes plus discrètes, centrées
-    const rows=[['dedication',0.034,{italic:true}],['names',0.026,{italic:true}],['info',0.017,{spacing:0.2}]]
-      .map(([k,sz,o])=>[k==='info' ? [textLine('date'),textLine('coords')].filter(Boolean).join('  ·  ') : textLine(k), sz*U*tScale(k==='info'?'date':k), {...o,key:k==='info'?'date':k}])
-      .filter(r=>r[0]);
-    if(!rows.length) return;
-    const lead=sz=>sz*1.55, total=rows.reduce((a,r)=>a+lead(r[1]),0);
-    let yy=row==='b' ? 0.05*H : H-0.045*H-total;
-    for(const [t,sz,o] of rows){ yy+=lead(sz); drawText(ctx,t,W/2,yy-sz*0.45,{...o,size:sz,align:'center',color:col,maxW,stroke:stroke(0.001)}); }
+    const title=textLine('title'), sub=textLine('subtitle');
+    const k=Math.min(1,W/U), ts=(vint?0.2:0.11)*U*k*tScale('title'), ss=0.024*U*tScale('subtitle'), gap=0.03*U;   // zone étroite (côte à côte) : titre réduit
+    const capT=ts*(vint?0.84:0.72), capS=ss*0.75, tl=[];
+    let y=0;
+    if(title){ y+=capT; tl.push({t:title,at:y,o:{size:ts,spacing:vint?0.03:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,maxW,shadow,stroke:stroke(0.004)}}); y+=gap; }
+    if(sub){ y+=capS; tl.push({t:sub,at:y,o:{size:ss,spacing:0.3,upper:true,key:'subtitle',maxW,stroke:stroke(0.0012),shadow:shadow && {color:shadow.color,dx:shadow.dx*0.3,dy:shadow.dy*0.3}}}); }
+    const tb=blockOf(ctx,tl,(title?capT:0)+(title&&sub?gap:0)+(sub?capS:0));
+    const lead=sz=>sz*1.55, fl=[]; let yy=0;
+    for(const [k2,sz0,o] of [['dedication',0.034,{italic:true}],['names',0.026,{italic:true}],['info',0.017,{spacing:0.2}]]){
+      const t=k2==='info' ? [textLine('date'),textLine('coords')].filter(Boolean).join('  ·  ') : textLine(k2); if(!t) continue;
+      const sz=sz0*U*tScale(k2==='info'?'date':k2); yy+=lead(sz);
+      fl.push({t,at:yy-sz*0.45,o:{...o,size:sz,key:k2==='info'?'date':k2,maxW,stroke:stroke(0.001)}});
+    }
+    const fb=blockOf(ctx,fl,yy);
+    return {title:tl.length ? {...tb,...placeBlock(tb,W,H,m,T.free?{free:T.free}:{pos:T.pos},'title')} : null,
+            foot:fl.length ? {...fb,...placeBlock(fb,W,H,m,footSpec(T),'foot')} : null};
+  }
+  /** Textes dans une zone (l'affiche, ou l'illustration en mode Carte + illustration) ; avoid : cadre de la carte à signaler */
+  function drawTexts(ctx, PW, PH, U, area, avoid){
+    const A=area||{x:0,y:0,w:PW,h:PH}, col=st.illusText.color;
+    ctx.save(); ctx.translate(A.x,A.y);
+    let L;
+    try{
+      L=textLayout(ctx,A.w,A.h,U);
+      for(const b of [L.title,L.foot]) if(b) for(const l of b.lines) drawText(ctx,l.t,b.ax,b.top+l.at,{...l.o,align:b.align,color:col});
+    } finally{ ctx.restore(); }
+    noteLayout(ctx,PW,PH,'area',A,L,avoid);
+  }
+  /** Vignette : titre et bloc du bas empilés dans la bande sous la carte ; chacun se place à gauche, au centre ou à droite */
+  function drawBand(ctx, W, H, U, g, ink){
+    const T=st.illusText, vint=T.style==='vintage', b=g.band, m=g.m+0.02*U, maxW=W-2*m;
+    const shadow=T.shadow && contrast(T.shadow,st.colors.paper)>=1.3 ? {color:T.shadow, dx:T.off*0.001*U, dy:T.off*0.001*U} : null;
+    const rows=[['title',textLine('title'),(vint?0.13:0.075)*U*tScale('title'),{spacing:vint?0.04:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow},vint?0.84:0.72],
+      ['title',textLine('subtitle'),0.021*U*tScale('subtitle'),{spacing:0.3,upper:true,key:'subtitle'},0.75],
+      ['foot',textLine('dedication'),0.03*U*tScale('dedication'),{italic:true,key:'dedication'},0.75],
+      ['foot',[textLine('date'),textLine('coords')].filter(Boolean).join('  ·  '),0.015*U*tScale('date'),{spacing:0.2,key:'date'},0.75]].filter(x=>x[1]);
+    if(!rows.length){ noteLayout(ctx,W,H,'band',b,{}); return; }
+    const gap=0.022*U; let total=rows.reduce((a,x)=>a+x[2]*x[4],0)+gap*(rows.length-1);
+    const f=Math.min(1,b.h*0.82/total); total*=f;
+    const colX=x=>x!=null ? x : 0.5;   // centre horizontal en fraction de la bande
+    const tx=T.free ? T.free.x : {g:0,c:0.5,d:1}[T.pos[1]], fx=T.ffree ? T.ffree.x : T.fpos==='auto' ? tx : {g:0,c:0.5,d:1}[T.fpos[1]];
+    const L={}; let y=b.y+(b.h-total)/2;
+    for(const [k,t,sz,o,cap] of rows){
+      const s=sz*f, w=measure(ctx,t,{...o,size:s,maxW}), x0=k==='title'?colX(tx):colX(fx), al=['left','center','right'][third(x0)];
+      const left=clamp(m+x0*(W-2*m)-w/2,m,W-m-w), ax=al==='left'?left:al==='right'?left+w:left+w/2;
+      const top=y; y+=s*cap; drawText(ctx,t,ax,y,{...o,size:s,align:al,color:ink,maxW});
+      const r=L[k]||(L[k]={rect:{x:Infinity,y:Infinity,w:0,h:0},x2:-Infinity,y2:-Infinity});
+      r.rect.x=Math.min(r.rect.x,left); r.rect.y=Math.min(r.rect.y,top); r.x2=Math.max(r.x2,left+w); r.y2=Math.max(r.y2,y);
+      y+=gap*f;
+    }
+    for(const r of Object.values(L)){ r.rect.w=r.x2-r.rect.x; r.rect.h=r.y2-r.rect.y; }
+    noteLayout(ctx,W,H,'band',{x:m,y:b.y,w:W-2*m,h:b.h},L);
+  }
+  // ---------- Zones de prise des textes (aperçu) : glisser, clavier ; chevauchements signalés ----------
+  let hitInfo=null;   // dernière mise en page de l'aperçu : {kind, area, title, foot} en fractions de l'affiche
+  function noteLayout(ctx, PW, PH, kind, A, L, avoid){
+    if(ctx.canvas!==$('cvOver')) return;   // seulement l'aperçu (ni l'export, ni les vignettes)
+    const fr=r=>r && {x:(r.x)/PW, y:(r.y)/PH, w:r.w/PW, h:r.h/PH}, off=r=>r && (kind==='area' ? {...r,x:r.x+A.x,y:r.y+A.y} : r);
+    hitInfo={kind, area:fr(A), title:fr(off(L?.title?.rect)), foot:fr(off(L?.foot?.rect))};
+    // Chevauchements : bloc du bas sur le titre ; texte sur la carte (médaillon, fondu)
+    const inter=(a,b)=>a && b && a.x<b.x+b.w && b.x<a.x+a.w && a.y<b.y+b.h && b.y<a.y+a.h;
+    const map=avoid && fr(avoid), msgs=[];
+    if(inter(hitInfo.title,hitInfo.foot)) msgs.push('les lignes du bas chevauchent le titre');
+    if(inter(hitInfo.title,map)) msgs.push('le titre déborde sur la carte');
+    if(inter(hitInfo.foot,map)) msgs.push('les lignes du bas débordent sur la carte');
+    const w=$('textWarn'); if(w){ const t=msgs.length ? '⚠ '+msgs.join(' ; ')+'.' : ''; if(w.textContent!==t) w.textContent=t; }
+    placeHits();
+  }
+
+  /** Zones de prise au-dessus des deux blocs de texte (aperçu) : 44 px de haut au moins, marge pour le doigt */
+  function placeHits(){
+    const P=ui.posterCss;
+    for(const k of ['title','foot']){
+      const el=$(k==='title'?'hitTitle':'hitFoot'), r=st.mode!=='map' && hitInfo?.[k];
+      el.hidden=!r; if(!r) continue;
+      const pad=6, w=r.w*P.w+2*pad, h=Math.max(44,r.h*P.h+2*pad), cy=(r.y+r.h/2)*P.h;
+      Object.assign(el.style,{left:(r.x*P.w-pad)+'px',top:(cy-h/2)+'px',width:w+'px',height:h+'px'});
+    }
+  }
+  const setFree=(k,p)=>{ if(k==='title') st.illusText.free=p; else st.illusText.ffree=p; scheduleOver(); };
+  /** Centre actuel d'un bloc, en fraction de la zone des textes */
+  function centerOf(k){ const r=hitInfo[k], A=hitInfo.area; return {x:(r.x+r.w/2-A.x)/A.w, y:(r.y+r.h/2-A.y)/A.h}; }
+  /** Fin d'un déplacement : aimantation sur les positions prédéfinies (et « Auto » pour le bloc du bas) */
+  function snapToPreset(k){
+    const T=st.illusText, c=k==='title' ? T.free : T.ffree; if(!c) return;
+    if(hitInfo.kind==='band'){   // bande de la vignette : gauche, centre, droite
+      const i=[0,0.5,1].findIndex(v=>Math.abs(c.x-v)<0.04); if(i<0) return;
+      if(k==='title'){ T.pos=T.pos[0]+'gcd'[i]; T.free=null; } else { T.fpos=(T.fpos==='auto'?'b':T.fpos[0])+'gcd'[i]; T.ffree=null; }
+      return;
+    }
+    const cv=$('cvOver'), ctx=cv.getContext('2d'), A=hitInfo.area, W=A.w*cv.width, H=A.h*cv.height, U=Math.min(cv.width,cv.height);
+    const cands=k==='title' ? C.POS.map(p=>[p,{free:null,pos:p}]) : [['auto',{ffree:null,fpos:'auto'}],...C.POS.map(p=>[p,{ffree:null,fpos:p}])];
+    for(const [p,over] of cands){
+      const b=textLayout(ctx,W,H,U,over)[k]; if(!b) continue;
+      if(Math.hypot((b.rect.x+b.rect.w/2)/W-c.x,(b.rect.y+b.rect.h/2)/H-c.y)<0.04){ Object.assign(T,over); return; }
+    }
+  }
+  function initHits(){
+    let tdrag=null;
+    for(const k of ['title','foot']){
+      const el=$(k==='title'?'hitTitle':'hitFoot');
+      el.addEventListener('pointerdown',e=>{
+        if(e.button>0 || !hitInfo?.[k]) return;
+        e.preventDefault(); e.stopPropagation(); el.setPointerCapture(e.pointerId); el.focus({preventScroll:true});
+        tdrag={k,id:e.pointerId,x:e.clientX,y:e.clientY,c:centerOf(k),moved:false}; el.classList.add('dragging');
+      });
+      el.addEventListener('pointermove',e=>{
+        if(!tdrag || tdrag.id!==e.pointerId) return;
+        const A=hitInfo.area, P=ui.posterCss;
+        let x=tdrag.c.x+(e.clientX-tdrag.x)/(A.w*P.w), y=tdrag.c.y+(e.clientY-tdrag.y)/(A.h*P.h);
+        if(Math.abs(x-0.5)<0.02) x=0.5; if(Math.abs(y-0.5)<0.02) y=0.5;   // aimantation sur les axes centraux
+        if(hitInfo.kind==='band') y=0.5;   // vignette : déplacement horizontal dans la bande
+        if(Math.hypot(e.clientX-tdrag.x,e.clientY-tdrag.y)>3) tdrag.moved=true;
+        if(tdrag.moved) setFree(k,{x:clamp(x,0,1),y:clamp(y,0,1)});
+      });
+      const end=e=>{ if(!tdrag || tdrag.id!==e.pointerId) return; const moved=tdrag.moved; tdrag=null; el.classList.remove('dragging');
+        if(moved){ snapToPreset(k); syncText(); scheduleOver(); saveState(); } };
+      el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end);
+      // Clavier : flèches = 1 % de la zone (Maj : 5 %) ; Origine = retour à la grille ; Échap = sortie
+      el.addEventListener('keydown',e=>{
+        if(!hitInfo?.[k]) return;
+        const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+        if(d){ const s=e.shiftKey?0.05:0.01, c=centerOf(k), T=st.illusText, cur=(k==='title'?T.free:T.ffree)||c;
+          setFree(k,{x:clamp(cur.x+d[0]*s,0,1),y:hitInfo.kind==='band'?0.5:clamp(cur.y+d[1]*s,0,1)}); syncText(); saveState(); }
+        else if(e.key==='Home'){ if(k==='title') st.illusText.free=null; else Object.assign(st.illusText,{ffree:null,fpos:'auto'}); syncText(); scheduleOver(); saveState(); }
+        else if(e.key==='Escape') el.blur();
+        else return;
+        e.preventDefault();
+      });
+    }
   }
 
   // ---------- Interface ----------
@@ -639,7 +771,7 @@ CMS.define('illus', () => {
     if(ill && ui.tab==='repere') showTab('illus');
     if(m==='map' && ui.tab==='illus') showTab('lieu');
     if(m!=='mix' && step==='compo') step='prompt';
-    exportState(); placeHit(); applyFade();
+    exportState(); placeHit(); applyFade(); if(m==='map'){ hitInfo=null; } placeHits();
   }
   function setStep(v){
     step=v; setSeg('illusStepSeg',v);
@@ -666,7 +798,11 @@ CMS.define('illus', () => {
       $(id).querySelectorAll('button').forEach(b=>pressed(b,b.dataset.v===T[f]));
     const cu=$('swText').querySelector('input'); if(cu){ cu.value=T.color; cu.parentElement.classList.toggle('on',!SW_TEXT.some(([x])=>x===T.color)); }
     $('sShadowOff').closest('.slider').hidden=!T.shadow;   // décalage : seulement avec une ombre
-    $('tPosSeg').querySelectorAll('button').forEach(b=>pressed(b,b.dataset.v===T.pos));
+    $('tPosSeg').querySelectorAll('button').forEach(b=>pressed(b,!T.free && b.dataset.v===T.pos));
+    $('fPosSeg').querySelectorAll('button').forEach(b=>pressed(b,!T.ffree && b.dataset.v===T.fpos));
+    pressed($('fAutoBtn'),!T.ffree && T.fpos==='auto');
+    $('tFreeNote').firstChild.textContent=T.free ? 'Titre placé librement (glissé sur l\u2019aperçu) : touchez une position pour revenir à la grille. ' : '';
+    $('fFreeNote').firstChild.textContent=T.ffree ? 'Lignes du bas placées librement : touchez « Auto » ou une position pour revenir à la grille. ' : '';
     $('oShadowOff').textContent=T.off;
   }
   function syncPrompt(){
@@ -688,7 +824,7 @@ CMS.define('illus', () => {
   function updatePrompt(){
     const o=$('promptOut'), t=buildPrompt(st); if(o.value!==t) o.value=t;
     const T=st.illusText, d=exportSpec();
-    $('promptInfo').textContent=`Format demandé : ${d.name} ${st.orient==='landscape'?'paysage':'portrait'} · zone du titre : ${POS_NAMES[T.pos[0]]}, ${COL_NAMES[T.pos[1]]} (onglet Textes).`;
+    $('promptInfo').textContent=`Format demandé : ${d.name} ${st.orient==='landscape'?'paysage':'portrait'} · zone du titre : ${POS_NAMES[titleRC(T)[0]]}, ${COL_NAMES[titleRC(T)[1]]} (onglet Textes).`;
   }
   function syncImage(){
     const I=st.illus, has=ready(), want=I.img;
@@ -808,11 +944,15 @@ CMS.define('illus', () => {
     document.querySelectorAll('#tStyleSeg button').forEach(b=>b.onclick=async()=>{ st.illusText.style=b.dataset.v; syncText(); saveState(); await loadFonts(); scheduleOver(); });
     swatches('swText',SW_TEXT,'color',true); swatches('swShadow',SW_SHADOW,'shadow'); swatches('swOutline',SW_OUTLINE,'outline');
     C.POS.forEach((p,i)=>{ const b=h('button',{type:'button',dataset:{v:p},'aria-label':`Titre ${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`,title:`${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`},POS_ARROWS[i]);
-      b.onclick=()=>{ st.illusText.pos=p; syncText(); scheduleOver(); saveState(); }; $('tPosSeg').append(b); });
+      b.onclick=()=>{ Object.assign(st.illusText,{pos:p,free:null}); syncText(); scheduleOver(); saveState(); }; $('tPosSeg').append(b);
+      const f=h('button',{type:'button',dataset:{v:p},'aria-label':`Lignes du bas ${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`,title:`${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`},POS_ARROWS[i]);
+      f.onclick=()=>{ Object.assign(st.illusText,{fpos:p,ffree:null}); syncText(); scheduleOver(); saveState(); }; $('fPosSeg').append(f); });
+    $('fAutoBtn').onclick=()=>{ Object.assign(st.illusText,{fpos:'auto',ffree:null}); syncText(); scheduleOver(); saveState(); };
+    initHits();
     sync();
     setTimeout(()=>gc().catch(()=>{}),2000);   // images orphelines (affiches supprimées, autre image importée)
   }
-  return {init, draw, drawMix, harmonize, compoLine, region, ratioText, osmPiste, omtPiste, rankPistes, scanPistes, get found(){ return found; }, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
+  return {init, draw, drawMix, textLayout, get hitInfo(){ return hitInfo; }, harmonize, compoLine, region, ratioText, osmPiste, omtPiste, rankPistes, scanPistes, get found(){ return found; }, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
     get missing(){ return missing; }, get loading(){ return !!loading; }, buildPrompt, quality, cropPct, placement, adjust, processPixels,
     get step(){ return step; }, get image(){ return img && {w:img.w, h:img.h, name:img.name}; }};
 });
