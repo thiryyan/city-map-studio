@@ -11,19 +11,27 @@ CMS.define('illus', () => {
   const C = CMS.illusConf;
   // ---------- Fonctions pures (testées sans navigateur : tests/unit/illus.test.mjs) ----------
   const GRADES = {ok:'Bonne', mid:'Juste', bad:'Insuffisante'};
-  /** Résolution d'impression de l'image pour chaque format (ppp), selon le cadrage ; agrandissement ×2 : lissage crédité de 45 % */
+  /** Résolution d'impression de l'image pour chaque format (ppp), selon le cadrage ; agrandissement ×2 : lissage crédité de 45 %.
+   *  Seuils (bonne, juste) : 200 / 140 ppp ; 300 / 200 pour le 10 × 15 cm, petite photo regardée de près. */
+  const SEUILS={'10x15':[300,200]};
+  /** Part de l'affiche occupée par l'illustration (1 × 1, sauf la vignette du mode Carte + illustration) */
+  function region(s){
+    if(s.mode!=='mix' || s.mix.compo==='med' || s.mix.compo==='fondu') return {fw:1,fh:1};
+    const d=posterDims(s), g=geom(s,d.W,d.H); return {fw:g.illus.w/d.W, fh:g.illus.h/d.H};
+  }
   function quality(s, iw, ih){
-    const I=s.illus, land=s.orient==='landscape';
+    const I=s.illus, land=s.orient==='landscape', R=region(s);
     return FORMATS.map(([key,name,a,b])=>{
-      const Win=(land?b:a)/25.4, Hin=(land?a:b)/25.4;
+      const Win=(land?b:a)/25.4*R.fw, Hin=(land?a:b)/25.4*R.fh;
       const base=I.fit==='contain' ? Math.max(iw/Win,ih/Hin) : Math.min(iw/Win,ih/Hin);
       const dpi=Math.round(base/(I.zoom/100)), eff=I.upscale ? dpi*1.45 : dpi;
-      return {key, name, dpi, grade: eff>=200 ? 'ok' : eff>=140 ? 'mid' : 'bad'};
+      const [ok,mid]=SEUILS[key]||[200,140];
+      return {key, name, dpi, grade: eff>=ok ? 'ok' : eff>=mid ? 'mid' : 'bad'};
     });
   }
   /** Part de l'image hors de l'affiche (cadrage « Remplir ») ou des bandes laissées vides (« Image entière »), en % */
   function cropPct(s, iw, ih){
-    const d=posterDims(s), a=iw/ih, b=d.W/d.H;
+    const d=posterDims(s), R=region(s), a=iw/ih, b=d.W*R.fw/(d.H*R.fh);
     return Math.round((1-Math.min(a,b)/Math.max(a,b))*100);
   }
   /** Rectangle de l'image dans une affiche W × H : remplir ou contenir, puis zoom et décalage (fractions de l'affiche) */
@@ -53,6 +61,56 @@ CMS.define('illus', () => {
     }
     return d;
   }
+  // ---------- Pistes lues dans la carte (monuments, cours d'eau, paysages) ----------
+  const POI_W={castle:10,palace:9,lighthouse:9,monument:7,fort:7,city_gate:6,attraction:7,ruins:6,viewpoint:5,museum:5,harbor:5,marina:5,townhall:4,zoo:3,theatre:3};
+  const BIG_WORSHIP=/cath[ée]drale|basilique|abbaye|abbatiale|collégiale|cathedral|basilica|abbey|minster/i;
+  /** Étiquettes OSM (moteur Fichier) → piste {name, w} pondérée, ou null */
+  function osmPiste(t){
+    const n=(t['name:fr']||t.name||'').trim();
+    if(t.landuse==='vineyard') return {name:'Vignobles',w:6};
+    if(t.natural==='coastline') return {name:'Bord de mer',w:7};
+    if(t.leisure==='marina' || t.landuse==='harbour') return {name:n||'Port',w:6};
+    if(!n) return null;
+    let w=0;
+    if(t.historic==='castle' || t.building==='castle') w=10;
+    else if(t.man_made==='lighthouse') w=9;
+    else if(['monument','fort','city_gate'].includes(t.historic)) w=7;
+    else if(t.historic==='ruins') w=6;
+    else if(t.amenity==='place_of_worship' || ['cathedral','church','chapel','basilica'].includes(t.building)) w=BIG_WORSHIP.test(n) || t.building==='cathedral' ? 9 : 4;
+    else if(t.tourism==='attraction') w=7;
+    else if(t.tourism==='viewpoint' || t.tourism==='museum') w=5;
+    else if(t.waterway==='river') w=8;
+    else if(t.waterway==='canal' || t.natural==='water' || t.place==='island') w=4;
+    else if(t.natural==='peak') w=5;
+    else if(t.amenity==='townhall') w=4;
+    else if(t.leisure==='park' || t.leisure==='garden') w=3;
+    return w ? {name:n,w} : null;
+  }
+  /** Élément d'une couche OpenMapTiles (moteur GPU) → piste {name, w, rank}, ou null */
+  function omtPiste(layer, p){
+    const n=String(p['name:fr']||p.name||'').trim();
+    switch(layer){
+      case 'poi': { if(!n) return null; let w=POI_W[p.subclass]||POI_W[p.class]||0; if(p.class==='place_of_worship') w=BIG_WORSHIP.test(n)?9:4; return w ? {name:n,w,rank:p.rank} : null; }
+      case 'waterway': return n && p.class==='river' ? {name:n,w:8} : null;
+      case 'water_name': return n ? {name:n,w:['ocean','sea','bay'].includes(p.class)?8:6} : null;
+      case 'mountain_peak': return n ? {name:n,w:5,rank:p.rank} : null;
+      case 'park': return n ? {name:n,w:3} : null;
+      case 'landcover': return p.subclass==='vineyard' ? {name:'Vignobles',w:6} : null;
+      case 'water': return p.class==='ocean' ? {name:'Bord de mer',w:7} : null;
+    }
+    return null;
+  }
+  const OMT_LAYERS=['poi','waterway','water_name','mountain_peak','park','landcover','water'];
+  /** Distance approchée (km) entre deux points {lat, lon} */
+  const distKm=(a,b)=>Math.hypot((a.lon-b.lon)*111.32*Math.cos(b.lat*Math.PI/180),(a.lat-b.lat)*110.57);
+  /** Meilleures pistes : poids, rang OpenMapTiles (importance), distance au centre ; un seul exemplaire par nom */
+  function rankPistes(cands, max=6){
+    const best=new Map();
+    for(const c of cands){ if(!c || !c.name) continue;
+      const sc=c.w*10-Math.min(c.rank??10,30)*0.3-Math.min(c.d||0,20)*1.5, k=c.name.toLowerCase();
+      if(!best.has(k) || best.get(k).sc<sc) best.set(k,{name:c.name.slice(0,80),sc}); }
+    return [...best.values()].sort((a,b)=>b.sc-a.sc).slice(0,max).map(x=>x.name);
+  }
   const L10N={
     fr:{rule:"RÈGLE ABSOLUE, À RESPECTER JUSQU'À LA FIN : l'image finale ne contient AUCUN texte (ni titre, ni nom de ville, ni lettre, chiffre, signature, logo ou filigrane) et AUCUN cadre, marge ou bordure : l'illustration va jusqu'aux bords. Le titre sera ajouté ensuite par un autre logiciel ; tout texte dans l'image la rendrait inutilisable, même si les affiches vintage en ont habituellement un.",
       role:w=>`Tu es illustrateur spécialisé dans les affiches touristiques vintage. Nous allons créer ensemble une illustration de ${w}, destinée à être imprimée en affiche.`,
@@ -63,9 +121,17 @@ CMS.define('illus', () => {
       side:{g:', plutôt à gauche', c:'', d:', plutôt à droite'},
       foot:{h:' Garder aussi le bas de l’image assez simple pour quelques lignes de texte discrètes.', m:' Garder aussi le bas de l’image assez simple pour quelques lignes de texte discrètes.', b:' Garder aussi le haut de l’image assez simple pour quelques lignes de texte discrètes.'},
       format:'FORMAT : ', res:', dans la plus haute résolution possible', big:' ; au moins 4000 px sur le grand côté si possible',
-      ratio:{p:'portrait, proportions 1:1,414 (A4) ; si ce format n’est pas disponible, 2:3', p57:'portrait, proportions 5:7 ; si ce format n’est pas disponible, 2:3',
+      ratio:{p:'portrait, proportions 1:1,414 (A4) ; si ce format n\u2019est pas disponible, 2:3', p57:'portrait, proportions 5:7 ; si ce format n\u2019est pas disponible, 2:3',
+        p23:'portrait, proportions 2:3', l23:'paysage, proportions 3:2',
         l:'paysage, proportions 1,414:1 (A4 couché) ; si ce format n’est pas disponible, 3:2', l57:'paysage, proportions 7:5 ; si ce format n’est pas disponible, 3:2'},
       fixed:'IMPOSÉ : ', moment:'moment de la journée : ', saison:'saison : ',
+      med:(pos,shape)=>`Laisser aussi une zone calme et peu détaillée ${{haut:'en haut',centre:'au centre',bas:'en bas'}[pos]} de l’image, au milieu de la largeur (${{circle:'un cercle',heart:'un cœur',arch:'une arche'}[shape]} d’environ 45 % de la largeur) : une carte y sera posée.`,
+      vig:'COMPOSITION : l’illustration sera affichée en petite vignette en forme d’arche, posée sur une carte : un sujet unique, centré, lisible de loin, sans détails fins ni zone réservée au titre.',
+      vratio:'portrait, proportions 3:4 ; si ce format n\u2019est pas disponible, 2:3',
+      hb:f=>`COMPOSITION DE L\u2019AFFICHE : l\u2019illustration n\u2019occupera que ${f==='two'?'les deux tiers du haut':'la moitié haute'} de l\u2019affiche, une carte occupant le bas : composition en largeur, sans élément important coupé par le bas de l\u2019image.`,
+      cote:'COMPOSITION DE L\u2019AFFICHE : l\u2019illustration occupera la moitié gauche d\u2019une affiche en paysage, une carte occupant la moitié droite : composition en hauteur.',
+      fondu:'Le bas de l\u2019image (environ 40 %) se fondra dans une carte : n\u2019y placer que des éléments simples (eau, prairie, chemin), sans sujet important.',
+      ratioOf:(o,lab,alt)=>`${o}, proportions ${lab}${alt?` ; si ce format n\u2019est pas disponible, ${alt}`:''}`, orient:{p:'portrait',l:'paysage',c:'carré',w:'panoramique'},
       theme:c=>`palette accordée à l'affiche : fond ${c.paper}, encre ${c.text}, eau ${c.water}, accent ${c.marker}`,
       photo:'je te fournirai une photo dont tu reprendras la palette',
       steps:'DÉROULEMENT (une étape à la fois) :',
@@ -85,8 +151,16 @@ CMS.define('illus', () => {
       foot:{h:' Also keep the bottom of the image simple enough for a few discreet lines of text.', m:' Also keep the bottom of the image simple enough for a few discreet lines of text.', b:' Also keep the top of the image simple enough for a few discreet lines of text.'},
       format:'FORMAT: ', res:', in the highest resolution available', big:'; at least 4000 px on the long side if possible',
       ratio:{p:'portrait, aspect ratio 1:1.414 (A4); if unavailable, 2:3', p57:'portrait, aspect ratio 5:7; if unavailable, 2:3',
+        p23:'portrait, aspect ratio 2:3', l23:'landscape, aspect ratio 3:2',
         l:'landscape, aspect ratio 1.414:1 (A4 landscape); if unavailable, 3:2', l57:'landscape, aspect ratio 7:5; if unavailable, 3:2'},
       fixed:'FIXED: ', moment:'time of day: ', saison:'season: ',
+      med:(pos,shape)=>`Also keep a calm, low-detail area ${{haut:'at the top',centre:'in the centre',bas:'at the bottom'}[pos]} of the image, horizontally centred (${{circle:'a circle',heart:'a heart',arch:'an arch'}[shape]} about 45% of the width wide): a map will be placed there.`,
+      vig:'COMPOSITION: the illustration will be shown as a small arch-shaped vignette over a map: one single, centred subject, readable from afar, no fine detail and no area reserved for a title.',
+      vratio:'portrait, aspect ratio 3:4; if unavailable, 2:3',
+      hb:f=>`POSTER LAYOUT: the illustration will fill only ${f==='two'?'the top two thirds':'the top half'} of the poster, with a map below it: use a wide composition, with nothing important cut by the bottom edge.`,
+      cote:'POSTER LAYOUT: the illustration will fill the left half of a landscape poster, with a map on the right half: use a tall composition.',
+      fondu:'The bottom of the image (about 40%) will fade into a map: put only simple elements there (water, meadow, path), no important subject.',
+      ratioOf:(o,lab,alt)=>`${o}, aspect ratio ${lab}${alt?`; if unavailable, ${alt}`:''}`, orient:{p:'portrait',l:'landscape',c:'square',w:'panoramic'},
       theme:c=>`palette matching the poster: background ${c.paper}, ink ${c.text}, water ${c.water}, accent ${c.marker}`,
       photo:'I will give you a photo whose palette you will reuse',
       steps:'PROCESS (one step at a time):',
@@ -99,17 +173,39 @@ CMS.define('illus', () => {
   };
   /** Lignes de texte affichées en pied (dédicace, noms, date, coordonnées) : le prompt leur réserve une zone calme */
   const footLines=s=>['dedication','names','date','coords'].some(k=>s.show[k]!==false && (k==='coords' || (s.texts[k]||'').trim()));
+  /** Phrase du prompt propre à la composition (mode Carte + illustration), affichée dans l'étape Composition */
+  function compoLine(s, lang='fr'){
+    const L=L10N[lang], M=s.mix;
+    return M.compo==='vig' ? L.vig : M.compo==='hb' ? L.hb(M.split) : M.compo==='cote' ? L.cote : M.compo==='fondu' ? L.fondu
+      : L.med(M.pos,M.shape).replace(/^Laisser aussi/,'Laisser').replace(/^Also keep/,'Keep');
+  }
+  /** Proportions demandées pour une zone d'illustration de rapport r (largeur / hauteur) : la plus proche d'une liste
+   *  usuelle, et en secours la plus proche de celles que proposent les générateurs (2:3, 3:4, 1:1, 4:3, 3:2, 16:9) */
+  const RATIOS=[[1/1.4142,'1:1,414','1:1.414','p'],[2/3,'2:3','2:3','p'],[3/4,'3:4','3:4','p'],[1,'1:1','1:1','c'],[4/3,'4:3','4:3','l'],
+    [1.4142,'1,414:1','1.414:1','l'],[3/2,'3:2','3:2','l'],[16/9,'16:9','16:9','l'],[2.5,'5:2','5:2','w'],[3,'3:1','3:1','w']];
+  const GEN=['2:3','3:4','1:1','4:3','3:2','16:9'];
+  function ratioText(r, L, en){
+    const near=list=>list.reduce((a,b)=>Math.abs(Math.log(b[0]/r))<Math.abs(Math.log(a[0]/r))?b:a);
+    const best=near(RATIOS), alt=near(RATIOS.filter(x=>GEN.includes(x[1])));
+    return L.ratioOf(L.orient[best[3]], en?best[2]:best[1], alt===best ? '' : en?alt[2]:alt[1]);
+  }
   /** Prompt complet pour l'IA externe, d'après l'état (ville, pistes, choix, format, position du titre) */
   function buildPrompt(s){
     const P=s.illus.prompt, L=L10N[P.lang]||L10N.fr, T=s.illusText;
-    const city=(s.texts.title||'').trim()||L.city, region=(s.texts.subtitle||'').trim();
-    const where=(s.texts.title||'').trim() ? city.toUpperCase()+(region?` (${region})`:'') : city;
+    const city=(s.texts.title||'').trim()||L.city, area=(s.texts.subtitle||'').trim();
+    const where=(s.texts.title||'').trim() ? city.toUpperCase()+(area?` (${area})`:'') : city;
     const out=[L.rule, L.role(where)];
     if(P.pistes.length) out.push(L.pistes+P.pistes.join(', ')+'.');
     out.push(L.style);
-    out.push(L.comp+L.zone[T.pos[0]]+L.side[T.pos[1]]+L.compEnd+(footLines(s)?L.foot[T.pos[0]]:''));
+    const cp=s.mode==='mix' ? s.mix.compo : '', vig=cp==='vig';
+    if(cp==='hb') out.push(L.hb(s.mix.split)); else if(cp==='cote') out.push(L.cote);
+    if(vig) out.push(L.vig);
+    else out.push(L.comp+L.zone[T.pos[0]]+L.side[T.pos[1]]+L.compEnd+(footLines(s)?L.foot[T.pos[0]]:'')
+      +(cp==='med'?' '+L.med(s.mix.pos,s.mix.shape):'')+(cp==='fondu'?' '+L.fondu:''));
     const r57=s.format==='50x70', land=s.orient==='landscape';
-    out.push(L.format+L.ratio[(land?'l':'p')+(r57?'57':'')]+L.res+(r57?L.big:'')+'.');
+    let fmt=vig ? L.vratio : L.ratio[(land?'l':'p')+(r57?'57':s.format==='10x15'?'23':'')];
+    if(cp==='hb' || cp==='cote'){ const d=posterDims(s), R=region(s); fmt=ratioText(d.W*R.fw/(d.H*R.fh),L,P.lang==='en'); }
+    out.push(L.format+fmt+L.res+(r57?L.big:'')+'.');
     const idx=P.lang==='en'?2:1, label=(list,k)=>(list.find(x=>x[0]===k)||list[0])[idx].toLowerCase();
     const fixed=[];
     if(P.moment!=='any') fixed.push(L.moment+label(C.MOMENTS,P.moment));
@@ -131,7 +227,7 @@ CMS.define('illus', () => {
   const MAX_BYTES=40*1024*1024, MIN_SIDE=64, PREV_SIDE=1600;
   const MAX_PX=Math.min(36e6, CANVAS_MAX_PX*0.6);   // laisse de la place au canevas d'export (iOS : 16,7 Mpx au total)
   let img=null;          // {full, prev, w, h, name, size, ref, url}
-  let step='prompt';
+  let step='prompt', found=[];   // found : pistes trouvées dans la carte (proposées, non retenues)
   const cache={key:'', canvas:null};   // dernière image retouchée (aperçu ou export)
   let grainTex=null;
   const canvasOf=(w,h)=>{ const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w)); c.height=Math.max(1,Math.round(h)); return c; };
@@ -335,19 +431,83 @@ CMS.define('illus', () => {
     const I=st.illus, U=g.U;
     if(pass!=='over'){
       ctx.fillStyle=st.colors.paper; ctx.fillRect(0,0,W,H);
-      if(ready()){
-        const r=placement(W,H,img.w,img.h,I);
-        ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
-        ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-        ctx.drawImage(processed(W,H),r.x,r.y,r.w,r.h);
-        ctx.beginPath(); ctx.rect(r.x,r.y,r.w,r.h); ctx.clip();
-        ctx.globalCompositeOperation='multiply';
-        if(I.paper){ ctx.globalAlpha=I.vintage==='strong'?0.42:0.28; ctx.fillStyle='#E7D6B0'; ctx.fillRect(r.x,r.y,r.w,r.h); }
-        if(I.grain){ ctx.globalAlpha=I.vintage==='strong'?0.6:0.42; ctx.drawImage(grain(W>H),0,0,W,H); }
-        ctx.restore();
-      } else placeholder(ctx,W,H,U,st.illus.img);
+      if(ready()) drawImageIn(ctx,g.illus,W,H); else placeholder(ctx,W,H,U,st.illus.img);
     }
     if(pass!=='under') drawTexts(ctx,W,H,U);
+  }
+  const FADE_STOP=0.45;   // fondu : la carte est pleinement visible à partir de 45 % de sa hauteur
+  /** Image retouchée dans un cadre r (et sa forme : arche de la vignette), avec papier jauni et grain */
+  function drawImageIn(ctx, r, W, H){
+    const I=st.illus, P=placement(r.w,r.h,img.w,img.h,I), x=r.x+P.x, y=r.y+P.y;
+    ctx.save(); clipMap(ctx,r);
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+    ctx.drawImage(processed(r.w,r.h),x,y,P.w,P.h);
+    ctx.beginPath(); ctx.rect(x,y,P.w,P.h); ctx.clip();
+    ctx.globalCompositeOperation='multiply';
+    if(I.paper){ ctx.globalAlpha=I.vintage==='strong'?0.42:0.28; ctx.fillStyle='#E7D6B0'; ctx.fillRect(x,y,P.w,P.h); }
+    if(I.grain){ ctx.globalAlpha=I.vintage==='strong'?0.6:0.42; ctx.drawImage(grain(W>H),0,0,W,H); }
+    ctx.restore();
+  }
+  /** Carte + illustration (drawPoster) : médaillon (carte dans une forme sur l'illustration) ou vignette (illustration sur la carte) */
+  function drawMix(ctx, W, H, pass, g, mapFn){
+    const c=st.colors, U=g.U, T=st.illusText, med=g.mix==='med', r=g.map;
+    if(pass!=='over'){
+      ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H);
+      if(g.mix!=='vig'){ if(ready()) drawImageIn(ctx,g.illus,W,H); else if(med || g.mix==='fondu') placeholder(ctx,W,H,U,st.illus.img); else placeholderIn(ctx,g.illus,U); }
+    }
+    if(pass==='all' && mapFn) g.places.forEach((p,i)=>{
+      if(p.rect.fade){   // fondu : carte rendue à part, puis effacée vers le haut (même dégradé que le masque de l'aperçu)
+        const R=p.rect, t=canvasOf(R.w,R.h), x=t.getContext('2d'), loc={x:0,y:0,w:t.width,h:t.height};
+        x.fillStyle=c.land; x.fillRect(0,0,t.width,t.height); mapFn(x,loc,p.view,i);
+        x.globalCompositeOperation='destination-in'; const gr=x.createLinearGradient(0,0,0,t.height); gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(FADE_STOP,'rgba(0,0,0,1)');
+        x.fillStyle=gr; x.fillRect(0,0,t.width,t.height); ctx.drawImage(t,R.x,R.y,R.w,R.h); t.width=t.height=0; return;
+      }
+      ctx.save(); clipMap(ctx,p.rect); ctx.fillStyle=c.land; ctx.fillRect(p.rect.x,p.rect.y,p.rect.w,p.rect.h); mapFn(ctx,p.rect,p.view,i); ctx.restore(); });
+    if(pass==='under') return;
+    for(const p of g.places){
+      if(st.fx?.halo){ ctx.save(); clipMap(ctx,p.rect); drawHalo(ctx,p.rect,p.view); ctx.restore(); }
+      ctx.save(); clipMap(ctx,p.rect); drawOrnaments(ctx,p.rect,p.view,U,true); ctx.restore();
+      ctx.save(); clipMap(ctx,p.rect); drawMarkers(ctx,p.rect,p.view,U,W,true); ctx.restore();
+    }
+    const ink=contrast(T.color,c.paper)>=2.5 ? T.color : c.text;   // sur le papier : couleur du titre si elle s'y lit
+    if(med){
+      ctx.save(); ctx.strokeStyle=c.paper; ctx.lineWidth=0.02*U; strokeShape(ctx,r,0.01*U);
+      ctx.strokeStyle=paint(ink); ctx.lineWidth=0.0022*U; strokeShape(ctx,r,0.021*U); ctx.restore();
+      drawTexts(ctx,W,H,U);
+    } else if(g.mix!=='vig'){
+      drawTexts(ctx,W,H,U,g.textArea);
+    } else {
+      ctx.strokeStyle=paint(c.frame);
+      ctx.lineWidth=0.0025*U; const o1=0.014*U; ctx.strokeRect(r.x-o1,r.y-o1,r.w+2*o1,r.h+2*o1);
+      ctx.lineWidth=0.0009*U; const o2=0.006*U; ctx.strokeRect(r.x-o2,r.y-o2,r.w+2*o2,r.h+2*o2);
+      const v=g.illus, e=0.012*U, edge={...v,x:v.x-e,y:v.y-e,w:v.w+2*e,h:v.h+2*e};
+      ctx.save(); ctx.shadowColor='rgba(0,0,0,0.22)'; ctx.shadowBlur=0.02*U; ctx.shadowOffsetY=0.006*U; clipMap(ctx,{...edge,x:edge.x-0.04*U,y:edge.y-0.04*U,w:edge.w+0.08*U,h:edge.h+0.08*U,shape:null});
+      ctx.fillStyle=c.paper; const pth=new Path2D(); pth.addPath(new Path2D(shapeD('arch',edge.w,edge.h)),new DOMMatrix().translate(edge.x,edge.y)); ctx.fill(pth); ctx.restore();
+      if(ready()) drawImageIn(ctx,v,W,H); else placeholderIn(ctx,v,U);
+      drawBand(ctx,W,H,U,g,ink);
+    }
+    ctx.globalAlpha=0.55;
+    drawText(ctx,attributionText(false),W-g.m,H-g.m*0.38,{size:0.0085*U,align:'right',color:g.mix==='vig' ? c.text : T.color});
+    ctx.globalAlpha=1;
+  }
+  function placeholderIn(ctx, r, U){
+    const ink=st.colors.text; ctx.save(); clipMap(ctx,r); ctx.fillStyle=hexA(ink)(0.08); ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.fillStyle=hexA(ink)(0.7); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=`600 ${0.026*U}px system-ui, sans-serif`;
+    ctx.fillText(st.illus.img && !loading ? 'Illustration à importer' : 'Illustration',r.x+r.w/2,r.y+r.h*0.6,r.w*0.9); ctx.restore();
+  }
+  /** Vignette : titre et lignes dans la bande sous la carte, centrés, réduits ensemble pour y tenir */
+  function drawBand(ctx, W, H, U, g, ink){
+    const T=st.illusText, vint=T.style==='vintage', b=g.band, maxW=W-2*g.m-0.04*U;
+    const shadow=T.shadow && contrast(T.shadow,st.colors.paper)>=1.3 ? {color:T.shadow, dx:T.off*0.001*U, dy:T.off*0.001*U} : null;
+    const rows=[[textLine('title'),(vint?0.13:0.075)*U*tScale('title'),{spacing:vint?0.04:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow},vint?0.84:0.72],
+      [textLine('subtitle'),0.021*U*tScale('subtitle'),{spacing:0.3,upper:true,key:'subtitle'},0.75],
+      [textLine('dedication'),0.03*U*tScale('dedication'),{italic:true,key:'dedication'},0.75],
+      [[textLine('date'),textLine('coords')].filter(Boolean).join('  ·  '),0.015*U*tScale('date'),{spacing:0.2,key:'date'},0.75]].filter(x=>x[0]);
+    if(!rows.length) return;
+    const gap=0.022*U; let total=rows.reduce((a,x)=>a+x[1]*x[3],0)+gap*(rows.length-1);
+    const f=Math.min(1,b.h*0.82/total); total*=f;
+    let y=b.y+(b.h-total)/2;
+    for(const [t,sz,o,cap] of rows){ y+=sz*cap*f; drawText(ctx,t,W/2,y,{...o,size:sz*f,align:'center',color:ink,maxW}); y+=gap*f; }
   }
   function placeholder(ctx, W, H, U, want){
     const m=0.06*U, ink=st.colors.text;
@@ -361,11 +521,16 @@ CMS.define('illus', () => {
     ctx.restore();
   }
   /** Titre et sous-titre à la position choisie ; dédicace, noms, date et coordonnées du côté opposé */
-  function drawTexts(ctx, W, H, U){
+  function drawTexts(ctx, PW, PH, U, area){
+    const A=area||{x:0,y:0,w:PW,h:PH};   // zone des textes : l'affiche, ou l'illustration (Carte + illustration)
+    ctx.save(); ctx.translate(A.x,A.y);
+    try{ drawTextsIn(ctx,A.w,A.h,U); } finally{ ctx.restore(); }
+  }
+  function drawTextsIn(ctx, W, H, U){
     const T=st.illusText, m=0.06*U, vint=T.style==='vintage', col=T.color, row=T.pos[0], cpos=T.pos[1];
     const align=cpos==='g'?'left':cpos==='d'?'right':'center', x=cpos==='g'?m:cpos==='d'?W-m:W/2, maxW=W-2*m;
     const title=textLine('title'), sub=textLine('subtitle');
-    const ts=(vint?0.2:0.11)*U*tScale('title'), ss=0.024*U*tScale('subtitle'), gap=0.03*U;
+    const k=Math.min(1,W/U), ts=(vint?0.2:0.11)*U*k*tScale('title'), ss=0.024*U*tScale('subtitle'), gap=0.03*U;   // zone étroite (côte à côte) : titre réduit
     const capT=ts*(vint?0.84:0.72), capS=ss*0.75;
     const blockH=(title?capT:0)+(title&&sub?gap:0)+(sub?capS:0);
     const top=row==='h' ? 0.065*H : row==='m' ? (H-blockH)/2 : H-0.075*H-blockH;
@@ -394,31 +559,91 @@ CMS.define('illus', () => {
   const ready=()=>!!img && img.ref===refOf(st);
   /** Rafraîchit l'affiche après un changement de l'image ou de son cadrage */
   let rafU=0;
-  function redraw(){ if(rafU) return; rafU=requestAnimationFrame(()=>{ rafU=0; drawUnder(); scheduleOver(); exportState(); }); }
+  function redraw(){ if(rafU) return; rafU=requestAnimationFrame(()=>{ rafU=0; drawUnder(); scheduleOver(); exportState(); placeHit(); }); }
+  /** Vignette : zone de prise au-dessus de la carte, pour déplacer l'illustration sans déplacer la carte */
+  function placeHit(){
+    const hit=$('illusHit'), on=st.mode==='mix' && st.mix.compo==='vig' && ready() && ui.posterCss.w>0;
+    hit.hidden=!on; if(!on) return;
+    const r=geom(st,ui.posterCss.w,ui.posterCss.h).illus;
+    Object.assign(hit.style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px',borderRadius:`${r.w/2}px ${r.w/2}px 0 0`});
+  }
+  /** Pistes lues dans la carte : données importées (moteur Fichier) ou tuiles du lieu (moteur GPU, carte hors écran) */
+  async function scanPistes(){
+    const btn=$('bScanPistes'), lab=btn.querySelector('span'), center=st.center;
+    const done=list=>{ found=list; syncPrompt();
+      toast(list.length ? `${list.length} piste${list.length>1?'s':''} trouvée${list.length>1?'s':''} dans la carte : touchez-les pour les ajouter`
+        : 'Aucune piste nommée autour du lieu : dézoomez la carte ou ajoutez vos pistes', !list.length); };
+    if(st.engine==='file'){
+      if(!osmData){ toast('Importez d\u2019abord un fichier de données (onglet Lieu, section Avancé)',true); return; }
+      done(rankPistes((osmData.named||[]).map(x=>{ const c=osmPiste(x.t); return c && {...c, d:distKm(x,center)}; }))); return;
+    }
+    if(!needConsent(()=>scanPistes())) return;
+    btn.disabled=true; lab.textContent='Lecture de la carte…';
+    try{
+      if(!CMS.maplibre.lib) await loadMaplibre();
+      if(!CMS.maplibre.lib) throw new Error('librairie cartographique indisponible');
+      const cands=await CMS.engines.mlQuery(st, map=>{
+        const out=[];
+        for(const L of OMT_LAYERS){ let fs=[]; try{ fs=map.querySourceFeatures('omt',{sourceLayer:L}); }catch(e){}
+          for(const f of fs){ const c=omtPiste(L,f.properties||{}); if(!c) continue;
+            const g=f.geometry; if(g?.type==='Point') c.d=distKm({lon:g.coordinates[0],lat:g.coordinates[1]},center); out.push(c); } }
+        return out;
+      });
+      done(rankPistes(cands||[]));
+    }catch(e){ toast('Lecture de la carte impossible : '+(e.message||e),true); }
+    finally{ btn.disabled=false; lab.textContent='Trouver des pistes dans la carte'; }
+  }
+  /** Fondu : la carte de l'aperçu s'efface vers le haut, comme à l'export */
+  function applyFade(){
+    const on=st.mode==='mix' && st.mix.compo==='fondu', m=on ? `linear-gradient(to bottom, transparent, #000 ${FADE_STOP*100}%)` : '';
+    slot.style.webkitMaskImage=m; slot.style.maskImage=m;
+  }
+  /** Composition (mode Carte + illustration) */
+  function syncCompo(){
+    const M=st.mix; setSeg('compoSeg',M.compo); setSeg('mixShapeSeg',M.shape); setSeg('mixPosSeg',M.pos);
+    $('medOpts').hidden=M.compo!=='med'; $('hbOpts').hidden=M.compo!=='hb'; setSeg('mixSplitSeg',M.split); applyFade();
+    $('compoPrompt').textContent='« '+compoLine(st)+' »';
+  }
+  /** Couleurs de la carte tirées de l'illustration (même calcul que la palette d'une photo) */
+  function harmonize(v){
+    if(!ready()){ toast('Importez d\u2019abord votre illustration (étape Image)',true); return; }
+    const k=80/Math.max(img.prev.width,img.prev.height), c=canvasOf(img.prev.width*k,img.prev.height*k), x=c.getContext('2d',{willReadFrequently:true});
+    x.drawImage(img.prev,0,0,c.width,c.height); const pal=paletteOf(x.getImageData(0,0,c.width,c.height).data);
+    if(!pal.length){ toast('Aucune couleur exploitable dans cette illustration.',true); return; }
+    const before={theme:st.theme,colors:{...st.colors}};
+    st.colors=photoTheme(pal,v==='dark'); setSeg('harmSeg',v);
+    noteThemeChange(before); refreshColors(); changed({all:true,cards:true});
+    toast('Couleurs de la carte tirées de l\u2019illustration · « Annuler » pour revenir');
+  }
   function exportState(){
-    const off=st.mode==='illus' && !ready();
-    for(const id of ['bExport','bNextExport']){ const b=$(id); if(b){ b.disabled=off; b.title=off?'Importez d’abord votre illustration (onglet Illustration)':''; } }
-    if(st.mode==='illus') setStatus(ready() ? 'Prêt' : loading ? 'Chargement de l\u2019illustration…' : missing ? 'Illustration à réimporter' : 'Importez votre illustration pour exporter', ready() ? '' : loading ? 'busy' : 'wait');
+    const off=st.mode!=='map' && !ready();
+    for(const id of ['bExport']){ const b=$(id); if(b){ b.disabled=off; b.title=off?'Importez d’abord votre illustration (onglet Illustration)':''; } }
+    const own=/illustration/i.test($('stTxt').textContent);   // message posé par ce module (sinon : état de la carte, à laisser)
+    if(st.mode==='mix' && ready()){ if(own) setStatus('Prêt'); return; }
+    if(st.mode==='map'){ if(own) setStatus('Prêt'); return; }
+    setStatus(ready() ? 'Prêt' : loading ? 'Chargement de l\u2019illustration…' : missing ? 'Illustration à réimporter' : 'Importez votre illustration pour exporter', ready() ? '' : loading ? 'busy' : 'wait');
   }
   function setMode(v){
     if(!C.MODES.includes(v) || st.mode===v) return;
-    st.mode=v; applyMode();
+    st.mode=v; if(v==='mix' && !ready()) step='compo';
+    applyMode(); sync();
     layoutPreview(); refreshCards(); loadFonts().then(()=>scheduleOver());
-    if(v==='map') updateEngineUI();
+    if(v!=='illus') updateEngineUI();
     saveState();
-    toast(v==='illus' ? 'Affiche illustrée : créez le prompt, puis importez votre image' : 'Affiche cartographique');
+    toast({illus:'Affiche illustrée : créez le prompt, puis importez votre image', mix:'Carte + illustration : choisissez la composition, puis créez le prompt', map:'Affiche cartographique'}[v]);
   }
   function applyMode(){
-    const ill=st.mode==='illus';
-    $('app').dataset.mode=st.mode; setSeg('modeSeg',st.mode); setSeg('modeSegM',st.mode);
-    $('tb-repere').hidden=ill; $('tb-illus').hidden=!ill;
+    const m=st.mode, ill=m==='illus';
+    $('app').dataset.mode=m; setSeg('modeSeg',m); setSeg('modeSegM',m);
+    $('tb-repere').hidden=ill; $('tb-illus').hidden=m==='map';
     if(ill && ui.tab==='repere') showTab('illus');
-    if(!ill && ui.tab==='illus') showTab('lieu');
-    exportState();
+    if(m==='map' && ui.tab==='illus') showTab('lieu');
+    if(m!=='mix' && step==='compo') step='prompt';
+    exportState(); placeHit(); applyFade();
   }
   function setStep(v){
     step=v; setSeg('illusStepSeg',v);
-    $('illusPrompt').hidden=v!=='prompt'; $('illusImage').hidden=v!=='image';
+    $('illusCompo').hidden=v!=='compo'; $('illusPrompt').hidden=v!=='prompt'; $('illusImage').hidden=v!=='image';
   }
   function swatches(id, list, field, custom){
     const box=$(id); box.replaceChildren();
@@ -455,6 +680,9 @@ CMS.define('illus', () => {
       b.onclick=()=>{ P.pistes=P.pistes.filter(x=>x!==p); syncPrompt(); saveState(); }; box.append(b);
     }
     $('pisteIn').disabled=P.pistes.length>=C.PISTES_MAX;
+    const sug=found.filter(x=>!P.pistes.includes(x)), sb=$('pisteSugg'); sb.hidden=!sug.length;
+    sb.replaceChildren(...sug.map(x=>{ const b=h('button',{type:'button',className:'chip','aria-label':`Ajouter la piste « ${x} »`},'+ '+x);
+      b.onclick=()=>{ if(P.pistes.length<C.PISTES_MAX && !P.pistes.includes(x)){ P.pistes.push(x); syncPrompt(); saveState(); } else toast(`${C.PISTES_MAX} pistes au plus`,true); }; return b; }));
     updatePrompt();
   }
   function updatePrompt(){
@@ -486,7 +714,7 @@ CMS.define('illus', () => {
     const want=refOf(st);
     // Image déjà cherchée en vain (restauration, « Annuler ») : signalée tout de suite, sans nouvelle tentative
     if(want && want!==(img?.ref||'') && !loading && tried===want && st.mode!=='map') missing=true;
-    applyMode(); setStep(step); syncPrompt(); syncImage(); syncText();
+    applyMode(); setStep(step); syncCompo(); syncPrompt(); syncImage(); syncText();
     if(want!==(img?.ref||'') && !loading && tried!==want) ensureImage();
   }
 
@@ -511,14 +739,14 @@ CMS.define('illus', () => {
     // Import : fichier, glisser-déposer (zone et aperçu), collage
     for(const id of ['illusIn','illusIn2']) $(id).onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
     const dropOn=el=>{
-      el.addEventListener('dragover',e=>{ if(st.mode!=='illus') return; e.preventDefault(); $('illusDrop').classList.add('over'); });
+      el.addEventListener('dragover',e=>{ if(st.mode==='map') return; e.preventDefault(); $('illusDrop').classList.add('over'); });
       el.addEventListener('dragleave',()=>$('illusDrop').classList.remove('over'));
-      el.addEventListener('drop',e=>{ if(st.mode!=='illus') return; e.preventDefault(); $('illusDrop').classList.remove('over');
+      el.addEventListener('drop',e=>{ if(st.mode==='map') return; e.preventDefault(); $('illusDrop').classList.remove('over');
         const f=e.dataTransfer?.files?.[0]; if(f){ if(ui.tab!=='illus') showTab('illus'); importFile(f); } });
     };
     dropOn($('illusDrop')); dropOn(stage);
     document.addEventListener('paste',e=>{
-      if(st.mode!=='illus' || e.target.matches?.('input[type=text],input[type=search],textarea')) return;
+      if(st.mode==='map' || e.target.matches?.('input[type=text],input[type=search],textarea')) return;
       const it=[...(e.clipboardData?.items||[])].find(i=>i.kind==='file' && i.type.startsWith('image/'));
       if(it){ e.preventDefault(); if(ui.tab!=='illus') showTab('illus'); importFile(it.getAsFile()); }
     });
@@ -532,19 +760,34 @@ CMS.define('illus', () => {
       syncImage(); redraw(); saveState();
     });
     CMS.on('state:synced',sync);
-    CMS.on('state:saved',()=>{ if(st.mode==='illus' && ui.tab==='illus' && step==='prompt') updatePrompt(); });
+    CMS.on('state:saved',()=>{ if(st.mode!=='map' && ui.tab==='illus' && step==='prompt') updatePrompt(); });
     // Déplacer l'image en la glissant sur l'aperçu
     let drag=null;
     poster.addEventListener('pointerdown',e=>{
-      if(st.mode!=='illus' || !ready() || e.button>0 || e.target.closest('button')) return;
+      if(st.mode==='map' || !ready() || e.button>0 || e.target.closest('button')) return;
+      // Carte + illustration : la carte garde ses gestes ; la vignette se déplace par sa zone de prise
+      if(st.mode==='mix' && (st.mix.compo==='vig' ? e.target.id!=='illusHit' : e.target.closest('#slot'))) return;
       drag={x:e.clientX,y:e.clientY,ox:st.illus.ox,oy:st.illus.oy,id:e.pointerId}; poster.setPointerCapture(e.pointerId); poster.classList.add('dragging');
     });
     poster.addEventListener('pointermove',e=>{
       if(!drag || e.pointerId!==drag.id) return;
-      st.illus.ox=clamp(drag.ox+(e.clientX-drag.x)/ui.posterCss.w,-1,1); st.illus.oy=clamp(drag.oy+(e.clientY-drag.y)/ui.posterCss.h,-1,1); redraw();
+      const r=geom(st,ui.posterCss.w,ui.posterCss.h).illus;   // décalage en fraction du cadre de l'illustration
+      st.illus.ox=clamp(drag.ox+(e.clientX-drag.x)/r.w,-1,1); st.illus.oy=clamp(drag.oy+(e.clientY-drag.y)/r.h,-1,1); redraw();
     });
     const end=e=>{ if(!drag || e.pointerId!==drag.id) return; drag=null; poster.classList.remove('dragging'); saveState(); };
     poster.addEventListener('pointerup',end); poster.addEventListener('pointercancel',end);
+    // Composition (Carte + illustration)
+    const mixSet=(f,v)=>{ st.mix[f]=v;
+      if(f==='compo' && v==='cote' && st.orient!=='landscape'){ setOrient('landscape'); toast('Côte à côte : affiche passée en paysage'); }
+      syncCompo(); syncImage(); ui.snap=null; layoutPreview(); placeHit(); saveState(); };
+    document.querySelectorAll('#mixSplitSeg button').forEach(b=>b.onclick=()=>mixSet('split',b.dataset.v));
+    $('bScanPistes').onclick=scanPistes;
+    document.querySelectorAll('#compoSeg button').forEach(b=>b.onclick=()=>mixSet('compo',b.dataset.v));
+    document.querySelectorAll('#mixShapeSeg button').forEach(b=>b.onclick=()=>mixSet('shape',b.dataset.v));
+    document.querySelectorAll('#mixPosSeg button').forEach(b=>b.onclick=()=>mixSet('pos',b.dataset.v));
+    document.querySelectorAll('#harmSeg button').forEach(b=>b.onclick=()=>harmonize(b.dataset.v));
+    $('bToPrompt').onclick=()=>setStep('prompt');
+    new ResizeObserver(()=>placeHit()).observe(poster);
     // Style du titre
     document.querySelectorAll('#tStyleSeg button').forEach(b=>b.onclick=async()=>{ st.illusText.style=b.dataset.v; syncText(); saveState(); await loadFonts(); scheduleOver(); });
     swatches('swText',SW_TEXT,'color',true); swatches('swShadow',SW_SHADOW,'shadow'); swatches('swOutline',SW_OUTLINE,'outline');
@@ -553,7 +796,7 @@ CMS.define('illus', () => {
     sync();
     setTimeout(()=>gc().catch(()=>{}),2000);   // images orphelines (affiches supprimées, autre image importée)
   }
-  return {init, draw, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
+  return {init, draw, drawMix, harmonize, compoLine, region, ratioText, osmPiste, omtPiste, rankPistes, scanPistes, get found(){ return found; }, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
     get missing(){ return missing; }, get loading(){ return !!loading; }, buildPrompt, quality, cropPct, placement, adjust, processPixels,
     get step(){ return step; }, get image(){ return img && {w:img.w, h:img.h, name:img.name}; }};
 });

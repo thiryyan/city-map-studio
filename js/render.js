@@ -551,6 +551,7 @@ function drawPoster(ctx, W, H, pass, mapFn){
 }
 function drawPosterAt(ctx, W, H, pass, mapFn){
   const c=st.colors, g=geom(st,W,H), m=g.m, U=g.U, r=g.map;
+  if(g.mix){ CMS.illus.drawMix(ctx,W,H,pass,g,mapFn); return g; }   // carte + illustration (js/illus.js)
   if(g.illus){ CMS.illus.draw(ctx,W,H,pass,g); return g; }   // modes illustrés : image importée et textes (js/illus.js)
   if(pass!=='over'){ ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H); if(g.sky) drawSky(ctx,g.sky,U); }
   if(pass==='all' && mapFn) g.places.forEach((p,i)=>{ ctx.save(); clipMap(ctx,p.rect); ctx.fillStyle=c.land; ctx.fillRect(p.rect.x,p.rect.y,p.rect.w,p.rect.h); mapFn(ctx,p.rect,p.view,i); ctx.restore(); });

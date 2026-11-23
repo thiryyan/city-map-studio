@@ -93,7 +93,6 @@ async def main():
         await wait_js(page, f"CMS.illus.ready() && CMS.illus.image.w===900", 8000)
         check(await page.evaluate("__cms.st.illus.img.ref") == ref, 'Mes affiches : restaurer retrouve l\'illustration enregistrée')
         check('Affiche illustrée' in await page.evaluate("(openSaves(), $('savesList').textContent)"), 'Mes affiches : « Affiche illustrée » dans la liste')
-        await page.evaluate("closeDialog('saves')")
 
         # Retirer puis Annuler (après le délai de calme qui suit une restauration : cf. commitHistory)
         await page.wait_for_timeout(1700)
@@ -190,7 +189,6 @@ async def main():
         await page.set_input_files('#cfgIn', files=[{'name': 'mes-affiches.json', 'mimeType': 'application/json', 'buffer': json.dumps(bak).encode()}])
         await page.wait_for_timeout(1500)
         check(await page.evaluate("__cms.loadSaves().length") == 1 and await page.evaluate(KEYS) == [ref], 'navigateur vierge : sauvegarde complète et ses images importées')
-        await page.evaluate("closeDialog('saves')")
         await page.set_input_files('#cfgIn', files=[{'name': 'sans-image.json', 'mimeType': 'application/json', 'buffer': json.dumps({**cfg0, 'state': {**cfg0['state'], 'illus': {**cfg0['state']['illus'], 'img': {**cfg0['state']['illus']['img'], 'ref': 'a' * 64}}}}).encode()}])
         await wait_js(page, "CMS.illus.missing", 8000)
         check(True, 'fichier sans image d\'une image inconnue : illustration à importer')

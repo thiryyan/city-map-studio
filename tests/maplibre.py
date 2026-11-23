@@ -17,7 +17,7 @@ import pathlib, os, json, math, struct, threading, asyncio, zlib, re
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from functools import partial
 import mapbox_vector_tile
-from shapely.geometry import LineString, Polygon, box
+from shapely.geometry import LineString, Point, Polygon, box
 from shapely.ops import polygonize, unary_union, transform
 from playwright.async_api import async_playwright
 from jswait import wait_js
@@ -53,11 +53,16 @@ def load_features():
         elif t.get('railway') == 'rail':
             L['transportation'].append((transform(mproj, LineString(pts)), {'class': 'rail'}))
         elif t.get('waterway') in ('river', 'canal', 'stream'):
-            L['waterway'].append((transform(mproj, LineString(pts)), {'class': t['waterway']}))
+            L['waterway'].append((transform(mproj, LineString(pts)), {'class': t['waterway'], **({'name': 'La Loire'} if t['waterway'] == 'river' else {})}))
         elif 'building' in t:
             L['building'].append((transform(mproj, Polygon(pts)), {}))
         elif t.get('leisure') == 'park':
             L['park'].append((transform(mproj, Polygon(pts)), {'class': 'park'}))
+    # Éléments nommés (pistes du prompt des modes illustrés, issue #45) : un château, une cathédrale, un musée
+    lat0, lon0 = 47.5861, 1.3359
+    L['poi'] = [(Point(m(lon0 + 0.002, lat0 + 0.003)), {'class': 'castle', 'name': 'Château royal de Blois', 'rank': 1}),
+                (Point(m(lon0 - 0.004, lat0 + 0.005)), {'class': 'place_of_worship', 'name': 'Cathédrale Saint-Louis', 'rank': 3}),
+                (Point(m(lon0 + 0.006, lat0 - 0.001)), {'class': 'museum', 'name': 'Maison de la magie', 'rank': 8})]
     return L
 FEATS = load_features()
 
@@ -150,7 +155,7 @@ async def main():
             diag = await page.inner_text('#diag')
             print('  diag MapLibre :', 'copie locale (lib/)' in diag)
             async with page.expect_download(timeout=90000) as dl:
-                await page.click('#bExport')
+                await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
             d = await dl.value; path = str(T / f'ml-export-{name}.png'); await d.save_as(path)
             data = open(path, 'rb').read(); i = data.find(b'pHYs')
             w, h, water, dark = png_stats(path)
@@ -173,7 +178,7 @@ async def main():
                 print('  effets (aperçu) :', fx)
                 assert fx['pat'] and fx['img'] and fx['building'] == 'line' and len(fx['passes']) == 2 and fx['passes'][0] != fx['passes'][1], fx
                 async with page.expect_download(timeout=90000) as dl:
-                    await page.click('#resClose'); await page.click('#bExport')
+                    await page.click('#resClose'); await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
                 d = await dl.value; path = str(T / 'ml-export-fx.png'); await d.save_as(path)
                 w2, h2, water2, dark2 = png_stats(path)
                 print('  export avec effets', w2, h2, '| pixels eau', water2, f'(sans effet : {water})')
@@ -190,13 +195,17 @@ async def main():
                 print('  pistes artistiques (aperçu) :', art)
                 assert art['glow'] == 24 and art['wl'] == 5 and art['q'] == 8 and art['plate'] and art['dots'] and art['cross'] and art['rendered'] > 0, art
                 async with page.expect_download(timeout=90000) as dl:
-                    await page.click('#resClose'); await page.click('#bExport')
+                    await page.click('#resClose'); await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
                 d = await dl.value; path = str(T / 'ml-export-art.png'); await d.save_as(path)
                 w3, h3, _, _ = png_stats(path)
                 print('  export avec les pistes artistiques', w3, h3)
                 assert (w3, h3) == (2480, 3508)
                 bad = [l for l in logs if 'PAGEERROR' in l or 'could not be loaded' in l or ('MapLibre' in l and 'warn' in l)]
                 assert not bad, bad[-5:]
+                # Pistes du prompt lues dans les tuiles (carte hors écran du lieu, issue #45)
+                pist = await page.evaluate("CMS.illus.scanPistes().then(()=>CMS.illus.found)")
+                print('  pistes lues dans la carte :', pist)
+                assert pist[:2] == ['Château royal de Blois', 'Cathédrale Saint-Louis'] and 'La Loire' in pist and 'Maison de la magie' in pist, pist
                 # Grands formats : au-delà du côté maximal d'un canevas WebGL, carte rendue en tuiles recollées.
                 # Rendu d'un seul tenant comparé au même rendu en 2 × 3 tuiles (côté maximal forcé à 1024 px).
                 cmp = await page.evaluate("""(async()=>{
@@ -211,7 +220,7 @@ async def main():
                 # Export A3 (3508 × 4961) : carte de plus de 4096 px de haut, rendue en tuiles
                 await page.evaluate("__cms.setFormat('a3')")
                 async with page.expect_download(timeout=180000) as dl:
-                    await page.click('#resClose'); await page.click('#bExport')
+                    await page.click('#resClose'); await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
                 d = await dl.value; path = str(T / 'ml-export-a3.png'); await d.save_as(path)
                 w4, h4, water4, dark4 = png_stats(path)
                 print('  export A3', w4, h4, '| pixels eau', water4, '| pixels axes', dark4)

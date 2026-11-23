@@ -91,18 +91,14 @@ async def main():
             await page.evaluate("__cms.showTab('lieu')"); await page.evaluate("__cms.runDiagnostics()"); await page.wait_for_timeout(1500)
             DIS = "['bUndo','bRedo','bUiSmaller','bDiag'].forEach(id=>document.getElementById(id).disabled=true); document.getElementById('toast').classList.remove('show')"
             bad = {}
-            for tab in ['lieu', 'textes', 'style', 'repere']:
+            for tab in ['lieu', 'textes', 'style', 'repere', 'export']:
                 await page.evaluate(f"__cms.showTab('{tab}')")
                 await page.evaluate("document.querySelectorAll('details').forEach(d=>d.open=true)"); await page.evaluate(DIS); await page.wait_for_timeout(400)
                 for f in await page.evaluate(AUDIT): bad.setdefault(f['el'], f)
-            for dlg, opener in [('saves', "openDialog('saves')"), ('result', None)]:
-                if opener: await page.evaluate(opener)
-                else:
-                    async with page.expect_download(timeout=120000) as dl: await page.click('#bExport')
-                    await dl.value
-                await page.wait_for_timeout(300)
-                for f in await page.evaluate(AUDIT): bad.setdefault(f['el'], f)
-                await page.keyboard.press('Escape'); await page.wait_for_timeout(200)
+            # Onglet Export après un export : encart du résultat (aperçu, informations, téléchargement)
+            async with page.expect_download(timeout=120000) as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
+            await dl.value; await page.wait_for_timeout(300)
+            for f in await page.evaluate(AUDIT): bad.setdefault(f['el'], f)
             # Agrandissement de l'interface (A+)
             await page.evaluate("__cms.showTab('textes')")
             for _ in range(2): await page.click('#bUiLarger')

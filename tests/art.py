@@ -172,7 +172,7 @@ async def main():
         # 10. Export pleine définition avec tout activé
         await ev("""()=>{ const st=__cms.st; st.fx={hatch:true,outline:false,pencil:true,glow:true,waterlines:true,dots:true,parkHatch:true,riso:true,halo:true,quarter:true,foil:true};
           st.orn={scale:true,compass:true,grid:true}; st.folds=true; st.texture='ancien'; __cms.setLayout('typo',true); }""")
-        async with page.expect_download(timeout=120000) as dl: await page.click('#bExport')
+        async with page.expect_download(timeout=120000) as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d = await dl.value; path = str(T / 'art-export.png'); await d.save_as(path)
         import struct
         w, h = struct.unpack('>II', open(path, 'rb').read()[16:24])

@@ -57,11 +57,11 @@ async def main():
 
         # ---------- Onglets ----------
         order = await page.evaluate("[...document.querySelectorAll('#tabs button:not([hidden])')].map(b=>b.dataset.tab)")
-        check(order == ['lieu', 'repere', 'textes', 'style'], f'onglets dans l\'ordre du parcours {order}')
+        check(order == ['lieu', 'repere', 'textes', 'style', 'export'], f'onglets dans l\'ordre du parcours {order}')
         aria = await page.evaluate("""[document.getElementById('tabs').getAttribute('role'),
             [...document.querySelectorAll('#tabs button:not([hidden])')].map(b=>b.getAttribute('role')+':'+b.getAttribute('aria-selected')).join(' '),
             document.getElementById('tab-lieu').getAttribute('role')]""")
-        check(aria == ['tablist', 'tab:true tab:false tab:false tab:false', 'tabpanel'], f'rôles ARIA {aria}')
+        check(aria == ['tablist', 'tab:true tab:false tab:false tab:false tab:false', 'tabpanel'], f'rôles ARIA {aria}')
         await page.focus('#tb-lieu'); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight')
         cur = await page.evaluate("[document.activeElement.id, document.querySelector('#tabs .on').dataset.tab, document.getElementById('tb-textes').getAttribute('aria-selected')]")
         check(cur == ['tb-textes', 'textes', 'true'], f'flèches du clavier : onglet suivant, focus déplacé {cur}')

@@ -27,7 +27,7 @@ async def main():
             await page.set_input_files('#fileIn',str(T/f'{f}')); await page.wait_for_timeout(600)
             print(f,'->',await page.inner_text('#stTxt'),'| engine',await page.evaluate('__cms.st.engine'),'| water rings',await page.evaluate("__cms.osmData.water.map(w=>w.rings.length)"))
         await page.screenshot(path=str(T/f'off-import.png'))
-        async with page.expect_download() as dl: await page.click('#bExport')
+        async with page.expect_download() as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d=await dl.value; await d.save_as(str(T/f'off-export.png')); data=open(str(T/f'off-export.png'),'rb').read()
         print('export',struct.unpack('>II',data[16:24]))
         print('errors',errs)

@@ -180,8 +180,10 @@ dialog.sheet .row .btn{flex:1 1 140px}
 #busy.show{display:flex}
 .spin{width:38px;height:38px;border:3px solid #fff3;border-top-color:var(--acc);border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-#result .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;max-width:420px;width:100%;max-height:100%;display:flex;flex-direction:column;gap:10px}
-#result img{width:100%;max-height:52dvh;object-fit:contain;background:#111;border-radius:8px}
+/* Résultat de l'export : encart de l'onglet Export (issue #51) */
+#result{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;gap:10px}
+#result[hidden]{display:none}
+#result img{width:100%;max-height:44dvh;object-fit:contain;background:#111;border-radius:8px}
 #result .row .btn{flex:1}
 .xl{display:none}@media (min-width:900px){.xl{display:inline}}
 .warn{background:#3a2a12;border:1px solid #8a6a2a;color:#f5deb0;border-radius:10px;padding:10px 12px;font-size:.875rem;margin-bottom:10px}
@@ -280,10 +282,13 @@ details.adv>h3:first-of-type{margin-top:6px}
 /* ---------- Modes illustrés (js/illus.js) ---------- */
 /* Sélecteur du type d'affiche, au-dessus des onglets */
 .modes{display:flex;gap:6px;padding:8px 10px 6px;flex:none}
-.modes button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:6px 8px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--mut);font-weight:500;cursor:pointer}
+.modes button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:44px;padding:6px 4px;font-size:.8125rem;line-height:1.2;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--mut);font-weight:500;cursor:pointer}
 .modes button.on{border-color:var(--acc);color:var(--txt);box-shadow:inset 0 0 0 1px var(--acc)}
 .modes button:focus-visible{outline:2px solid var(--acc2);outline-offset:1px}
-#app[data-mode=illus] .maponly,#app:not([data-mode=illus]) .illusonly{display:none!important}
+/* Visibilité selon le type d'affiche : maponly (carte et carte + illustration), layoutonly (carte seule : ambiances, gabarits),
+   illusonly (modes illustrés), pureillus (illustration seule), mixonly (carte + illustration) */
+#app[data-mode=illus] .maponly,#app:not([data-mode=map]) .layoutonly,#app[data-mode=map] .illusonly,#app:not([data-mode=illus]) .pureillus,#app:not([data-mode=mix]) .mixonly{display:none!important}
+#app[data-mode=mix] #placeBox,#app[data-mode=mix] #labelsBox,#app[data-mode=mix] #skyBox{display:none!important}
 #app[data-mode=illus] #slot,#app[data-mode=illus] .fab,#app[data-mode=illus] .mapcredit,#app[data-mode=illus] #shield,#app[data-mode=illus] #placeSwitch{display:none!important}
 #app[data-mode=illus] #poster{touch-action:none;cursor:grab}
 #poster.dragging{cursor:grabbing}
@@ -319,3 +324,26 @@ h3 .opt{text-transform:none;letter-spacing:0;font-weight:400}
 .modes.inbody{display:none}
 #app.sheetmode .modes.top{display:none}
 #app.sheetmode .modes.inbody{display:flex;padding:10px 0 2px}
+/* Carte + illustration : compositions, zone de prise de la vignette */
+.compos{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.compos button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--txt);cursor:pointer;font-weight:500;min-height:44px}
+.compos button small{color:var(--mut);font-weight:400;font-size:.75rem;text-align:center}
+.compos button.on{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.compos .mini{width:46px;height:64px;position:relative;overflow:hidden;border-radius:2px;background:#d9cdb5;display:block}
+.compos .mini i{position:absolute;display:block}
+.compos .il{background:#7f9bb5}.compos .mp{background:#f4efe6 repeating-linear-gradient(35deg,#8c8681 0 1px,transparent 1px 6px)}
+.compos .full{inset:0}.compos .med{left:11px;top:34px;width:24px;height:24px;border-radius:50%;box-shadow:0 0 0 2px #f4efe6}
+.compos .vig{right:5px;top:5px;width:16px;height:22px;border-radius:8px 8px 0 0;box-shadow:0 0 0 2px #f4efe6}
+.illushit{position:absolute;z-index:4;cursor:grab;touch-action:none}
+.compos .top{left:0;top:0;width:100%;height:50%}.compos .bot{left:0;bottom:0;width:100%;height:46%}
+.compos .mini.land{width:64px;height:46px;margin:9px 0}.compos .left{left:0;top:0;width:49%;height:100%}.compos .right{right:0;top:0;width:49%;height:100%}
+.compos .fade{left:0;bottom:0;width:100%;height:42%;-webkit-mask-image:linear-gradient(transparent,#000 45%);mask-image:linear-gradient(transparent,#000 45%)}
+/* Onglet Export : titres de section */
+h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px;padding-top:14px;border-top:1px solid var(--line);color:var(--txt)}
+.tab>h2.sec:first-child{margin-top:4px;padding-top:0;border-top:0}
+#tab-export .btn.pri#bExport{margin-top:8px}
+/* Jusqu'à six onglets (Carte + illustration) : ils se partagent la largeur, sans défilement horizontal (360 px) */
+.tabs button{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:420px){.tabs{gap:0;padding:0 4px}.tabs button{padding-left:1px;padding-right:1px;font-size:.8125rem}}
+.tabs .ts{display:none}
+@media (max-width:420px){#app[data-mode=mix] .tabs .tl{display:none}#app[data-mode=mix] .tabs .ts{display:inline}}

@@ -63,6 +63,7 @@ function normState(src){
     orn:V.each(s.orn,D.orn,V.bool),
     folds:V.bool(s.folds,D.folds),
     mode:V.oneOf(s.mode,CMS.illusConf.MODES,D.mode),
+    mix:{compo:V.oneOf(V.obj(s.mix).compo,CMS.illusConf.COMPOS,D.mix.compo), shape:V.oneOf(V.obj(s.mix).shape,CMS.illusConf.SHAPES,D.mix.shape), pos:V.oneOf(V.obj(s.mix).pos,CMS.illusConf.MPOS,D.mix.pos), split:V.oneOf(V.obj(s.mix).split,CMS.illusConf.SPLITS,D.mix.split)},
     illus:normIllus(s.illus,D.illus),
     illusText:normIllusText(s.illusText,D.illusText)
   };

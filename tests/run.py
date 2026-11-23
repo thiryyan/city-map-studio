@@ -30,7 +30,7 @@ async def main():
                 print('dms',await page.evaluate("[__cms.dms(47.5861,'N','S'),__cms.dms(1.3359,'E','W'),__cms.dms(1.99999,'E','W'),__cms.dms(-73.9855,'E','W')]"))
                 print('rings',await page.evaluate("__cms.osmData.water.map(f=>f.rings.length+':'+f.rings.map(r=>r.length).join('/'))"))
             async with page.expect_download() as dl:
-                await page.click('#bExport')
+                await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
             d=await dl.value; path=str(T/f'export-{name}.png'); await d.save_as(path)
             data=open(path,'rb').read()
             w,h=struct.unpack('>II',data[16:24]); i=data.find(b'pHYs')

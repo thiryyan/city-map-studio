@@ -56,7 +56,7 @@ async def main():
         if any(show.values()) or kept != 'Blois': fails.append('persistance')
         # un fichier importé n'est pas conservé entre deux sessions : nouvel import avant l'export
         await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
-        async with page.expect_download() as dl: await page.click('#bExport')
+        async with page.expect_download() as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d = await dl.value; path = str(T / 'texts-export.png'); await d.save_as(path)
         w, h = struct.unpack('>II', open(path, 'rb').read()[16:24]); print('export sans texte', d.suggested_filename, w, h)
         if (w, h) != (2480, 3508): fails.append('export')

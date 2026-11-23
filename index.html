@@ -38,6 +38,7 @@
       <canvas id="cvUnder" aria-hidden="true"></canvas>
       <div id="slot"><div id="mlMap"></div><canvas id="vecCanvas" tabindex="0" role="application" aria-roledescription="carte" aria-label="Carte. Flèches : déplacer (Maj : plus loin). Plus et moins : zoomer. Entrée : placer le repère au centre en mode placement."></canvas></div>
       <canvas id="cvOver" role="img" aria-label="Aperçu de l'affiche"></canvas>
+      <div class="illushit" id="illusHit" hidden aria-hidden="true"></div>
       <canvas id="cvTex" hidden aria-hidden="true"></canvas>
       <div class="cmpbadge" id="cmpBadge" role="status" hidden></div>
       <button class="shield placeSwitch" id="placeSwitch" type="button" hidden><span>Modifier le lieu 2</span></button>
@@ -65,19 +66,22 @@
     <div class="modes top" id="modeSeg" role="group" aria-label="Type d'affiche">
       <button data-v="map" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Carte</button>
       <button data-v="illus" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Illustration</button>
+    <button data-v="mix" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 9l3-3 3 3 2-2 4 2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="10" cy="13" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Carte + illus.</button>
     </div>
     <nav class="tabs" id="tabs" role="tablist" aria-label="Étapes de création">
       <button data-tab="lieu" class="on" role="tab" id="tb-lieu" aria-controls="tab-lieu" aria-selected="true">Lieu</button>
       <button data-tab="repere" role="tab" id="tb-repere" aria-controls="tab-repere" aria-selected="false" tabindex="-1">Repère</button>
-      <button data-tab="illus" role="tab" id="tb-illus" aria-controls="tab-illus" aria-selected="false" tabindex="-1" hidden>Illustration</button>
+      <button data-tab="illus" role="tab" id="tb-illus" aria-controls="tab-illus" aria-selected="false" tabindex="-1" aria-label="Illustration" hidden><span class="tl">Illustration</span><span class="ts" aria-hidden="true">Illus.</span></button>
       <button data-tab="textes" role="tab" id="tb-textes" aria-controls="tab-textes" aria-selected="false" tabindex="-1">Textes</button>
       <button data-tab="style" role="tab" id="tb-style" aria-controls="tab-style" aria-selected="false" tabindex="-1">Style</button>
+      <button data-tab="export" role="tab" id="tb-export" aria-controls="tab-export" aria-selected="false" tabindex="-1">Export</button>
     </nav>
     <div class="tabbody">
       <!-- Téléphone (panneau coulissant) : sélecteur dans la zone défilante, pour garder la place des réglages -->
         <div class="modes inbody" id="modeSegM" role="group" aria-label="Type d'affiche">
         <button data-v="map" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Carte</button>
         <button data-v="illus" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Illustration</button>
+      <button data-v="mix" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 9l3-3 3 3 2-2 4 2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="10" cy="13" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Carte + illus.</button>
       </div>
       <!-- LIEU -->
       <div class="tab on" id="tab-lieu" role="tabpanel" aria-labelledby="tb-lieu">
@@ -131,16 +135,44 @@
           <div class="diag" id="diag"></div>
         </details>
         <button class="btn next maponly" type="button" data-next="repere">Étape suivante : le repère<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button class="btn next illusonly" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next pureillus" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <p class="credit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL) · Tuiles <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · Rendu MapLibre GL · Géocodage Nominatim</p>
       </div>
       <!-- ILLUSTRATION (modes illustrés) : prompt pour une IA externe, puis import et ajustement de l'image -->
       <div class="tab" id="tab-illus" role="tabpanel" aria-labelledby="tb-illus">
-        <div class="seg mt6" id="illusStepSeg" role="group" aria-label="Étape de l'illustration"><button data-v="prompt" type="button">1 · Prompt</button><button data-v="image" type="button">2 · Image</button></div>
+        <div class="seg mt6" id="illusStepSeg" role="group" aria-label="Étape de l'illustration"><button data-v="compo" type="button" class="mixonly">Composition</button><button data-v="prompt" type="button">Prompt</button><button data-v="image" type="button">Image</button></div>
+        <div id="illusCompo" hidden>
+          <h3>Composition</h3>
+          <div class="compos" id="compoSeg" role="group" aria-label="Composition de l'affiche">
+            <button data-v="med" type="button"><span class="mini" aria-hidden="true"><i class="il full"></i><i class="mp med"></i></span>Médaillon<small>Illustration en pleine page, carte dans une forme</small></button>
+            <button data-v="vig" type="button"><span class="mini" aria-hidden="true"><i class="mp full"></i><i class="il vig"></i></span>Vignette<small>Carte encadrée, illustration en arche</small></button>
+            <button data-v="hb" type="button"><span class="mini" aria-hidden="true"><i class="il top"></i><i class="mp bot"></i></span>Haut / bas<small>Illustration en haut, carte en bas</small></button>
+            <button data-v="cote" type="button"><span class="mini land" aria-hidden="true"><i class="il left"></i><i class="mp right"></i></span>Côte à côte<small>Affiche en paysage</small></button>
+            <button data-v="fondu" type="button"><span class="mini" aria-hidden="true"><i class="il full"></i><i class="mp fade"></i></span>Fondu<small>La carte émerge de l'illustration</small></button>
+          </div>
+          <div id="hbOpts">
+            <h3>Partage de l'affiche</h3>
+            <div class="seg" id="mixSplitSeg" role="group" aria-label="Part de l'illustration"><button data-v="half" type="button">Moitié · moitié</button><button data-v="two" type="button">Deux tiers · un tiers</button></div>
+          </div>
+          <div id="medOpts">
+            <h3>Forme de la carte</h3>
+            <div class="seg" id="mixShapeSeg" role="group" aria-label="Forme de la carte"><button data-v="circle" type="button">Rond</button><button data-v="heart" type="button">Cœur</button><button data-v="arch" type="button">Arche</button></div>
+            <h3>Position de la carte</h3>
+            <div class="seg" id="mixPosSeg" role="group" aria-label="Position de la carte"><button data-v="haut" type="button">Haut</button><button data-v="centre" type="button">Centre</button><button data-v="bas" type="button">Bas</button></div>
+          </div>
+          <div class="cur mt10"><b>Transmis au prompt</b><span class="mono" id="compoPrompt"></span></div>
+          <h3>Couleurs de la carte d'après l'illustration</h3>
+          <div class="seg" id="harmSeg" role="group" aria-label="Couleurs de la carte d'après l'illustration"><button data-v="light" type="button">Version claire</button><button data-v="dark" type="button">Version sombre</button></div>
+          <p class="hint">Les couleurs de la carte sont tirées de l'illustration (« Annuler » pour revenir). Dans l'autre sens, la palette « Thème de l'affiche » de l'étape Prompt transmet à l'IA les couleurs de la carte.</p>
+          <button class="btn wide mt8" type="button" id="bToPrompt">Étape suivante : le prompt</button>
+        </div>
         <div id="illusPrompt">
           <p class="hint">L'illustration est créée par l'IA de votre choix (ChatGPT, Gemini…) : l'application rédige la demande, vous l'y collez, puis vous importez l'image obtenue à l'étape 2.</p>
           <h3>Pistes à proposer à l'IA <small class="opt">facultatif</small></h3>
           <div class="chips" id="pisteChips" role="group" aria-label="Pistes"></div>
+          <button class="btn wide mt8" type="button" id="bScanPistes"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Trouver des pistes dans la carte</span></button>
+          <div class="chips mt8" id="pisteSugg" role="group" aria-label="Pistes trouvées dans la carte" hidden></div>
+          <p class="hint">Monuments, cours d'eau, sommets et paysages autour du lieu, lus dans la carte (avec le moteur Fichier : dans les données importées). Touchez une piste pour l'ajouter.</p>
           <form class="row mt8" id="pisteForm" autocomplete="off"><input class="grow" type="text" id="pisteIn" maxlength="80" enterkeyhint="done" aria-label="Ajouter une piste" placeholder="Château, port, vignobles…"><button class="btn" type="submit">Ajouter</button></form>
           <h3>Moment de la journée</h3>
           <div class="seg wrap" id="momentSeg" role="group" aria-label="Moment de la journée"></div>
@@ -194,18 +226,12 @@
       </div>
       <!-- STYLE -->
       <div class="tab" id="tab-style" role="tabpanel" aria-labelledby="tb-style">
-        <div class="maponly">
+        <div class="layoutonly">
         <h3>Ambiances</h3>
         <p class="hint">Un toucher pour un ensemble assorti (thème, polices, gabarit, repère, papier) ; tout reste modifiable ensuite.</p>
         <div class="fonts ambs" id="ambiances" role="group" aria-label="Ambiances"></div>
         </div>
-        <h3>Orientation</h3>
-        <div class="seg" id="orientSeg"><button data-v="portrait" type="button">Portrait</button><button data-v="landscape" type="button">Paysage</button></div>
-        <h3>Format d'impression</h3>
-        <div class="seg" id="formatSeg" role="group" aria-label="Format d'impression"><button data-v="a4" type="button">A4</button><button data-v="a3" type="button">A3</button><button data-v="50x70" type="button">50 × 70 cm</button></div>
-        <div class="seg mt6" id="fileSeg" role="group" aria-label="Fichier exporté"><button data-v="png" type="button">Image PNG</button><button data-v="pdf" type="button">Document PDF</button></div>
-        <p class="hint" id="formatHint" aria-live="polite"></p>
-        <div class="maponly">
+        <div class="layoutonly">
         <h3>Gabarit</h3>
         <div class="cards" id="layouts" role="group" aria-label="Gabarits"></div>
         <div class="slider"><label for="sMargin">Marge (passe-partout)</label><output id="oMargin"></output><input type="range" id="sMargin" data-k="margin" min="3" max="12" step="0.5"></div>
@@ -223,6 +249,8 @@
           <label class="tog">Planètes visibles<input type="checkbox" data-k="sky.planets"></label>
           <label class="tog">Voie lactée<input type="checkbox" data-k="sky.milky"></label>
         </div>
+        </div>
+        <div class="maponly">
         <h3>Thème</h3>
         <div class="chips fcats" id="themeCats" role="group" aria-label="Catégories de thèmes"></div>
         <div class="themes" id="themes" role="group" aria-label="Thèmes"></div>
@@ -278,11 +306,7 @@
         <label class="tog mt8">Mention complète des sources sur l'affiche<input type="checkbox" data-k="attribution"></label>
         <p class="hint">« © OpenStreetMap » (et « © OpenMapTiles » avec le moteur Vectoriel GPU) reste toujours inscrit : les licences ODbL et CC-BY l'exigent.</p>
         </div>
-        <h3>Avant d'imprimer</h3>
-        <div class="row"><button class="btn grow" type="button" id="bMockup">Voir l'affiche au mur</button><button class="btn grow" type="button" id="bShare">Copier le lien de l'affiche</button></div>
-        <button class="btn wide mt8" type="button" id="bSaves">Mes affiches : enregistrer, restaurer, fichier</button>
-        <div id="shareBox" hidden><input type="text" id="shareOut" readonly aria-label="Lien de l'affiche"><p class="hint">Le lien contient le lieu, les textes et les réglages, encodés dans l'adresse : rien n'est envoyé à un serveur. Partagez-le seulement avec des personnes de confiance.</p></div>
-        <button class="btn next pri2" type="button" id="bNextExport">Tout est prêt : exporter l'affiche<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v9M4 7l4 4 4-4M3 14h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next" type="button" id="bNextExport">Étape suivante : l'export<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- REPERE -->
       <div class="tab" id="tab-repere" role="tabpanel" aria-labelledby="tb-repere">
@@ -315,7 +339,8 @@
           <label class="tog">Pointillés<input type="checkbox" id="routeDash"></label>
           <div class="row mt8"><button class="btn grow" type="button" id="bFitRoute">Cadrer sur l'itinéraire</button><button class="btn" type="button" id="bDelRoute">Retirer</button></div>
         </div>
-        <button class="btn next" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next layoutonly" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next mixonly" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- TEXTES -->
       <div class="tab" id="tab-textes" role="tabpanel" aria-labelledby="tb-textes">
@@ -373,10 +398,41 @@
         <p class="hint maponly">Le sous-titre s'affiche dans les gabarits Cadre, Fondu et Médaillon ; le gabarit Souvenir ne l'affiche pas (en-tête sur une ligne, dédicace et noms en pied).</p>
         <button class="btn next" type="button" data-next="style">Étape suivante : le style<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
+      <!-- EXPORT : rendu, sauvegarde, export (issue #51) -->
+      <div class="tab" id="tab-export" role="tabpanel" aria-labelledby="tb-export">
+        <h2 class="sec">Rendu</h2>
+        <h3>Orientation</h3>
+        <div class="seg" id="orientSeg"><button data-v="portrait" type="button">Portrait</button><button data-v="landscape" type="button">Paysage</button></div>
+        <h3>Format d'impression</h3>
+        <div class="seg" id="formatSeg" role="group" aria-label="Format d'impression"><button data-v="a4" type="button">A4</button><button data-v="a3" type="button">A3</button><button data-v="50x70" type="button">50 × 70 cm</button><button data-v="10x15" type="button">10 × 15 cm</button></div>
+        <div class="seg mt6" id="fileSeg" role="group" aria-label="Fichier exporté"><button data-v="png" type="button">Image PNG</button><button data-v="pdf" type="button">Document PDF</button></div>
+        <p class="hint" id="formatHint" aria-live="polite"></p>
+        <button class="btn wide mt8" type="button" id="bMockup">Voir l'affiche au mur</button>
+        <h2 class="sec" id="savesTitle">Sauvegarde : mes affiches</h2>
+        <p class="hint">Enregistrez la configuration de l'affiche (lieu, cadrage, textes, style, effets) pour la retrouver plus tard. Les affiches restent dans ce navigateur ; téléchargez-les en fichier pour les garder ailleurs ou les ouvrir sur un autre appareil. Les données importées (moteur Fichier) ne sont pas incluses.</p>
+        <form id="saveForm" class="row"><input type="text" id="saveName" class="grow" maxlength="80" aria-label="Nom de l'affiche à enregistrer" placeholder="Nom de l'affiche" autocomplete="off"><button class="btn pri" type="submit">Enregistrer</button></form>
+        <ul class="saves" id="savesList" aria-label="Affiches enregistrées"></ul>
+        <p class="hint" id="savesEmpty">Aucune affiche enregistrée pour l'instant. Astuce : Ctrl + S (⌘ + S) enregistre l'affiche en cours.</p>
+        <div class="row"><button class="btn grow" type="button" id="bCfgExport">Télécharger l'affiche en cours</button><label class="btn grow">Ouvrir un fichier<input type="file" id="cfgIn" accept=".json,application/json" hidden></label></div>
+        <button class="btn wide" type="button" id="bSavesBackup">Sauvegarder toutes mes affiches dans un fichier</button>
+        <label class="tog">Inclure les illustrations dans les fichiers<input type="checkbox" id="cfgImg" checked></label>
+        <p class="hint">Les affiches illustrées gardent leur image dans ce navigateur. Incluse dans le fichier, elle voyage avec lui (fichier plus lourd) ; sinon, il faudra la réimporter sur un autre appareil. Le lien partagé ne contient jamais l'image.</p>
+        <h3>Partager par lien</h3>
+        <button class="btn wide" type="button" id="bShare">Copier le lien de l'affiche</button>
+        <div id="shareBox" hidden><input type="text" id="shareOut" readonly aria-label="Lien de l'affiche"><p class="hint">Le lien contient le lieu, les textes et les réglages, encodés dans l'adresse : rien n'est envoyé à un serveur. Partagez-le seulement avec des personnes de confiance.</p></div>
+        <h2 class="sec">Export</h2>
+        <button class="btn pri" id="bExport" type="button"><span>Exporter l'affiche HD<span class="xl" id="exportDims">&nbsp;· 2480 × 3508 px</span><span class="nw" id="exportDpi">&nbsp;· 300 DPI</span></span></button>
+        <div class="result" id="result" hidden role="region" aria-label="Affiche exportée">
+          <img id="resImg" alt="Aperçu de l'affiche exportée">
+          <div class="hint" id="resInfo"></div>
+          <div class="hint">Si le téléchargement ne démarre pas, faites un appui long sur l'image puis « Enregistrer l'image ».</div>
+          <div class="row"><a class="btn pri" id="resDl" download>Télécharger</a><button class="btn" id="resShare" type="button" hidden>Partager</button></div>
+          <button class="btn sm" id="resClose" type="button">Masquer l'aperçu</button>
+        </div>
+      </div>
     </div>
     <div class="foot">
       <div class="status"><span class="hist" role="group" aria-label="Historique"><button type="button" id="bUndo" aria-label="Annuler" title="Annuler (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 8l4 4M3 8h9a5 5 0 0 1 0 10H8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" id="bRedo" aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="m13 4 4 4-4 4M17 8H8a5 5 0 0 0 0 10h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span><button class="lnk" id="bReset" type="button" title="Revenir aux réglages par défaut">Réinitialiser</button><span class="uisz" role="group" aria-label="Taille du texte de l'interface"><button type="button" id="bUiSmaller" aria-label="Réduire le texte de l'interface">A−</button><button type="button" id="bUiLarger" aria-label="Agrandir le texte de l'interface">A+</button></span></div>
-      <button class="btn pri" id="bExport" type="button"><span>Exporter l'affiche HD<span class="xl" id="exportDims">&nbsp;· 2480 × 3508 px</span><span class="nw" id="exportDpi">&nbsp;· 300 DPI</span></span></button>
     </div>
   </aside>
 </div>
@@ -401,25 +457,6 @@
   <label class="tog">Passe-partout<input type="checkbox" id="mockMat"></label>
   <div class="row"><button class="btn pri" type="button" id="mockDl">Télécharger l'aperçu</button></div>
   <button class="btn" type="button" id="mockClose">Fermer</button>
-</div></dialog>
-<dialog class="modal" id="saves" aria-labelledby="savesTitle"><div class="box">
-  <h2 id="savesTitle">Mes affiches</h2>
-  <p class="hint">Enregistrez la configuration de l'affiche (lieu, cadrage, textes, style, effets) pour la retrouver plus tard. Les affiches restent dans ce navigateur ; téléchargez-les en fichier pour les garder ailleurs ou les ouvrir sur un autre appareil. Les données importées (moteur Fichier) ne sont pas incluses.</p>
-  <form id="saveForm" class="row"><input type="text" id="saveName" class="grow" maxlength="80" aria-label="Nom de l'affiche à enregistrer" placeholder="Nom de l'affiche" autocomplete="off"><button class="btn pri" type="submit">Enregistrer</button></form>
-  <ul class="saves" id="savesList" aria-label="Affiches enregistrées"></ul>
-  <p class="hint" id="savesEmpty">Aucune affiche enregistrée pour l'instant. Astuce : Ctrl + S (⌘ + S) enregistre l'affiche en cours.</p>
-  <div class="row"><button class="btn grow" type="button" id="bCfgExport">Télécharger l'affiche en cours</button><label class="btn grow">Ouvrir un fichier<input type="file" id="cfgIn" accept=".json,application/json" hidden></label></div>
-  <button class="btn wide" type="button" id="bSavesBackup">Sauvegarder toutes mes affiches dans un fichier</button>
-  <label class="tog">Inclure les illustrations dans les fichiers<input type="checkbox" id="cfgImg" checked></label>
-  <p class="hint">Les affiches illustrées gardent leur image dans ce navigateur. Incluse dans le fichier, elle voyage avec lui (fichier plus lourd) ; sinon, il faudra la réimporter sur un autre appareil. Le lien partagé ne contient jamais l'image.</p>
-  <button class="btn" type="button" id="savesClose">Fermer</button>
-</div></dialog>
-<dialog class="modal" id="result" aria-label="Affiche exportée"><div class="box">
-  <img id="resImg" alt="Aperçu de l'affiche exportée">
-  <div class="hint" id="resInfo"></div>
-  <div class="hint">Si le téléchargement ne démarre pas, faites un appui long sur l'image puis « Enregistrer l'image ».</div>
-  <div class="row"><a class="btn pri" id="resDl" download>Télécharger</a><button class="btn" id="resShare" type="button" hidden>Partager</button></div>
-  <button class="btn" id="resClose" type="button">Fermer</button>
 </div></dialog>
 
 <!-- Application : scripts classiques chargés dans l'ordre (aucun module ES, aucune étape de build ; fonctionne en file:// et sur GitHub Pages) -->

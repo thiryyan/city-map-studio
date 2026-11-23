@@ -77,7 +77,7 @@ async def main():
         check(ts == [120, 110], f'tailles conservées après rechargement {ts}')
         check(await page.input_value('input[data-k="textScale.title"]') == '120', 'curseur resynchronisé')
         await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
-        async with page.expect_download() as dl: await page.click('#bExport')
+        async with page.expect_download() as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
         d = await dl.value; path = str(T / 'textsize-export.png'); await d.save_as(path)
         w, h = struct.unpack('>II', open(path, 'rb').read()[16:24]); print('  export', d.suggested_filename, w, h)
         check((w, h) == (2480, 3508), 'export 2480 × 3508 avec tailles modifiées')

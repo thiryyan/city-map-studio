@@ -9,7 +9,7 @@ const S = patch => `Object.assign(structuredClone(DEFAULT_STATE), ${patch})`;
 
 test('qualité d\'impression : 1696 × 2528 px → A4 bonne, A3 juste, 50 × 70 insuffisante', () => {
   const q = J(`CMS.illus.quality(${S('{}')},1696,2528)`);
-  assert.deepEqual(q.map(f => [f.key, f.dpi, f.grade]), [['a4', 205, 'ok'], ['a3', 145, 'mid'], ['50x70', 86, 'bad']]);
+  assert.deepEqual(q.map(f => [f.key, f.dpi, f.grade]), [['a4', 205, 'ok'], ['a3', 145, 'mid'], ['50x70', 86, 'bad'], ['10x15', 428, 'ok']]);
 });
 
 test('qualité : zoom (ppp divisés), image entière (côté le moins contraint), agrandissement ×2 (lissage crédité)', () => {
@@ -18,7 +18,15 @@ test('qualité : zoom (ppp divisés), image entière (côté le moins contraint)
   const c = J(`CMS.illus.quality(${S("{illus:{...DEFAULT_STATE.illus,fit:'contain'}}")},1696,2528)`);
   assert.equal(c[0].dpi, 216);
   const u = J(`CMS.illus.quality(${S("{illus:{...DEFAULT_STATE.illus,upscale:true}}")},1696,2528)`);
-  assert.deepEqual(u.map(f => f.grade), ['ok', 'ok', 'bad']);
+  assert.deepEqual(u.map(f => f.grade), ['ok', 'ok', 'bad', 'ok']);
+});
+
+test('qualité 10 × 15 cm : seuils 300 / 200 ppp (petite photo regardée de près)', () => {
+  // 1000 × 1500 px : 254 ppp en 10 × 15 (juste, alors qu\'il serait « bonne » avec les seuils 200 / 140), 121 ppp en A4
+  const q = J(`CMS.illus.quality(${S('{}')},1000,1500)`);
+  assert.deepEqual(q.map(f => [f.key, f.dpi, f.grade]), [['a4', 121, 'bad'], ['a3', 86, 'bad'], ['50x70', 51, 'bad'], ['10x15', 254, 'mid']]);
+  assert.equal(J(`CMS.illus.quality(${S('{}')},1200,1800)`)[3].grade, 'ok');
+  assert.equal(J(`CMS.illus.quality(${S('{}')},700,1050)`)[3].grade, 'bad');
 });
 
 test('placement : remplir, contenir, zoom et décalage', () => {
@@ -79,4 +87,41 @@ test('normState : référence de l\'illustration (empreinte SHA-256) validée', 
     assert.equal(J(`normState({illus:{img:${bad}}}).illus.img`), null, bad);
   assert.equal(J(`normState({illus:{img:{ref:'${ok}',name:'x'.repeat(500),w:-5,h:1e9}}}).illus.img.name.length`), 120);
   assert.deepEqual(J(`(({w,h})=>[w,h])(normState({illus:{img:{ref:'${ok}',w:-5,h:1e9}}}).illus.img)`), [1, 100000]);
+});
+
+test('Carte + illustration : prompt et zone de l\'illustration selon la composition', () => {
+  const med = S("{mode:'mix',mix:{compo:'med',shape:'arch',pos:'centre'}}"), vig = S("{mode:'mix',mix:{compo:'vig',shape:'circle',pos:'bas'}}");
+  const pm = ev(ctx, `CMS.illus.buildPrompt(${med})`), pv = ev(ctx, `CMS.illus.buildPrompt(${vig})`);
+  assert.match(ev(ctx, `CMS.illus.buildPrompt(${S("{format:'10x15'}")})`), /FORMAT : portrait, proportions 2:3, dans la plus haute/);
+  assert.match(pm, /pour le titre\..*Laisser aussi une zone calme et peu détaillée au centre de l’image.*une arche d’environ 45 %/s);
+  assert.match(pv, /petite vignette en forme d’arche/);
+  assert.match(pv, /FORMAT : portrait, proportions 3:4/);
+  assert.doesNotMatch(pv, /pour le titre/);
+  assert.deepEqual(J(`CMS.illus.region(${med})`), { fw: 1, fh: 1 });
+  const r = J(`CMS.illus.region(${vig})`);
+  assert.ok(r.fw > 0.25 && r.fw < 0.35 && Math.abs(r.fh / r.fw * 1.4142 - 1.34) < 0.02, JSON.stringify(r));
+  assert.equal(ev(ctx, `CMS.illus.compoLine(${med})`).startsWith('Laisser une zone calme'), true);
+});
+
+test('pistes : étiquettes OSM et couches OpenMapTiles pondérées, classement, doublons', () => {
+  assert.deepEqual(J("CMS.illus.osmPiste({historic:'castle',name:'Château royal de Blois'})"), { name: 'Château royal de Blois', w: 10 });
+  assert.equal(J("CMS.illus.osmPiste({amenity:'place_of_worship',name:'Cathédrale Saint-Louis'})").w, 9);
+  assert.equal(J("CMS.illus.osmPiste({amenity:'place_of_worship',name:'Chapelle Saint-Jean'})").w, 4);
+  assert.deepEqual(J("CMS.illus.osmPiste({landuse:'vineyard'})"), { name: 'Vignobles', w: 6 });
+  for (const t of ["{amenity:'bench',name:'Banc'}", "{highway:'primary',name:'Rue'}", "{historic:'castle'}"]) assert.equal(J(`CMS.illus.osmPiste(${t})`), null, t);
+  assert.equal(J("CMS.illus.omtPiste('poi',{class:'castle',name:'Château de Chambord','name:fr':'Château de Chambord',rank:1})").w, 10);
+  assert.equal(J("CMS.illus.omtPiste('waterway',{class:'river',name:'La Loire'})").name, 'La Loire');
+  assert.equal(J("CMS.illus.omtPiste('waterway',{class:'stream',name:'Ru'})"), null);
+  assert.equal(J("CMS.illus.omtPiste('water',{class:'ocean'})").name, 'Bord de mer');
+  const r = J(`CMS.illus.rankPistes([{name:'Musée',w:5,rank:2},{name:'Château',w:10,rank:20,d:3},{name:'château',w:10,rank:1},{name:'Parc',w:3},
+    {name:'Loire',w:8},{name:'Vignobles',w:6},{name:'A',w:1},{name:'B',w:1},null])`);
+  assert.deepEqual(r, ['château', 'Loire', 'Vignobles', 'Musée', 'Parc', 'A']);
+});
+
+test('proportions demandées : zone la plus proche et secours parmi les formats des générateurs', () => {
+  const L = "({ratioOf:(o,l,a)=>o+' '+l+(a?' / '+a:''),orient:{p:'portrait',l:'paysage',c:'carré',w:'panoramique'}})";
+  assert.equal(ev(ctx, `CMS.illus.ratioText(1/1.4142,${L})`), 'portrait 1:1,414 / 3:4');
+  assert.equal(ev(ctx, `CMS.illus.ratioText(1.38,${L})`), 'paysage 1,414:1 / 4:3');
+  assert.equal(ev(ctx, `CMS.illus.ratioText(1.06,${L})`), 'carré 1:1');
+  assert.equal(ev(ctx, `CMS.illus.ratioText(1.45,${L},true)`), 'paysage 1.414:1 / 3:2');
 });

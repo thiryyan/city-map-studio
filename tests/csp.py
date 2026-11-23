@@ -59,9 +59,9 @@ async def main():
             for tab in ['style', 'repere', 'textes', 'lieu']:
                 await ev(f"__cms.showTab('{tab}')"); await page.wait_for_timeout(150)
             async with page.expect_download():
-                await page.click('#bExport')
+                await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
             await page.wait_for_timeout(500); await page.click('#resClose')
-            await ev("__cms.showTab('style')"); await page.click('#bMockup'); await page.wait_for_timeout(1200); await page.click('#mockClose')
+            await ev("__cms.showTab('export')"); await page.click('#bMockup'); await page.wait_for_timeout(1200); await page.click('#mockClose')
             await ev("__cms.setLayout('sky')"); await page.wait_for_timeout(1500)
             check(await ev("!!window.SKY_DATA"), f'{label} : données du ciel chargées (script à la demande)')
             await ev("__cms.setLayout('souvenir')")

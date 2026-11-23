@@ -183,9 +183,10 @@ function updateExportLabel(){
   const e=exportSpec(), pdf=st.fileType==='pdf', cm=v=>(v/10).toLocaleString('fr-FR');
   $('exportDims').textContent=`\u00a0· ${e.W} × ${e.H} px`;
   $('exportDpi').textContent=`\u00a0· ${e.key==='a4'?'':e.name+' · '}${e.dpi} DPI${pdf?' · PDF':''}`;
-  $('formatHint').textContent=`${e.key==='50x70'?e.name:`${e.name} (${cm(e.mm[0])} × ${cm(e.mm[1])} cm)`} : ${e.W} × ${e.H} px à ${e.dpi} DPI`
+  $('formatHint').textContent=`${/^a\d/.test(e.key)?`${e.name} (${cm(e.mm[0])} × ${cm(e.mm[1])} cm)`:e.name} : ${e.W} × ${e.H} px à ${e.dpi} DPI`
     +(e.dpi<EXPORT_MAX_DPI?` — résolution abaissée pour rester dans la limite de mémoire des images de cet appareil ; amplement suffisante vue à distance.`:'.')
-    +(pdf?' Document PDF à la taille exacte d\'impression (image JPEG haute qualité).':' Image PNG sans perte.');
+    +(pdf?' Document PDF à la taille exacte d\'impression (image JPEG haute qualité).':' Image PNG sans perte.')
+    +(e.key==='10x15'?' Tirage photo : sans marge de fond perdu, au format exact de 10 × 15 cm.':'');
 }
 /** Sections visibles selon le gabarit */
 function updateLayoutUI(){
@@ -377,7 +378,6 @@ function saveCurrent(name){
 }
 function restoreSave(id){
   const e=loadSaves().find(x=>x.id===id); if(!e) return;
-  closeDialog('saves');
   try{ applyConfig(e.state,`« ${e.name} » restaurée · « Annuler » pour revenir`); }catch(err){ toast('Restauration impossible : '+err.message,true); }
 }
 function deleteSave(id){ const l=loadSaves(), e=l.find(x=>x.id===id); if(!e) return;
@@ -427,7 +427,6 @@ async function importConfigFile(file){
     }
     const state = o.format===CFG_FORMAT ? o.state : (o.texts && o.layout ? o : null);   // état brut : ancien format
     if(!state || typeof state!=='object' || Array.isArray(state)) throw new Error('fichier non reconnu (ni configuration, ni sauvegarde City Map Studio)');
-    closeDialog('saves');
     applyConfig(state,`Configuration « ${V.str(o.name,'',80).trim()||file.name} » ouverte · « Annuler » pour revenir`+imgMsg+newer);
   }catch(e){ toast('Ouverture impossible : '+e.message,true); }
 }
@@ -442,15 +441,17 @@ function renderSaves(){
     const res=h('button',{type:'button',className:'btn sm pri','aria-label':`Restaurer « ${e.name} »`},'Restaurer'); res.onclick=()=>restoreSave(e.id);
     const dl=h('button',{type:'button',className:'btn sm','aria-label':`Télécharger « ${e.name} »`,title:'Télécharger le fichier'},'⤓'); dl.onclick=()=>downloadConfig(e);
     const th=e.thumb ? h('img',{src:e.thumb,alt:'',width:56,height:79}) : h('span',{className:'nothumb','aria-hidden':'true'});
-    box.append(h('li',{className:'save'},th,h('div',{className:'meta'},h('b',{},e.name),h('small',{},`${fmt.format(new Date(e.savedAt))} · `+(e.state.mode==='illus' ? 'Affiche illustrée' : `${LAYOUT_NAME(e.state.layout)} · ${THEMES[e.state.theme]?.name||''}`))),h('div',{className:'acts'},res,dl,del)));
+    box.append(h('li',{className:'save'},th,h('div',{className:'meta'},h('b',{},e.name),h('small',{},`${fmt.format(new Date(e.savedAt))} · `+(e.state.mode==='illus' ? 'Affiche illustrée' : e.state.mode==='mix' ? 'Carte + illustration' : `${LAYOUT_NAME(e.state.layout)} · ${THEMES[e.state.theme]?.name||''}`))),h('div',{className:'acts'},res,dl,del)));
   }
 }
-function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); openDialog('saves'); setTimeout(()=>$('saveName').focus(),50); }
+/** Mes affiches : section Sauvegarde de l'onglet Export (nom proposé, liste à jour, champ du nom sélectionné) */
+function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); showTab('export'); $('savesTitle').scrollIntoView?.({block:'start'}); setTimeout(()=>$('saveName').focus({preventScroll:true}),50); }
 function initSaves(){
-  $('bSaves').onclick=openSaves; $('savesClose').onclick=()=>closeDialog('saves');
+  renderSaves();
+  CMS.on('tab:export',()=>{ if(!$('saveName').value.trim()) $('saveName').value=defaultSaveName(); renderSaves(); });
   $('saveForm').onsubmit=e=>{ e.preventDefault(); saveCurrent($('saveName').value); };
   $('bCfgExport').onclick=()=>downloadConfig(null); $('bSavesBackup').onclick=downloadBackup;
   $('cfgIn').onchange=e=>{ const f=e.target.files[0]; if(f) importConfigFile(f); e.target.value=''; };
-  addEventListener('storage',e=>{ if(e.key===SAVES_KEY && $('saves').open) renderSaves(); });   // autre onglet
+  addEventListener('storage',e=>{ if(e.key===SAVES_KEY) renderSaves(); });   // autre onglet
   addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase()==='s'){ e.preventDefault(); saveCurrent(defaultSaveName()); } });
 }

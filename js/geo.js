@@ -73,6 +73,30 @@ function geom(s, W, H){
   const g={m,U,land,lay};
   // Mode Illustration : pas de carte (cadre vide, aucune vue) ; l'image couvre l'affiche (CMS.illus.draw)
   if(s.mode==='illus'){ g.illus={x:0,y:0,w:W,h:H}; g.map={x:0,y:0,w:0,h:0}; g.places=[]; return g; }
+  // Carte + illustration : médaillon (illustration pleine page, carte dans une forme) ou vignette (carte encadrée, illustration en arche)
+  if(s.mode==='mix'){
+    const M=s.mix||{}; g.mix=CMS.illusConf.COMPOS.includes(M.compo) ? M.compo : 'med';
+    const gap=0.012*U;   // filet couleur papier entre illustration et carte
+    if(g.mix==='med'){
+      const d=(land?H:W)*0.45, sh=M.shape||'circle', h=sh==='heart' ? d*0.92 : sh==='arch' ? d*1.2 : d;
+      const y=M.pos==='haut' ? H*0.24 : M.pos==='centre' ? (H-h)/2 : H-h-H*0.12;
+      g.illus={x:0,y:0,w:W,h:H}; g.map={x:(W-d)/2,y,w:d,h,shape:sh};
+    } else if(g.mix==='hb'){   // illustration en haut (moitié ou deux tiers), carte en bas
+      const f=M.split==='two' ? 2/3 : 0.5; g.illus={x:0,y:0,w:W,h:H*f}; g.map={x:0,y:H*f+gap,w:W,h:H-H*f-gap};
+    } else if(g.mix==='cote'){   // côte à côte (affiche en paysage) : illustration à gauche, carte à droite
+      const w=(W-gap)/2; g.illus={x:0,y:0,w,h:H}; g.map={x:w+gap,y:0,w,h:H};
+    } else if(g.mix==='fondu'){   // la carte émerge du bas de l'illustration (dégradé)
+      g.illus={x:0,y:0,w:W,h:H}; g.map={x:0,y:H*0.58,w:W,h:H*0.42,fade:true};
+    } else {
+      const band=0.24*U; g.map={x:m,y:m,w:W-2*m,h:H-2*m-band};
+      let w=(land?0.22:0.3)*W; const pad=0.035*U; w=Math.min(w,(g.map.h-2*pad)/1.34);
+      g.illus={x:W-m-pad-w,y:m+pad,w,h:w*1.34,shape:'arch'}; g.band={y:g.map.y+g.map.h,h:H-m-(g.map.y+g.map.h)};
+    }
+    // zone des textes : l'illustration (le haut de l'affiche pour le fondu) ; la vignette a sa bande
+    g.textArea=g.mix==='fondu' ? {x:0,y:0,w:W,h:H*0.58} : g.illus;
+    g.places=[{rect:g.map,view:s,main:true}]; g.map.circle=g.map.shape==='circle';
+    return g;
+  }
   if(!land){
     switch(lay){
       case 'classic': g.map={x:m,y:m,w:W-2*m,h:H-2*m-0.36*U}; g.text=below(g.map,0.014); break;

@@ -40,7 +40,7 @@ async def check(b, url, label):
         ok = any(x.startswith('normal') for x in res['faces']) and (not res['italic'] or any(x.startswith('italic') for x in res['faces']))
         print(f'  {label} {f:9}', '✓' if ok else '✗', res['faces'])
         if not ok: fails.append(f'{label}:{f}')
-    async with page.expect_download() as dl: await page.click('#bExport')
+    async with page.expect_download() as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
     await dl.value; info = await page.inner_text('#resInfo')
     print(f'  {label} export :', info)
     if 'police' in info: fails.append(f'{label}: export avec police de secours')

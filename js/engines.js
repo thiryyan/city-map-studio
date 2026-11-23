@@ -64,6 +64,16 @@ function parseOsm(json){
   }
   d.count=[d.water,d.waterLines,d.parks,d.buildings,d.rails,...Object.values(d.roads)].reduce((a,x)=>a+x.length,0);
   d.extent=dataExtent(d);
+  // Éléments nommés (monuments, cours d'eau, sommets…) et paysages : pistes pour le prompt des modes illustrés (CMS.illus)
+  const KEEP=['name','name:fr','historic','amenity','tourism','man_made','waterway','natural','landuse','leisure','building','water','place'];
+  d.named=[];
+  for(const el of json.elements||[]){
+    const t=el.tags; if(!t || !(t.name || t.landuse==='vineyard' || t.natural==='coastline' || t.leisure==='marina' || t.landuse==='harbour')) continue;
+    const p=el.type==='node' ? {lat:el.lat,lon:el.lon} : el.geometry?.[0] || el.members?.find(m=>m.geometry)?.geometry?.[0];
+    if(!p || !Number.isFinite(p.lat)) continue;
+    const k={}; for(const x of KEEP) if(typeof t[x]==='string') k[x]=t[x].slice(0,120);
+    d.named.push({t:k,lat:p.lat,lon:p.lon}); if(d.named.length>=5000) break;
+  }
   return d;
 }
 function dataExtent(d){
@@ -396,7 +406,7 @@ function mlSnapshot(cssW,cssH,pr,center,view,draw){
     const cleanup=()=>{ clearTimeout(timer); try{ map?.remove(); }catch(_){} div.remove(); };
     const fail=e=>{ if(done) return; done=true; cleanup(); reject(e); };
     const finish=warn=>{ if(done) return; done=true;
-      try{ draw(map.getCanvas()); cleanup(); resolve(warn); } catch(e){ cleanup(); reject(e); } };
+      try{ draw(map.getCanvas(),map); cleanup(); resolve(warn); } catch(e){ cleanup(); reject(e); } };
     try{
       map=new CMS.maplibre.lib.Map({container:div,style:buildStyle(st.stroke*zoomFactor(view.zoom),1,pr,view),center:[center.lon,center.lat],zoom:view.zoom,
         pixelRatio:pr,interactive:false,preserveDrawingBuffer:true,fadeDuration:0,attributionControl:false,renderWorldCopies:false,maxCanvasSize:[8192,8192]});
@@ -413,6 +423,11 @@ function mlSnapshot(cssW,cssH,pr,center,view,draw){
  *  Au-delà du côté maximal d'un canevas WebGL (glMax : 4096 px sur la plupart des mobiles), la carte serait rendue
  *  en basse définition puis agrandie : elle est alors rendue en tuiles (même zoom, centres décalés en Mercator),
  *  chacune débordant un peu sur ses voisines (pas d'effet de bord sur les traits), puis recollées sans raccord. */
+/** Carte hors écran du lieu (sans la dessiner) : fn(map) une fois les tuiles chargées, pour en lire les éléments
+ *  (pistes du prompt). Même file d'attente que les rendus d'export ; tuiles OpenFreeMap (déjà autorisées). */
+async function mlQuery(view, fn){
+  let out; await mlSnapshot(900,900,1,view.center,view,(cv,map)=>{ out=fn(map); }); return out;
+}
 async function renderMaplibreOffscreen(wPx,hPx,view=st){
   const pr=wPx/REF_W, out=document.createElement('canvas'); out.width=wPx; out.height=hPx; const o=out.getContext('2d');
   const max=glMax(), B=Math.ceil(8*pr), nx=Math.ceil(wPx/(max-2*B-4*pr)), ny=Math.ceil(hPx/(max-2*B-4*pr));
@@ -437,6 +452,6 @@ async function renderMaplibreOffscreen(wPx,hPx,view=st){
   return {canvas:out,warn};
 }
 
-return {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest};
+return {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest, mlQuery};
 });
 const {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest} = CMS.engines;
