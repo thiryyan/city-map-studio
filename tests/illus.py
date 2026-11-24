@@ -51,7 +51,7 @@ async def main():
         net.clear()
         check(await page.evaluate("__cms.st.mode") == 'illus', 'clic « Illustration » : mode illustré')
         tabs = await page.evaluate("[...document.querySelectorAll('#tabs button:not([hidden])')].map(b=>b.dataset.tab)")
-        check(tabs == ['illus', 'textes', 'style', 'export'], f'mode Illustration : ni Lieu ni Repère, parcours Illustration · Textes · Style · Export {tabs}')
+        check(tabs == ['lieu', 'illus', 'textes', 'style', 'export'], f'mode Illustration : Lieu (titre, coordonnées, pistes ; #77) sans Repère, parcours Lieu · Illustration · Textes · Style · Export {tabs}')
         check(await page.is_hidden('#slot') and await page.is_hidden('#bZoomIn') and await page.is_hidden('#bPlace') and await page.is_hidden('#bToMarker'), 'carte et boutons de carte masqués')
         check(await page.is_visible('#bClean'), '« Voir l\'affiche seule » reste proposé (#56)')
         check(await page.evaluate("$('modeSeg').querySelector('[data-v=illus]').getAttribute('aria-pressed')") == 'true', 'bouton du mode : aria-pressed')

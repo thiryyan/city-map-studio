@@ -258,15 +258,18 @@ function buildUI(){
   const co=$('colors');
   Object.entries(COLOR_LABELS).forEach(([k,n])=>{ const l=h('label',{},h('input',{type:'color',dataset:{c:k}}),h('span',{},n));
     l.querySelector('input').oninput=e=>{ st.colors[k]=e.target.value.toUpperCase(); colorChanged(k); }; co.appendChild(l); });
-  $('photoIn').onchange=e=>{ const f=e.target.files[0]; if(f) importPhotoPalette(f); e.target.value=''; };
-  document.querySelectorAll('#photoSeg button').forEach(b=>b.onclick=()=>applyPhotoPalette(b.dataset.v));
+  $('photoIn').onchange=e=>{ const f=e.target.files[0]; if(f) CMS.palette.fromFile(f); e.target.value=''; };
+  $('bPalIllus').onclick=()=>CMS.palette.fromIllus();
+  document.querySelectorAll('#photoSeg button').forEach(b=>b.onclick=()=>CMS.palette.apply(b.dataset.v));
   document.querySelectorAll('[data-gold]').forEach(b=>b.onclick=()=>{ st.colors[b.dataset.gold]=GOLD; refreshColors(); changed({all:true,cards:true}); toast('Touche d\'or appliquée'); });
   // repères
   const mk=$('marks');
   MARKERS.forEach(([k,n])=>{ const d=h('button',{type:'button',className:'card',dataset:{v:k}},h('canvas',{width:96,height:96}),n);
     d.onclick=()=>{ st.markerStyle=k; changed({cards:true}); }; mk.appendChild(d); });
   const mc=$('mColors');
-  MARKER_COLORS.forEach(([n,v])=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=n; b.onclick=()=>{ st.colors.marker=v; refreshColors(); changed({cards:true}); }; mc.appendChild(b); });
+  // « Auto » (#77) : couleur Repère du thème, comme la couleur « Auto » des textes ; la puce de la couleur en cours est enfoncée
+  [['Auto','auto','Auto : couleur Repère du thème'],...MARKER_COLORS].forEach(([n,v,t])=>{ const b=h('button',{type:'button',className:'chip',dataset:{v},title:t||n},n);
+    b.onclick=()=>{ st.colors.marker=v==='auto' ? themeMarker() : v; refreshColors(); changed({cards:true}); }; mc.appendChild(b); });
   $('mColor').oninput=e=>{ st.colors.marker=e.target.value.toUpperCase(); colorChanged('marker'); };
   // segments
   document.querySelectorAll('#engineSeg button').forEach(b=>b.onclick=()=>setEngine(b.dataset.v));
@@ -293,11 +296,14 @@ function buildUI(){
     });
   });
   $('zoom').oninput=e=>setZoom(parseFloat(e.target.value));
-  $('bZoomIn').onclick=()=>setZoom(st.zoom+0.5); $('bZoomOut').onclick=()=>setZoom(st.zoom-0.5);
+  // Boutons flottants : ils agissent sur le calque cadré, carte ou illustration (#77)
+  const onIllus=()=>CMS.illus.layer()==='illus';
+  $('bZoomIn').onclick=()=>onIllus() ? CMS.illus.zoomBy(10) : setZoom(st.zoom+0.5); $('bZoomOut').onclick=()=>onIllus() ? CMS.illus.zoomBy(-10) : setZoom(st.zoom-0.5);
+  $('bLayer').onclick=()=>CMS.illus.setLayer(onIllus() ? 'map' : 'illus');
   $('bPlace').onclick=$('bPlace2').onclick=()=>setPlacing(!ui.placing);
   $('markerForm').onsubmit=e=>{ e.preventDefault(); placeMarkerFromInput(); };
   $('bMarkerCenter').onclick=()=>setMarker(st.center.lat,st.center.lon);
-  $('bToMarker').onclick=()=>goTo(st.marker.lat,st.marker.lon);
+  $('bToMarker').onclick=()=>onIllus() ? CMS.illus.recenter() : goTo(st.marker.lat,st.marker.lon);
   $('bDiag').onclick=runDiagnostics;
   $('bReset').onclick=askReset;
   $('bUiSmaller').onclick=()=>stepUiScale(-1); $('bUiLarger').onclick=()=>stepUiScale(1);
@@ -344,6 +350,9 @@ function syncInputs(){
 /** Polices : sélection des cartes (titre, texte, duo) et aperçus */
 function syncFonts(){
   setSeg('fontSeg',st.font); setSeg('fontTitleSeg',CMS.illus.textStyle().vint ? '*vintage' : st.fontTitle||'');
+  // Style du titre automatique (#77) : dit ce qu'il donne dans ce type d'affiche, et dans les autres
+  const ta=$('titleAuto'), auto=st.illusText.style==='auto'; ta.hidden=!auto;
+  if(auto) ta.textContent=`Titre automatique : ${st.mode==='map' ? 'police choisie sur une carte (Vintage sur une affiche illustrée)' : 'Vintage sur une affiche illustrée (police choisie sur une carte)'}. Touchez une police ou Vintage pour le fixer dans les trois types d\u2019affiche.`;
   const duo=DUOS.find(([,,ft,fx])=>fx===st.font && (st.fontTitle||st.font)===ft);
   setSeg('duos',duo?duo[0]:'—'); updateFontSamples();
 }
@@ -368,7 +377,12 @@ function colorChanged(k){
 }
 /** État « choisi » d'un bouton de sélection : classe visuelle et état ARIA */
 function pressed(b,on){ b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); }
-function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker; updateContrast(); drawTexture(); CMS.emit('colors:changed'); }
+/** Couleur Repère du thème choisi dans la liste des thèmes */
+function themeMarker(){ return (THEMES[st.theme]?.c.marker || st.colors.marker).toUpperCase(); }
+function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker;
+  const mk=st.colors.marker.toUpperCase(); let any=false;
+  $('mColors').querySelectorAll('button').forEach(b=>{ const on=!any && (b.dataset.v==='auto' ? themeMarker()===mk : b.dataset.v.toUpperCase()===mk); any=any||on; pressed(b,on); });
+  updateContrast(); drawTexture(); CMS.emit('colors:changed'); }
 /** Exécute fn avec un état provisoirement modifié (vignettes) */
 /** Vignettes : drawPoster lit l'état global ; il est modifié le temps d'un rendu SYNCHRONE puis rétabli.
  *  Une fonction asynchrone rendrait la main avec l'état modifié : elle est refusée. */

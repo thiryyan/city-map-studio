@@ -157,12 +157,17 @@ function applyAmbiance(k){
   const a=AMBIANCES.find(x=>x[0]===k); if(!a) return; const p=a[2];
   commitHistory(0);   // étape d'historique explicite : un choix fait juste après le démarrage reste annulable
   const before=cmpSnap();
-  st.theme=p.theme; st.colors={...THEMES[p.theme].c}; st.font=p.font; st.fontTitle=p.fontTitle; st.illusText.style='auto'; st.markerStyle=p.markerStyle; st.texture=p.texture;
-  st.fx={...DEFAULT_STATE.fx,...(p.fx||{})}; st.orn={...DEFAULT_STATE.orn,...(p.orn||{})}; st.folds=!!p.folds;
-  setLayout(p.layout,true);
+  // Seulement ce qui existe dans le type d'affiche courant (#77) : rien ne change en silence pour un autre type.
+  // Illustration : ni carte ni repère ; Carte + illustration : sans gabarit (la composition en tient lieu).
+  const map=st.mode==='map', withMap=st.mode!=='illus', parts=['thème','polices','papier'];
+  st.theme=p.theme; st.colors={...THEMES[p.theme].c}; st.font=p.font; st.fontTitle=p.fontTitle; st.illusText.style='auto'; st.texture=p.texture; st.folds=!!p.folds;
+  const fx={...DEFAULT_STATE.fx,...(p.fx||{})};
+  if(withMap){ st.markerStyle=p.markerStyle; st.fx=fx; st.orn={...DEFAULT_STATE.orn,...(p.orn||{})}; parts.push('repère','effets'); }
+  else st.fx.foil=fx.foil;   // dorure des textes : seul effet d'une affiche illustrée
+  if(map){ setLayout(p.layout,true); parts.push('gabarit'); }
   noteChange(before,`l'ambiance « ${a[1]} »`);
   syncInputs(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); redrawAll(true); drawTexture(); commitHistory();
-  toast(`Ambiance « ${a[1]} » appliquée · tout reste personnalisable`);
+  toast(`Ambiance « ${a[1]} » : ${parts.slice(0,-1).join(', ')} et ${parts.at(-1)} · « Annuler » pour revenir`);
 }
 function applyOccasion(k){
   const o=OCCASIONS.find(x=>x[0]===k); if(!o) return; commitHistory(0);
@@ -200,7 +205,12 @@ function updateExportLabel(){
 /** Sections visibles selon le gabarit */
 function updateLayoutUI(){
   const L=st.layout;
-  $('ringTog').hidden=!['medallion','heart','arch'].includes(L);
+  // Marge et contour (#77) : en Carte, selon le gabarit ; en Carte + illustration, médaillon (contour) et vignette (marge)
+  const mix=st.mode==='mix', cp=st.mix?.compo;
+  $('ringTog').hidden=mix ? cp!=='med' : !['medallion','heart','arch'].includes(L);
+  $('marginBox').hidden=mix && cp!=='vig';
+  $('mixFormH').hidden=$('mixFormHint').hidden=mix && cp!=='med' && cp!=='vig';
+  $('mixFormHint').textContent=cp==='med' ? 'Médaillon : trait autour de la forme de la carte.' : cp==='vig' ? 'Vignette : marge autour de la carte et de sa bande de texte.' : '';
   $('skyBox').hidden=L!=='sky'; $('placeBox').hidden=L!=='diptych'; $('labelsBox').hidden=L!=='diptych';
   setSeg('placeSeg',String(st.active||0));
   if(L==='sky'){ $('skyWhen').value=st.sky.when; $('skyTz').value=String(st.sky.tz); }
@@ -421,19 +431,9 @@ function initSheet(){
   setSheet('half'); stageMode();
 }
 
-// ---------- Palette tirée d'une photo ----------
-// La photo est lue et réduite sur l'appareil (createImageBitmap, aucune adresse ni envoi) ; seules ses couleurs sont gardées.
-let photoPal=null;
-async function importPhotoPalette(file){
-  let bmp;
-  try{ bmp=await createImageBitmap(file); }catch(e){ toast('Image illisible : choisissez une photo JPEG, PNG ou WebP.',true); return; }
-  const n=80, k=Math.min(1,n/Math.max(bmp.width,bmp.height)), w=Math.max(1,Math.round(bmp.width*k)), hh=Math.max(1,Math.round(bmp.height*k));
-  const cv=document.createElement('canvas'); cv.width=w; cv.height=hh; const c=cv.getContext('2d'); c.drawImage(bmp,0,0,w,hh); if(bmp.close) bmp.close();
-  photoPal=paletteOf(c.getImageData(0,0,w,hh).data);
-  if(!photoPal.length){ toast('Aucune couleur exploitable dans cette image.',true); return; }
-  const sw=$('photoSw'); sw.textContent=''; photoPal.forEach(p=>sw.append(h('i',{style:{background:p.hex}})));
-  $('photoPal').hidden=false; applyPhotoPalette('light');
-}
+// ---------- Couleurs d'après une image : photo ou illustration importée (#77) ----------
+// L'image est lue et réduite sur l'appareil (aucune adresse ni envoi) ; seules ses couleurs sont gardées.
+// Une seule entrée, onglet Style, pour les trois types d'affiche : la même palette donne la version claire ou sombre.
 /** Couleurs dominantes (k-moyennes, 6 groupes, départ aux quantiles de luminance : résultat reproductible) : [{hex, n}] */
 function paletteOf(D, K=6){
   const px=[]; for(let i=0;i<D.length;i+=4) if(D[i+3]>=128) px.push([D[i],D[i+1],D[i+2]]);
@@ -460,13 +460,44 @@ function photoTheme(pal, dark){
   for(const k of Object.keys(c)) c[k]=c[k].toUpperCase();
   return c;
 }
-function applyPhotoPalette(v){
-  if(!photoPal) return;
-  const before=cmpSnap();
-  st.colors=photoTheme(photoPal,v==='dark'); setSeg('photoSeg',v);
-  noteChange(before,{theme:true}); refreshColors(); changed({all:true,cards:true});
-  toast('Palette de la photo appliquée · « Annuler » pour revenir');
-}
+
+CMS.define('palette', () => {
+  let photoPal=null, photoSrc='photo';
+  /** Couleurs dominantes d'une image (bitmap, canevas ou image), réduite à 80 px de côté */
+  function paletteOfImage(src, iw, ih){
+    const k=Math.min(1,80/Math.max(iw,ih)), w=Math.max(1,Math.round(iw*k)), hh=Math.max(1,Math.round(ih*k));
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=hh; const c=cv.getContext('2d',{willReadFrequently:true}); c.drawImage(src,0,0,w,hh);
+    return paletteOf(c.getImageData(0,0,w,hh).data);
+  }
+  /** Nouvelle palette (src : 'photo' | 'illus') : nuancier affiché, version claire appliquée */
+  function setImagePalette(pal, src){
+    if(!pal || !pal.length){ toast('Aucune couleur exploitable dans cette image.',true); return; }
+    photoPal=pal; photoSrc=src;
+    const sw=$('photoSw'); sw.textContent=''; pal.forEach(p=>sw.append(h('i',{style:{background:p.hex}})));
+    $('photoNote').textContent=src==='illus' ? 'Couleurs tirées de l\'illustration importée : papier, textes et carte s\'y accordent.' : 'La photo reste sur votre appareil : seules ses couleurs sont gardées.';
+    $('photoPal').hidden=false; apply('light');
+  }
+  async function importPhotoPalette(file){
+    let bmp;
+    try{ bmp=await createImageBitmap(file); }catch(e){ toast('Image illisible : choisissez une photo JPEG, PNG ou WebP.',true); return; }
+    const pal=paletteOfImage(bmp,bmp.width,bmp.height); if(bmp.close) bmp.close();
+    setImagePalette(pal,'photo');
+  }
+  /** Palette de l'illustration importée (modes illustrés) */
+  function illusPalette(){
+    const im=CMS.illus.previewImage();
+    if(!im){ toast('Importez d\'abord votre illustration (onglet Illustration, étape Image).',true); return; }
+    setImagePalette(paletteOfImage(im,im.width,im.height),'illus');
+  }
+  function apply(v){
+    if(!photoPal) return;
+    const before=cmpSnap();
+    st.colors=photoTheme(photoPal,v==='dark'); setSeg('photoSeg',v);
+    noteChange(before,{theme:true}); refreshColors(); changed({all:true,cards:true});
+    toast((photoSrc==='illus' ? 'Couleurs tirées de l\'illustration' : 'Palette de la photo appliquée')+' · « Annuler » pour revenir');
+  }
+  return {fromFile:importPhotoPalette, fromIllus:illusPalette, apply};
+});
 
 // ---------- Mes affiches : sauvegarde et restauration de la configuration ----------
 // Sauvegardes nommées dans ce navigateur (localStorage, avec une vignette), fichier de configuration d'une affiche,

@@ -193,7 +193,7 @@ CMS.define('illus', () => {
   }
   /** Prompt complet pour l'IA externe, d'après l'état (ville, pistes, choix, format, position du titre) */
   function buildPrompt(s){
-    const P=s.illus.prompt, L=L10N[P.lang]||L10N.fr, T=s.illusText;
+    const P=s.illus.prompt, L=L10N[P.lang]||L10N.fr, T=s.mode==='mix' ? s.illusText.mix : s.illusText;   // positions de l'affiche illustrée (#77)
     const city=(s.texts.title||'').trim()||L.city, area=(s.texts.subtitle||'').trim();
     const where=(s.texts.title||'').trim() ? city.toUpperCase()+(area?` (${area})`:'') : city;
     const out=[L.rule, L.role(where)];
@@ -473,9 +473,9 @@ CMS.define('illus', () => {
       ctx.save(); clipMap(ctx,p.rect); drawMarkers(ctx,p.rect,p.view,U,W,true); ctx.restore();
     }
     const ink=contrast(T.color,c.paper)>=2.5 ? T.color : c.text;   // sur le papier : couleur du titre si elle s'y lit
-    if(med){
+    if(med){   // contour de la forme : même réglage que les gabarits de la Carte (#77) ; le filet papier détache toujours la carte
       ctx.save(); ctx.strokeStyle=c.paper; ctx.lineWidth=0.02*U; strokeShape(ctx,r,0.01*U);
-      ctx.strokeStyle=paint(ink); ctx.lineWidth=0.0022*U; strokeShape(ctx,r,0.021*U); ctx.restore();
+      if(st.ring){ ctx.strokeStyle=paint(ink); ctx.lineWidth=0.0022*U; strokeShape(ctx,r,0.021*U); } ctx.restore();
       drawTexts(ctx,W,H,U,null,r);
     } else if(g.mix!=='vig'){
       drawTexts(ctx,W,H,U,g.textArea);
@@ -523,8 +523,46 @@ CMS.define('illus', () => {
     ctx.save(); ctx.font=fontStr(o.size,o); const w=textW(ctx,t,F.script?0:(o.spacing||0),o.size); ctx.restore();
     return Math.min(w,o.maxW||Infinity);
   }
+  /** Ligne composée (date · coordonnées, #77) : t est une liste de morceaux [texte, options] posés sur la même ligne de base,
+   *  chacun à sa taille ; l'ensemble est réduit d'un même facteur pour tenir dans o.maxW. Sinon t est un texte. */
+  function measureLine(ctx, t, o){
+    if(!Array.isArray(t)) return measure(ctx,t,o);
+    const w=t.reduce((a,[x,po])=>a+measure(ctx,x,{...po,maxW:undefined}),0);
+    return Math.min(w,o.maxW||Infinity);
+  }
+  /** Dessine une ligne (texte, ou morceaux d'une ligne composée) ; o.align : alignement de l'ensemble sur x */
+  function drawLine(ctx, t, x, y, o){
+    if(!Array.isArray(t)){ drawText(ctx,t,x,y,o); return; }
+    const ws=t.map(([s,po])=>measure(ctx,s,{...po,maxW:undefined})), tot=ws.reduce((a,b)=>a+b,0), k=Math.min(1,(o.maxW||Infinity)/(tot||1));
+    if(k<1) noteFit(o.key,k);
+    let sx=o.align==='center' ? x-tot*k/2 : o.align==='right' ? x-tot*k : x;
+    t.forEach(([s,po],i)=>{ drawText(ctx,s,sx,y,{...o,...po,size:po.size*k,align:'left',maxW:undefined}); sx+=ws[i]*k; });
+  }
+  /** Ligne « date · coordonnées » des modes illustrés : chaque partie à sa propre taille (réglages Taille de la date et des coordonnées) */
+  function infoLine(U, base, o){
+    const d=textLine('date'), c=textLine('coords');
+    const od={...o,key:'date',size:base*U*tScale('date')}, oc={...o,key:'coords',size:base*U*tScale('coords')};
+    if(d && c) return {t:[[d,od],['  ·  ',od],[c,oc]], o:{...od,size:Math.max(od.size,oc.size)}};
+    return d ? {t:d,o:od} : c ? {t:c,o:oc} : null;
+  }
+  /** Lignes du bloc du bas, communes à toutes les mises en page des modes illustrés (et aux blocs sortis du gabarit en mode Carte) :
+   *  dédicace (une ou deux lignes, réglage dedWrap, comme les gabarits), noms, date · coordonnées, légende des lieux numérotés.
+   *  Tailles de base en U ; renvoie [{t, o, lead}] (lead : hauteur de ligne). */
+  function footRows(U, maxW, sizes){
+    const S={dedication:0.034,names:0.026,info:0.017,legend:0.014,...sizes}, rows=[], lead=sz=>sz*1.55;
+    const ded=textLine('dedication');
+    if(ded){ const sz=S.dedication*U*tScale('dedication'), L=dedLines(ded,sz/U,maxW/U,{italic:true});
+      L.lines.forEach((t,i)=>rows.push({t,o:{italic:true,key:'dedication',size:sz},lead:i ? dedLeading(sz/U)*U : lead(sz)})); }
+    const names=textLine('names');
+    if(names){ const sz=S.names*U*tScale('names'); rows.push({t:names,o:{italic:true,key:'names',size:sz},lead:lead(sz)}); }
+    const info=infoLine(U,S.info,{spacing:0.2});
+    if(info) rows.push({...info,lead:lead(info.o.size)});
+    const leg=textLine('legend');
+    if(leg){ const sz=S.legend*U; rows.push({t:leg,o:{spacing:0.06,key:'legend',size:sz},lead:lead(sz)}); }
+    return rows;
+  }
   /** Rangée d'une ligne : lignes [{t, o, at}] (at : ligne de base depuis le haut du bloc) → bloc {lines, w, h} */
-  function blockOf(ctx, lines, h){ return {lines, w:Math.max(0,...lines.map(l=>measure(ctx,l.t,l.o))), h}; }
+  function blockOf(ctx, lines, h){ return {lines, w:Math.max(0,...lines.map(l=>measureLine(ctx,l.t,l.o))), h}; }
   /** Place un bloc : position prédéfinie (row, col) avec ses marges, ou centre libre {x, y} ; renvoie {left, top, align} */
   function placeBlock(b, W, H, m, spec, kind){
     let left, top, align;
@@ -557,12 +595,8 @@ CMS.define('illus', () => {
     if(title){ y+=capT; tl.push({t:title,at:y,o:{size:ts,spacing:vint?0.03:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,maxW,shadow,stroke:stroke(0.004)}}); y+=gap; }
     if(sub){ y+=capS; tl.push({t:sub,at:y,o:{size:ss,spacing:0.3,upper:true,key:'subtitle',maxW,stroke:stroke(0.0012),shadow:shadow && {color:shadow.color,dx:shadow.dx*0.3,dy:shadow.dy*0.3}}}); }
     const tb=blockOf(ctx,tl,(title?capT:0)+(title&&sub?gap:0)+(sub?capS:0));
-    const lead=sz=>sz*1.55, fl=[]; let yy=0;
-    for(const [k2,sz0,o] of [['dedication',0.034,{italic:true}],['names',0.026,{italic:true}],['info',0.017,{spacing:0.2}]]){
-      const t=k2==='info' ? [textLine('date'),textLine('coords')].filter(Boolean).join('  ·  ') : textLine(k2); if(!t) continue;
-      const sz=sz0*U*tScale(k2==='info'?'date':k2); yy+=lead(sz);
-      fl.push({t,at:yy-sz*0.45,o:{...o,size:sz,key:k2==='info'?'date':k2,maxW,stroke:stroke(0.001)}});
-    }
+    const fl=[]; let yy=0;
+    for(const r of footRows(U,maxW)){ yy+=r.lead; fl.push({t:r.t,at:yy-r.o.size*0.45,o:{...r.o,maxW,stroke:stroke(0.001)}}); }
     const fb=blockOf(ctx,fl,yy);
     return {title:tl.length ? {...tb,...placeBlock(tb,W,H,m,T.free?{free:T.free}:{pos:T.pos},'title')} : null,
             foot:fl.length ? {...fb,...placeBlock(fb,W,H,m,footSpec(T),'foot')} : null};
@@ -574,7 +608,7 @@ CMS.define('illus', () => {
     let L;
     try{
       L=textLayout(ctx,A.w,A.h,U);
-      for(const b of [L.title,L.foot]) if(b) for(const l of b.lines) drawText(ctx,l.t,b.ax,b.top+l.at,{...l.o,align:b.align,color:col});
+      for(const b of [L.title,L.foot]) if(b) for(const l of b.lines) drawLine(ctx,l.t,b.ax,b.top+l.at,{...l.o,align:b.align,color:col});
     } finally{ ctx.restore(); }
     noteLayout(ctx,PW,PH,'area',A,L,avoid);
   }
@@ -591,7 +625,7 @@ CMS.define('illus', () => {
       L=textLayout(ctx,W,H,U,{pos:P.pos==='auto' ? 'hc' : P.pos});
       if(!mv.title) L.title=null;
       if(!mv.foot) L.foot=null;
-      for(const b of [L.title,L.foot]) if(b) for(const l of b.lines) drawText(ctx,l.t,b.ax,b.top+l.at,{...l.o,align:b.align,color:col});
+      for(const b of [L.title,L.foot]) if(b) for(const l of b.lines) drawLine(ctx,l.t,b.ax,b.top+l.at,{...l.o,align:b.align,color:col});
     }
     noteLayout(ctx,W,H,'area',{x:0,y:0,w:W,h:H},L);
   }
@@ -599,10 +633,10 @@ CMS.define('illus', () => {
   function drawBand(ctx, W, H, U, g, ink){
     const T={...textStyle(),...posOf()}, vint=T.vint, b=g.band, m=g.m+0.02*U, maxW=W-2*m;
     const shadow=T.shadow && contrast(T.shadow,st.colors.paper)>=1.3 ? {color:T.shadow, dx:T.off*0.001*U, dy:T.off*0.001*U} : null;
+    // Bloc du bas : mêmes lignes que les autres mises en page (dédicace sur deux lignes, noms, date · coordonnées, légende ; #77)
     const rows=[['title',textLine('title'),(vint?0.13:0.075)*U*tScale('title'),{spacing:vint?0.04:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow},vint?0.84:0.72],
       ['title',textLine('subtitle'),0.021*U*tScale('subtitle'),{spacing:0.3,upper:true,key:'subtitle'},0.75],
-      ['foot',textLine('dedication'),0.03*U*tScale('dedication'),{italic:true,key:'dedication'},0.75],
-      ['foot',[textLine('date'),textLine('coords')].filter(Boolean).join('  ·  '),0.015*U*tScale('date'),{spacing:0.2,key:'date'},0.75]].filter(x=>x[1]);
+      ...footRows(U,maxW,{dedication:0.03,names:0.022,info:0.015,legend:0.013}).map(r=>['foot',r.t,r.o.size,r.o,0.75])].filter(x=>x[1]);
     if(!rows.length){ noteLayout(ctx,W,H,'band',b,{}); return; }
     const gap=0.022*U; let total=rows.reduce((a,x)=>a+x[2]*x[4],0)+gap*(rows.length-1);
     const f=Math.min(1,b.h*0.82/total); total*=f;
@@ -610,9 +644,10 @@ CMS.define('illus', () => {
     const tx=T.free ? T.free.x : {g:0,c:0.5,d:1}[T.pos[1]], fx=T.ffree ? T.ffree.x : T.fpos==='auto' ? tx : {g:0,c:0.5,d:1}[T.fpos[1]];
     const L={}; let y=b.y+(b.h-total)/2;
     for(const [k,t,sz,o,cap] of rows){
-      const s=sz*f, w=measure(ctx,t,{...o,size:s,maxW}), x0=k==='title'?colX(tx):colX(fx), al=['left','center','right'][third(x0)];
+      const s=sz*f, tt=Array.isArray(t) ? t.map(([x,po])=>[x,{...po,size:po.size*f}]) : t;
+      const w=measureLine(ctx,tt,{...o,size:s,maxW}), x0=k==='title'?colX(tx):colX(fx), al=['left','center','right'][third(x0)];
       const left=clamp(m+x0*(W-2*m)-w/2,m,W-m-w), ax=al==='left'?left:al==='right'?left+w:left+w/2;
-      const top=y; y+=s*cap; drawText(ctx,t,ax,y,{...o,size:s,align:al,color:ink,maxW});
+      const top=y; y+=s*cap; drawLine(ctx,tt,ax,y,{...o,size:s,align:al,color:ink,maxW});
       const r=L[k]||(L[k]={rect:{x:Infinity,y:Infinity,w:0,h:0},x2:-Infinity,y2:-Infinity});
       r.rect.x=Math.min(r.rect.x,left); r.rect.y=Math.min(r.rect.y,top); r.x2=Math.max(r.x2,left+w); r.y2=Math.max(r.y2,y);
       y+=gap*f;
@@ -706,8 +741,9 @@ CMS.define('illus', () => {
     return {vint:T.style==='auto' ? !map : T.style==='vintage', color:T.color==='auto' ? c.text : T.color,
       shadow:T.shadow==='auto' ? (map ? '' : c.paper) : T.shadow, outline:T.outline, off:T.off};
   }
-  /** Positions des blocs de texte du type d'affiche : modes illustrés, ou mode Carte (illusText.map, 'auto' = dans le gabarit) */
-  const posOf=(s=st)=>s.mode==='map' ? s.illusText.map : s.illusText;
+  /** Positions des blocs de texte, propres à chaque type d'affiche (#77) : Illustration (illusText), Carte + illustration
+   *  (illusText.mix) ou Carte (illusText.map, 'auto' = dans le gabarit) */
+  const posOf=(s=st)=>s.mode==='map' ? s.illusText.map : s.mode==='mix' ? s.illusText.mix : s.illusText;
   // ---------- Interface ----------
   const SW_TEXT=[['auto','Auto : couleur Texte du thème'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#F3EAD8','Crème'],['#FFFFFF','Blanc']];
   const SW_SHADOW=[['auto','Auto : aucune en Carte, couleur du papier sur une illustration'],['','Sans ombre'],['#F3EAD8','Crème'],['#D9CDB5','Sable'],['#C5A059','Or'],['#24365A','Bleu nuit'],['#2C2A29','Encre']];
@@ -761,19 +797,30 @@ CMS.define('illus', () => {
     const M=st.mix; setSeg('compoSeg',M.compo); setSeg('mixShapeSeg',M.shape); setSeg('mixPosSeg',M.pos);
     $('medOpts').hidden=M.compo!=='med'; $('hbOpts').hidden=M.compo!=='hb'; setSeg('mixSplitSeg',M.split); applyFade();
     $('compoPrompt').textContent='« '+compoLine(st)+' »';
+    updateLayoutUI();   // marge et contour selon la composition (onglet Style)
   }
-  /** Couleurs de la carte tirées de l'illustration (même calcul que la palette d'une photo) */
-  function harmonize(v){
-    if(!ready()){ toast('Importez d\u2019abord votre illustration (étape Image)',true); return; }
-    const k=80/Math.max(img.prev.width,img.prev.height), c=canvasOf(img.prev.width*k,img.prev.height*k), x=c.getContext('2d',{willReadFrequently:true});
-    x.drawImage(img.prev,0,0,c.width,c.height); const pal=paletteOf(x.getImageData(0,0,c.width,c.height).data);
-    if(!pal.length){ toast('Aucune couleur exploitable dans cette illustration.',true); return; }
-    const before=cmpSnap();
-    st.colors=photoTheme(pal,v==='dark'); setSeg('harmSeg',v);
-    noteChange(before,{theme:true}); refreshColors(); changed({all:true,cards:true});
-    toast('Couleurs de la carte tirées de l\u2019illustration · « Annuler » pour revenir');
+  /** Copie réduite de l'illustration importée (palette d'après l'image, onglet Style), ou null */
+  const previewImage=()=>ready() ? img.prev : null;
+  // ---------- Calque cadré (#77) : carte ou illustration, mêmes boutons flottants et même mode Cadrer ----------
+  let layerPref='map';
+  /** Calque que cadrent les boutons flottants et le mode Cadrer : la carte (Carte), l'image (Illustration), au choix (Carte + illustration) */
+  const layer=()=>st.mode==='illus' ? 'illus' : st.mode==='map' || !ready() ? 'map' : layerPref;
+  function syncLayer(){
+    const il=layer()==='illus', app=$('app'), was=app.dataset.layer;
+    app.dataset.layer=layer(); app.classList.toggle('illusready',ready());
+    const b=$('bLayer'), t=il ? 'Cadrage : l\u2019illustration (toucher pour la carte)' : 'Cadrage : la carte (toucher pour l\u2019illustration)';
+    pressed(b,il); b.title=t; b.setAttribute('aria-label',t); b.querySelector('.lm').hidden=il; b.querySelector('.li').hidden=!il;
+    const set=(id,x)=>{ const e=$(id); e.title=x; e.setAttribute('aria-label',x); };
+    set('bZoomIn',il?'Agrandir l\u2019illustration':'Zoom avant'); set('bZoomOut',il?'Réduire l\u2019illustration':'Zoom arrière');
+    set('bToMarker',il?'Recentrer l\u2019illustration':'Centrer sur le repère');
+    $('frameTxt').textContent=il ? 'Glissez l\u2019illustration · + et − pour zoomer' : 'Glissez · pincez pour zoomer';
+    if(was && was!==app.dataset.layer && ui.posterCss.w) layoutPreview();   // verrou déplacé sur le calque cadré
   }
+  function setLayer(v){ layerPref=v==='illus' ? 'illus' : 'map'; syncLayer(); toast(layer()==='illus' ? 'Cadrage de l\u2019illustration : la carte reste en place' : 'Cadrage de la carte'); }
+  function zoomBy(d){ if(!ready()) return; st.illus.zoom=clamp(st.illus.zoom+d,100,300); syncInputs(); syncImage(); redraw(); saveState(); }
+  function recenter(){ if(!ready()) return; Object.assign(st.illus,{ox:0,oy:0}); redraw(); saveState(); }
   function exportState(){
+    syncLayer();
     const off=st.mode!=='map' && !ready();
     for(const id of ['bExport']){ const b=$(id); if(b){ b.disabled=off; b.title=off?'Importez d’abord votre illustration (onglet Illustration)':''; } }
     const own=/illustration/i.test($('stTxt').textContent);   // message posé par ce module (sinon : état de la carte, à laisser)
@@ -785,6 +832,7 @@ CMS.define('illus', () => {
     if(!C.MODES.includes(v) || st.mode===v) return;
     st.mode=v; if(v==='mix' && !ready()) step='compo';
     applyMode(); sync();
+    if(v==='illus' && ui.tab==='lieu') showTab('illus');   // le parcours continue par le prompt
     layoutPreview(); refreshCards(); loadFonts().then(()=>scheduleOver());
     if(v!=='illus') updateEngineUI();
     saveState();
@@ -793,9 +841,10 @@ CMS.define('illus', () => {
   function applyMode(){
     const m=st.mode, ill=m==='illus';
     $('app').dataset.mode=m; setSeg('modeSeg',m);
-    // Parcours selon le type : Carte = Lieu, Repère, Textes… ; Illustration = Illustration, Textes… (ni lieu ni repère, sans carte) ; mixte = tout
-    $('tb-lieu').hidden=ill; $('tb-repere').hidden=ill; $('tb-illus').hidden=m==='map';
-    if(ill && (ui.tab==='repere' || ui.tab==='lieu')) showTab('illus');
+    // Parcours selon le type : Carte = Lieu, Repère, Textes… ; Illustration = Lieu, Illustration, Textes… (sans repère : pas de carte) ;
+    // mixte = tout. Le lieu reste modifiable en Illustration (#77) : il donne le titre, les coordonnées et les pistes du prompt.
+    $('tb-lieu').hidden=false; $('tb-repere').hidden=ill; $('tb-illus').hidden=m==='map';
+    if(ill && ui.tab==='repere') showTab('illus');
     if(m==='map' && ui.tab==='illus') showTab('lieu');
     if(m!=='mix' && step==='compo') step='prompt';
     exportState(); placeHit(); applyFade(); if(m==='map'){ hitInfo=null; } placeHits();
@@ -860,7 +909,7 @@ CMS.define('illus', () => {
   }
   function updatePrompt(){
     const o=$('promptOut'), t=buildPrompt(st); if(o.value!==t) o.value=t;
-    const T=st.illusText, d=exportSpec();
+    const T=posOf(), d=exportSpec();
     $('promptInfo').textContent=`Format demandé : ${d.name} ${st.orient==='landscape'?'paysage':'portrait'} · zone du titre : ${POS_NAMES[titleRC(T)[0]]}, ${COL_NAMES[titleRC(T)[1]]} (onglet Textes).`;
   }
   function syncImage(){
@@ -955,6 +1004,7 @@ CMS.define('illus', () => {
     let drag=null;
     poster.addEventListener('pointerdown',e=>{
       if(st.mode==='map' || !ready() || e.button>0 || e.target.closest('button')) return;
+      if(st.mode==='mix' && isSheet() && layer()!=='illus') return;   // mobile : seul le calque cadré se déplace (#77)
       // Carte + illustration : la carte garde ses gestes ; la vignette se déplace par sa zone de prise
       if(st.mode==='mix' && (st.mix.compo==='vig' ? e.target.id!=='illusHit' : e.target.closest('#slot'))) return;
       drag={x:e.clientX,y:e.clientY,ox:st.illus.ox,oy:st.illus.oy,id:e.pointerId}; poster.setPointerCapture(e.pointerId); poster.classList.add('dragging');
@@ -967,15 +1017,18 @@ CMS.define('illus', () => {
     const end=e=>{ if(!drag || e.pointerId!==drag.id) return; drag=null; poster.classList.remove('dragging'); saveState(); };
     poster.addEventListener('pointerup',end); poster.addEventListener('pointercancel',end);
     // Composition (Carte + illustration)
-    const mixSet=(f,v)=>{ st.mix[f]=v;
-      if(f==='compo' && v==='cote' && st.orient!=='landscape'){ setOrient('landscape'); toast('Côte à côte : affiche passée en paysage'); }
+    // Côte à côte impose le paysage ; une autre composition rend l'orientation d'avant (#77)
+    let coteFrom=null;
+    const mixSet=(f,v)=>{ const was=st.mix.compo; st.mix[f]=v;
+      if(f==='compo' && v==='cote' && st.orient!=='landscape'){ coteFrom=st.orient; setOrient('landscape'); toast('Côte à côte : affiche passée en paysage'); }
+      else if(f==='compo' && was==='cote' && v!=='cote' && coteFrom && st.orient==='landscape'){ setOrient(coteFrom); toast('Affiche revenue en portrait'); }
+      if(f==='compo' && v!=='cote') coteFrom=null;
       syncCompo(); syncImage(); ui.snap=null; layoutPreview(); placeHit(); saveState(); };
     document.querySelectorAll('#mixSplitSeg button').forEach(b=>b.onclick=()=>mixSet('split',b.dataset.v));
     $('bScanPistes').onclick=scanPistes;
     document.querySelectorAll('#compoSeg button').forEach(b=>b.onclick=()=>mixSet('compo',b.dataset.v));
     document.querySelectorAll('#mixShapeSeg button').forEach(b=>b.onclick=()=>mixSet('shape',b.dataset.v));
     document.querySelectorAll('#mixPosSeg button').forEach(b=>b.onclick=()=>mixSet('pos',b.dataset.v));
-    document.querySelectorAll('#harmSeg button').forEach(b=>b.onclick=()=>harmonize(b.dataset.v));
     $('bToPrompt').onclick=()=>setStep('prompt');
     new ResizeObserver(()=>placeHit()).observe(poster);
     // Style du titre
@@ -987,9 +1040,11 @@ CMS.define('illus', () => {
     $('fAutoBtn').onclick=()=>setPos('foot','auto'); $('tLayBtn').onclick=()=>setPos('title','auto');
     initHits();
     sync();
+    if(st.mode==='illus' && ui.tab==='lieu') showTab('illus');   // reprise d'une affiche illustrée : son étape principale
     setTimeout(()=>gc().catch(()=>{}),2000);   // images orphelines (affiches supprimées, autre image importée)
   }
-  return {init, draw, drawMix, textLayout, textStyle, posOf, mapMoved, drawMapTexts, get hitInfo(){ return hitInfo; }, harmonize, compoLine, region, ratioText, osmPiste, omtPiste, rankPistes, scanPistes, get found(){ return found; }, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
+  return {init, draw, drawMix, textLayout, textStyle, posOf, mapMoved, drawMapTexts, get hitInfo(){ return hitInfo; }, previewImage, compoLine, region, ratioText, osmPiste, omtPiste, rankPistes, scanPistes, get found(){ return found; }, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
     get missing(){ return missing; }, get loading(){ return !!loading; }, buildPrompt, quality, cropPct, placement, adjust, processPixels,
+    layer, setLayer, zoomBy, recenter,
     get step(){ return step; }, get image(){ return img && {w:img.w, h:img.h, name:img.name}; }};
 });

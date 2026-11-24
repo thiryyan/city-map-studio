@@ -293,7 +293,12 @@ details.adv>h3:first-of-type{margin-top:6px}
    illusonly (modes illustrés), pureillus (illustration seule), mixonly (carte + illustration) */
 #app[data-mode=illus] .maponly,#app:not([data-mode=map]) .layoutonly,#app[data-mode=map] .illusonly,#app:not([data-mode=illus]) .pureillus,#app:not([data-mode=mix]) .mixonly{display:none!important}
 #app[data-mode=mix] #placeBox,#app[data-mode=mix] #labelsBox,#app[data-mode=mix] #skyBox{display:none!important}
-#app[data-mode=illus] #slot,#app[data-mode=illus] .fab button:not(#bClean),#app[data-mode=illus] .mapcredit,#app[data-mode=illus] #shield,#app[data-mode=illus] #placeSwitch{display:none!important}
+#app[data-mode=illus] #slot,#app[data-mode=illus] #bPlace,#app[data-mode=illus] .mapcredit,#app[data-mode=illus] #placeSwitch{display:none!important}
+/* Cadrage unifié (#77) : en Illustration, zoom, recentrage et mode Cadrer agissent sur l'image (rien à cadrer avant son import) ;
+   en Carte + illustration, sur le calque choisi (#bLayer) : la carte est alors figée quand l'illustration est cadrée */
+#app[data-mode=illus]:not(.illusready) .fab button:not(#bClean),#app[data-mode=illus]:not(.illusready) #shield{display:none!important}
+#app[data-mode=mix]:not(.illusready) #bLayer{display:none!important}
+#app[data-layer=illus] #slot{pointer-events:none}
 #app[data-mode=illus] #poster{touch-action:none;cursor:grab}
 #poster.dragging{cursor:grabbing}
 h3 .opt{text-transform:none;letter-spacing:0;font-weight:400}

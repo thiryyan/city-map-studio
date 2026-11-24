@@ -54,7 +54,7 @@ async def main():
             check(await page.evaluate(TABS) == ['lieu', 'repere', 'textes', 'style', 'export'], f'{name} : Carte = Lieu · Repère · Textes · Style · Export {await page.evaluate(TABS)}')
             await page.click('#modeSeg [data-v=illus]'); await page.wait_for_timeout(300)
             tabs = await page.evaluate(TABS)
-            check(tabs == ['illus', 'textes', 'style', 'export'], f'{name} : Illustration = Illustration · Textes · Style · Export {tabs}')
+            check(tabs == ['lieu', 'illus', 'textes', 'style', 'export'], f'{name} : Illustration = Lieu · Illustration · Textes · Style · Export (lieu modifiable, #77) {tabs}')
             check(await page.evaluate("document.querySelector('#tabs .on').dataset.tab") == 'illus', f'{name} : passage en Illustration, onglet actif = Illustration')
             await page.click('#modeSeg [data-v=mix]'); await page.wait_for_timeout(300)
             tabs = await page.evaluate(TABS)

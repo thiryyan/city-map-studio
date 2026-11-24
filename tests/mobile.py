@@ -142,7 +142,7 @@ async def main():
 
         # ---------- Petit téléphone (360 px) : jusqu'à six onglets, sans défilement ni libellé tronqué (issue #51) ----------
         ctx, page, errs = await open_page({'width': 360, 'height': 740})
-        for mode, n in [('map', 5), ('illus', 4), ('mix', 6)]:
+        for mode, n in [('map', 5), ('illus', 5), ('mix', 6)]:   # Illustration : Lieu, Illustration, Textes, Style, Export (#77)
             await page.evaluate(f"CMS.illus.setMode('{mode}')"); await page.wait_for_timeout(250)
             t = await page.evaluate("""(()=>{ const bs=[...document.querySelectorAll('#tabs button:not([hidden])')];
               return {n:bs.length, cut:bs.filter(b=>[...b.querySelectorAll('span')].concat(b.children.length?[]:[b]).some(e=>e.offsetParent!==null && e.scrollWidth>e.clientWidth+1)).map(b=>b.textContent),

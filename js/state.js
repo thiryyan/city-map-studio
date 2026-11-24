@@ -91,6 +91,9 @@ function normState(src){
       outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,C.POS,d.pos),
       free:pt(o.free), fpos:V.oneOf(o.fpos,['auto',...C.POS],d.fpos), ffree:pt(o.ffree),
       map:{pos:V.oneOf(m.pos,['auto',...C.POS],dm.pos), free:pt(m.free), fpos:V.oneOf(m.fpos,['auto',...C.POS],dm.fpos), ffree:pt(m.ffree)}};
+    // Carte + illustration : positions propres (#77). Un état antérieur, où elles étaient partagées avec l'Illustration, les reprend.
+    const x=o.mix ? V.obj(o.mix) : {pos:T.pos,free:T.free,fpos:T.fpos,ffree:T.ffree};
+    T.mix={pos:V.oneOf(x.pos,C.POS,d.mix.pos), free:pt(x.free), fpos:V.oneOf(x.fpos,['auto',...C.POS],d.mix.fpos), ffree:pt(x.ffree)};
     if(o.v!==2 && Object.keys(o).length){
       if(T.style==='vintage') T.style='auto';
       if(V.oneOf(s.mode,C.MODES,'map')==='map') Object.assign(T,{color:'auto',shadow:'auto',outline:''});
