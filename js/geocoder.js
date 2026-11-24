@@ -34,14 +34,18 @@
   }
   const clip = (v, n) => String(v ?? '').trim().slice(0, n);
 
-  /** Résultats sûrs : {lat, lon, name, display, key} ; les entrées invalides sont écartées */
+  /** Résultats sûrs : {lat, lon, name, display, key, city, region, country} ; les entrées invalides sont écartées.
+   *  city / region / country : tirés de l'adresse détaillée (addressdetails), chaîne vide s'ils manquent */
   function sanitize(list) {
     if (!Array.isArray(list)) throw geoError('BAD_RESPONSE', 'réponse inattendue');
     return list.map(it => {
       const lat = Number.parseFloat(it?.lat), lon = Number.parseFloat(it?.lon);
       if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 85.06 || Math.abs(lon) > 180) return null;
       const display = clip(it?.display_name, 300), name = clip(it?.name, 120);
-      return { lat, lon, name, display: display || name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`, key: `${clip(it?.osm_type, 10)}/${clip(it?.osm_id, 20)}` };
+      const a = it?.address && typeof it.address === 'object' ? it.address : {};
+      const first = (...k) => k.map(x => clip(typeof a[x] === 'string' ? a[x] : '', 120)).find(Boolean) || '';
+      return { lat, lon, name, display: display || name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`, key: `${clip(it?.osm_type, 10)}/${clip(it?.osm_id, 20)}`,
+        city: first('city', 'town', 'village', 'municipality', 'hamlet'), region: first('state', 'county', 'region'), country: first('country') };
     }).filter(Boolean);
   }
 
@@ -84,7 +88,7 @@
     if (Date.now() < cooldownUntil) return Promise.reject(geoError('RATE_LIMITED', 'quota atteint', { retryInMs: cooldownUntil - Date.now() }));
     current?.ctl.abort();
     const ctl = new AbortController(), url = new URL(NOMINATIM);
-    url.search = new URLSearchParams({ format: 'jsonv2', limit: String(limit), 'accept-language': lang, q }).toString();
+    url.search = new URLSearchParams({ format: 'jsonv2', limit: String(limit), 'accept-language': lang, addressdetails: '1', q }).toString();
     const entry = { ck, ctl, promise: null };
     entry.promise = request(q, ck, url, ctl).finally(() => { if (current === entry) current = null; });
     current = entry;

@@ -491,6 +491,20 @@ async function search(q){
 function closeResults(){ searchMsg(''); $('q').focus(); }
 /** Un résultat validé (CMS.geocoder) : nom en tête, adresse en dessous, deux actions décrites par le lieu */
 let resultSeq=0;
+/** Le titre (ville) et le sous-titre (région • pays) suivent la ville du résultat choisi, comme pour les villes proposées,
+ *  sauf s'ils ont été personnalisés : seuls un texte vide, celui d'une ville proposée ou le dernier posé ici sont remplacés.
+ *  Rend le nouveau titre, ou '' si rien n'a changé. */
+let autoTexts={title:'',subtitle:''};
+function followCity(it){
+  const city=it.city || '', sub=[it.region,it.country].filter(Boolean).join(' • ');
+  if(!city) return '';
+  const free=(k,i)=>{ const v=(st.texts[k]||'').trim(); return !v || v===autoTexts[k] || PRESETS.some(p=>p[i]===v); };
+  const t=free('title',4) && st.texts.title!==city, s=!!sub && free('subtitle',5) && st.texts.subtitle!==sub;
+  if(t){ st.texts.title=city; autoTexts.title=city; }
+  if(s){ st.texts.subtitle=sub; autoTexts.subtitle=sub; }
+  if(t||s){ syncInputs(); updateFontSamples(); changed(); }
+  return t ? city : '';
+}
 function resultItem(it){
   const {lat,lon,name:nm,display}=it, id='res-'+(++resultSeq);
   const rest=nm && display.startsWith(nm) ? display.slice(nm.length).replace(/^,\s*/,'') : display;
@@ -499,7 +513,8 @@ function resultItem(it){
   const btn=(label,fn)=>{ const b=h('button',{type:'button',className:'btn sm'},label); b.setAttribute('aria-describedby',id);
     b.onclick=e=>{ fn(); if(e.detail===0) $('q').focus({preventScroll:true}); };   // activé au clavier : le focus revient au champ
     return b; };
-  const b1=btn('Carte + repère',()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); searchMsg(''); $('resultsStatus').textContent='Carte centrée et repère placé.'; });
+  const b1=btn('Carte + repère',()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); const t=followCity(it); searchMsg('');
+    $('resultsStatus').textContent='Carte centrée et repère placé.'+(t?` Titre : ${t}.`:''); if(t) toast('Titre : '+t); });
   const b2=btn('Repère seul',()=>{ setMarker(lat,lon); searchMsg(''); toast('Repère placé'); });
   return h('li',{className:'res'},t,h('div',{className:'row'},b1,b2));
 }
