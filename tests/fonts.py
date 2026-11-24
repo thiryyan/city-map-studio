@@ -13,7 +13,7 @@ T = pathlib.Path(__file__).resolve().parent
 ROOT = T.parent
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
-FAMILIES = ['serif', 'sans', 'mono', 'garamond', 'deco', 'bodoni', 'italiana', 'fraunces', 'jost', 'bebas', 'vibes']
+FAMILIES = ['serif', 'sans', 'mono', 'garamond', 'deco', 'bodoni', 'italiana', 'fraunces', 'jost', 'bebas', 'vibes', 'cinzel', 'fell', 'marcellus']
 
 class Q(SimpleHTTPRequestHandler):
     def log_message(self, *a): pass

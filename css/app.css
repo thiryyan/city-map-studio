@@ -145,7 +145,7 @@ label.f.show:has(input:not(:checked))+input+.tsz,label.f.show:has(input:not(:che
 /* Verrou de la carte (mobile) : un toucher sur la carte ouvre le mode Cadrer au lieu de la déplacer par erreur */
 .shield{position:absolute;z-index:4;border:0;padding:0;margin:0;background:none;cursor:pointer;display:flex;align-items:flex-end;justify-content:center}
 .shield.mini span{display:none}
-.shield span{white-space:nowrap;margin-bottom:8px;background:#1e1e23d9;color:var(--txt);border:1px solid #ffffff22;border-radius:999px;padding:5px 11px;font-size:.8125rem;display:flex;gap:6px;align-items:center;backdrop-filter:blur(6px);pointer-events:none}
+.shield span{white-space:nowrap;margin-bottom:8px;background:#1e1e23d9;color:var(--txt);border:1px solid #ffffff22;border-radius:999px;padding:5px 11px;font-size:.8125rem;display:flex;gap:6px;align-items:center;backdrop-filter:blur(6px);pointer-events:none}   /* « Modifier le lieu 2 » ; le verrou de cadrage n'a pas de libellé visible */
 .stagebar{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:11;display:flex;flex-direction:column;align-items:center;gap:6px;width:max-content;max-width:calc(100% - 20px)}
 .placehint{background:var(--acc);color:#141414;border-radius:999px;padding:6px 14px;font-size:.875rem;font-weight:600;display:none;text-align:center}
 .placehint.show{display:block}
@@ -229,7 +229,7 @@ details.adv>h3:first-of-type{margin-top:6px}
 .hist button{background:none;border:1px solid var(--line);border-radius:8px;min-width:40px;min-height:44px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .hist button[disabled]{opacity:var(--off);cursor:default}
 /* Évolutions graphiques : duos, ambiances, lieux, aperçu au mur */
-.fcats{margin:-2px 0 4px}.fcats .chip{font-size:.8125rem}
+.fcats{margin:12px 0 4px}.fcats .chip{font-size:.8125rem}
 .duos button{min-width:132px}.duos .t{font-size:1.2rem;line-height:1.2}.duos .d{font-size:1rem;color:var(--mut);line-height:1.3;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .ambs button{min-width:96px;padding:6px 6px 8px}.ambs canvas{display:block;width:84px;height:auto;border-radius:3px;box-shadow:0 1px 3px #0006}
 .ambs button.land canvas{width:110px}

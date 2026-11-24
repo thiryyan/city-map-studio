@@ -56,17 +56,35 @@ function placeMarkerFromInput(){
 }
 function setMarker(lat,lon){ st.marker={lat,lon}; setPlacing(false); updateMarkerTxt(); if(st.fx.quarter){ ui.snap=null; redrawAll(true); } else changed(); }
 /** Indications du panneau Lieu, sur le même modèle pour la ville (centre de la carte) et le lieu de rencontre (repère) :
- *  nom de la ville proposée la plus proche (5 km au plus) ou « Autre lieu », puis les coordonnées ; bouton de la ville en surbrillance */
+ *  nom de la ville la plus proche (5 km au plus) parmi les villes proposées et celles choisies par la recherche
+ *  (updateMarkerTxt.remember), sinon « Autre lieu », puis les coordonnées ; bouton de la ville proposée en surbrillance */
 function updateMarkerTxt(){
-  const near=({lat,lon})=>{ let best=null, bd=5; for(const p of PRESETS){ const dy=(lat-p[1])*111.2, dx=(lon-p[2])*111.2*Math.cos(lat*Math.PI/180), d=Math.hypot(dx,dy); if(d<bd){ bd=d; best=p; } } return best; };
-  const show=(id,pt,p,sub)=>$(id).replaceChildren(h('b',{},p?p[4]:'Autre lieu'),h('span',{className:'sr-only'},', '),h('small',{},p?sub(p):'Hors des villes proposées'),
+  const all=[...PRESETS.map(p=>({lat:p[1],lon:p[2],name:p[4],sub:p[5],preset:p})),...updateMarkerTxt.places()];
+  const near=({lat,lon})=>{ let best=null, bd=5; for(const p of all){ const dy=(lat-p.lat)*111.2, dx=(lon-p.lon)*111.2*Math.cos(lat*Math.PI/180), d=Math.hypot(dx,dy); if(d<bd){ bd=d; best=p; } } return best; };
+  const show=(id,pt,p,sub)=>$(id).replaceChildren(h('b',{},p?p.name:'Autre lieu'),h('span',{className:'sr-only'},', '),h('small',{},p?sub(p):'Hors des villes proposées'),
     h('span',{className:'mono'},`${dms(pt.lat,'N','S')}  ·  ${dms(pt.lon,'E','W')}`));
   const city=near(st.center), mk=near(st.marker);
-  show('cityTxt',st.center,city,p=>p[5]);
-  show('markerTxt',st.marker,mk,p=>mk===city?'Dans la ville affichée':'Hors de la ville affichée');
-  document.querySelectorAll('#presets .chip').forEach((b,i)=>{ const on=PRESETS[i]===city; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); });
+  show('cityTxt',st.center,city,p=>p.sub||'Ville choisie');
+  show('markerTxt',st.marker,mk,p=>city && p.name===city.name?'Dans la ville affichée':'Hors de la ville affichée');
+  document.querySelectorAll('#presets .chip').forEach((b,i)=>{ const on=!!city && PRESETS[i]===city.preset; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); });
   $('coordsManual').placeholder=coordText();
 }
+/** Villes choisies par la recherche (nom, « région • pays », point choisi), gardées dans ce navigateur : 30 au plus, les plus récentes d'abord */
+updateMarkerTxt.KEY='cityMapStudio.places';
+updateMarkerTxt.places=()=>{
+  if(!updateMarkerTxt.list){
+    let a=[]; try{ a=JSON.parse(localStorage.getItem(updateMarkerTxt.KEY)||'[]'); }catch(e){}
+    const ok=p=>p && Number.isFinite(p.lat) && Number.isFinite(p.lon) && Math.abs(p.lat)<=90 && Math.abs(p.lon)<=180 && typeof p.name==='string' && p.name.trim();
+    updateMarkerTxt.list=(Array.isArray(a)?a:[]).filter(ok).slice(0,30).map(p=>({lat:p.lat,lon:p.lon,name:p.name.slice(0,120),sub:typeof p.sub==='string'?p.sub.slice(0,160):''}));
+  }
+  return updateMarkerTxt.list;
+};
+updateMarkerTxt.remember=(lat,lon,name,sub)=>{
+  if(!name) return;
+  const l=updateMarkerTxt.places().filter(p=>!(p.name===name && Math.hypot(p.lat-lat,p.lon-lon)<1e-4));
+  l.unshift({lat,lon,name,sub:sub||''}); updateMarkerTxt.list=l.slice(0,30);
+  try{ localStorage.setItem(updateMarkerTxt.KEY,JSON.stringify(updateMarkerTxt.list)); }catch(e){}
+};
 function syncZoomUI(){ $('zoom').value=st.zoom.toFixed(1); $('oZoom').textContent=st.zoom.toFixed(1); }
 function setZoom(z){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'&&st.mode!=='illus'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
 function goTo(lat,lon,zoom){
@@ -491,12 +509,14 @@ async function search(q){
 function closeResults(){ searchMsg(''); $('q').focus(); }
 /** Un résultat validé (CMS.geocoder) : nom en tête, adresse en dessous, deux actions décrites par le lieu */
 let resultSeq=0;
-/** Le titre (ville) et le sous-titre (région • pays) suivent la ville du résultat choisi, comme pour les villes proposées,
+/** Nom donné au lieu choisi : sa ville, ou à défaut (site naturel, monument isolé, lieu-dit) le nom du lieu lui-même */
+const placeName=it=>{ const d=(it.display||'').split(',')[0].trim(); return it.city || it.name || (/^[-\d.\s]+$/.test(d)?'':d); };   // jamais de simples coordonnées
+/** Le titre (ville ou, à défaut, nom du lieu) et le sous-titre (région • pays) suivent le résultat choisi, comme pour les villes proposées,
  *  sauf s'ils ont été personnalisés : seuls un texte vide, celui d'une ville proposée ou le dernier posé ici sont remplacés.
  *  Rend le nouveau titre, ou '' si rien n'a changé. */
 let autoTexts={title:'',subtitle:''};
 function followCity(it){
-  const city=it.city || '', sub=[it.region,it.country].filter(Boolean).join(' • ');
+  const city=placeName(it), sub=[it.region,it.country].filter(Boolean).join(' • ');
   if(!city) return '';
   const free=(k,i)=>{ const v=(st.texts[k]||'').trim(); return !v || v===autoTexts[k] || PRESETS.some(p=>p[i]===v); };
   const t=free('title',4) && st.texts.title!==city, s=!!sub && free('subtitle',5) && st.texts.subtitle!==sub;
@@ -513,9 +533,10 @@ function resultItem(it){
   const btn=(label,fn)=>{ const b=h('button',{type:'button',className:'btn sm'},label); b.setAttribute('aria-describedby',id);
     b.onclick=e=>{ fn(); if(e.detail===0) $('q').focus({preventScroll:true}); };   // activé au clavier : le focus revient au champ
     return b; };
-  const b1=btn('Carte + repère',()=>{ st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); const t=followCity(it); searchMsg('');
+  const remember=()=>updateMarkerTxt.remember(lat,lon,placeName(it),[it.region,it.country].filter(Boolean).join(' • '));
+  const b1=btn('Carte + repère',()=>{ remember(); st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); const t=followCity(it); searchMsg('');
     $('resultsStatus').textContent='Carte centrée et repère placé.'+(t?` Titre : ${t}.`:''); if(t) toast('Titre : '+t); });
-  const b2=btn('Repère seul',()=>{ setMarker(lat,lon); searchMsg(''); toast('Repère placé'); });
+  const b2=btn('Repère seul',()=>{ remember(); setMarker(lat,lon); searchMsg(''); toast('Repère placé'); });
   return h('li',{className:'res'},t,h('div',{className:'row'},b1,b2));
 }
 

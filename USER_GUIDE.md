@@ -38,7 +38,7 @@ justification sont dans le [dossier technique](docs/dossier-technique.md).
 | **Carte du monde entier** | Tracé minimaliste des rues, de l'eau, des parcs, des bâtiments et des voies ferrées, sans aucun nom sur la carte. |
 | **Repère** | 10 styles (cœur, épingle, alliances, petits pieds…), jusqu'à 3 lieux numérotés et reliés, itinéraire GPX. |
 | **11 gabarits** | Souvenir, Cadre, Fondu, Médaillon, Cœur, Arche, Voyage, Polaroid, Deux lieux, Ciel, Lettres ; en portrait ou en paysage. |
-| **Style** | 13 ambiances prêtes à l'emploi, 16 thèmes de couleurs, palette tirée d'une photo, 6 papiers et des plis. Les 11 polices et 6 duos sont dans l'onglet Textes. |
+| **Style** | 13 ambiances prêtes à l'emploi, 16 thèmes de couleurs, palette tirée d'une photo, 6 papiers et des plis. Les 14 polices et 7 duos sont dans l'onglet Textes. |
 | **Effets** | Eau hachurée, bâtiments en contour ou pointillés, trait crayon, lueur, lignes d'eau gravées, parcs hachurés, surimpression riso, halo et quartier en relief, dorure, échelle, rose des vents, graduations. |
 | **Ciel du jour J** | Étoiles, constellations, Lune et planètes visibles au-dessus du lieu, à la date et à l'heure choisies. |
 | **Export** | PNG 300 DPI (2480 × 3508 px en A4) ou PDF à la taille exacte d'impression ; aperçu au mur. |
@@ -162,7 +162,7 @@ Saisissez une adresse, un monument ou une ville, puis touchez **Chercher**. La r
 validation : il n'y a pas de suggestions pendant la frappe, que le service Nominatim interdit. Cinq résultats au
 plus s'affichent, chacun avec deux actions :
 
-* **Carte + repère** : centre la carte sur le lieu et y pose le repère ; le titre prend le nom de la ville du lieu et le sous-titre sa région et son pays (un titre ou un sous-titre que vous avez personnalisé est conservé) ;
+* **Carte + repère** : centre la carte sur le lieu et y pose le repère ; le titre prend le nom de la ville du lieu (ou, pour un lieu hors d'une ville — site naturel, monument isolé —, le nom du lieu lui-même) et le sous-titre sa région et son pays (un titre ou un sous-titre que vous avez personnalisé est conservé) ;
 * **Repère seul** : pose le repère sans déplacer la carte.
 
 Une recherche à la fois : le bouton est inactif pendant la requête. En cas de recherches trop rapprochées, le
@@ -178,8 +178,10 @@ moins 15.
 
 Six villes sont proposées en un toucher : **Blois** (par défaut), **Paris**, **Venise**, **New York**, **Bordeaux**
 et **Périgueux**. Le titre et le sous-titre de l'affiche sont remplis en même temps. Sous le titre « Villes »,
-l'application indique la ville affichée (la plus proche du centre, à 5 km au plus, ou « Autre lieu ») et ses
-coordonnées ; la ville affichée est mise en surbrillance.
+l'application indique la ville affichée (la plus proche du centre, à 5 km au plus, parmi les villes proposées et
+celles choisies par la recherche, ou « Autre lieu ») et ses coordonnées ; une ville proposée affichée est mise en
+surbrillance. Le lieu de rencontre indique de même la ville du repère. Les villes choisies par la recherche sont
+retenues dans ce navigateur.
 
 ### 4.4. Lieu de rencontre (le repère)
 
@@ -331,11 +333,12 @@ L'onglet Textes est le même pour les trois types d'affiche (Carte, Illustration
 
 
 * **Duos** préassortis : Origine (Playfair), Mariage (Italiana + Calligraphie), Voyage (Bebas + Jost), Classique
-  (Bodoni + Garamond), Moderne (Jost), Chaleureux (Fraunces + Montserrat).
+  (Bodoni + Garamond), Moderne (Jost), Chaleureux (Fraunces + Montserrat), Cartographe (Cinzel + Fell).
 * **Police du titre** et **police du texte**, choisies séparément. La police du titre propose d'abord **Vintage** :
-  grandes capitales condensées, à la manière des affiches de voyage. Viennent ensuite « Comme le texte » et onze
+  grandes capitales condensées, à la manière des affiches de voyage. Viennent ensuite « Comme le texte » et quatorze
   familles : Playfair, Garamond, Bodoni, Italiana, Fraunces (classiques), Montserrat, Jost, Mono (modernes), Art
-  déco, Bebas (affiche) et Calligraphie (manuscrite). Les cartes se filtrent par catégorie et montrent votre titre
+  déco, Bebas (affiche), Calligraphie (manuscrite), Cinzel, Fell et Marcellus (gravées : lettres des inscriptions
+  et des cartes anciennes). Les cartes se filtrent par catégorie et montrent votre titre
   ou vos noms.
 * **Règle de la police manuscrite** : elle n'est jamais mise en capitales ni espacée. Elle ne sert qu'à la dédicace,
   aux noms et aux légendes des deux lieux ; les autres lignes prennent la police du titre.
@@ -595,7 +598,7 @@ déplacement en glissant l'image sur l'aperçu, **Recentrer**.
 Style (§ 7.4).
 
 Sur l'aperçu, les boutons flottants **+**, **−** et **Recentrer** agissent sur l'illustration. Sur téléphone,
-l'image est verrouillée comme la carte : touchez-la (« Toucher pour cadrer ») pour la déplacer, puis **Terminer**.
+l'image est verrouillée comme la carte : touchez-la pour la déplacer, puis **Terminer**.
 
 **Remplacer** importe une autre image ; ✕ retire l'illustration (« Annuler » la retrouve).
 

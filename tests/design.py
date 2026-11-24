@@ -1,6 +1,6 @@
 """e2e : évolutions graphiques (phases A, B et C).
 
-A : 11 polices et duos (police manuscrite réservée à la dédicace et aux noms), filtres,
+A : 14 polices et duos (police manuscrite réservée à la dédicace et aux noms), filtres,
     16 thèmes avec filtres et contrôle de contraste, gabarits Cœur / Arche / Voyage,
     ambiances, modèles de texte.
 B : aperçu au mur, plusieurs lieux numérotés et reliés, textures de papier,
@@ -47,7 +47,7 @@ async def main():
         n = await ev("Object.keys(__cms.FONTS).length")
         await ev("__cms.showTab('textes')")   # les polices sont dans l'onglet Textes (section Typographie, #72)
         cards = await ev("[document.querySelectorAll('#fontSeg button').length, document.querySelectorAll('#fontTitleSeg button').length, document.querySelectorAll('#duos button').length]")
-        check(n == 11 and cards == [11, 13, 6], f'11 polices, cartes titre (avec Vintage et « Comme le texte ») et texte, 6 duos ({n}, {cards})')
+        check(n == 14 and cards == [14, 16, 7], f'14 polices, cartes titre (avec Vintage et « Comme le texte ») et texte, 7 duos ({n}, {cards})')
         await page.click('#fontCats .chip:has-text("Manuscrites")')
         # affichage réel (offsetParent), pas l'attribut hidden : un display:flex l'emportait sur hidden
         VIS = "s=>[...document.querySelectorAll(s)].filter(b=>b.offsetParent!==null).map(b=>b.dataset.v)"
@@ -56,8 +56,11 @@ async def main():
         await page.click('#fontCats .chip:has-text("Affiche")')
         vis = await ev(VIS, '#fontSeg button')
         check(vis == ['deco', 'bebas'], f'filtre « Affiche » {vis}')
+        await page.click('#fontCats .chip:has-text("Gravées")')
+        vis = await ev(VIS, '#fontSeg button')
+        check(vis == ['cinzel', 'fell', 'marcellus'], f'filtre « Gravées » {vis}')
         await page.click('#fontCats .chip:has-text("Toutes")')
-        check(len(await ev(VIS, '#fontSeg button')) == 11, 'filtre « Toutes » : 11 polices affichées')
+        check(len(await ev(VIS, '#fontSeg button')) == 14, 'filtre « Toutes » : 14 polices affichées')
         base = await snap()
         await page.click('#duos [data-v=mariage]'); await page.wait_for_timeout(400)
         st = await ev("[__cms.st.fontTitle, __cms.st.font]")

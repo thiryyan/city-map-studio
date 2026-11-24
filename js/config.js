@@ -51,15 +51,23 @@ const FONTS = {
   // Linéale condensée, capitales seules : affiche de voyage
   bebas:{fam:'"Bebas Neue", Oswald, Impact, sans-serif', scale:1.18, load:['400 20px "Bebas Neue"']},
   // Calligraphie anglaise : dédicace et noms ; jamais en capitales ni espacée (script:true), petit œil compensé
-  vibes:{fam:'"Great Vibes", "Brush Script MT", cursive', scale:1.4, script:true, load:['400 20px "Great Vibes"']}
+  vibes:{fam:'"Great Vibes", "Brush Script MT", cursive', scale:1.4, script:true, load:['400 20px "Great Vibes"']},
+  // Gravées : lettres des inscriptions et des cartes anciennes
+  // Capitales romaines lapidaires (les minuscules sont des petites capitales ; pas d'italique : penchée par le navigateur si besoin)
+  cinzel:{fam:'Cinzel, "Trajan Pro", Georgia, serif', load:['400 20px Cinzel']},
+  // Romain du XVIIe siècle, encrage irrégulier : l'écriture des cartes anciennes, avec son italique
+  fell:{fam:'"IM Fell English", Garamond, Georgia, serif', scale:1.05, load:['400 20px "IM Fell English"','italic 400 20px "IM Fell English"']},
+  // Capitales évasées à la manière des inscriptions romaines, minuscules douces (pas d'italique)
+  marcellus:{fam:'Marcellus, "Trajan Pro", Georgia, serif', load:['400 20px Marcellus']}
 };
 // Cartes de police : [clé, nom, catégorie]
 const FONT_LIST=[['serif','Playfair','classique'],['garamond','Garamond','classique'],['bodoni','Bodoni','classique'],['italiana','Italiana','classique'],['fraunces','Fraunces','classique'],
-  ['sans','Montserrat','moderne'],['jost','Jost','moderne'],['mono','Mono','moderne'],['deco','Art déco','affiche'],['bebas','Bebas','affiche'],['vibes','Calligraphie','manuscrite']];
-const FONT_CATS=[['','Toutes'],['classique','Classiques'],['moderne','Modernes'],['manuscrite','Manuscrites'],['affiche','Affiche']];
+  ['sans','Montserrat','moderne'],['jost','Jost','moderne'],['mono','Mono','moderne'],['deco','Art déco','affiche'],['bebas','Bebas','affiche'],['vibes','Calligraphie','manuscrite'],
+  ['cinzel','Cinzel','gravure'],['fell','Fell','gravure'],['marcellus','Marcellus','gravure']];
+const FONT_CATS=[['','Toutes'],['classique','Classiques'],['moderne','Modernes'],['manuscrite','Manuscrites'],['affiche','Affiche'],['gravure','Gravées']];
 // Duos typographiques : [clé, nom, police du titre, police du texte]
 const DUOS=[['origine','Origine','serif','serif'],['mariage','Mariage','italiana','vibes'],['voyage','Voyage','bebas','jost'],['classique','Classique','bodoni','garamond'],
-  ['moderne','Moderne','jost','jost'],['chaleureux','Chaleureux','fraunces','sans']];
+  ['moderne','Moderne','jost','jost'],['chaleureux','Chaleureux','fraunces','sans'],['cartographe','Cartographe','cinzel','fell']];
 
 const COLOR_LABELS = {paper:'Papier',land:'Terre',water:'Eau',park:'Parcs',building:'Bâtiments',roadMajor:'Rues principales',roadMinor:'Rues secondaires',path:'Chemins',rail:'Voies ferrées',text:'Texte',frame:'Filets',marker:'Repère'};
 const THEMES = {
