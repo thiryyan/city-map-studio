@@ -13,7 +13,8 @@ APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
 NOMI = json.dumps([{'lat': '48.8584', 'lon': '2.2945', 'name': 'Tour Eiffel',
-                    'display_name': 'Tour Eiffel, Avenue Gustave Eiffel, Paris, France'}])
+                    'display_name': 'Tour Eiffel, Avenue Gustave Eiffel, Paris, France',
+                    'address': {'city': 'Paris', 'state': 'Île-de-France', 'country': 'France'}}])
 
 # Cibles tactiles : tout élément interactif visible du panneau, hors liens dans le texte et curseurs.
 TARGETS = """() => {
@@ -194,6 +195,16 @@ async def main():
         res = await page.inner_text('#results')
         check('Tour Eiffel' in res and 'Paris' in res and not await page.is_disabled('#searchForm [type=submit]'), 'résultat : nom en tête, adresse en dessous')
         await page.screenshot(path=str(T / 'ux-search.png'))
+        # le titre suit la ville du résultat choisi (« Carte + repère »), sauf titre personnalisé
+        await page.evaluate("__cms.st.texts.title='Blois'; __cms.st.texts.subtitle='Val de Loire • France'")
+        await page.click('#results .res button:has-text("Carte + repère")'); await page.wait_for_timeout(300)
+        tt = await page.evaluate("[__cms.st.texts.title, __cms.st.texts.subtitle]")
+        check(tt == ['Paris', 'Île-de-France • France'] and await page.input_value('input[data-k="texts.title"]') == 'Paris',
+              f'titre et sous-titre suivent la ville choisie {tt}')
+        await page.evaluate("__cms.st.texts.title='Notre ville'")
+        await page.fill('#q', 'tour eiffel'); await page.press('#q', 'Enter'); await page.wait_for_selector('#results .res button', timeout=5000)
+        await page.click('#results .res button:has-text("Carte + repère")'); await page.wait_for_timeout(300)
+        check(await page.evaluate("__cms.st.texts.title") == 'Notre ville', 'titre personnalisé conservé')
         check(not errs, f'aucune erreur de page {errs}')
         await b.close()
     print('échecs', fails); assert not fails
