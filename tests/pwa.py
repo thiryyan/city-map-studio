@@ -5,10 +5,14 @@ toutes les ressources doivent être en chemins relatifs. Vérifie :
 - chargement complet sans erreur ni ressource manquante (404) ;
 - manifeste valide, icônes présentes, balises de description et d'aperçu des liens ;
 - service worker actif, qui ne met en cache aucune ressource tierce ;
+- liste APP de sw.js complète (js/, css/, lib/ hors lib/sky/) et sans fichier manquant ;
+- cache HTTP contourné (GitHub Pages : max-age=600) ; version affichée ; vérifications au plus une fois par heure ;
+- déploiement simulé : bandeau « Mettre à jour » sur une page déjà contrôlée (pas à la première installation),
+  un seul rechargement, état de l'affiche conservé (issue #65) ;
 - rechargement hors ligne : l'application démarre et exporte avec le moteur Fichier ;
 - en file:// : ni manifeste ni service worker déclarés (refusés par le navigateur).
 """
-import pathlib, os, asyncio, threading, json, tempfile
+import pathlib, os, asyncio, threading, json, tempfile, re
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from functools import partial
 from playwright.async_api import async_playwright
@@ -20,11 +24,33 @@ FIX = (T / 'osm.json').read_text()
 SEED = "localStorage.setItem('cityMapStudio.consent','1'); localStorage.setItem('cityMapStudio.welcomed','1')"
 
 
+SW = (ROOT / 'sw.js').read_text(encoding='utf-8')
+VERSION = re.search(r"const VERSION = '([^']+)'", SW).group(1)
+
+
 class Q(SimpleHTTPRequestHandler):
-    status = []
+    """Comme GitHub Pages : Cache-Control max-age=600. deploy : sw.js servi avec une nouvelle VERSION."""
+    status = []; reqs = []; deploy = False
     def log_message(self, *a): pass
     def send_response(self, code, *a):
         Q.status.append((code, self.path)); super().send_response(code, *a)
+    def end_headers(self):
+        self.send_header('Cache-Control', 'max-age=600'); super().end_headers()
+    def do_GET(self):
+        Q.reqs.append((self.path, self.headers.get('Cache-Control', ''), self.headers.get('Service-Worker', '')))
+        if Q.deploy and self.path.split('?')[0].endswith('/sw.js'):
+            body = SW.replace(VERSION, VERSION + '-deploy').encode()
+            self.send_response(200); self.send_header('Content-Type', 'text/javascript'); self.send_header('Content-Length', str(len(body)))
+            self.end_headers(); self.wfile.write(body); return
+        super().do_GET()
+
+
+def app_coverage():
+    """Tout fichier de js/, css/ et lib/ (hors lib/sky/, polices woff2 chargées à la demande, licences) figure dans APP, et réciproquement."""
+    app = set(re.findall(r"'([^']+)'", re.search(r'const APP = \[(.*?)\];', SW, re.S).group(1))) - {'./'}
+    files = {str(f.relative_to(ROOT)) for d in ('js', 'css', 'lib') for f in (ROOT / d).rglob('*')
+             if f.is_file() and f.suffix in ('.js', '.css') and not str(f.relative_to(ROOT)).startswith('lib/sky/')}
+    return sorted(files - app), sorted(f for f in app if not (ROOT / f).is_file())
 
 
 async def main():
@@ -32,6 +58,9 @@ async def main():
     def check(cond, msg):
         print('✓' if cond else '✗', msg)
         if not cond: fails.append(msg)
+    absent, missing_app = app_coverage()
+    check(not absent, f'sw.js : tout fichier de js/, css/, lib/ figure dans APP (absents : {absent})')
+    check(not missing_app, f'sw.js : tout élément de APP existe (introuvables : {missing_app})')
     site = tempfile.mkdtemp(); os.symlink(ROOT, os.path.join(site, 'city-map-studio'))
     srv = ThreadingHTTPServer(('127.0.0.1', 0), partial(Q, directory=site))
     threading.Thread(target=srv.serve_forever, daemon=True).start()
@@ -56,6 +85,7 @@ async def main():
         man = await page.evaluate("document.querySelector('link[rel=manifest]')?.href")
         m = json.loads(await page.evaluate("u=>fetch(u).then(r=>r.text())", man)) if man else {}
         icons = await page.evaluate("""m=>Promise.all(m.icons.map(i=>fetch(new URL(i.src,document.querySelector('link[rel=manifest]').href)).then(r=>r.ok)))""", m) if m else []
+        check(m.get('id') == './', 'manifeste : identité figée (id)')
         check(m.get('start_url') == './' and m.get('display') == 'standalone' and icons and all(icons) and any(i['purpose'] == 'maskable' for i in m['icons']),
               f'manifeste valide, {len(icons)} icônes présentes dont une « maskable »')
         meta = await page.evaluate("""['meta[name=description]','meta[property="og:image"]','meta[name="twitter:card"]','link[rel=icon]','link[rel=apple-touch-icon]']
@@ -71,6 +101,46 @@ async def main():
         keys = await page.evaluate("caches.keys().then(async ks=>{ const out=[]; for(const k of ks){ const c=await caches.open(k); for(const r of await c.keys()) out.push(r.url); } return out; })")
         check(ctl and any(k.endswith('/js/main.js') for k in keys) and any(k.endswith('/lib/maplibre-gl.js') for k in keys), f'service worker actif, application en cache ({len(keys)} fichiers)')
         check(all(k.startswith(base) for k in keys), 'cache : aucune ressource tierce')
+
+        # 3 bis. Cache HTTP contourné : malgré max-age=600, l'application est revalidée auprès du serveur (#65)
+        Q.reqs.clear(); await page.goto(url)
+        await wait_js(page, "(window.__cms && __cms.pwa.checks>0) || false", timeout=15000); await page.wait_for_timeout(500)
+        main_js = [r for r in Q.reqs if r[0].split('?')[0].endswith('/js/main.js')]
+        check(main_js and all('max-age=0' in r[1] or 'no-cache' in r[1] for r in main_js),
+              f'réseau d\'abord sans copie du cache HTTP : js/main.js redemandé au serveur ({main_js})')
+        sw_reqs = [r for r in Q.reqs if r[0].split('?')[0].endswith('/sw.js')]
+        check(sw_reqs, f'vérification de mise à jour au démarrage (sw.js redemandé : {len(sw_reqs)})')
+        await wait_js(page, "document.getElementById('appVersion').textContent.includes('cms-') || false", timeout=5000)
+        check(await page.text_content('#appVersion') == f'Version : {VERSION}', f"version affichée : {await page.text_content('#appVersion')}")
+        check(not await page.evaluate("document.getElementById('updBanner').classList.contains('show')"),
+              'première installation : aucun bandeau de mise à jour')
+
+        # 3 ter. Au plus une vérification par heure, au retour au premier plan
+        n0 = await page.evaluate("__cms.pwa.checks")
+        await page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+        early = await page.evaluate("__cms.pwa.check(Date.now()+60e3)")
+        late = await page.evaluate("__cms.pwa.check(Date.now()+3600e3+1)")
+        check(n0 >= 1 and not early and late and await page.evaluate("__cms.pwa.checks") == n0 + 1,
+              f'reg.update() : au démarrage, puis au plus une fois par heure ({n0} → {await page.evaluate("__cms.pwa.checks")})')
+
+        # 3 quater. Déploiement simulé : bandeau, « Mettre à jour », un seul rechargement, état conservé
+        await page.evaluate("""()=>{ const i=document.querySelector('input[data-k="texts.title"]'); i.value='Mise à jour 65'; i.dispatchEvent(new Event('input',{bubbles:true})); }""")
+        await wait_js(page, "(localStorage.getItem('cityMapStudio.v2')||'').includes('Mise à jour 65') || false", timeout=5000)
+        Q.deploy = True
+        await page.evaluate("__cms.pwa.check(Date.now()+7200e3)")
+        await wait_js(page, "document.getElementById('updBanner').classList.contains('show') || false", timeout=15000)
+        check(await page.is_visible('#bUpdate'), 'nouvelle version : bandeau « Mettre à jour » sur la page déjà contrôlée')
+        check(await page.evaluate("__cms.pwa.reg.waiting && __cms.pwa.reg.active && true") or False, 'nouveau worker en attente, ancien toujours actif (pas d\'activation sans accord)')
+        loads = []; page.on('load', lambda: loads.append(1))
+        await page.evaluate("window.__avant=1"); await page.click('#bUpdate')
+        await page.wait_for_timeout(3000)
+        check(len(loads) == 1 and await page.evaluate("typeof window.__avant") == 'undefined', f'« Mettre à jour » : page rechargée une seule fois ({len(loads)})')
+        await wait_js(page, "document.getElementById('appVersion').textContent.includes('deploy') || false", timeout=5000)
+        check(await page.text_content('#appVersion') == f'Version : {VERSION}-deploy', f"nouvelle version active : {await page.text_content('#appVersion')}")
+        check(await page.evaluate("__cms.st.texts.title") == 'Mise à jour 65', 'état de l\'affiche conservé après la mise à jour')
+        check(not await page.evaluate("document.getElementById('updBanner').classList.contains('show')"), 'après la mise à jour : plus de bandeau')
+        old = await page.evaluate("caches.keys()")
+        check(old == [VERSION + '-deploy'], f'ancien cache purgé : {old}')
 
         # 4. Hors ligne
         await ctx.set_offline(True); errs.clear()

@@ -24,7 +24,7 @@
 | E14 | Vie privée | Aucune ressource de présentation (librairie, polices, styles) n'est chargée depuis un tiers : l'adresse IP du visiteur n'est transmise qu'aux services de données cartographiques nécessaires au fonctionnement, et **seulement après son accord explicite** (§ 2.4). Les polices sont auto-hébergées, conformément à la jurisprudence RGPD sur Google Fonts (LG München, 20/01/2022, 3 O 17493/20). |
 | E15 | Sécurité | Politique de sécurité du contenu (CSP) en balise meta : aucun script ni style en ligne, réseau limité aux services cartographiques. Tout état venu de l'extérieur (lien partagé, `localStorage`) est validé champ par champ (`normState`). CDN de secours chargés avec empreinte SRI. |
 | E16 | Accessibilité | Fenêtres en `<dialog>` modal (focus retenu, Échap), commandes au clavier, cibles tactiles de 44 px, noms accessibles pour tous les champs, texte de remplacement de l'aperçu. |
-| E17 | Hors ligne | Application installable (manifeste) ; en http(s), un service worker garde l'application en cache (réseau d'abord) : démarrage et export du moteur Fichier sans réseau. Aucune ressource tierce mise en cache. |
+| E17 | Hors ligne | Application installable (manifeste) ; en http(s), un service worker garde l'application en cache (réseau d'abord) : démarrage et export du moteur Fichier sans réseau. Aucune ressource tierce mise en cache. Nouvelle version proposée par un bandeau, jamais imposée (§ 7.5). |
 
 ---
 
@@ -181,7 +181,9 @@ Les thèmes se filtrent par catégorie (**Clairs**, **Sombres**, **Couleurs**). 
 
 **Palette tirée d'une photo** : l'image choisie est lue et réduite sur l'appareil (`createImageBitmap`, 80 px au plus grand côté ; ni adresse, ni envoi, ni enregistrement), puis ramenée à six couleurs dominantes par k-moyennes (départ aux quantiles de luminance : même image, même palette). Version **claire** : papier tiré de la couleur la plus claire (fondue à 75 % vers le blanc), encre de la plus sombre ; version **sombre** : l'inverse. L'eau et les parcs prennent les deux couleurs les plus saturées et les plus présentes, fondues dans le papier ; le repère, la plus saturée, assombrie si elle contraste trop peu avec le papier (< 2,6). Seules les 12 couleurs sont gardées ; le changement est annulable et comparable comme un thème.
 
-**Comparer avant / après** : après un changement de thème, un bouton « Maintenir pour comparer avec « *thème précédent* » » apparaît sous les thèmes. Tant qu'il est maintenu (souris, toucher, ou Espace / Entrée au clavier), l'affiche montre le thème précédent, avec un badge « Avant · *thème* » ; relâché, le thème choisi revient. C'est un aperçu seulement : rien n'est enregistré (`saveState` est suspendu) ni ajouté à l'historique. Le bouton disparaît dès que les couleurs ne sont plus celles du thème appliqué (autre thème, couleur retouchée, « Annuler »). Reconfirmer le même thème ne crée pas de comparaison.
+**Comparer avant / après** (issues #15 et #63) : après un changement « comparable », un bouton « Maintenir pour comparer… » apparaît dans le pied du panneau, au-dessus de la barre d'état : il reste accessible depuis tous les onglets, y compris panneau réduit. Changements comparables : thème ou palette (photo, illustration), ambiance, modèle de texte, effet de tracé et dorure ou riso (`fx.*`), ornement (`orn.*`), plis, papier. Le libellé suit la nature du changement : « … avec « *thème précédent* » », « … : avant l'ambiance « Soirée de gala » », « … : avant le modèle « Mariage » », « … : avant l'effet « Trait crayon » », « … : avant le retrait de l'effet « Lueur » », « … : avant le papier « Kraft » ». Tant qu'il est maintenu (souris, toucher, ou Espace / Entrée au clavier), l'affiche montre l'état d'avant, avec un badge (« Avant · *thème* », « Avant l'ambiance « … » ») ; relâché, l'état courant revient **exactement**. C'est un aperçu seulement : rien n'est enregistré (`saveState` est suspendu) ni ajouté à l'historique.
+
+Seuls les champs modifiés par le dernier changement comparable sont retenus (`CMS.compare`, `js/ui.js`), avec leurs valeurs d'avant et d'après. Le bouton disparaît dès que l'un d'eux change de nouveau (autre choix, couleur retouchée, « Annuler ») ; une autre modification (titre, cadrage) ne l'efface pas et reste affichée pendant la comparaison. Le moteur et le cadrage (centre, zoom, repère, deuxième lieu) ne sont jamais comparés : ils relanceraient des requêtes réseau ou n'apporteraient rien. Reconfirmer le même choix ne crée pas de comparaison.
 
 Chaque variable reste modifiable individuellement. Les actions rapides **« Touche d'or »** appliquent `#C5A059` à l'eau, aux rues principales, au repère ou aux filets.
 
@@ -514,6 +516,18 @@ Les deux services distants (tuiles OpenFreeMap, Nominatim) et, en secours, les C
 | Aperçu intégré d'une application ou visionneuse | 2 uniquement | Réseau et téléchargements bloqués. |
 | Entièrement hors ligne | 2 (+ 1 si les tuiles sont autohébergées) | Une extraction **PMTiles** (Protomaps) peut être servie localement. |
 
+### 7.5. Application installée et mises à jour (issue #65)
+
+L'application installée (Chrome, Android, iOS) est le site dans une fenêtre dédiée : tout repose sur `sw.js` (cache) et `manifest.webmanifest` (icône, nom). Le navigateur voit une nouvelle version quand `sw.js` change d'au moins un octet ; d'où la constante `VERSION`, à changer à chaque modification de `sw.js` ou d'un fichier de sa liste `APP`.
+
+* **Stratégies de cache** : application (HTML, CSS, JS, manifeste, icônes) en **réseau d'abord**, avec une requête `cache: 'no-cache'` : le navigateur revalide auprès du serveur (304 peu coûteux) et ne sert jamais une copie périmée de son cache HTTP (GitHub Pages répond `Cache-Control: max-age=600`, sans possibilité de changer les en-têtes). `lib/` (versions figées) en cache d'abord. Le worker est enregistré avec `updateViaCache: 'none'`.
+* **Détection** : `reg.update()` au démarrage, puis au retour au premier plan (`visibilitychange`), au plus une fois par heure : une PWA peut rester des jours en arrière-plan sur mobile.
+* **Pas d'activation sans accord** : le nouveau worker reste en attente (`waiting`, pas de `skipWaiting()` à l'installation). Si la page est déjà contrôlée (donc pas à la première installation), un bandeau `#updBanner` affiche « Nouvelle version disponible » / **Mettre à jour** (✕ pour plus tard). Le bouton envoie `{type:'SKIP_WAITING'}` au worker ; `controllerchange` recharge alors la page **une seule fois**. Pas de rechargement automatique : un export ou un import d'illustration peut être en cours. L'état de l'affiche, enregistré en local, est retrouvé après le rechargement. Si un autre onglet a déjà activé la nouvelle version, le bandeau propose simplement de recharger.
+* **Version visible** : onglet Lieu, section Avancé, sous le diagnostic (`#appVersion`), lue auprès du worker actif (`{type:'GET_VERSION'}` sur un `MessageChannel`) ; « inconnue » sans worker (`file://`, tests sans `?sw`) ou sans réponse.
+* **Identité** : le manifeste fixe `"id": "./"` (identique à l'identité dérivée de `start_url`) : changer un jour `start_url` ne créera pas une seconde application.
+* **Garde-fous** : `tests/pwa.py` vérifie que tout fichier `.js` et `.css` de `js/`, `css/` et `lib/` (hors `lib/sky/`, chargé à la demande) figure dans `APP` et que tout élément de `APP` existe ; les polices woff2 sont mises en cache à leur premier usage. En CI, `tests/swversion.py` échoue si une pull request modifie `sw.js` ou un fichier de `APP` sans changer `VERSION`. Pas d'injection de hash au déploiement : elle imposerait un déploiement par GitHub Actions au lieu de la publication directe de `main`.
+* **Hors de notre contrôle** : la mise à jour de l'icône et du nom de l'application installée par Chrome est asynchrone (WebAPK sur Android) ; elle se vérifie sur l'URL publiée, pas par test automatique.
+
 ---
 
 ## 8. Organisation du code
@@ -563,7 +577,7 @@ city-map-studio/
     ├── city.py             # moteur Fichier sur city.json : import JSON et XML, fleuve assemblé, points de contrôle, fluidité, exports
     ├── saves.py            # Mes affiches : enregistrer, restaurer, persistance, fichiers de configuration et de sauvegarde, fichiers piégés
     ├── make_og.py          # régénère icons/og-image.jpg avec le rendu actuel (ville de test, trois ambiances)
-    ├── compare.py          # comparer avant / après un changement de thème (souris, toucher, clavier)
+    ├── compare.py          # comparer avant / après un thème, une ambiance, un modèle, un effet (souris, toucher, clavier)
     ├── welcome.py          # ambiance proposée au premier lancement, sans fenêtre bloquante
     ├── deps.py             # réglages dépendants d'un autre choix : masqués ou annotés, bascule annulable
     ├── illuspaste.py       # coller l'illustration depuis le presse-papiers (simulé)
@@ -597,10 +611,10 @@ Pour réduire cette portée partagée, les fichiers migrent vers des modules `CM
 | `engines.js` | Données OSM, cache de tracés et tracé Canvas (moteur Fichier), effets de tracé, moteur MapLibre. |
 | `preview.js` | `$`, `h` (création d'éléments sans `innerHTML`), aperçu, deux lieux, gestes, papier, `composePoster`, aperçu au mur. |
 | `features.js` | Lieux multiples, GPX, partage par lien, ambiances, panneau coulissant. |
-| `ui.js` | Taille de l'interface, coordonnées, historique, `buildUI`, `changed`, vignettes, recherche, polices, comparaison avant / après un changement de thème. |
+| `ui.js` | Taille de l'interface, coordonnées, historique, `buildUI`, `changed`, vignettes, recherche, polices, comparaison avant / après un changement (`CMS.compare`). |
 | `illus.js` | `CMS.illus` : mode Illustration (§ 4.13) : prompt, import et ré-encodage de l'image, qualité d'impression, retouches, rendu de l'image et des textes, interface (sélecteur de mode, onglet Illustration, style du titre). |
 | `export.js` | Export PNG et PDF, contexte d'exécution, diagnostic, import de fichier. |
-| `main.js` | `boot`, application installable (`installPwa`), crochets de test. |
+| `main.js` | `boot`, application installable et mises à jour (`CMS.pwa` : `install`, `check`, `version`), crochets de test. |
 
 Principales sections :
 
@@ -639,7 +653,7 @@ Principales sections :
 | Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
 | Taille des textes | Chaque curseur (par ligne et global) modifie l'affiche dans les 4 gabarits ; retour à 100 % = rendu d'origine ; réduction automatique signalée ; tailles persistées et remises à 100 % par « Réinitialiser » ; export 2480 × 3508. |
 | Fluidité du moteur Fichier | Déplacement sans reconstruction du cache ; nouveau cache au changement de zoom ou de données ; rendu identique avec un cache neuf, pour chaque effet ; carreaux visibles seuls ; croisement de tracés transparents non repeint ; export 2480 × 3508. |
-| Comparer avant / après | Bouton absent sans changement de thème ; nommé d'après le thème précédent ; maintenu (souris, toucher, clavier) : affiche identique à l'avant, badge ; relâché : thème choisi à l'identique ; rien d'enregistré ni d'ajouté à l'historique ; bouton retiré après « Annuler » ou une retouche de couleur. |
+| Comparer avant / après | Bouton absent sans changement comparable ; nommé d'après le thème précédent, ou la nature du changement (ambiance, modèle, effet activé ou retiré, papier) ; accessible depuis tous les onglets ; maintenu (souris, toucher, clavier) : affiche identique à l'avant, badge ; relâché : état courant rétabli exactement ; rien d'enregistré ni d'ajouté à l'historique ; titre et cadrage modifiés ensuite : conservés, ni comparés ni effaçant la comparaison ; bouton retiré après « Annuler » ou une retouche de couleur. |
 | Effets de tracé | Eau hachurée, bâtiments en contour et trait crayon : rendus distincts, retour exact au rendu d'origine, export aux bonnes dimensions ; moteur GPU : motif fourni, couche en contour, deux passes décalées, hachures présentes à l'export ; effets fixés par les ambiances et annulables. |
 | Premier lancement | Une seule fenêtre modale (l'accord), puis l'affiche visible et une proposition d'ambiance non bloquante en tête des réglages ; ambiance appliquée et annulable ; proposition unique (utilisée ou fermée) ; rien pour une affiche existante ni pour un lien partagé (#59). |
 | Évolutions graphiques | 11 polices et duos, police manuscrite limitée à la dédicace et aux noms ; 16 thèmes, palette tirée d'une photo, filtres, contraste ; gabarits distincts, cœur découpé dans l'aperçu ; ambiances et modèles annulables ; 10 repères distincts ; 3 lieux numérotés et reliés ; 5 textures et plis ; aperçu au mur téléchargeable ; lien reconstituant l'affiche ; paysage 3508 × 2480 ; deux vues conservées ; GPX simplifié et cadré ; Polaire à la hauteur de la latitude ; exports aux bonnes dimensions. Gabarits d'origine identiques au pixel près. |
@@ -652,7 +666,7 @@ Principales sections :
 | Aperçu intégré | Page dans une iframe : avertissement explicite dans l'onglet Lieu. |
 | Sécurité | Lien forgé (types faux, valeurs hors bornes, champs inconnus) : application intacte, valeurs invalides remplacées, rien d'invalide enregistré ; lien piégé (contenu décompressé > 512 Ko) refusé ; aucune violation de la CSP en `file://` ni en HTTP. |
 | Accessibilité | Fenêtres modales : focus placé et retenu, Échap, focus rendu ; vignettes utilisables au clavier ; cibles de 44 px ; tous les champs nommés. |
-| GitHub Pages et hors ligne | Servi sous `/city-map-studio/` sans ressource manquante ; manifeste et icônes valides ; après une visite, démarrage et export (moteur Fichier) sans réseau. |
+| GitHub Pages et hors ligne | Servi sous `/city-map-studio/` sans ressource manquante ; manifeste et icônes valides ; après une visite, démarrage et export (moteur Fichier) sans réseau ; cache HTTP contourné ; nouvelle version proposée par un bandeau (pas à la première installation), un seul rechargement, état conservé ; version affichée ; liste `APP` complète ; `VERSION` changée à chaque modification (CI). |
 
 ### 9.2. Tests automatisés
 
@@ -687,7 +701,7 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Moteur Fichier sur une ville réaliste (6,4 × 5,2 km, ~18 500 bâtiments, 7,8 Mo) | ✅ | `tests/city.py` : import JSON (≈ 0,15 s) et XML, fleuve assemblé depuis 7 membres avec 2 îles, eau et pont aux points de contrôle, cache en ≈ 0,2 s, déplacement ≈ 2 ms par image (Chromium, ordinateur) ; ⏳ mêmes mesures sur un téléphone réel et sur un vrai extrait OSM. |
 | Mes affiches (sauvegarde et restauration de la configuration) | ✅ | `tests/saves.py` : aller-retour exact de l'état, annulation, persistance, Ctrl + S, fichiers, fusion sans doublon, fichiers piégés, navigateur plein ; ⏳ Safari iOS (quota du stockage, téléchargement des fichiers). |
 | Pistes artistiques (effets, autour du repère, dorure, ornements, Lettres, papier Ancien et plis, Lune, planètes, Voie lactée, palette d'une photo) | ✅ | `tests/art.py` (moteur Fichier) et `tests/maplibre.py` (couches GPU, tuiles simulées) ; ⏳ rendu avec les vraies tuiles OpenFreeMap, impression réelle de la dorure et du riso. |
-| Comparer avant / après un changement de thème | ✅ | `tests/compare.py` (émulation du toucher) ; ⏳ appui long sur iOS Safari et Chrome Android. |
+| Comparer avant / après un changement de thème, d'ambiance, de modèle ou d'effet | ✅ | `tests/compare.py` (émulation du toucher) ; ⏳ appui long sur iOS Safari et Chrome Android. |
 | Parcours guidé, accessibilité, historique, date, géolocalisation, recherche | ✅ | `tests/ux.py` (émulation) ; ⏳ géolocalisation et calendrier natif à valider sur iOS et Android. |
 | Panneau coulissant, mode Cadrer, paysage, A− / A+ | ✅ | `tests/mobile.py` (émulation) ; ⏳ gestes à valider sur iOS Safari et Chrome Android. |
 | Déplacement des textes (titre, bloc du bas) : positions, glisser, aimantation, clavier, chevauchement, vignette, prompt | ✅ | `tests/illustext.py` ; « Auto » comparé lettre par lettre au rendu d'avant (9 configurations) ; ⏳ glisser au doigt sur iOS Safari et Chrome Android. |
@@ -709,6 +723,6 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Lien forgé ou piégé, état corrompu, crochets de test | ✅ | `tests/security.py` |
 | Accessibilité au clavier et aux lecteurs d'écran | ✅ | `tests/a11y.py` (Chromium) ; ⏳ VoiceOver (iOS) et TalkBack (Android) à valider sur appareil. |
 | Politique de sécurité du contenu | ✅ | `tests/csp.py`, `tests/maplibre.py` |
-| Sous-chemin GitHub Pages, application installable, hors ligne | ✅ | `tests/pwa.py` (serveur local) ; ⏳ installation et hors ligne sur l'URL publiée, iOS et Android. |
+| Sous-chemin GitHub Pages, application installable, hors ligne, mises à jour | ✅ | `tests/pwa.py` (serveur local, déploiement simulé), `tests/swversion.py` (CI) ; ⏳ installation, hors ligne et mise à jour après un vrai déploiement sur l'URL publiée, Chrome Android et ordinateur, iOS ([#65](https://github.com/thiryyan/city-map-studio/issues/65)). |
 | Image d'aperçu des liens partagés | ⏳ à valider | L'adresse `https://thiryyan.github.io/city-map-studio/icons/og-image.jpg` suppose la publication à cette adresse ; à adapter en cas de domaine personnalisé. Image régénérée par `tests/make_og.py` à partir du rendu actuel. |
 | Téléchargement sur iOS Safari et Chrome Android (bouton, partage natif, appui long, 2480 × 3508 et 300 DPI conservés) | ✅ | Appareils réels ([#7](https://github.com/thiryyan/city-map-studio/issues/7)). |

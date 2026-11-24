@@ -156,16 +156,20 @@ function closeWelcome(hide=true){
 function applyAmbiance(k){
   const a=AMBIANCES.find(x=>x[0]===k); if(!a) return; const p=a[2];
   commitHistory(0);   // étape d'historique explicite : un choix fait juste après le démarrage reste annulable
+  const before=cmpSnap();
   st.theme=p.theme; st.colors={...THEMES[p.theme].c}; st.font=p.font; st.fontTitle=p.fontTitle; st.markerStyle=p.markerStyle; st.texture=p.texture;
   st.fx={...DEFAULT_STATE.fx,...(p.fx||{})}; st.orn={...DEFAULT_STATE.orn,...(p.orn||{})}; st.folds=!!p.folds;
   setLayout(p.layout,true);
+  noteChange(before,`l'ambiance « ${a[1]} »`);
   syncInputs(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); redrawAll(true); drawTexture(); commitHistory();
   toast(`Ambiance « ${a[1]} » appliquée · tout reste personnalisable`);
 }
 function applyOccasion(k){
   const o=OCCASIONS.find(x=>x[0]===k); if(!o) return; commitHistory(0);
+  const before=cmpSnap();
   st.texts.dedication=o[2]; st.show.dedication=true;
   if(!st.texts.names.trim() || OCCASIONS.some(x=>x[3]===st.texts.names)) st.texts.names=o[3];
+  noteChange(before,`le modèle « ${o[1]} »`);
   syncInputs(); scheduleOver(); commitHistory(); toast(`Modèle « ${o[1]} » appliqué · « Annuler » pour revenir`);
 }
 /** Gabarit : met à jour l'état propre à certains gabarits (deux lieux, ciel), puis l'aperçu */
@@ -232,7 +236,7 @@ const isSheet = () => !TWO_COL.matches;
 const app = document.getElementById('app');
 function sheetHeights(){
   const vh=app.clientHeight||innerHeight, pn=$('panel');
-  const peek=Math.ceil($('grab').offsetHeight+$('modeSeg').offsetHeight+$('tabs').offsetHeight+document.querySelector('.foot').offsetHeight+($('banner').classList.contains('show')?$('banner').offsetHeight:0))+1;
+  const peek=Math.ceil($('grab').offsetHeight+$('modeSeg').offsetHeight+$('tabs').offsetHeight+document.querySelector('.foot').offsetHeight+['banner','updBanner'].reduce((s,id)=>s+($(id).classList.contains('show')?$(id).offsetHeight:0),0))+1;
   return {peek, half:Math.max(peek+120,Math.round(vh*0.55)), full:Math.max(peek+120,Math.round(vh*0.84)), max:Math.round(vh*0.92)};
 }
 /** Applique la hauteur du panneau : cran nommé, ou hauteur libre en px pendant un glissement */
@@ -458,9 +462,9 @@ function photoTheme(pal, dark){
 }
 function applyPhotoPalette(v){
   if(!photoPal) return;
-  const before={theme:st.theme,colors:{...st.colors}};
+  const before=cmpSnap();
   st.colors=photoTheme(photoPal,v==='dark'); setSeg('photoSeg',v);
-  noteThemeChange(before); refreshColors(); changed({all:true,cards:true});
+  noteChange(before,{theme:true}); refreshColors(); changed({all:true,cards:true});
   toast('Palette de la photo appliquée · « Annuler » pour revenir');
 }
 
