@@ -14,7 +14,9 @@ CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
 NOMI = json.dumps([{'lat': '48.8584', 'lon': '2.2945', 'name': 'Tour Eiffel',
                     'display_name': 'Tour Eiffel, Avenue Gustave Eiffel, Paris, France',
-                    'address': {'city': 'Paris', 'state': 'Île-de-France', 'country': 'France'}}])
+                    'address': {'city': 'Paris', 'state': 'Île-de-France', 'country': 'France'}},
+                   {'lat': '45.7578', 'lon': '4.8320', 'name': 'Place Bellecour', 'display_name': 'Place Bellecour, Lyon, France',
+                    'address': {'city': 'Lyon', 'state': 'Auvergne-Rhône-Alpes', 'country': 'France'}}])
 
 # Cibles tactiles : tout élément interactif visible du panneau, hors liens dans le texte et curseurs.
 TARGETS = """() => {
@@ -167,7 +169,7 @@ async def main():
         # ---------- Polices ----------
         await page.evaluate("__cms.showTab('textes')")   # les polices sont dans l'onglet Textes (#72)
         smp = await page.evaluate("[...document.querySelectorAll('#fontTitleSeg button:not([data-v=\\'\\']):not([data-v=\\'*vintage\\']) .smp')].map(e=>e.textContent)")
-        check(len(smp) == 11 and all(t == 'Tours' for t in smp), f'aperçu des polices du titre avec le titre saisi {smp}')
+        check(len(smp) == 14 and all(t == 'Tours' for t in smp), f'aperçu des polices du titre avec le titre saisi {smp}')
         await page.click('#fontSeg [data-v=garamond]')
         check(await page.evaluate("[__cms.st.font, document.querySelector('#fontSeg [data-v=garamond]').getAttribute('aria-checked')]") == ['garamond', 'true'], 'police choisie (radio ARIA)')
 
@@ -205,6 +207,12 @@ async def main():
         await page.fill('#q', 'tour eiffel'); await page.press('#q', 'Enter'); await page.wait_for_selector('#results .res button', timeout=5000)
         await page.click('#results .res button:has-text("Carte + repère")'); await page.wait_for_timeout(300)
         check(await page.evaluate("__cms.st.texts.title") == 'Notre ville', 'titre personnalisé conservé')
+        # ville hors des villes proposées : l'onglet Lieu la nomme (ville et lieu de rencontre), même après rechargement
+        await page.fill('#q', 'bellecour'); await page.press('#q', 'Enter'); await page.wait_for_selector('#results .res button', timeout=5000)
+        await page.click('#results .res:nth-child(2) button:has-text("Carte + repère")'); await page.wait_for_timeout(300)
+        lt = await page.evaluate("['cityTxt','markerTxt'].map(i=>document.getElementById(i).innerText)")
+        check(lt[0].startswith('Lyon') and 'Auvergne-Rhône-Alpes • France' in lt[0] and lt[1].startswith('Lyon') and 'Dans la ville affichée' in lt[1],
+              f'onglet Lieu : ville choisie par la recherche nommée {lt}')
         check(not errs, f'aucune erreur de page {errs}')
         await b.close()
     print('échecs', fails); assert not fails

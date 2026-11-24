@@ -18,7 +18,7 @@ KEYS = ['title', 'subtitle', 'coords', 'dedication', 'names', 'date']
 SNAP = "(()=>['cvOver','cvUnder'].map(id=>document.getElementById(id).toDataURL()).join())()"
 LAYOUTS = ['souvenir', 'classic', 'fade', 'medallion', 'heart', 'arch', 'travel', 'polaroid', 'diptych', 'sky', 'typo']
 NO_SUBTITLE = {'souvenir', 'polaroid'}   # gabarits qui n'affichent pas le sous-titre (note dans l'onglet Textes, tests/deps.py)
-FAMILIES = ['serif', 'garamond', 'bodoni', 'italiana', 'fraunces', 'sans', 'jost', 'mono', 'deco', 'bebas', 'vibes']
+FAMILIES = ['serif', 'garamond', 'bodoni', 'italiana', 'fraunces', 'sans', 'jost', 'mono', 'deco', 'bebas', 'cinzel', 'fell', 'marcellus', 'vibes']
 
 async def main():
     async with async_playwright() as p:
