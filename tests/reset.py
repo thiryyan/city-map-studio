@@ -1,10 +1,12 @@
 """e2e : bouton « Réinitialiser » (retour aux réglages par défaut).
 
 Modifie gabarit, thème, couleur, police, textes, lignes affichées, repère,
-zoom, marge et calques, puis vérifie : un seul appui ne réinitialise rien
-(confirmation demandée, annulée après 4 s) ; deux appuis rétablissent l'état
-par défaut et l'affiche initiale ; l'accord aux services est conservé ; le
-résultat est persisté après rechargement.
+zoom, marge et calques, avec des données importées (moteur Fichier), une affiche
+enregistrée et la taille de l'interface agrandie, puis vérifie : un seul appui ne
+réinitialise rien (confirmation demandée, annulée après 4 s) ; deux appuis rétablissent
+l'état par défaut et l'affiche initiale, moteur Vectoriel GPU compris ; sont conservés
+l'accord aux services, les données importées, Mes affiches et la taille de l'interface ;
+le résultat est persisté après rechargement.
 """
 import pathlib, os, asyncio, json
 from playwright.async_api import async_playwright
@@ -14,6 +16,7 @@ APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 SNAP = "document.getElementById('cvOver').toDataURL()"
 STATE = "JSON.stringify(__cms.st)"
+FIX = open(T / 'osm.json').read()
 
 async def main():
     fails = []
@@ -31,7 +34,10 @@ async def main():
         await page.evaluate("localStorage.removeItem('cityMapStudio.v2')"); await page.reload(); await page.wait_for_timeout(1500)
         default_state = json.loads(await page.evaluate(STATE)); base = await page.evaluate(SNAP)
 
-        # Modifications
+        # Modifications (moteur Fichier avec des données, affiche enregistrée, interface agrandie : à conserver)
+        await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
+        await page.click('#bUiLarger'); await page.keyboard.press('Control+s'); await page.wait_for_timeout(300)
+        saves = await page.evaluate("localStorage.getItem('cityMapStudio.saves')")
         await page.click('#tabs [data-tab=style]')
         await page.click('#layouts .card[data-v=medallion]'); await page.click('#themes .theme[data-v=onyx]')
         await page.click('#fontSeg [data-v=deco]')   # polices : onglet Style (déjà ouvert)
@@ -57,6 +63,9 @@ async def main():
         check(await page.evaluate(SNAP) == base, 'affiche identique à l\'affiche initiale')
         check(await page.input_value('input[data-k="texts.title"]') == 'Blois', 'champs de saisie resynchronisés')
         check(await page.evaluate('__cms.consent'), 'accord aux services conservé')
+        check(await page.evaluate("__cms.st.engine==='maplibre' && !!__cms.osmData"), 'moteur Vectoriel GPU rétabli, données importées conservées')
+        check(saves and await page.evaluate("localStorage.getItem('cityMapStudio.saves')") == saves, 'Mes affiches conservées')
+        check(await page.evaluate("localStorage.getItem('cityMapStudio.uiScale')") == '1.125', 'taille de l\'interface conservée')
         await page.wait_for_timeout(500); await page.reload(); await page.wait_for_timeout(1500)
         check(json.loads(await page.evaluate(STATE)) == default_state, 'réglages par défaut persistés après rechargement')
         check(not errs, f'aucune erreur de page {errs}')

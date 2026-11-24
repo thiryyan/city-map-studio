@@ -1,7 +1,7 @@
 """e2e : contrastes de l'interface (WCAG 2.2, critères 1.4.3 et 1.4.11).
 
 Mesure, sur le rendu réel, le contraste de chaque texte visible de l'interface (chaque onglet, sections Avancé
-dépliées, fenêtres Mes affiches et Résultat), sur mobile et sur ordinateur, et à l'agrandissement A+ :
+dépliées, Mes affiches et résultat de l'export dans l'onglet Export), sur mobile et sur ordinateur, et à l'agrandissement A+ :
 - texte courant : 4,5:1 au moins ; grand texte (24 px, ou 18,66 px en gras) : 3:1 ;
 - texte d'un bouton inactif (disabled) : exempté par les WCAG, mais tenu ici à 3:1 pour rester lisible ;
 - composants non textuels : pastilles d'état (prêt, chargement, attente, erreur), bordure des champs, icônes des boutons

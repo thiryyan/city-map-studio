@@ -1,7 +1,7 @@
 """e2e : accord préalable aux services tiers (RGPD).
 
-Sans accord : aucune requête externe au démarrage, ni à la recherche, ni en
-au diagnostic ; la demande d'accord s'affiche.
+Sans accord : aucune requête externe au démarrage, ni à la recherche, ni au
+diagnostic ; la demande d'accord s'affiche.
 Après « Afficher la carte » : l'action en attente s'exécute et l'accord est
 mémorisé. « Retirer l'accord » revient à l'état initial. « Travailler hors
 ligne » passe au moteur Fichier sans aucune requête.

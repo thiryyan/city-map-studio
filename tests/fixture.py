@@ -1,9 +1,11 @@
+"""Génère tests/osm.json : petite ville synthétique au format JSON OSM ({"elements": [...]}, géométrie fournie).
+
+Centrée sur la vue par défaut (Blois) : fleuve en multipolygone avec îles, rues de toutes les classes, autoroute,
+sentier, voie ferrée, parcs et 300 bâtiments. Graine fixe : même fichier à chaque exécution. Lancé par
+tests/run_all.py avant la suite ; tests/make_formats.py en dérive les formats .osm et GeoJSON.
+"""
 import pathlib
 T=pathlib.Path(__file__).resolve().parent
-ROOT=T.parent
-APP_URL=(ROOT/'index.html').as_uri()+'?test'
-import os
-CHROME=os.environ.get('CHROME') or None  # Chrome/Chromium ; vide = Chromium de Playwright
 import json, math, random
 random.seed(3)
 lat0, lon0 = 47.5861, 1.3359

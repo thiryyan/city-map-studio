@@ -140,7 +140,8 @@ async def main():
         # 9. Accessibilité : noms accessibles, fenêtre modale, Échap
         a11y = await ev("""[...document.querySelectorAll('#tab-export button, #tab-export input')].every(e=>(e.getAttribute('aria-label')||e.textContent.trim()||e.labels?.[0]?.textContent.trim()||e.closest('label')?.textContent.trim()))""")
         check(a11y, 'commandes de l\'onglet Export nommées')
-        check(await ev("document.querySelectorAll('dialog#saves,dialog#result').length") == 0, 'Mes affiches et résultat : plus de fenêtre modale (onglet Export)')
+        check(await ev("!!document.querySelector('#tab-export #savesList') && !!document.querySelector('#tab-export #result') && !document.querySelector('#savesList')?.closest('dialog')"),
+              'Mes affiches et résultat de l\'export : intégrés à l\'onglet Export, hors de toute fenêtre modale')
         check(not errs, f'aucune erreur de page {errs}')
         await b.close()
     for f in T.glob('saves-*.json'): f.unlink()

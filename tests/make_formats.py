@@ -1,3 +1,9 @@
+"""Dérive de tests/osm.json les autres formats d'import du moteur Fichier, et la page de test de l'aperçu intégré.
+
+tests/data.osm (XML OSM : nœuds, chemins à références, relations multipolygones), tests/data.geojson
+(FeatureCollection) et tests/frame.html (l'application dans une iframe, pour tests/offline.py). Lancé par
+tests/run_all.py après tests/fixture.py.
+"""
 import json, pathlib
 T=pathlib.Path(__file__).resolve().parent
 d=json.load(open(T/'osm.json'))

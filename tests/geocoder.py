@@ -1,4 +1,4 @@
-"""e2e : client Nominatim (js/nominatim.js, CMS.geocoder ; issue #32).
+"""e2e : client Nominatim (js/geocoder.js, CMS.geocoder ; issue #32).
 
 Nominatim simulé : muet, 429, 503 puis 200, réponse piégée. Délais abaissés par __cmsTestConfig (seulement avec ?test).
 Vérifie : délai dépassé (bouton réactivé), quota respecté sans nouvelle requête, une relance sur 5xx, cache,
