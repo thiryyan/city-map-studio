@@ -107,6 +107,26 @@ async def main():
         check(await shown('route'), 'itinéraire en Deux lieux : note')
         await act('route'); check(await st('layout') == 'souvenir' and not await shown('route'), '« Passer au gabarit Souvenir » : note retirée')
 
+        # Style de l'itinéraire : masqué quand l'itinéraire est masqué
+        rvis = "(()=>[document.getElementById('routeColor'),document.getElementById('routeW').closest('.slider'),document.getElementById('routeDash').closest('label')].map(e=>!e.hidden))()"
+        check(await page.evaluate(rvis) == [True, True, True], 'itinéraire affiché : couleur, épaisseur et pointillés proposés')
+        await page.evaluate("document.getElementById('routeShow').click()"); await page.wait_for_timeout(450)
+        check(await page.evaluate(rvis) == [False, False, False], 'itinéraire masqué : son style est masqué')
+        await page.evaluate("document.getElementById('routeShow').click()"); await page.wait_for_timeout(450)
+
+        # Taille du titre avec le gabarit Lettres
+        check(not await shown('titleTypo'), 'gabarit Souvenir : pas de note sur la taille du titre')
+        await page.evaluate("__cms.setLayout('typo')"); await page.wait_for_timeout(450)
+        check(await shown('titleTypo') and 'Lettres' in await text('titleTypo'), 'gabarit Lettres : taille du titre sans effet, note')
+        await act('titleTypo'); check(await st('layout') == 'classic' and not await shown('titleTypo'), '« Passer au gabarit Cadre » : note retirée')
+
+        # Taille d'une ligne décochée
+        await setk('show.date', False)
+        check(not await shown('hidden-date'), 'date décochée, taille par défaut : pas de note')
+        await page.evaluate("()=>{ const e=document.querySelector('[data-k=\"textScale.date\"]'); e.value=130; e.dispatchEvent(new Event('input',{bubbles:true})); }"); await page.wait_for_timeout(450)
+        check(await shown('hidden-date') and 'date est masquée' in await text('hidden-date'), 'taille d\'une ligne décochée : note')
+        await act('hidden-date'); check(await st('show.date') and not await shown('hidden-date'), '« L\'afficher » : ligne cochée, note retirée')
+
         # Contraste des notes
         await page.evaluate("__cms.setLayout('diptych')"); await page.wait_for_timeout(450)
         c = await page.evaluate("""(()=>{ const n=document.getElementById('dep-route'); const p=s=>s.match(/\\d+(\\.\\d+)?/g).slice(0,3).map(Number);

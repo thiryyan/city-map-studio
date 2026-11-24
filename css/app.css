@@ -24,8 +24,7 @@ button,input,select{font:inherit;color:inherit}
 .grab:focus-visible i{background:var(--acc)}
 #app[data-sheet=peek] .tabbody{display:none}
 #app.dragging .tabbody{overflow:hidden}
-#app.sheetmode .status{font-size:.75rem;margin-bottom:2px}
-#app.sheetmode .foot{padding-top:3px}   /* boutons de la ligne d'état à 44 px : le pied garde sa hauteur */
+#app.sheetmode .foot{padding-top:6px;padding-bottom:calc(6px + var(--sab))}
 #app.sheetmode .btn.pri{min-height:46px}
 /* Ordinateur, tablette paysage et téléphone en paysage : deux colonnes */
 @media (min-width:900px), (orientation:landscape) and (min-width:560px){
@@ -45,8 +44,28 @@ button,input,select{font:inherit;color:inherit}
 .tabbody{flex:1;overflow-y:auto;padding:14px 14px 24px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .tab{display:none}.tab.on{display:block}
 .foot{flex:none;padding:8px 12px calc(8px + var(--sab));border-top:1px solid var(--line);background:var(--panel)}
-.status{font-size:.8125rem;color:var(--mut);margin-bottom:6px;display:flex;gap:6px;align-items:center;min-height:16px}
-#stTxt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foot{container-type:inline-size}
+/* Barre d'actions : aperçu, annuler, rétablir, comparer (après un changement), étape suivante ou export.
+   Libellés des boutons d'icône quand la barre est assez large (requête de conteneur) */
+.actbar{display:flex;gap:6px;align-items:center}
+.abtn{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:44px;height:44px;padding:0 9px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--txt);cursor:pointer;font-size:.8125rem}
+.abtn[disabled]{opacity:var(--off);cursor:default}
+.abtn .al{display:none}
+@container (min-width:460px){.abtn .al{display:inline}}
+.abnext .nxp{display:none}
+@container (min-width:420px){.abnext .nxp{display:inline}}
+.abnext[data-act=export] .nxa{display:none}
+.abtn.compare.on{background:var(--acc);border-color:var(--acc);color:#141414}
+.btn.pri.abnext{flex:1;width:auto;min-width:0;min-height:44px;font-size:.9375rem;padding:6px 10px}
+#app.sheetmode .btn.pri.abnext{min-height:44px}
+.abnext span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.abnext[disabled]{opacity:var(--off);cursor:default}
+/* Voyant d'état, sur la scène : la pastille seule quand tout va bien ; le message tant qu'il est utile */
+.stpill{position:absolute;left:10px;top:10px;z-index:10;display:flex;align-items:center;gap:6px;max-width:calc(100% - 84px);padding:5px 10px;border:1px solid #ffffff22;border-radius:999px;background:#1e1e23e6;color:var(--txt);font-size:.75rem;pointer-events:none;backdrop-filter:blur(6px)}
+#stTxt{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stpill.quiet{padding:5px}
+.stpill.quiet #stTxt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#app.clean .stpill{display:none}
 .lnk{flex:none;background:none;border:0;min-height:44px;padding:4px 2px;color:var(--mut);font-size:.8125rem;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .lnk.confirm{color:var(--acc);font-weight:600}
 .uisz{flex:none;display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -174,6 +193,7 @@ dialog.sheet details p{color:var(--mut);margin:4px 0 0}
 dialog.sheet .row .btn{flex:1 1 140px}
 #toast{position:fixed;left:50%;bottom:calc(var(--sheetH,0px) + 14px);transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:#2b2b31;border:1px solid var(--line);padding:10px 14px;border-radius:10px;z-index:100;max-width:90vw;font-size:.875rem;pointer-events:none;box-shadow:0 6px 20px #0008}
 @media (min-width:900px), (orientation:landscape) and (min-width:560px){#toast{bottom:24px;left:calc(50% + min(200px,23vw))}}
+body:has(#app.clean) #toast{left:50%}
 #toast.show{opacity:1;transform:translateX(-50%)}
 #toast.err{border-color:var(--danger)}
 #busy{position:fixed;inset:0;background:#000b;z-index:90;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px}
@@ -257,8 +277,7 @@ details.adv>h3:first-of-type{margin-top:6px}
 .diag .note{margin-top:6px}.diag .diagOp{margin-top:4px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
 /* Comparer avant / après un changement de thème */
-.foot .compare{margin-bottom:8px}   /* dans le pied du panneau : accessible depuis tous les onglets (#63) */
-.btn.compare{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.compare{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .cmpbadge{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;white-space:nowrap;background:#1e1e23e6;color:var(--txt);border:1px solid var(--acc);border-radius:999px;padding:5px 12px;font-size:.8125rem;font-weight:600}
 /* Palette tirée d'une photo */
 #photoPal{margin-top:8px;display:grid;gap:8px}
@@ -363,7 +382,9 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 .texthit.dragging{cursor:grabbing;outline:1.5px solid var(--acc)}
 /* Voir l'affiche seule (#56) : rien sur l'aperçu, et sur mobile plus de panneau ; un toucher n'importe où ramène les réglages */
 #app.clean .fab,#app.clean #shield,#app.clean #placeSwitch,#app.clean .mapcredit,#app.clean .cmpbadge,#app.clean .stagebar,#app.clean .illushit,#app.clean .texthit,#app.clean .safeguide{display:none!important}
-#app.clean.sheetmode #panel{display:none}
+#app.clean #panel{display:none}
+#app.clean:not(.sheetmode){grid-template-columns:100%}
+#app.clean:not(.sheetmode) #stage{grid-column:1}
 .cleanexit{position:absolute;inset:0;z-index:20;border:0;padding:0;margin:0;background:none;cursor:zoom-out;display:flex;align-items:flex-end;justify-content:center;touch-action:none}
 .cleanexit:focus-visible{outline:2px solid var(--acc);outline-offset:-4px}
 .cleanexit span{margin-bottom:calc(12px + var(--sab));background:#1e1e23e6;color:var(--txt);border:1px solid #ffffff22;border-radius:999px;padding:6px 12px;font-size:.8125rem;pointer-events:none;backdrop-filter:blur(6px)}
@@ -382,3 +403,15 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 /* Pastille « Auto » des couleurs des textes (#74) : libellé, et en bas la couleur que donne le thème */
 .sw.auto{display:inline-flex;align-items:center;justify-content:center;background:var(--panel2);color:var(--txt);font-size:.6875rem;font-weight:600;padding-bottom:8px}
 .sw.auto i{position:absolute;left:0;right:0;bottom:0;height:9px;border-top:1px solid var(--line)}
+/* Réglages modifiés (#5, #7) : pastille sur les onglets, compte dans les sections repliables, liste de relecture */
+.tabs button{position:relative}
+.tabs button .tbd{position:absolute;top:7px;right:calc(50% - 2.4em);width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.tabs button .tbd[hidden]{display:none}
+details.adv>summary .chg{flex:none;font-size:.75rem;font-weight:600;color:var(--acc2);border:1px solid var(--acc);border-radius:999px;padding:1px 8px}
+.changes{list-style:none;margin:8px 0 10px;padding:0;display:flex;flex-direction:column;gap:6px}
+.changes li{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.changes .cg{flex:1 1 60%;min-width:0;display:flex;flex-direction:column;gap:1px}
+.changes .cg b{font-size:.875rem}
+.changes .cg small{color:var(--mut);font-size:.8125rem}
+.changes .ctab{color:var(--acc2);font-size:.75rem;font-weight:600}
+.changes .acts{display:flex;gap:4px}

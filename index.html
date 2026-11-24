@@ -49,6 +49,7 @@
     </div>
     <!-- Sources de la carte : sous l'affiche, hors de celle-ci (l'affiche porte sa propre mention, identique à l'export) -->
     <p class="mapcredit" id="mapCredit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a><span id="mcOmt"> · © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a></span></p>
+    <div class="stpill quiet" id="stPill"><i class="dot" id="stDot" aria-hidden="true"></i><span id="stTxt">Prêt</span></div>
     <div class="fab">
       <button id="bFrame" title="Cadrer la carte" aria-label="Cadrer la carte" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16M2 10h16M10 2l-3 3M10 2l3 3M10 18l-3-3M10 18l3-3M2 10l3-3M2 10l3 3M18 10l-3-3M18 10l-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button id="bZoomIn" title="Zoom avant" aria-label="Zoom avant"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
@@ -57,7 +58,6 @@
       <button id="bToMarker" title="Centrer sur le repère" aria-label="Centrer sur le repère"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="1.8" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg></button>
       <!-- Calque cadré (#77) : Carte + illustration ; zoom, recentrage et mode Cadrer agissent sur ce calque -->
       <button id="bLayer" class="mixonly" type="button" title="Cadrage : la carte (toucher pour l'illustration)" aria-label="Cadrage : la carte (toucher pour l'illustration)" aria-pressed="false"><svg class="lm" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><svg class="li" hidden width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
-      <button id="bClean" title="Voir l'affiche seule" aria-label="Voir l'affiche seule"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M1.8 10S5 4.5 10 4.5 18.2 10 18.2 10 15 15.5 10 15.5 1.8 10 1.8 10z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
     </div>
     <button class="cleanexit" id="cleanExit" type="button" aria-label="Revenir aux réglages" hidden><span>Toucher pour revenir aux réglages</span></button>
     <div class="stagebar">
@@ -142,7 +142,10 @@
           <button class="btn wide mt10" id="bDiag" type="button">Diagnostiquer la connexion</button>
           <p class="hint" id="consentInfo"></p>
           <div class="diag" id="diag"></div>
-          <p class="hint" id="appVersion">Version : inconnue</p>
+          <h3>Taille du texte de l'interface</h3>
+          <div class="row"><span class="uisz" role="group" aria-label="Taille du texte de l'interface"><button type="button" id="bUiSmaller" aria-label="Réduire le texte de l'interface">A−</button><button type="button" id="bUiLarger" aria-label="Agrandir le texte de l'interface">A+</button></span><span class="hint grow" id="uiScaleTxt">100 %</span></div>
+          <p class="hint">Propre à cet appareil ; « Réinitialiser » n'y touche pas.</p>
+          <p class="hint" id="appVersion">Version : –</p>
         </details>
         <button class="btn next pureillus" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button class="btn next maponly" type="button" data-next="repere">Étape suivante : le repère<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -217,11 +220,11 @@
             <ul class="quality" id="illusQuality" aria-label="Qualité d'impression par format"></ul>
             <label class="tog">Agrandir ×2 dans le navigateur<input type="checkbox" data-k="illus.upscale"></label>
             <p class="hint" id="illusRatio"></p>
-            <h3>Cadrage</h3>
+            <h3 id="hIllusCrop">Cadrage</h3>
             <div class="seg" id="illusFitSeg" role="group" aria-label="Cadrage de l'image"><button data-v="cover" type="button">Remplir l'affiche</button><button data-v="contain" type="button">Image entière</button></div>
             <div class="slider"><label for="sIllusZoom">Zoom</label><output id="oIllusZoom"></output><input type="range" id="sIllusZoom" data-k="illus.zoom" min="100" max="300" step="5"></div>
             <div class="row"><p class="hint grow">Glissez l'image sur l'aperçu pour la déplacer.</p><button class="btn sm" type="button" id="bIllusCenter">Recentrer</button></div>
-            <h3>Retouches</h3>
+            <h3 id="hIllusFx">Retouches</h3>
             <div class="slider"><label for="sIllusBright">Luminosité</label><output id="oIllusBright"></output><input type="range" id="sIllusBright" data-k="illus.bright" min="-50" max="50" step="1"></div>
             <div class="slider"><label for="sIllusContrast">Contraste</label><output id="oIllusContrast"></output><input type="range" id="sIllusContrast" data-k="illus.contrast" min="-50" max="50" step="1"></div>
             <div class="slider"><label for="sIllusSatur">Saturation</label><output id="oIllusSatur"></output><input type="range" id="sIllusSatur" data-k="illus.satur" min="-50" max="50" step="1"></div>
@@ -254,13 +257,13 @@
           <div class="seg" id="photoSeg" role="group" aria-label="Version de la palette"><button data-v="light" type="button">Claire</button><button data-v="dark" type="button">Sombre</button></div>
           <p class="hint" id="photoNote"></p>
         </div>
-        <h3>Papier</h3>
+        <h3 id="hPaper">Papier</h3>
         <div class="chips" id="textures"></div>
         <label class="tog illusonly">Papier jauni sur l'illustration<input type="checkbox" data-k="illus.paper"></label>
         <label class="tog">Plis d'une carte dépliée<input type="checkbox" data-k="folds"></label>
         <label class="tog">Dorure (reflets métalliques des textes, filets et repères)<input type="checkbox" data-k="fx.foil"></label>
         <details class="adv maponly" id="styleMore">
-          <summary><span>Plus de réglages</span><small>gabarit, effets, calques, couleurs</small></summary>
+          <summary><span>Plus de réglages</span><small>gabarit, effets, calques, couleurs</small><b class="chg" id="chg-styleMore" hidden></b></summary>
           <div class="layoutonly">
           <h3>Gabarit</h3>
           <div class="cards" id="layouts" role="group" aria-label="Gabarits"></div>
@@ -272,7 +275,7 @@
           <p class="hint mixonly" id="mixFormHint"></p>
           <div class="layoutonly">
           <div id="skyBox" hidden>
-            <h3>Ciel du jour J</h3>
+            <h3 id="hSky">Ciel du jour J</h3>
             <p class="hint">Les étoiles visibles au-dessus du repère, à la date et à l'heure choisies.</p>
             <label class="f" for="skyWhen">Date et heure (heure locale du lieu)</label>
             <input type="datetime-local" id="skyWhen" class="dt">
@@ -292,10 +295,10 @@
             <button class="chip" data-gold="marker">Repère</button>
             <button class="chip" data-gold="frame">Filets</button>
           </div>
-          <h3>Tracé</h3>
+          <h3 id="hTrace">Tracé</h3>
           <div class="slider"><label for="sStroke">Épaisseur des rues</label><output id="oStroke"></output><input type="range" id="sStroke" data-k="stroke" min="0.5" max="2.5" step="0.05"></div>
           <div class="slider"><label for="sWater">Mise en valeur des cours d'eau</label><output id="oWater"></output><input type="range" id="sWater" data-k="waterMult" min="0.5" max="3" step="0.1"></div>
-          <h3>Effets de tracé</h3>
+          <h3 id="hFx">Effets de tracé</h3>
           <label class="tog">Eau hachurée<input type="checkbox" data-k="fx.hatch"></label>
           <label class="tog">Bâtiments en contour<input type="checkbox" data-k="fx.outline"></label>
           <label class="tog">Trait crayon (rues tracées deux fois, légèrement décalées)<input type="checkbox" data-k="fx.pencil"></label>
@@ -308,7 +311,7 @@
           <label class="tog">Halo du souvenir (la ville s'efface autour du lieu)<input type="checkbox" data-k="fx.halo"></label>
           <label class="tog">Quartier en relief (rues proches à la couleur du repère)<input type="checkbox" data-k="fx.quarter"></label>
           <div class="slider"><label for="sFocus">Rayon autour du repère</label><output id="oFocus"></output><input type="range" id="sFocus" data-k="focusR" min="10" max="60" step="1"></div>
-          <h3>Ornements</h3>
+          <h3 id="hOrn">Ornements</h3>
           <label class="tog">Échelle graphique<input type="checkbox" data-k="orn.scale"></label>
           <label class="tog">Rose des vents<input type="checkbox" data-k="orn.compass"></label>
           <label class="tog">Graduations (latitude et longitude)<input type="checkbox" data-k="orn.grid"></label>
@@ -317,7 +320,7 @@
           <label class="tog">Bâtiments<input type="checkbox" data-k="layers.buildings"></label>
           <label class="tog">Voies ferrées<input type="checkbox" data-k="layers.rail"></label>
           <details class="adv" id="colorsBox">
-            <summary><span>Personnaliser les couleurs</span><small>12 teintes</small></summary>
+            <summary><span>Personnaliser les couleurs</span><small>12 teintes</small><b class="chg" id="chg-colorsBox" hidden></b></summary>
             <div class="colors" id="colors"></div>
           </details>
           <label class="tog mt8">Mention complète des sources sur l'affiche<input type="checkbox" data-k="attribution"></label>
@@ -327,7 +330,7 @@
       </div>
       <!-- REPERE -->
       <div class="tab" id="tab-repere" role="tabpanel" aria-labelledby="tb-repere">
-        <h3>Style du repère</h3>
+        <h3 id="hMarker">Style du repère</h3>
         <div class="marks cards" id="marks" role="group" aria-label="Styles de repère"></div>
         <div class="seg mt10" id="fillSeg">
           <button data-v="1">Plein</button><button data-v="0">Contour</button>
@@ -339,14 +342,14 @@
           <div class="chips grow" id="mColors"></div>
           <input type="color" id="mColor" aria-label="Couleur personnalisée du repère">
         </div>
-        <h3>Plusieurs lieux</h3>
+        <h3 id="hPlaces">Plusieurs lieux</h3>
         <p class="hint">Jusqu'à trois lieux sur la même carte : rencontre, mariage, maison…</p>
         <p class="hint" id="placesHint" hidden>Le gabarit « Deux lieux » n'affiche qu'un repère par carte.</p>
         <div id="mList" class="plist"></div>
         <button class="btn wide mt6" type="button" id="bAddPlace">+ Ajouter un lieu</button>
         <label class="tog">Numéroter les lieux (légende sous la carte)<input type="checkbox" data-k="numbered"></label>
         <label class="tog">Relier les lieux par un trait<input type="checkbox" data-k="linkMarkers"></label>
-        <h3>Itinéraire</h3>
+        <h3 id="hRoute">Itinéraire</h3>
         <label class="btn wide">Importer un tracé GPX<input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden></label>
         <div id="routeBox" hidden>
           <p class="hint" id="routeInfo"></p>
@@ -361,7 +364,7 @@
       </div>
       <!-- TEXTES -->
       <div class="tab" id="tab-textes" role="tabpanel" aria-labelledby="tb-textes">
-        <h3>Typographie</h3>
+        <h3 id="hTypo">Typographie</h3>
         <p class="hint">Les duos accordent la police du titre et celle du texte.</p>
         <div class="fonts duos" id="duos" role="radiogroup" aria-label="Duo de polices"></div>
         <div class="chips fcats" id="fontCats" role="group" aria-label="Catégories de polices"></div>
@@ -377,7 +380,7 @@
         <div class="swrow"><span id="swOutlineLbl">Contour</span><div class="swatches" id="swOutline" role="group" aria-labelledby="swOutlineLbl"></div></div>
         <div class="slider"><label for="sShadowOff">Décalage de l'ombre</label><output id="oShadowOff"></output><input type="range" id="sShadowOff" data-k="illusText.off" min="1" max="12" step="1"></div>
         <p class="hint">« Auto » suit le thème (onglet Style). Ombre et contour gardent les lettres lisibles sur une illustration ou sur la carte.</p>
-        <h3>Position du titre</h3>
+        <h3 id="hTextPos">Position du titre</h3>
         <div class="row layoutonly"><button class="chip" type="button" id="tLayBtn" aria-pressed="true">Dans le gabarit</button></div>
         <div class="posgrid mt8" id="tPosSeg" role="group" aria-label="Position du titre"></div>
         <p class="hint" id="tFreeNote"><span></span>Le titre se glisse aussi directement sur l'aperçu (aimanté sur ces positions et sur les axes du centre), ou au clavier (Tab puis flèches).<span class="illusonly"> La position est reprise dans le prompt : l'IA laisse cette zone calme.</span><span class="layoutonly"> Hors du gabarit, le titre et le sous-titre sont posés sur l'affiche, au-dessus de la carte ; leur place dans le gabarit reste vide. Gabarit Lettres : le titre forme la carte et reste en place.</span></p>
@@ -389,11 +392,11 @@
         <p class="fitnote" id="textWarn" aria-live="polite"></p>
         <h3>Modèles de texte</h3>
         <div class="chips" id="occasions"></div>
-        <h3>Taille des textes</h3>
+        <h3 id="hTextSize">Taille des textes</h3>
         <div class="slider"><label for="sTsAll">Tous les textes</label><output id="oTsAll"></output><input type="range" id="sTsAll" data-k="textScaleAll" min="70" max="140" step="5"></div>
         <div class="row end"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>
         <p class="fitnote" id="fitNote" aria-live="polite"></p>
-        <h3>Lignes</h3>
+        <h3 id="hLines">Lignes</h3>
         <p class="hint">Cochez les lignes à afficher sur l'affiche ; un texte décoché est conservé. Chaque ligne a sa propre taille ; un texte trop long est réduit pour tenir dans la largeur.</p>
         <label class="f show"><input type="checkbox" data-k="show.title" aria-label="Afficher le titre">Titre (ville)</label><input type="text" data-k="texts.title" aria-label="Titre">
         <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.title" min="60" max="150" step="5" aria-label="Taille du titre"><output id="oTs-title"></output></div>
@@ -421,7 +424,12 @@
       </div>
       <!-- EXPORT : rendu, sauvegarde, export (issue #51) -->
       <div class="tab" id="tab-export" role="tabpanel" aria-labelledby="tb-export">
-        <h2 class="sec">Rendu</h2>
+        <h2 class="sec" id="hChanges">Relecture : ce qui a changé</h2>
+        <p class="hint" id="changesHint">Réglages qui s'écartent des valeurs par défaut, par partie (le lieu, le cadrage et vos textes ne sont jamais comptés). « Voir » ouvre le réglage ; « Réinitialiser » ne rétablit que cette partie, et « Annuler » revient en arrière.</p>
+        <ul class="changes" id="changesList" aria-labelledby="hChanges"></ul>
+        <p class="hint" id="changesEmpty" hidden>Aucun réglage modifié : l'affiche suit les valeurs par défaut.</p>
+        <button class="btn wide" id="bReset" type="button" title="Revenir à tous les réglages par défaut, lieu et textes compris">Tout réinitialiser</button>
+        <h2 class="sec" id="hRender">Rendu</h2>
         <h3>Orientation</h3>
         <div class="seg" id="orientSeg"><button data-v="portrait" type="button">Portrait</button><button data-v="landscape" type="button">Paysage</button></div>
         <h3>Format d'impression</h3>
@@ -455,9 +463,15 @@
         </div>
       </div>
     </div>
+    <!-- Barre d'actions (toujours visible, panneau réduit compris) : aperçu, historique, comparaison, étape suivante ou export -->
     <div class="foot">
-      <button class="btn wide compare" id="bCompare" type="button" aria-pressed="false" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16" stroke="currentColor" stroke-width="1.8"/><rect x="2.5" y="4" width="15" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 5h6.5v10H3.5z" fill="currentColor" opacity=".35"/></svg><span>Maintenir pour comparer</span></button>
-      <div class="status"><span class="hist" role="group" aria-label="Historique"><button type="button" id="bUndo" aria-label="Annuler" title="Annuler (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 8l4 4M3 8h9a5 5 0 0 1 0 10H8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" id="bRedo" aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="m13 4 4 4-4 4M17 8H8a5 5 0 0 0 0 10h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span><i class="dot" id="stDot"></i><span id="stTxt">Prêt</span><button class="lnk" id="bReset" type="button" title="Revenir aux réglages par défaut">Réinitialiser</button><span class="uisz" role="group" aria-label="Taille du texte de l'interface"><button type="button" id="bUiSmaller" aria-label="Réduire le texte de l'interface">A−</button><button type="button" id="bUiLarger" aria-label="Agrandir le texte de l'interface">A+</button></span></div>
+      <div class="actbar" role="toolbar" aria-label="Actions">
+        <button class="abtn" id="bClean" type="button" title="Voir l'affiche seule" aria-label="Voir l'affiche seule"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M1.8 10S5 4.5 10 4.5 18.2 10 18.2 10 15 15.5 10 15.5 1.8 10 1.8 10z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span class="al">Aperçu</span></button>
+        <button class="abtn" type="button" id="bUndo" aria-label="Annuler" title="Annuler (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 8l4 4M3 8h9a5 5 0 0 1 0 10H8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="abtn" type="button" id="bRedo" aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="m13 4 4 4-4 4M17 8H8a5 5 0 0 0 0 10h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="abtn compare" id="bCompare" type="button" aria-pressed="false" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16" stroke="currentColor" stroke-width="1.8"/><rect x="2.5" y="4" width="15" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 5h6.5v10H3.5z" fill="currentColor" opacity=".35"/></svg><span class="al" aria-hidden="true">Comparer</span><span class="sr-only cmpTxt">Maintenir pour comparer</span></button>
+        <button class="btn pri abnext" id="bNext" type="button"><span><span class="nxp" id="bNextPre">Suivant : </span><span id="bNextTxt">Repère</span></span><svg class="nxa" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
     </div>
   </aside>
 </div>

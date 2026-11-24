@@ -99,9 +99,10 @@ async def main():
             async with page.expect_download(timeout=120000) as dl: await page.evaluate("__cms.showTab('export')"); await page.click('#bExport')
             await dl.value; await page.wait_for_timeout(300)
             for f in await page.evaluate(AUDIT): bad.setdefault(f['el'], f)
-            # Agrandissement de l'interface (A+)
-            await page.evaluate("__cms.showTab('textes')")
+            # Agrandissement de l'interface (A+, onglet Lieu, section Avancé), puis audit de l'onglet Textes
+            await page.evaluate("__cms.showTab('lieu'); document.getElementById('adv').open=true")
             for _ in range(2): await page.click('#bUiLarger')
+            await page.evaluate("__cms.showTab('textes')")
             await page.evaluate(DIS); await page.wait_for_timeout(400)
             for f in await page.evaluate(AUDIT): bad.setdefault(f['el'], f)
             for f in bad.values(): print(f"    {f['el']} : {f['r']}:1 (attendu {f['need']}:1)")
@@ -109,7 +110,7 @@ async def main():
             # Pastilles d'état : chaque couleur contre le fond du panneau
             dots = await page.evaluate(DOTS)
             res = await page.evaluate("""d=>{ const p=c=>c.match(/\\d+(\\.\\d+)?/g).map(Number), lin=v=>{v/=255;return v<=0.03928?v/12.92:((v+0.055)/1.055)**2.4}, L=c=>0.2126*lin(c[0])+0.7152*lin(c[1])+0.0722*lin(c[2]);
-                const bg=p(getComputedStyle(document.querySelector('.foot')).backgroundColor==='rgba(0, 0, 0, 0)'?getComputedStyle(document.getElementById('panel')).backgroundColor:getComputedStyle(document.querySelector('.foot')).backgroundColor);
+                const bg=p(getComputedStyle(document.getElementById('stPill')).backgroundColor);   // voyant d'état, sur la scène
                 return Object.fromEntries(Object.entries(d).map(([k,c])=>{ const a=L(p(c)), b=L(bg); return [k,+((Math.max(a,b)+0.05)/(Math.min(a,b)+0.05)).toFixed(2)]; })); }""", dots)
             check(all(v >= 3 for v in res.values()), f'{name} : pastilles d\'état à 3:1 au moins {res}')
             check(not errs, f'{name} : aucune erreur de page {errs[:2]}')

@@ -6,7 +6,7 @@
 // ou localStorage['cityMapStudio.debug']='1'. En usage normal, rien n'est exposé.
 const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ return localStorage.getItem('cityMapStudio.debug')==='1'; }catch(e){ return false; } })();
 async function boot(){
-  buildUI(); CMS.illus.init(); initSaves(); initSheet(); CMS.deps.init(); CMS.safe.init(); applyUiScale();
+  buildUI(); CMS.illus.init(); initSaves(); initSheet(); CMS.deps.init(); CMS.safe.init(); CMS.actbar.init(); CMS.changes.init(); applyUiScale();
   $('bConsentYes').onclick=giveConsent; $('bConsentFile').onclick=declineConsent; updateConsentInfo();
   dlgCancel.consent=declineConsent; initDialogs();
   showEnvWarning();
@@ -46,7 +46,7 @@ CMS.define('pwa', () => {
     $('updBanner').classList.toggle('show',!!on);
     if(ui.sheet==='peek') applySheet();
   }
-  /** Version servie par le worker actif ; « inconnue » sans worker, hors ligne sans réponse, ou en file:// */
+  /** Version servie par le worker actif (copie hors ligne) ; null sans worker, hors ligne sans réponse, ou en file:// */
   function version(){
     const c=sw() && sw().controller;
     if(!c) return Promise.resolve(null);
@@ -56,7 +56,15 @@ CMS.define('pwa', () => {
       c.postMessage({type:'GET_VERSION'},[ch.port2]);
     });
   }
-  function showVersion(){ version().then(v=>{ $('appVersion').textContent='Version : '+(v||'inconnue'); }); }
+  /** Version de la page (CMS.build), toujours connue ; celle du cache hors ligne n'est ajoutée que si elle diffère
+   *  (mise à jour en attente ou pas encore appliquée : utile au diagnostic). data-version : identifiants bruts. */
+  let swV=null;
+  function versionText(){
+    const B=CMS.build, el=$('appVersion');
+    el.dataset.version=B.version; if(swV) el.dataset.sw=swV; else delete el.dataset.sw;
+    return 'Version : '+B.label(B.version)+(swV && swV!==B.version ? ' · copie hors ligne : '+B.label(swV) : '');
+  }
+  function showVersion(){ $('appVersion').textContent=versionText(); version().then(v=>{ swV=v; $('appVersion').textContent=versionText(); }); }
   /** Un worker installé alors qu'un autre contrôle déjà la page : une mise à jour (pas la première installation) */
   function watch(w){
     if(!w) return;
@@ -94,7 +102,7 @@ CMS.define('pwa', () => {
       document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') check(); });
     }).catch(e=>console.warn('service worker',e.message));
   }
-  return {install,check,version,get checks(){ return checks; },get reg(){ return reg; }};
+  return {install,check,version,get swVersion(){ return swV; },get checks(){ return checks; },get reg(){ return reg; }};
 });
 const {install: installPwa} = CMS.pwa;
 boot();

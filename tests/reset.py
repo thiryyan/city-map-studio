@@ -1,4 +1,4 @@
-"""e2e : bouton « Réinitialiser » (retour aux réglages par défaut).
+"""e2e : bouton « Tout réinitialiser » (onglet Export) (retour aux réglages par défaut).
 
 Modifie gabarit, thème, couleur, police, textes, lignes affichées, repère,
 zoom, marge et calques, avec des données importées (moteur Fichier), une affiche
@@ -50,11 +50,15 @@ async def main():
         changed = json.loads(await page.evaluate(STATE))
         check(changed != default_state and await page.evaluate(SNAP) != base, 'réglages modifiés')
 
+        # « Tout réinitialiser » : en bas de la relecture, onglet Export ; la liste montre les parties modifiées
+        await page.click('#tabs [data-tab=export]'); await page.wait_for_timeout(300)
+        parts = await page.evaluate("[...document.querySelectorAll('#changesList [data-reset]')].map(b=>b.dataset.reset)")
+        check('typo' in parts and 'lines' in parts and 'trace' in parts, f'relecture : typographie, lignes, tracé et calques modifiés {parts}')
         await page.click('#bReset'); await page.wait_for_timeout(300)
         check(await page.inner_text('#bReset') == 'Confirmer ?', 'premier appui : confirmation demandée')
         check(json.loads(await page.evaluate(STATE)) == changed, 'premier appui : rien n\'est réinitialisé')
         await page.wait_for_timeout(4300)
-        check(await page.inner_text('#bReset') == 'Réinitialiser', 'confirmation annulée après 4 s')
+        check(await page.inner_text('#bReset') == 'Tout réinitialiser', 'confirmation annulée après 4 s')
 
         await page.click('#bReset'); await page.click('#bReset'); await page.wait_for_timeout(1200)
         now = json.loads(await page.evaluate(STATE))

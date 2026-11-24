@@ -110,6 +110,9 @@ async function runDiagnostics(){
   const line=(label)=>{ const d=h('div',{},h('span',{className:'wt'},'…'),h('span',{},label),h('small')); box.appendChild(d); return d; };
   const set=(d,r)=>{ d.children[0].className=r.ok?'ok':'ko'; d.children[0].textContent=r.ok?'✓':'✗'; d.children[2].textContent=r.info+(r.ms?` · ${r.ms} ms`:''); };
   const env=line('Contexte'); set(env,{ok:!ENV.framed&&navigator.onLine!==false, info:(ENV.framed?'aperçu intégré (sandbox) · ':'')+ENV.proto+(navigator.onLine===false?' · hors ligne':'')});
+  // Version : celle de la page, et celle du cache hors ligne si elle diffère (mise à jour pas encore appliquée)
+  const ver=line('Version'), B=CMS.build, swv=await CMS.pwa.version();
+  set(ver,{ok:!swv || swv===B.version, info:B.label(B.version)+(swv && swv!==B.version ? ' · copie hors ligne : '+B.label(swv)+' → « Mettre à jour » ou rechargez la page' : swv ? ' · copie hors ligne à jour' : ' · sans copie hors ligne')});
   const lib=line('Librairie MapLibre'); set(lib,{ok:mlLib==='ok', info: mlLib==='ok'?('chargée'+(mlCdn?' via '+mlCdn:'')):mlLib==='loading'?'chargement en cours':'aucun CDN joignable'});
   const tests=[
     ['Tuiles OpenFreeMap', s=>fetch(OFM_URL,{signal:s}).then(async r=>({ok:r.ok&&!!(await r.json()).tiles,status:r.status}))],

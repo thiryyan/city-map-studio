@@ -8,6 +8,7 @@ let uiScale=(()=>{ try{ const v=parseFloat(localStorage.getItem(UI_SCALE_KEY)); 
 function applyUiScale(){
   const r=document.documentElement.style;
   if(uiScale===1) r.removeProperty('font-size'); else r.fontSize=(uiScale*100)+'%';   // 100 % : réglage du système (Dynamic Type sur iOS)
+  $('uiScaleTxt').textContent=Math.round(uiScale*100)+' %';
   $('bUiSmaller').disabled=uiScale===UI_SCALES[0]; $('bUiLarger').disabled=uiScale===UI_SCALES[UI_SCALES.length-1];
   try{ uiScale===1 ? localStorage.removeItem(UI_SCALE_KEY) : localStorage.setItem(UI_SCALE_KEY,String(uiScale)); }catch(e){}
   requestAnimationFrame(()=>applySheet());
@@ -100,6 +101,7 @@ function showTab(name, focus){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));
   ui.tab=name; drawCards(name);
   if(name==='export') CMS.emit('tab:export');   // Mes affiches : nom proposé, liste à jour (features.js)
+  CMS.emit('tab:shown',name);   // barre d'actions : étape suivante ou export
 }
 /** Section « Avancé » de l'onglet Lieu : ouverte à la demande, mémorisée ; ouverte d'office quand elle devient utile */
 const ADV_KEY='cityMapStudio.advOpen';
@@ -339,10 +341,10 @@ function askReset(){
   const b=$('bReset');
   if(!b.classList.contains('confirm')){
     b.classList.add('confirm'); b.textContent='Confirmer ?';
-    clearTimeout(resetT); resetT=setTimeout(()=>{ b.classList.remove('confirm'); b.textContent='Réinitialiser'; },4000);
+    clearTimeout(resetT); resetT=setTimeout(()=>{ b.classList.remove('confirm'); b.textContent='Tout réinitialiser'; },4000);
     return;
   }
-  clearTimeout(resetT); b.classList.remove('confirm'); b.textContent='Réinitialiser';
+  clearTimeout(resetT); b.classList.remove('confirm'); b.textContent='Tout réinitialiser';
   resetAll();
 }
 /** Rétablit tous les réglages par défaut (lieu, cadrage, gabarit, thème, couleurs, repère, textes, calques).
@@ -589,7 +591,7 @@ CMS.define('compare', () => {
   function updateCompare(){
     const b=$('bCompare'), ok=compareAvailable(), was=!b.hidden;
     b.hidden=!ok; if(!ok) cmp=null;   // champs modifiés depuis : comparaison périmée
-    else b.querySelector('span').textContent=cmp.button;
+    else { b.querySelector('.cmpTxt').textContent=cmp.button; b.title=cmp.button; }
     if(was!==ok && ui.sheet==='peek') applySheet();   // bouton dans le pied du panneau
   }
   CMS.on('state:saved',updateCompare);
