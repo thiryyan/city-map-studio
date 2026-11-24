@@ -4,6 +4,7 @@
   "description": "Affiches cartographiques souvenir : rues, cours d'eau et repère sur le lieu d'une rencontre, export PNG A4 300 DPI.",
   "lang": "fr",
   "dir": "ltr",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

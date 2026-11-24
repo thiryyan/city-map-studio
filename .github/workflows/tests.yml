@@ -23,9 +23,15 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # historique complet : comparaison avec la branche de base (VERSION de sw.js)
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      # sw.js ou un fichier de sa liste APP modifié : VERSION doit changer, sinon le worker ne se met pas à jour (#65)
+      - name: Version du service worker
+        if: github.event_name == 'pull_request'
+        run: python tests/swversion.py "origin/${{ github.base_ref }}"
       # Pas de « playwright install --with-deps » (plusieurs minutes d'apt-get) : on pilote le Google Chrome
       # déjà présent sur l'image ubuntu-latest, via la variable CHROME lue par chaque test.
       - name: Dépendances

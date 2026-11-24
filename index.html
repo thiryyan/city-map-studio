@@ -68,6 +68,7 @@
     <button class="grab" id="grab" type="button" aria-label="Agrandir le panneau des réglages"><i></i></button>
     <div class="brand">City Map Studio<small>Atelier d'affiches cartographiques</small></div>
     <div class="banner" id="banner" role="status"><span id="bannerTxt"></span><button class="btn sm on" id="bBanner" type="button" hidden></button></div>
+    <div class="banner" id="updBanner" role="status"><span>Nouvelle version disponible</span><button class="btn sm on" id="bUpdate" type="button">Mettre à jour</button><button class="btn sm" id="bUpdLater" type="button" aria-label="Plus tard">✕</button></div>
     <div class="modes top" id="modeSeg" role="group" aria-label="Type d'affiche">
       <button data-v="map" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Carte</button>
       <button data-v="illus" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Illustration</button>
@@ -138,6 +139,7 @@
           <button class="btn wide mt10" id="bDiag" type="button">Diagnostiquer la connexion</button>
           <p class="hint" id="consentInfo"></p>
           <div class="diag" id="diag"></div>
+          <p class="hint" id="appVersion">Version : inconnue</p>
         </details>
         <button class="btn next maponly" type="button" data-next="repere">Étape suivante : le repère<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <p class="credit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL) · Tuiles <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · Rendu MapLibre GL · Géocodage Nominatim</p>

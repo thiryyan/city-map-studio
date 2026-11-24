@@ -24,7 +24,7 @@
 | E14 | Vie privée | Aucune ressource de présentation (librairie, polices, styles) n'est chargée depuis un tiers : l'adresse IP du visiteur n'est transmise qu'aux services de données cartographiques nécessaires au fonctionnement, et **seulement après son accord explicite** (§ 2.4). Les polices sont auto-hébergées, conformément à la jurisprudence RGPD sur Google Fonts (LG München, 20/01/2022, 3 O 17493/20). |
 | E15 | Sécurité | Politique de sécurité du contenu (CSP) en balise meta : aucun script ni style en ligne, réseau limité aux services cartographiques. Tout état venu de l'extérieur (lien partagé, `localStorage`) est validé champ par champ (`normState`). CDN de secours chargés avec empreinte SRI. |
 | E16 | Accessibilité | Fenêtres en `<dialog>` modal (focus retenu, Échap), commandes au clavier, cibles tactiles de 44 px, noms accessibles pour tous les champs, texte de remplacement de l'aperçu. |
-| E17 | Hors ligne | Application installable (manifeste) ; en http(s), un service worker garde l'application en cache (réseau d'abord) : démarrage et export du moteur Fichier sans réseau. Aucune ressource tierce mise en cache. |
+| E17 | Hors ligne | Application installable (manifeste) ; en http(s), un service worker garde l'application en cache (réseau d'abord) : démarrage et export du moteur Fichier sans réseau. Aucune ressource tierce mise en cache. Nouvelle version proposée par un bandeau, jamais imposée (§ 7.5). |
 
 ---
 
@@ -514,6 +514,18 @@ Les deux services distants (tuiles OpenFreeMap, Nominatim) et, en secours, les C
 | Aperçu intégré d'une application ou visionneuse | 2 uniquement | Réseau et téléchargements bloqués. |
 | Entièrement hors ligne | 2 (+ 1 si les tuiles sont autohébergées) | Une extraction **PMTiles** (Protomaps) peut être servie localement. |
 
+### 7.5. Application installée et mises à jour (issue #65)
+
+L'application installée (Chrome, Android, iOS) est le site dans une fenêtre dédiée : tout repose sur `sw.js` (cache) et `manifest.webmanifest` (icône, nom). Le navigateur voit une nouvelle version quand `sw.js` change d'au moins un octet ; d'où la constante `VERSION`, à changer à chaque modification de `sw.js` ou d'un fichier de sa liste `APP`.
+
+* **Stratégies de cache** : application (HTML, CSS, JS, manifeste, icônes) en **réseau d'abord**, avec une requête `cache: 'no-cache'` : le navigateur revalide auprès du serveur (304 peu coûteux) et ne sert jamais une copie périmée de son cache HTTP (GitHub Pages répond `Cache-Control: max-age=600`, sans possibilité de changer les en-têtes). `lib/` (versions figées) en cache d'abord. Le worker est enregistré avec `updateViaCache: 'none'`.
+* **Détection** : `reg.update()` au démarrage, puis au retour au premier plan (`visibilitychange`), au plus une fois par heure : une PWA peut rester des jours en arrière-plan sur mobile.
+* **Pas d'activation sans accord** : le nouveau worker reste en attente (`waiting`, pas de `skipWaiting()` à l'installation). Si la page est déjà contrôlée (donc pas à la première installation), un bandeau `#updBanner` affiche « Nouvelle version disponible » / **Mettre à jour** (✕ pour plus tard). Le bouton envoie `{type:'SKIP_WAITING'}` au worker ; `controllerchange` recharge alors la page **une seule fois**. Pas de rechargement automatique : un export ou un import d'illustration peut être en cours. L'état de l'affiche, enregistré en local, est retrouvé après le rechargement. Si un autre onglet a déjà activé la nouvelle version, le bandeau propose simplement de recharger.
+* **Version visible** : onglet Lieu, section Avancé, sous le diagnostic (`#appVersion`), lue auprès du worker actif (`{type:'GET_VERSION'}` sur un `MessageChannel`) ; « inconnue » sans worker (`file://`, tests sans `?sw`) ou sans réponse.
+* **Identité** : le manifeste fixe `"id": "./"` (identique à l'identité dérivée de `start_url`) : changer un jour `start_url` ne créera pas une seconde application.
+* **Garde-fous** : `tests/pwa.py` vérifie que tout fichier `.js` et `.css` de `js/`, `css/` et `lib/` (hors `lib/sky/`, chargé à la demande) figure dans `APP` et que tout élément de `APP` existe ; les polices woff2 sont mises en cache à leur premier usage. En CI, `tests/swversion.py` échoue si une pull request modifie `sw.js` ou un fichier de `APP` sans changer `VERSION`. Pas d'injection de hash au déploiement : elle imposerait un déploiement par GitHub Actions au lieu de la publication directe de `main`.
+* **Hors de notre contrôle** : la mise à jour de l'icône et du nom de l'application installée par Chrome est asynchrone (WebAPK sur Android) ; elle se vérifie sur l'URL publiée, pas par test automatique.
+
 ---
 
 ## 8. Organisation du code
@@ -600,7 +612,7 @@ Pour réduire cette portée partagée, les fichiers migrent vers des modules `CM
 | `ui.js` | Taille de l'interface, coordonnées, historique, `buildUI`, `changed`, vignettes, recherche, polices, comparaison avant / après un changement de thème. |
 | `illus.js` | `CMS.illus` : mode Illustration (§ 4.13) : prompt, import et ré-encodage de l'image, qualité d'impression, retouches, rendu de l'image et des textes, interface (sélecteur de mode, onglet Illustration, style du titre). |
 | `export.js` | Export PNG et PDF, contexte d'exécution, diagnostic, import de fichier. |
-| `main.js` | `boot`, application installable (`installPwa`), crochets de test. |
+| `main.js` | `boot`, application installable et mises à jour (`CMS.pwa` : `install`, `check`, `version`), crochets de test. |
 
 Principales sections :
 
@@ -652,7 +664,7 @@ Principales sections :
 | Aperçu intégré | Page dans une iframe : avertissement explicite dans l'onglet Lieu. |
 | Sécurité | Lien forgé (types faux, valeurs hors bornes, champs inconnus) : application intacte, valeurs invalides remplacées, rien d'invalide enregistré ; lien piégé (contenu décompressé > 512 Ko) refusé ; aucune violation de la CSP en `file://` ni en HTTP. |
 | Accessibilité | Fenêtres modales : focus placé et retenu, Échap, focus rendu ; vignettes utilisables au clavier ; cibles de 44 px ; tous les champs nommés. |
-| GitHub Pages et hors ligne | Servi sous `/city-map-studio/` sans ressource manquante ; manifeste et icônes valides ; après une visite, démarrage et export (moteur Fichier) sans réseau. |
+| GitHub Pages et hors ligne | Servi sous `/city-map-studio/` sans ressource manquante ; manifeste et icônes valides ; après une visite, démarrage et export (moteur Fichier) sans réseau ; cache HTTP contourné ; nouvelle version proposée par un bandeau (pas à la première installation), un seul rechargement, état conservé ; version affichée ; liste `APP` complète ; `VERSION` changée à chaque modification (CI). |
 
 ### 9.2. Tests automatisés
 
@@ -709,6 +721,6 @@ Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap
 | Lien forgé ou piégé, état corrompu, crochets de test | ✅ | `tests/security.py` |
 | Accessibilité au clavier et aux lecteurs d'écran | ✅ | `tests/a11y.py` (Chromium) ; ⏳ VoiceOver (iOS) et TalkBack (Android) à valider sur appareil. |
 | Politique de sécurité du contenu | ✅ | `tests/csp.py`, `tests/maplibre.py` |
-| Sous-chemin GitHub Pages, application installable, hors ligne | ✅ | `tests/pwa.py` (serveur local) ; ⏳ installation et hors ligne sur l'URL publiée, iOS et Android. |
+| Sous-chemin GitHub Pages, application installable, hors ligne, mises à jour | ✅ | `tests/pwa.py` (serveur local, déploiement simulé), `tests/swversion.py` (CI) ; ⏳ installation, hors ligne et mise à jour après un vrai déploiement sur l'URL publiée, Chrome Android et ordinateur, iOS ([#65](https://github.com/thiryyan/city-map-studio/issues/65)). |
 | Image d'aperçu des liens partagés | ⏳ à valider | L'adresse `https://thiryyan.github.io/city-map-studio/icons/og-image.jpg` suppose la publication à cette adresse ; à adapter en cas de domaine personnalisé. Image régénérée par `tests/make_og.py` à partir du rendu actuel. |
 | Téléchargement sur iOS Safari et Chrome Android (bouton, partage natif, appui long, 2480 × 3508 et 300 DPI conservés) | ✅ | Appareils réels ([#7](https://github.com/thiryyan/city-map-studio/issues/7)). |

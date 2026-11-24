@@ -232,7 +232,7 @@ const isSheet = () => !TWO_COL.matches;
 const app = document.getElementById('app');
 function sheetHeights(){
   const vh=app.clientHeight||innerHeight, pn=$('panel');
-  const peek=Math.ceil($('grab').offsetHeight+$('modeSeg').offsetHeight+$('tabs').offsetHeight+document.querySelector('.foot').offsetHeight+($('banner').classList.contains('show')?$('banner').offsetHeight:0))+1;
+  const peek=Math.ceil($('grab').offsetHeight+$('modeSeg').offsetHeight+$('tabs').offsetHeight+document.querySelector('.foot').offsetHeight+['banner','updBanner'].reduce((s,id)=>s+($(id).classList.contains('show')?$(id).offsetHeight:0),0))+1;
   return {peek, half:Math.max(peek+120,Math.round(vh*0.55)), full:Math.max(peek+120,Math.round(vh*0.84)), max:Math.round(vh*0.92)};
 }
 /** Applique la hauteur du panneau : cran nommé, ou hauteur libre en px pendant un glissement */

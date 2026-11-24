@@ -17,7 +17,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - **Nouveau service réseau** : l'ajouter à `connect-src` dans la CSP de `index.html`, en plus de `needConsent()`.
 - **Nouveau champ d'état** : l'ajouter à `DEFAULT_STATE` **et** à `normState()` (`js/state.js`), avec sa vérification ; sinon il est ignoré au chargement (enregistrement local, lien partagé, Mes affiches et fichiers de configuration passent tous par `normState`).
 - **Nouvelle version de MapLibre** : remplacer `lib/`, mettre à jour `ML_VERSION` et les empreintes `ML_SRI` (`openssl dgst -sha384 -binary lib/maplibre-gl.js | base64`).
-- **Nouveau fichier de l'application** (`js/`, `css/`) : l'ajouter à la liste `APP` de `sw.js` ; changer `VERSION` dans `sw.js` à chaque modification de cette liste ou de `sw.js`.
+- **Nouveau fichier de l'application** (`js/`, `css/`, `lib/` hors `lib/sky/`) : l'ajouter à la liste `APP` de `sw.js` (vérifié par `tests/pwa.py`). **Changer `VERSION`** dans `sw.js` à chaque modification de `sw.js`, de la liste `APP` ou d'un fichier qu'elle contient : sinon les applications installées ne voient pas la mise à jour (vérifié en CI par `tests/swversion.py`). Les utilisateurs se voient proposer « Mettre à jour » ; rien n'est rechargé sans leur accord (dossier, § 7.5).
 - **Fenêtre modale** : un `<dialog class="modal">` ouvert par `openDialog(id)` et fermé par `closeDialog(id)` (focus rendu) ; action de la touche Échap dans `dlgCancel`.
 - Tout bouton de sélection (vignette, carte) est un `<button type="button">` avec `aria-pressed` (`pressed(b, on)`) ; tout champ a un nom accessible (`<label for>` ou `aria-label`).
 - **Couleurs de l'interface** : passer par les variables de `:root` (`css/app.css`) ; texte 4,5:1 et composants 3:1 au moins, états inactifs compris (`--off`), vérifiés par `tests/contrast.py`.
@@ -72,7 +72,8 @@ python tests/security.py         # lien forgé ou piégé, état corrompu, croch
 python tests/a11y.py             # fenêtres modales, clavier, cibles tactiles, noms accessibles
 python tests/contrast.py         # contrastes de l'interface (WCAG 1.4.3 et 1.4.11), états inactifs compris
 python tests/csp.py              # aucune violation de la politique de sécurité du contenu
-python tests/pwa.py              # sous-chemin GitHub Pages, manifeste, service worker, hors ligne
+python tests/pwa.py              # sous-chemin GitHub Pages, manifeste, service worker, hors ligne, liste APP, mise à jour (déploiement simulé)
+python tests/swversion.py        # VERSION de sw.js changée si sw.js ou un fichier de APP diffère de origin/main (lancé par la CI)
 python tests/illus.py            # mode Illustration : prompt, import (refus GIF / fichier endommagé), qualité, cadrage, retouches, titre, export
 python tests/illustore.py        # illustrations conservées : IndexedDB, rechargement, Mes affiches, fichiers avec images, lien, image manquante, nettoyage
 python tests/illusmix.py         # Carte + illustration : médaillon, vignette, haut / bas, côte à côte, fondu ; prompt, qualité, harmonisation, gestes, pistes lues dans la carte, export

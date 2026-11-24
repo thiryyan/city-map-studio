@@ -4,12 +4,18 @@
  *   l'accord de l'utilisateur) passent directement au réseau, sans jamais être mis en cache ici.
  * - Application (HTML, CSS, JS, manifeste, icônes) : réseau d'abord, copie en cache si le réseau manque.
  *   En ligne, la version publiée est toujours servie : pas de mélange d'anciens et de nouveaux fichiers après une mise à jour.
+ *   Requête « no-cache » : revalidation auprès du serveur, jamais de copie périmée du cache HTTP
+ *   (GitHub Pages répond Cache-Control: max-age=600).
  * - lib/ (MapLibre, polices, données du ciel ; versions figées) : cache d'abord.
+ * - Mise à jour (issue #65) : un nouveau worker attend (« waiting ») ; la page propose « Mettre à jour » et n'envoie
+ *   {type:'SKIP_WAITING'} qu'à l'accord de l'utilisateur. {type:'GET_VERSION'} renvoie VERSION sur le port fourni.
  *
- * Changer VERSION à chaque modification de la liste APP ci-dessous ou de ce fichier.
+ * Changer VERSION à chaque modification de la liste APP ci-dessous, de ce fichier ou d'un fichier de APP
+ * (vérifié par la CI : tests/swversion.py). Tout fichier de js/, css/ et lib/ (hors lib/sky/, polices woff2 et licences)
+ * doit figurer dans APP (tests/pwa.py).
  */
 'use strict';
-const VERSION = 'cms-2026-11-23a';
+const VERSION = 'cms-2026-11-24a';
 const APP = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png',
   'css/app.css',
@@ -19,7 +25,14 @@ const APP = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
+  // Pas de skipWaiting() ici : à la première installation, le worker s'active seul (aucun autre en place) ;
+  // ensuite, il attend l'accord de l'utilisateur pour ne pas mêler ancien JS en mémoire et nouveaux fichiers.
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(APP.map(u => new Request(u, {cache: 'no-cache'})))));
+});
+self.addEventListener('message', e => {
+  const t = e.data && e.data.type;
+  if (t === 'SKIP_WAITING') self.skipWaiting();
+  else if (t === 'GET_VERSION' && e.ports[0]) e.ports[0].postMessage(VERSION);
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -30,7 +43,7 @@ self.addEventListener('activate', e => {
 async function networkFirst(req) {
   const cache = await caches.open(VERSION);
   try {
-    const res = await fetch(req);
+    const res = await fetch(req, {cache: 'no-cache'});   // revalidation (304 peu coûteux), jamais de copie HTTP périmée
     if (res.ok) cache.put(req, res.clone());
     return res;
   } catch (err) {
