@@ -234,28 +234,18 @@
       </div>
       <!-- STYLE -->
       <div class="tab" id="tab-style" role="tabpanel" aria-labelledby="tb-style">
-        <div class="layoutonly">
         <h3>Ambiances</h3>
         <p class="hint">Un toucher pour un ensemble assorti (thème, polices, gabarit, repère, papier) ; tout reste modifiable ensuite.</p>
         <div class="fonts ambs" id="ambiances" role="group" aria-label="Ambiances"></div>
-        </div>
-        <div class="maponly">
         <h3>Thème</h3>
         <div class="chips fcats" id="themeCats" role="group" aria-label="Catégories de thèmes"></div>
         <div class="themes" id="themes" role="group" aria-label="Thèmes"></div>
+        <p class="hint illusonly">Le thème donne le papier et la couleur « Auto » des textes (onglet Textes).</p>
         <p class="fitnote" id="contrastWarn" aria-live="polite"></p>
-        </div>
-        <h3>Polices</h3>
-        <div class="fonts duos" id="duos" role="radiogroup" aria-label="Duo de polices"></div>
-        <div class="chips fcats" id="fontCats" role="group" aria-label="Catégories de polices"></div>
-        <h3>Police du titre</h3>
-        <div class="fonts" id="fontTitleSeg" role="radiogroup" aria-label="Police du titre"></div>
-        <h3>Police du texte</h3>
-        <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police du texte"></div>
-        <p class="hint">Une police manuscrite n'est jamais mise en capitales : réservez-la à la dédicace et aux noms.</p>
         <h3>Papier</h3>
         <div class="chips" id="textures"></div>
         <label class="tog">Plis d'une carte dépliée<input type="checkbox" data-k="folds"></label>
+        <label class="tog">Dorure (reflets métalliques des textes, filets et repères)<input type="checkbox" data-k="fx.foil"></label>
         <details class="adv maponly" id="styleMore">
           <summary><span>Plus de réglages</span><small>gabarit, effets, calques, couleurs</small></summary>
           <div class="layoutonly">
@@ -290,7 +280,6 @@
             <button class="chip" data-gold="marker">Repère</button>
             <button class="chip" data-gold="frame">Filets</button>
           </div>
-          <label class="tog">Dorure (reflets métalliques des textes, filets et repères)<input type="checkbox" data-k="fx.foil"></label>
           <h3>Tracé</h3>
           <div class="slider"><label for="sStroke">Épaisseur des rues</label><output id="oStroke"></output><input type="range" id="sStroke" data-k="stroke" min="0.5" max="2.5" step="0.05"></div>
           <div class="slider"><label for="sWater">Mise en valeur des cours d'eau</label><output id="oWater"></output><input type="range" id="sWater" data-k="waterMult" min="0.5" max="3" step="0.1"></div>
@@ -360,25 +349,31 @@
       </div>
       <!-- TEXTES -->
       <div class="tab" id="tab-textes" role="tabpanel" aria-labelledby="tb-textes">
-        <div class="illusonly">
-          <h3>Style du titre</h3>
-          <div class="seg" id="tStyleSeg" role="group" aria-label="Style du titre"><button data-v="vintage" type="button">Vintage</button><button data-v="font" type="button">Police choisie ci-dessous</button></div>
-          <p class="hint">« Vintage » : grandes capitales condensées et ombre décalée, à la manière des affiches de voyage.</p>
-          <h3>Couleurs des textes</h3>
-          <div class="swrow"><span id="swTextLbl">Lettres</span><div class="swatches" id="swText" role="group" aria-labelledby="swTextLbl"></div></div>
-          <div class="swrow"><span id="swShadowLbl">Ombre</span><div class="swatches" id="swShadow" role="group" aria-labelledby="swShadowLbl"></div></div>
-          <div class="swrow"><span id="swOutlineLbl">Contour</span><div class="swatches" id="swOutline" role="group" aria-labelledby="swOutlineLbl"></div></div>
-          <div class="slider"><label for="sShadowOff">Décalage de l'ombre</label><output id="oShadowOff"></output><input type="range" id="sShadowOff" data-k="illusText.off" min="1" max="12" step="1"></div>
-          <h3>Position des textes</h3>
-          <div class="posgrid" id="tPosSeg" role="group" aria-label="Position du titre"></div>
-          <p class="hint" id="tFreeNote"><span></span>Le titre se glisse aussi directement sur l'aperçu (aimanté sur ces positions et sur les axes du centre), ou au clavier (Tab puis flèches). La position est reprise dans le prompt : l'IA laisse cette zone calme.</p>
-          <h3>Position des lignes du bas</h3>
-          <p class="hint">Dédicace, noms, date et coordonnées, en un bloc.</p>
-          <div class="row"><button class="chip" type="button" id="fAutoBtn" aria-pressed="true">Auto : à l'opposé du titre</button></div>
-          <div class="posgrid mt8" id="fPosSeg" role="group" aria-label="Position des lignes du bas"></div>
-          <p class="hint" id="fFreeNote"><span></span>Ce bloc se glisse aussi sur l'aperçu. Vignette : titre et lignes se placent à gauche, au centre ou à droite de la bande.</p>
-          <p class="fitnote" id="textWarn" aria-live="polite"></p>
-        </div>
+        <h3>Typographie</h3>
+        <p class="hint">« Vintage » : grandes capitales condensées, à la manière des affiches de voyage. Les duos accordent la police du titre et celle du texte.</p>
+        <div class="fonts duos" id="duos" role="radiogroup" aria-label="Duo de polices"></div>
+        <div class="chips fcats" id="fontCats" role="group" aria-label="Catégories de polices"></div>
+        <h3>Police du titre</h3>
+        <div class="fonts" id="fontTitleSeg" role="radiogroup" aria-label="Police du titre"></div>
+        <h3>Police du texte</h3>
+        <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police du texte"></div>
+        <p class="hint">Une police manuscrite n'est jamais mise en capitales : réservez-la à la dédicace et aux noms.</p>
+        <h3>Couleurs des textes</h3>
+        <div class="swrow"><span id="swTextLbl">Lettres</span><div class="swatches" id="swText" role="group" aria-labelledby="swTextLbl"></div></div>
+        <div class="swrow"><span id="swShadowLbl">Ombre</span><div class="swatches" id="swShadow" role="group" aria-labelledby="swShadowLbl"></div></div>
+        <div class="swrow"><span id="swOutlineLbl">Contour</span><div class="swatches" id="swOutline" role="group" aria-labelledby="swOutlineLbl"></div></div>
+        <div class="slider"><label for="sShadowOff">Décalage de l'ombre</label><output id="oShadowOff"></output><input type="range" id="sShadowOff" data-k="illusText.off" min="1" max="12" step="1"></div>
+        <p class="hint">« Auto » suit le thème (onglet Style). Ombre et contour gardent les lettres lisibles sur une illustration ou sur la carte.</p>
+        <h3>Position du titre</h3>
+        <div class="row layoutonly"><button class="chip" type="button" id="tLayBtn" aria-pressed="true">Dans le gabarit</button></div>
+        <div class="posgrid mt8" id="tPosSeg" role="group" aria-label="Position du titre"></div>
+        <p class="hint" id="tFreeNote"><span></span>Le titre se glisse aussi directement sur l'aperçu (aimanté sur ces positions et sur les axes du centre), ou au clavier (Tab puis flèches).<span class="illusonly"> La position est reprise dans le prompt : l'IA laisse cette zone calme.</span><span class="layoutonly"> Hors du gabarit, le titre et le sous-titre sont posés sur l'affiche, au-dessus de la carte ; leur place dans le gabarit reste vide. Gabarit Lettres : le titre forme la carte et reste en place.</span></p>
+        <h3>Position des lignes du bas</h3>
+        <p class="hint">Dédicace, noms, date et coordonnées, en un bloc.</p>
+        <div class="row"><button class="chip" type="button" id="fAutoBtn" aria-pressed="true">Auto : à l'opposé du titre</button></div>
+        <div class="posgrid mt8" id="fPosSeg" role="group" aria-label="Position des lignes du bas"></div>
+        <p class="hint" id="fFreeNote"><span></span>Ce bloc se glisse aussi sur l'aperçu.<span class="mixonly"> Vignette : titre et lignes se placent à gauche, au centre ou à droite de la bande.</span></p>
+        <p class="fitnote" id="textWarn" aria-live="polite"></p>
         <h3>Modèles de texte</h3>
         <div class="chips" id="occasions"></div>
         <h3>Taille des textes</h3>

@@ -80,13 +80,22 @@ function normState(src){
       prompt:{pistes, moment:V.oneOf(p.moment,keys(C.MOMENTS),d.prompt.moment), saison:V.oneOf(p.saison,keys(C.SAISONS),d.prompt.saison),
         palette:V.oneOf(p.palette,C.PALETTES,d.prompt.palette), lang:V.oneOf(p.lang,C.LANGS,d.prompt.lang)}};
   }
-  /** Textes des modes illustrés : ombre et contour acceptent '' (aucun) */
+  /** Style et position des textes : ombre et contour acceptent '' (aucun) ; style, lettres et ombre acceptent 'auto'.
+   *  Migration d'un état antérieur aux valeurs Auto (sans v:2, #74) : style Vintage → Auto (même rendu dans chaque mode) ;
+   *  affiche Carte : lettres, ombre et contour reviennent à Auto (le mode Carte ne les dessinait pas : rendu inchangé). */
   function normIllusText(src,d){
-    const o=V.obj(src), hexOrNone=(v,dv)=>v==='' ? '' : V.hex(v,dv);
+    const o=V.obj(src), C=CMS.illusConf, hexOrNone=(v,dv)=>v==='' ? '' : V.hex(v,dv), orAuto=(v,f)=>v==='auto' ? 'auto' : f();
     const pt=p=>{ const q=V.obj(p); return Number.isFinite(q.x) && Number.isFinite(q.y) ? {x:V.num(q.x,0.5,0,1), y:V.num(q.y,0.5,0,1)} : null; };   // position libre
-    return {style:V.oneOf(o.style,CMS.illusConf.TSTYLES,d.style), color:V.hex(o.color,d.color), shadow:hexOrNone(o.shadow,d.shadow),
-      outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,CMS.illusConf.POS,d.pos),
-      free:pt(o.free), fpos:V.oneOf(o.fpos,['auto',...CMS.illusConf.POS],d.fpos), ffree:pt(o.ffree)};
+    const m=V.obj(o.map), dm=d.map;
+    const T={v:2, style:V.oneOf(o.style,C.TSTYLES,d.style), color:orAuto(o.color,()=>V.hex(o.color,d.color)), shadow:orAuto(o.shadow,()=>hexOrNone(o.shadow,d.shadow)),
+      outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,C.POS,d.pos),
+      free:pt(o.free), fpos:V.oneOf(o.fpos,['auto',...C.POS],d.fpos), ffree:pt(o.ffree),
+      map:{pos:V.oneOf(m.pos,['auto',...C.POS],dm.pos), free:pt(m.free), fpos:V.oneOf(m.fpos,['auto',...C.POS],dm.fpos), ffree:pt(m.ffree)}};
+    if(o.v!==2 && Object.keys(o).length){
+      if(T.style==='vintage') T.style='auto';
+      if(V.oneOf(s.mode,C.MODES,'map')==='map') Object.assign(T,{color:'auto',shadow:'auto',outline:''});
+    }
+    return T;
   }
 }
 let st = loadState();

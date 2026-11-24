@@ -84,8 +84,8 @@ async def main():
         MORE = "[document.getElementById('styleMore').open, localStorage.getItem('cityMapStudio.styleMoreOpen')]"
         check(await page.evaluate(MORE) == [False, None] and not await page.is_visible('#colorsBox') and await page.is_visible('#themes'),
               'Style : « Plus de réglages » repliée par défaut, Essentiel visible')
-        ess = await page.evaluate("['#ambiances','#themes','#duos','#fontSeg','#textures'].map(q=>!!document.querySelector(q)?.offsetParent)")
-        check(all(ess), f'Style, Essentiel : ambiances, thèmes, polices, papier {ess}')
+        ess = await page.evaluate("['#ambiances','#themes','#textures','[data-k=\"fx.foil\"]'].map(q=>!!document.querySelector(q)?.closest('label,div').offsetParent).concat(['#duos','#fontSeg'].map(q=>!document.querySelector(q).offsetParent))")
+        check(all(ess), f'Style, Essentiel : ambiances, thèmes, papier, dorure ; polices dans l\'onglet Textes (#72) {ess}')
         await page.click('#styleMore summary'); await page.wait_for_timeout(150)
         check(await page.evaluate(MORE) == [True, '1'] and await page.is_visible('#colorsBox'), '« Plus de réglages » ouverte et mémorisée')
         await page.click('#styleMore summary'); await page.wait_for_timeout(150)
@@ -164,8 +164,8 @@ async def main():
         check(box == [True, True], 'bouton calendrier ≥ 44 px, entièrement couvert par le champ date natif (iOS)')
 
         # ---------- Polices ----------
-        await page.evaluate("__cms.showTab('style')")   # les polices sont dans l'onglet Style
-        smp = await page.evaluate("[...document.querySelectorAll('#fontTitleSeg button:not([data-v=\\'\\']) .smp')].map(e=>e.textContent)")
+        await page.evaluate("__cms.showTab('textes')")   # les polices sont dans l'onglet Textes (#72)
+        smp = await page.evaluate("[...document.querySelectorAll('#fontTitleSeg button:not([data-v=\\'\\']):not([data-v=\\'*vintage\\']) .smp')].map(e=>e.textContent)")
         check(len(smp) == 11 and all(t == 'Tours' for t in smp), f'aperçu des polices du titre avec le titre saisi {smp}')
         await page.click('#fontSeg [data-v=garamond]')
         check(await page.evaluate("[__cms.st.font, document.querySelector('#fontSeg [data-v=garamond]').getAttribute('aria-checked')]") == ['garamond', 'true'], 'police choisie (radio ARIA)')

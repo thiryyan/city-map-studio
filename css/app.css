@@ -374,3 +374,6 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 .welstrip .hint{margin:4px 0 8px}
 /* Zone de sécurité (#60) : aperçu seulement, lisible sur papier clair comme sombre */
 .safeguide{position:absolute;z-index:3;pointer-events:none;border:1px dashed #d4892a;box-shadow:0 0 0 1px #ffffff55}
+/* Pastille « Auto » des couleurs des textes (#74) : libellé, et en bas la couleur que donne le thème */
+.sw.auto{display:inline-flex;align-items:center;justify-content:center;background:var(--panel2);color:var(--txt);font-size:.6875rem;font-weight:600;padding-bottom:8px}
+.sw.auto i{position:absolute;left:0;right:0;bottom:0;height:9px;border-top:1px solid var(--line)}

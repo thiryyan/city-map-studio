@@ -157,7 +157,7 @@ function applyAmbiance(k){
   const a=AMBIANCES.find(x=>x[0]===k); if(!a) return; const p=a[2];
   commitHistory(0);   // étape d'historique explicite : un choix fait juste après le démarrage reste annulable
   const before=cmpSnap();
-  st.theme=p.theme; st.colors={...THEMES[p.theme].c}; st.font=p.font; st.fontTitle=p.fontTitle; st.markerStyle=p.markerStyle; st.texture=p.texture;
+  st.theme=p.theme; st.colors={...THEMES[p.theme].c}; st.font=p.font; st.fontTitle=p.fontTitle; st.illusText.style='auto'; st.markerStyle=p.markerStyle; st.texture=p.texture;
   st.fx={...DEFAULT_STATE.fx,...(p.fx||{})}; st.orn={...DEFAULT_STATE.orn,...(p.orn||{})}; st.folds=!!p.folds;
   setLayout(p.layout,true);
   noteChange(before,`l'ambiance « ${a[1]} »`);

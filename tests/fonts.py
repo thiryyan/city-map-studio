@@ -30,7 +30,7 @@ async def check(b, url, label):
     await page.route('**/*', route)
     await page.goto(url); await page.wait_for_timeout(1200)
     await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
-    await page.click('#tabs [data-tab=style]')   # les polices sont dans l'onglet Style (« Essentiel »)
+    await page.click('#tabs [data-tab=textes]')   # les polices sont dans l'onglet Textes (section Typographie, #72)
     for f in FAMILIES:
         await page.click(f'#fontSeg [data-v={f}]'); await page.wait_for_timeout(300)
         # variantes attendues : celles que déclare FONTS[f].load (certaines familles n'ont pas d'italique)
