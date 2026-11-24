@@ -63,7 +63,7 @@ python tests/city.py             # ville réaliste (tests/city.json) : import JS
 python tests/saves.py            # Mes affiches : enregistrer, restaurer, fichier de configuration, sauvegarde complète, fichiers piégés
 python tests/make_og.py          # régénère icons/og-image.jpg (aperçu des liens partagés) avec le rendu actuel
 python tests/art.py              # pistes artistiques : effets, dorure, ornements, Lettres, papiers, ciel, palette d'une photo
-python tests/compare.py          # comparer avant / après un changement de thème
+python tests/compare.py          # comparer avant / après un changement de thème, d'ambiance, de modèle ou d'effet
 python tests/welcome.py          # ambiance proposée au premier lancement, sans fenêtre bloquante
 python tests/fonts.py            # polices auto-hébergées, aucun appel tiers
 python tests/consent.py          # accord préalable : aucune requête tierce sans accord

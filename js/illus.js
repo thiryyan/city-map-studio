@@ -742,9 +742,9 @@ CMS.define('illus', () => {
     const k=80/Math.max(img.prev.width,img.prev.height), c=canvasOf(img.prev.width*k,img.prev.height*k), x=c.getContext('2d',{willReadFrequently:true});
     x.drawImage(img.prev,0,0,c.width,c.height); const pal=paletteOf(x.getImageData(0,0,c.width,c.height).data);
     if(!pal.length){ toast('Aucune couleur exploitable dans cette illustration.',true); return; }
-    const before={theme:st.theme,colors:{...st.colors}};
+    const before=cmpSnap();
     st.colors=photoTheme(pal,v==='dark'); setSeg('harmSeg',v);
-    noteThemeChange(before); refreshColors(); changed({all:true,cards:true});
+    noteChange(before,{theme:true}); refreshColors(); changed({all:true,cards:true});
     toast('Couleurs de la carte tirées de l\u2019illustration · « Annuler » pour revenir');
   }
   function exportState(){

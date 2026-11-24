@@ -132,8 +132,8 @@ function applySnap(s){
 /** Fige tout de suite l'étape en cours (action ponctuelle : réinitialisation, changement de moteur), puis ignore
  *  pendant un instant les petits recentrages de la carte qui suivent, pour ne pas créer de fausses étapes. */
 function commitHistory(quietMs=1500){ clearTimeout(saveT); try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} hist.quietUntil=0; recordHistory(); hist.quietUntil=Date.now()+quietMs; }
-function undo(){ compareTheme(false); if(!hist.past.length) return; clearTimeout(saveT); recordHistory(); if(!hist.past.length) return; hist.future.push(hist.cur); applySnap(hist.past.pop()); toast('Modification annulée'); }
-function redo(){ compareTheme(false); if(!hist.future.length) return; hist.past.push(hist.cur); applySnap(hist.future.pop()); toast('Modification rétablie'); }
+function undo(){ compareBefore(false); if(!hist.past.length) return; clearTimeout(saveT); recordHistory(); if(!hist.past.length) return; hist.future.push(hist.cur); applySnap(hist.past.pop()); toast('Modification annulée'); }
+function redo(){ compareBefore(false); if(!hist.future.length) return; hist.past.push(hist.cur); applySnap(hist.future.pop()); toast('Modification rétablie'); }
 
 function buildUI(){
   // onglets
@@ -212,7 +212,7 @@ function buildUI(){
   THEME_CATS.forEach(([k,n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'+(i?'':' on'); b.textContent=n; b.dataset.v=k;
     b.onclick=()=>{ document.querySelectorAll('#themeCats .chip').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll('#themes .theme').forEach(t=>t.hidden=!!k && t.dataset.cat!==k); }; $('themeCats').appendChild(b); });
   // papier
-  TEXTURES.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.dataset.v=k; b.textContent=n; b.onclick=()=>{ st.texture=k; setSeg('textures',k); drawTexture(); saveState(); }; $('textures').appendChild(b); });
+  TEXTURES.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.dataset.v=k; b.textContent=n; b.onclick=()=>{ const before=cmpSnap(); st.texture=k; setSeg('textures',k); noteChange(before,`le papier « ${n} »`); drawTexture(); saveState(); }; $('textures').appendChild(b); });
   // modèles de texte
   OCCASIONS.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.onclick=()=>applyOccasion(k); $('occasions').appendChild(b); });
   // polices : duos, catégories, police du titre, police du texte
@@ -248,8 +248,8 @@ function buildUI(){
   Object.entries(THEMES).forEach(([k,t])=>{
     const d=h('button',{type:'button',className:'theme',dataset:{v:k,cat:t.cat}},
       h('span',{className:'sw'},...['paper','land','water','roadMajor','marker'].map(c=>h('i',{style:{background:t.c[c]}}))),h('span',{className:'n'},t.name));
-    d.onclick=()=>{ const before={theme:st.theme,colors:{...st.colors}};
-      st.theme=k; st.colors={...t.c}; noteThemeChange(before); refreshColors(); changed({all:true,cards:true}); }; th.appendChild(d); });
+    d.onclick=()=>{ const before=cmpSnap();
+      st.theme=k; st.colors={...t.c}; noteChange(before,{theme:true}); refreshColors(); changed({all:true,cards:true}); }; th.appendChild(d); });
   initCompare();
   // couleurs
   const co=$('colors');
@@ -274,7 +274,9 @@ function buildUI(){
     const k=el.dataset.k;
     el.addEventListener('input',()=>{
       const v = el.type==='checkbox' ? el.checked : el.type==='range' ? parseFloat(el.value) : el.value;
+      const cmpLabel=el.type==='checkbox' && /^(fx|orn)\.|^folds$/.test(k) ? CMS.compare.fxLabel(el,k) : '', before=cmpLabel && cmpSnap();
       setPath(st,k,v); syncOutputs();
+      if(cmpLabel) noteChange(before,cmpLabel);
       if(k==='texts.title'||k==='texts.names'||k==='texts.dedication') updateFontSamples();
       if(k.startsWith('sky.')){ drawUnder(); saveState(); return; }
       if(k==='folds'){ drawTexture(); saveState(); return; }
@@ -499,39 +501,66 @@ async function loadFonts(){
 loadFonts.used=()=>[fontOf('title'),fontOf('','dedication'),fontOf('','date'),...(st.mode!=='map' && st.illusText.style==='vintage' ? [FONTS.bebas] : [])];
 function fontsReady(){ try{ return loadFonts.used().flatMap(f=>f.load).every(f=>document.fonts.check(f)); }catch(e){ return true; } }
 
-// ---------- Comparer avant / après un changement de thème ----------
-/** Dernier changement de thème : couleurs d'avant, et couleurs appliquées (le bouton disparaît dès qu'elles changent :
- *  autre thème, couleur retouchée, annulation). Un appui maintenu sur « Comparer » montre l'affiche avec le thème
- *  précédent ; le relâcher rétablit le thème choisi. Ni l'état enregistré ni l'historique ne voient l'aperçu. */
-let themeCmp=null;
-function noteThemeChange(before){
-  const after=JSON.stringify(st.colors);
-  if(JSON.stringify(before.colors)===after) return;   // même thème reconfirmé : la comparaison précédente reste valable
-  themeCmp={before,after};
-}
-const compareAvailable=()=>!!themeCmp && themeCmp.after===JSON.stringify(ui.comparing?ui.cmpKeep.colors:st.colors);
-const themeName=t=>THEMES[t.theme] && JSON.stringify(THEMES[t.theme].c)===JSON.stringify(t.colors) ? THEMES[t.theme].name : 'couleurs précédentes';
-function updateCompare(){
-  const b=$('bCompare'), ok=compareAvailable();
-  b.hidden=!ok; if(!ok){ themeCmp=null; return; }   // couleurs modifiées depuis : comparaison périmée
-  b.querySelector('span').textContent=`Maintenir pour comparer avec « ${themeName(themeCmp.before)} »`;
-}
-function compareTheme(on){
-  if(on===!!ui.comparing) return;
-  if(on && !compareAvailable()) return;
-  if(on){ commitHistory(0); ui.cmpKeep={theme:st.theme,colors:st.colors}; st.theme=themeCmp.before.theme; st.colors={...themeCmp.before.colors}; }
-  else { st.theme=ui.cmpKeep.theme; st.colors=ui.cmpKeep.colors; ui.cmpKeep=null; }
-  ui.comparing=on;
-  const b=$('bCompare'); b.setAttribute('aria-pressed',String(on)); b.classList.toggle('on',on);
-  const badge=$('cmpBadge'); badge.hidden=!on; if(on) badge.textContent='Avant · '+themeName(themeCmp.before);
-  drawUnder(); drawTexture(); mlRestyle(); renderMap(false); scheduleOver();   // rendu seulement : rien n'est enregistré
-}
-function initCompare(){
-  const b=$('bCompare'), stop=()=>compareTheme(false);
-  b.addEventListener('pointerdown',e=>{ if(e.button) return; e.preventDefault(); b.setPointerCapture(e.pointerId); compareTheme(true); });
-  b.addEventListener('pointerup',stop); b.addEventListener('pointercancel',stop); b.addEventListener('lostpointercapture',stop);
-  b.addEventListener('keydown',e=>{ if((e.key===' '||e.key==='Enter') && !e.repeat){ e.preventDefault(); compareTheme(true); } });
-  b.addEventListener('keyup',e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); stop(); } });
-  b.addEventListener('blur',stop); b.addEventListener('contextmenu',e=>e.preventDefault());   // appui long sur mobile : pas de menu
-  addEventListener('blur',stop); document.addEventListener('visibilitychange',stop);
-}
+// ---------- Comparer avant / après un changement (thème, ambiance, modèle, effet) ----------
+/** Dernier changement « comparable » (issue #63) : thème ou palette, ambiance, modèle de texte, effet de tracé, ornement,
+ *  plis, papier. On retient les seuls champs modifiés (valeurs d'avant et d'après) : le bouton disparaît dès que l'un
+ *  d'eux change de nouveau (autre choix, retouche, annulation), mais pas pour une autre modification (titre, cadrage).
+ *  Un appui maintenu sur « Comparer » montre l'affiche avec les valeurs d'avant ; le relâcher rétablit les valeurs
+ *  choisies, à l'identique. Ni l'état enregistré ni l'historique ne voient l'aperçu. Moteur et cadrage ne sont jamais
+ *  comparés : ils relanceraient des requêtes réseau ou n'apporteraient rien. */
+CMS.define('compare', () => {
+  const CMP_SKIP=new Set(['engine','center','zoom','marker','active','place2']);
+  let cmp=null;
+  /** Instantané à prendre juste avant le changement */
+  const cmpSnap=()=>JSON.parse(JSON.stringify(st));
+  /** À appeler juste après le changement : before (cmpSnap), label (badge « Avant … » et bouton), ou {theme:true} */
+  function noteChange(before,label){
+    const keys=Object.keys(st).filter(k=>!CMP_SKIP.has(k) && JSON.stringify(before[k])!==JSON.stringify(st[k]));
+    if(!keys.length) return;   // même choix reconfirmé : la comparaison précédente reste valable
+    const pick=o=>JSON.stringify(keys.map(k=>o[k]));
+    const vals={}; for(const k of keys) vals[k]=before[k];
+    const name=label && label.theme ? themeName(before) : '';
+    cmp={keys,vals,after:pick(st),pick,
+      button: name ? `Maintenir pour comparer avec « ${name} »` : `Maintenir pour comparer : avant ${label}`,
+      badge: name ? 'Avant · '+name : 'Avant '+label};
+    updateCompare();
+  }
+  /** Libellé d'un effet, d'un ornement ou des plis : « l'effet « Lueur » », « le retrait de « Lueur » » */
+  function fxLabel(el,k){
+    if(k==='folds') return el.checked ? 'les plis' : 'le retrait des plis';
+    const n=(el.closest('label')?.textContent||k).trim().replace(/\s*\(.*\)$/,''), what=`${k.startsWith('orn.')?'l\'ornement':'l\'effet'} « ${n} »`;
+    return el.checked ? what : 'le retrait de '+what;
+  }
+  const compareAvailable=()=>!!cmp && cmp.after===cmp.pick(ui.comparing?{...st,...ui.cmpKeep}:st);
+  const themeName=t=>THEMES[t.theme] && JSON.stringify(THEMES[t.theme].c)===JSON.stringify(t.colors) ? THEMES[t.theme].name : 'couleurs précédentes';
+  function updateCompare(){
+    const b=$('bCompare'), ok=compareAvailable(), was=!b.hidden;
+    b.hidden=!ok; if(!ok) cmp=null;   // champs modifiés depuis : comparaison périmée
+    else b.querySelector('span').textContent=cmp.button;
+    if(was!==ok && ui.sheet==='peek') applySheet();   // bouton dans le pied du panneau
+  }
+  CMS.on('state:saved',updateCompare);
+  function compareBefore(on){
+    if(on===!!ui.comparing) return;
+    if(on && !compareAvailable()) return;
+    if(on){ commitHistory(0); ui.cmpKeep={}; for(const k of cmp.keys){ ui.cmpKeep[k]=st[k]; st[k]=JSON.parse(JSON.stringify(cmp.vals[k])); } }
+    else { Object.assign(st,ui.cmpKeep); ui.cmpKeep=null; }
+    ui.comparing=on;
+    const b=$('bCompare'); b.setAttribute('aria-pressed',String(on)); b.classList.toggle('on',on);
+    const badge=$('cmpBadge'); badge.hidden=!on; if(on) badge.textContent=cmp.badge;
+    // rendu seulement : rien n'est enregistré (saveState est inactif pendant la comparaison)
+    ui.snap=null; layoutPreview(); drawUnder(); drawTexture(); mlRestyle(); renderMap(false); scheduleOver();
+    loadFonts().then(()=>scheduleOver());
+  }
+  function initCompare(){
+    const b=$('bCompare'), stop=()=>compareBefore(false);
+    b.addEventListener('pointerdown',e=>{ if(e.button) return; e.preventDefault(); b.setPointerCapture(e.pointerId); compareBefore(true); });
+    b.addEventListener('pointerup',stop); b.addEventListener('pointercancel',stop); b.addEventListener('lostpointercapture',stop);
+    b.addEventListener('keydown',e=>{ if((e.key===' '||e.key==='Enter') && !e.repeat){ e.preventDefault(); compareBefore(true); } });
+    b.addEventListener('keyup',e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); stop(); } });
+    b.addEventListener('blur',stop); b.addEventListener('contextmenu',e=>e.preventDefault());   // appui long sur mobile : pas de menu
+    addEventListener('blur',stop); document.addEventListener('visibilitychange',stop);
+  }
+  return {snap:cmpSnap,note:noteChange,update:updateCompare,hold:compareBefore,init:initCompare,fxLabel};
+});
+const {snap: cmpSnap, note: noteChange, update: updateCompare, hold: compareBefore, init: initCompare} = CMS.compare;
