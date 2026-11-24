@@ -42,6 +42,9 @@ async def open_page(b, mode):
             if mode == 'hang': await asyncio.sleep(10); return await r.abort()
             if mode == '429': return await r.fulfill(status=429, body='Too many requests', headers={'Access-Control-Allow-Origin': '*'})
             if mode == '503' and state['n'] == 1: return await r.fulfill(status=503, body='busy', headers={'Access-Control-Allow-Origin': '*'})
+            if mode == 'nocors' and '/status' in u:   # /status sans en-tête CORS : l'appel lisible échoue (comme dans un navigateur), l'appel no-cors passe
+                if 'origin' in await r.request.all_headers(): return await r.abort()   # appel lisible (cors) : en-tête Origin
+                return await r.fulfill(status=200, content_type='application/json', body='{"status":0,"message":"OK"}')
             body = '{"status":0,"message":"OK"}' if '/status' in u else OK
             return await r.fulfill(status=200, content_type='application/json', body=body, headers={'Access-Control-Allow-Origin': '*'})
         if u.startswith('file:'): return await r.continue_()
@@ -103,7 +106,17 @@ async def main():
         # Diagnostic : /status, pas une recherche
         await page.evaluate("__cms.runDiagnostics()"); await page.wait_for_timeout(800)
         check('/status' in reqs[-1][1] and 'q=' not in reqs[-1][1], f'diagnostic : état du service, sans recherche ({reqs[-1][1]})')
+        await wait_js(page, "!document.getElementById('bDiag').disabled", 8000)
+        diag = await page.evaluate("Object.fromEntries([...document.querySelectorAll('#diag > div')].filter(d=>d.children.length>=3).map(d=>[d.children[1].textContent, d.children[0].textContent]))")
+        check(diag.get('Géocodage Nominatim') == '✓', f'diagnostic : Nominatim joignable {diag}')
         check(not errs, f'aucune erreur de page {errs}')
+        await ctx.close()
+
+        # /status sans en-tête CORS (réponse illisible) : serveur joignable, pas d'échec du diagnostic
+        ctx, page, errs, reqs = await open_page(b, 'nocors')
+        await page.evaluate("__cms.runDiagnostics()"); await wait_js(page, "!document.getElementById('bDiag').disabled", 8000)
+        row = await page.evaluate("(()=>{ const d=[...document.querySelectorAll('#diag > div')].find(d=>d.children.length>=3 && d.children[1].textContent==='Géocodage Nominatim'); return [d.children[0].textContent, d.children[2].textContent]; })()")
+        check(row[0] == '✓' and 'joignable' in row[1], f'/status sans CORS : serveur signalé joignable {row}')
         await ctx.close()
         await b.close()
     print('échecs', fails); assert not fails

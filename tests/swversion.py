@@ -2,7 +2,7 @@
 
 Si le diff contre la branche de base touche sw.js ou un fichier de sa liste APP, la constante VERSION de sw.js
 doit avoir changé : sinon sw.js reste identique, le navigateur ne voit aucune mise à jour du worker et le cache
-hors ligne garde les anciens fichiers.
+hors ligne garde les anciens fichiers. Toujours : la version de la page (CMS.build, js/core.js) est égale à VERSION.
 
     python tests/swversion.py               # contre origin/main
     python tests/swversion.py origin/develop
@@ -25,10 +25,19 @@ def version(src):
     return re.search(r"const VERSION = '([^']+)'", src).group(1)
 
 
+def core_version(src):
+    m = re.search(r"const version = '([^']+)'", src)
+    return m and m.group(1)
+
+
 def main(base):
+    now = (ROOT / 'sw.js').read_text(encoding='utf-8')
+    core = core_version((ROOT / 'js' / 'core.js').read_text(encoding='utf-8'))
+    if core != version(now):
+        print(f'✗ version de la page (js/core.js, CMS.build : {core}) différente de VERSION de sw.js ({version(now)})')
+        print('  → recopier VERSION de sw.js dans CMS.build (js/core.js)'); return 1
     merge = git('merge-base', base, 'HEAD').strip()
     changed = set(git('diff', '--name-only', merge, 'HEAD').split())
-    now = (ROOT / 'sw.js').read_text(encoding='utf-8')
     try: before = git('show', f'{merge}:sw.js')
     except subprocess.CalledProcessError: before = ''
     touched = sorted(changed & (app_files(now) | {'sw.js'}))

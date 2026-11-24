@@ -157,6 +157,11 @@ async def main():
         await page.evaluate("document.getElementById('banner').classList.remove('show')")
         await page.evaluate("__cms.setSheet('full')"); await page.wait_for_timeout(200)
         await page.evaluate("__cms.setSheet('half')"); await page.wait_for_timeout(200)
+        # Barre d'actions à 360 px : tient sans débordement, cibles de 44 px, bouton principal lisible
+        bar = await page.evaluate("""(()=>{ const a=document.querySelector('.actbar'), bs=[...a.querySelectorAll('button')].filter(b=>b.offsetParent!==null);
+          return {over:a.scrollWidth>a.clientWidth+1, small:bs.filter(b=>b.getBoundingClientRect().height<44||b.getBoundingClientRect().width<44).map(b=>b.id),
+            cut:(t=>t.scrollWidth>t.clientWidth+1)(document.getElementById('bNextTxt').parentElement)}; })()""")
+        check(not bar['over'] and not bar['small'] and not bar['cut'], f'360 px : barre d\'actions sans débordement, cibles de 44 px, libellé entier {bar}')
         p0 = await rect(page, '#poster'); c0 = await center(page); m0 = await page.evaluate('JSON.stringify(__cms.st.marker)')
         await page.tap('#bClean'); await page.wait_for_timeout(350)
         p1 = await rect(page, '#poster')
@@ -187,10 +192,10 @@ async def main():
         check(not await page.evaluate('__cms.ui.framing'), 'affiche seule depuis Cadrer : cadrage refermé')
         await page.keyboard.press('Escape'); await page.wait_for_timeout(250)
         check(await sheet(page) == 'half', 'affiche seule depuis Cadrer : retour au cran d\'avant le cadrage')
-        # mode Illustration : le bouton reste seul visible parmi les boutons flottants
+        # mode Illustration, sans image : aucun bouton flottant ; « Aperçu » reste dans la barre d'actions
         await page.evaluate("CMS.illus.setMode('illus')"); await page.wait_for_timeout(250)
         vis = await page.evaluate("[...document.querySelectorAll('.fab button')].filter(b=>b.offsetParent!==null).map(b=>b.id)")
-        check(vis == ['bClean'], f'mode Illustration : seul « Voir l\'affiche seule » est proposé {vis}')
+        check(vis == [] and await page.is_visible('.actbar #bClean'), f'mode Illustration : aucun bouton flottant, « Aperçu » dans la barre {vis}')
         check(not errs, f'affiche seule : aucune erreur de page {errs}')
         await ctx.close()
 

@@ -73,8 +73,13 @@ async def main():
         check(await ev("document.getElementById('result').hidden") and await ev("document.activeElement.id") == 'bExport', 'export : « Masquer l\'aperçu », focus rendu au bouton d\'export')
 
         # 5. Cibles tactiles et noms accessibles
-        small = await ev("[...document.querySelectorAll('.hist button,.uisz button,#bReset')].filter(e=>e.getBoundingClientRect().height<44).map(e=>e.id)")
-        check(not small, f'ligne d\'état : boutons de 44 px de haut au moins {small}')
+        # barre d'actions ; A− / A+ (Lieu › Avancé) et « Tout réinitialiser » (Export), sections affichées
+        await ev("__cms.showTab('lieu'); document.getElementById('adv').open=true")
+        small = await ev("[...document.querySelectorAll('.actbar button:not([hidden]),.uisz button')].filter(e=>e.getBoundingClientRect().height<44).map(e=>e.id)")
+        await ev("__cms.showTab('export')")
+        small += await ev("[document.getElementById('bReset')].filter(e=>e.getBoundingClientRect().height<44).map(e=>e.id)")
+        await ev("__cms.showTab('lieu')")
+        check(not small, f'barre d\'actions, A− / A+, « Tout réinitialiser » : boutons de 44 px de haut au moins {small}')
         unnamed = await ev("""[...document.querySelectorAll('input:not([type=hidden]),select,button')].filter(e=>{
             if(e.closest('[hidden]')||e.type==='file') return false;
             const lab=e.labels&&e.labels.length, al=e.getAttribute('aria-label')||e.getAttribute('aria-labelledby')||e.title, txt=(e.textContent||'').trim();

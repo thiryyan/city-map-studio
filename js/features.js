@@ -226,7 +226,14 @@ function updateContrast(){
 }
 
 // ---------- Interface ----------
-function setStatus(t,kind,detail){ $('stTxt').textContent=t; $('stTxt').title=detail?t+' — '+detail:t; $('stDot').className='dot'+(kind?' '+kind:''); }
+/** Ligne d'état (voyant sur la scène) : « Prêt » réduit à la pastille ; un message sans gravité s'efface après 4 s ;
+ *  chargement, attente et erreur restent écrits tant qu'ils durent. */
+function setStatus(t,kind,detail){
+  $('stTxt').textContent=t; $('stPill').title=$('stTxt').title=detail?t+' — '+detail:t; $('stDot').className='dot'+(kind?' '+kind:'');
+  const ready=!kind && /^Prêt/.test(t); clearTimeout(setStatus.t);
+  $('stPill').classList.toggle('quiet',ready);
+  if(!kind && !ready) setStatus.t=setTimeout(()=>$('stPill').classList.add('quiet'),4000);
+}
 let toastT=0;
 function toast(msg,err){ const t=$('toast'); t.textContent=msg; t.className='show'+(err?' err':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='',err?6000:3200); }
 function showBanner(show,txt,label,action){
@@ -286,7 +293,12 @@ CMS.define('deps', () => {
     [()=>row('focusR'), ()=>!(st.fx.halo||st.fx.quarter)],          // rayon : seulement avec le halo ou le quartier
     [()=>row('numbered'), ()=>!extras()],                             // numéroter, relier : au moins deux lieux sur une même carte
     [()=>row('linkMarkers'), ()=>!extras()],
+    // style de l'itinéraire : sans objet tant que l'itinéraire est masqué
+    [()=>$('routeColor'), ()=>st.route?.show===false], [()=>$('routeW').closest('.slider'), ()=>st.route?.show===false],
+    [()=>$('routeDash').closest('label'), ()=>st.route?.show===false],
   ];
+  const LINE_NAMES={title:'le titre est masqué',subtitle:'le sous-titre est masqué',coords:'les coordonnées sont masquées',
+    dedication:'la dédicace est masquée',names:'les noms sont masqués',date:'la date est masquée'};
   /** Réglages activés mais empêchés : [id, ancre, condition, texte, bouton, action] */
   const NOTES=[
     ['parkHatch', ()=>row('fx.parkHatch'), ()=>st.fx.parkHatch && !st.layers.parks,
@@ -304,6 +316,13 @@ CMS.define('deps', () => {
       ()=>`Le gabarit « ${layName(st.layout)} » n'affiche pas le sous-titre.`, 'Passer au gabarit Cadre', ()=>setLayout('classic')],
     ['route', ()=>$('routeShow').closest('label'), ()=>st.layout==='diptych' && !!st.route?.pts?.length && st.route.show!==false,
       ()=>'Le gabarit « Deux lieux » n\'affiche pas l\'itinéraire.', 'Passer au gabarit Souvenir', ()=>setLayout('souvenir')],
+    // Lettres : le titre est dessiné à la plus grande taille possible (§ 4.11) ; sa taille propre est sans effet
+    ['titleTypo', ()=>row('textScale.title'), ()=>st.mode==='map' && st.layout==='typo' && st.show.title!==false,
+      ()=>'Sans effet avec le gabarit « Lettres » : le titre y prend toute la largeur.', 'Passer au gabarit Cadre', ()=>setLayout('classic')],
+    // ligne décochée dont la taille a été changée (ou coordonnées saisies) : rien ne s'affiche
+    ...Object.keys(LINE_NAMES).map(k=>['hidden-'+k, ()=>row('textScale.'+k), ()=>st.show[k]===false && (st.textScale[k]!==100 || (k==='coords' && !!st.coordsManual)),
+      ()=>`Sans effet : ${LINE_NAMES[k]} sur l'affiche.`,
+      ()=>k==='coords'||k==='names' ? 'Les afficher' : 'L\'afficher', ()=>setTog('show.'+k,true)]),
   ];
   const els={};
   function update(){
@@ -367,15 +386,27 @@ CMS.define('safe', () => {
 });
 
 // ---------- Voir l'affiche seule (issue #56) ----------
-// Masque tout ce qui recouvre l'aperçu (boutons flottants, « Toucher pour cadrer », légende, badges) et, sur mobile,
-// le panneau : l'affiche occupe tout l'écran. Une couche transparente reçoit le toucher de sortie, qui ne déplace donc
+// Masque tout ce qui recouvre l'aperçu (boutons flottants, « Toucher pour cadrer », légende, badges, voyant d'état) et
+// le panneau des réglages (mobile et ordinateur) : l'affiche occupe toute la fenêtre, et tout l'écran là où le navigateur
+// le permet (API Fullscreen ; pas sur iPhone, où la fenêtre suffit). Quitter le plein écran (Échap du navigateur) quitte ce mode. Une couche transparente reçoit le toucher de sortie, qui ne déplace donc
 // pas la carte et ne pose aucun repère. Sortie aussi par Échap ou le bouton retour du système. Aucun état d'affiche modifié.
 CMS.define('clean', () => {
-  let before=null, pushed=false;
+  let before=null, pushed=false, full=false;
+  const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement||null;
+  function goFull(){
+    const r=document.documentElement, req=r.requestFullscreen||r.webkitRequestFullscreen;
+    if(!req || fsEl()) return;
+    try{ const pr=req.call(r,{navigationUI:'hide'}); full=true; if(pr && pr.catch) pr.catch(()=>{ full=false; }); }catch(e){ full=false; }
+  }
+  function leaveFull(){
+    if(!full) return; full=false;
+    const ex=document.exitFullscreen||document.webkitExitFullscreen;
+    if(fsEl() && ex){ try{ const pr=ex.call(document); if(pr && pr.catch) pr.catch(()=>{}); }catch(e){} }
+  }
   function enter(){
     if(ui.clean) return;
     setPlacing(false); setFraming(false);
-    before=ui.sheet; ui.clean=true; app.classList.add('clean'); applySheet();
+    before=ui.sheet; ui.clean=true; app.classList.add('clean'); applySheet(); goFull();
     const x=$('cleanExit'); x.hidden=false; x.classList.remove('hinted'); void x.offsetWidth; x.classList.add('hinted');
     try{ history.pushState({cmsClean:1},''); pushed=true; }catch(e){ pushed=false; }
     x.focus({preventScroll:true});
@@ -383,7 +414,7 @@ CMS.define('clean', () => {
   /** fromHistory : sortie déclenchée par le bouton retour (l'entrée d'historique est déjà retirée) */
   function exit(fromHistory){
     if(!ui.clean) return;
-    ui.clean=false; app.classList.remove('clean'); $('cleanExit').hidden=true;
+    ui.clean=false; app.classList.remove('clean'); $('cleanExit').hidden=true; leaveFull();
     if(before) setSheet(before); before=null;
     if(pushed && !fromHistory){ pushed=false; try{ if(history.state?.cmsClean) history.back(); }catch(e){} }
     pushed=false;
@@ -394,8 +425,204 @@ CMS.define('clean', () => {
     $('cleanExit').onclick=()=>exit(false);
     addEventListener('popstate',()=>{ if(ui.clean) exit(true); });
     addEventListener('keydown',e=>{ if(e.key==='Escape' && ui.clean){ e.preventDefault(); exit(false); } });
+    const onFs=()=>{ if(!fsEl() && full){ full=false; if(ui.clean) exit(false); } };   // plein écran quitté par le navigateur
+    document.addEventListener('fullscreenchange',onFs); document.addEventListener('webkitfullscreenchange',onFs);
   }
   return {enter, exit, init};
+});
+// ---------- Barre d'actions : étape suivante ou export ----------
+// Le bouton principal de la barre du bas mène à l'onglet visible suivant (même parcours que les boutons « Étape suivante »
+// des onglets) ; sur le dernier onglet, il lance l'export et suit l'état du bouton d'export (désactivé s'il l'est).
+CMS.define('actbar', () => {
+  const NAMES={lieu:'le lieu',repere:'le repère',illus:'l\'illustration',textes:'les textes',style:'le style',export:'l\'export'};
+  const SHORT={lieu:'Lieu',repere:'Repère',illus:'Illustration',textes:'Textes',style:'Style',export:'Export'};
+  const tabs=()=>[...document.querySelectorAll('#tabs button')].filter(b=>!b.hidden).map(b=>b.dataset.tab);
+  /** Onglet visible qui suit l'onglet courant ; null sur le dernier */
+  function next(){ const t=tabs(), i=t.indexOf(ui.tab); return i>=0 && i<t.length-1 ? t[i+1] : null; }
+  function update(){
+    const b=$('bNext'), n=next(), exp=!n;
+    const pre=exp ? '' : 'Suivant : ', txt=exp ? 'Exporter' : SHORT[n];   // « Suivant : » quand la barre est assez large (CSS)
+    if($('bNextTxt').textContent!==txt) $('bNextTxt').textContent=txt;
+    $('bNextPre').textContent=pre;
+    b.setAttribute('aria-label', exp ? 'Exporter l\'affiche HD' : 'Étape suivante : '+NAMES[n]);
+    b.disabled=exp && $('bExport').disabled; b.dataset.act=exp?'export':'next';
+  }
+  function go(){
+    const n=next();
+    if(isSheet() && ui.sheet==='peek') setSheet('half');   // résultat de l'export ou onglet suivant : visibles
+    if(!n){ $('bExport').click(); return; }
+    showTab(n); document.querySelector('.tabbody').scrollTop=0;
+  }
+  function init(){
+    $('bNext').onclick=go;
+    CMS.on('tab:shown',update); CMS.on('state:synced',update); CMS.on('state:saved',update);
+    new MutationObserver(update).observe($('bExport'),{attributes:true,attributeFilter:['disabled']});
+    new MutationObserver(update).observe($('tabs'),{subtree:true,attributes:true,attributeFilter:['hidden']});
+    update();
+  }
+  return {init, update, next};
+});
+
+// ---------- Réglages modifiés : pastilles, comptes et relecture (évolutions 5 et 7) ----------
+// Une seule table de parties : chacune dit quels réglages s'écartent des valeurs par défaut (DEFAULT_STATE ; pour les
+// couleurs, la palette du thème choisi) et sait les rétablir. Le lieu, le cadrage, les textes saisis, le type d'affiche, le
+// gabarit et le thème sont des choix, jamais comptés comme des écarts. Seules comptent les parties qui agissent dans le
+// type d'affiche courant (onglet visible, condition `on`). Affichage : pastille sur l'onglet (avec description pour les
+// lecteurs d'écran), compte dans le titre des sections repliables (sec), liste de l'onglet Export avec « Voir » et
+// « Réinitialiser ». Une réinitialisation partielle passe par l'historique : « Annuler » revient en arrière.
+CMS.define('changes', () => {
+  const D=DEFAULT_STATE, J=JSON.stringify, same=(a,b)=>J(a)===J(b);
+  /** Nom court d'un réglage : texte de son étiquette, sans la précision entre parenthèses */
+  const lab=k=>{ const el=document.querySelector(`[data-k="${k}"]`), l=el && el.closest('label');
+    return l ? [...l.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').replace(/\s*\(.*$/,'').trim() || k : k; };
+  const nm=(list,k)=>(list.find(x=>x[0]===k)||[,k])[1];
+  const pct=v=>Math.round(v)+' %', signed=v=>(v>0?'+':'')+v;
+  const LINES={title:'titre',subtitle:'sous-titre',coords:'coordonnées',dedication:'dédicace',names:'noms',date:'date'};
+  const TABS={lieu:'Lieu',repere:'Repère',illus:'Illustration',textes:'Textes',style:'Style',export:'Export'};
+  const tpos=s=>CMS.illus.posOf(s);   // CMS.illus : chargé après ce fichier, lu à l'usage
+  const dpos=s=>s.mode==='map' ? D.illusText.map : s.mode==='mix' ? D.illusText.mix : D.illusText;
+  const onMap=s=>s.mode!=='illus';
+  const copy=(o,keys,src=D)=>{ for(const k of keys) o[k]=structuredClone(src[k]); };
+  const fmtWhen=w=>{ const m=/^(\d{4})-(\d\d)-(\d\d)T(\d\d:\d\d)$/.exec(w); return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : w; };
+  const FX=Object.keys(D.fx).filter(k=>k!=='foil');   // la dorure est réglée avec le papier
+  /** Parties : id, onglet, ancre (id), nom, sections repliables (sec), condition (on), écarts (items), réinitialisation (reset) */
+  const GROUPS=[
+    {id:'marker', tab:'repere', at:'hMarker', name:'Repère', items:s=>[
+      s.markerStyle!==D.markerStyle && `« ${nm(MARKERS,s.markerStyle)} »`, s.markerFill!==D.markerFill && 'contour seul',
+      s.markerSize!==D.markerSize && 'taille '+pct(s.markerSize), s.markerOpacity!==D.markerOpacity && 'opacité '+pct(s.markerOpacity*100),
+      !!s.markerLabel && 'nom du lieu'],
+      reset:o=>copy(o,['markerStyle','markerFill','markerSize','markerOpacity','markerLabel'])},
+    {id:'places', tab:'repere', at:'hPlaces', name:'Plusieurs lieux', on:s=>s.layout!=='diptych', items:s=>[
+      s.markers2.length>0 && (s.markers2.length+1)+' lieux', s.numbered && 'numérotés', s.linkMarkers && 'reliés'],
+      reset:o=>copy(o,['markers2','numbered','linkMarkers'])},
+    {id:'route', tab:'repere', at:'hRoute', name:'Itinéraire', items:s=>[
+      !!s.route && ('GPX actif'+(s.route.name?` « ${s.route.name} »`:'')+(s.route.show===false?' (masqué)':'')),
+      !same(s.routeStyle,D.routeStyle) && 'style du tracé'],
+      reset:o=>copy(o,['route','routeStyle'])},
+    {id:'illusCrop', tab:'illus', at:'hIllusCrop', step:'image', name:'Cadrage de l\'image', items:s=>[
+      s.illus.fit!==D.illus.fit && 'image entière', s.illus.zoom!==D.illus.zoom && 'zoom '+pct(s.illus.zoom),
+      !!(s.illus.ox||s.illus.oy) && 'image déplacée'],
+      reset:o=>copy(o.illus,['fit','zoom','ox','oy'],D.illus)},
+    {id:'illusFx', tab:'illus', at:'hIllusFx', step:'image', name:'Retouches de l\'image', items:s=>[
+      !!s.illus.bright && 'luminosité '+signed(s.illus.bright), !!s.illus.contrast && 'contraste '+signed(s.illus.contrast),
+      !!s.illus.satur && 'saturation '+signed(s.illus.satur),
+      s.illus.vintage!==D.illus.vintage && 'filtre vintage '+(s.illus.vintage==='light'?'léger':'marqué'),
+      s.illus.grain && lab('illus.grain'), s.illus.flat && lab('illus.flat'), s.illus.upscale && lab('illus.upscale')],
+      reset:o=>copy(o.illus,['bright','contrast','satur','vintage','grain','flat','upscale'],D.illus)},
+    {id:'typo', tab:'textes', at:'hTypo', name:'Typographie', items:s=>[
+      s.fontTitle!==D.fontTitle && 'police du titre', s.font!==D.font && 'police du texte',
+      ['style','color','shadow','outline','off'].some(k=>s.illusText[k]!==D.illusText[k]) && 'style des textes (couleur, ombre, contour)'],
+      reset:o=>{ copy(o,['font','fontTitle']); copy(o.illusText,['style','color','shadow','outline','off'],D.illusText); }},
+    {id:'textPos', tab:'textes', at:'hTextPos', name:'Positions des textes', items:s=>{ const p=tpos(s), d=dpos(s); return [
+      (p.free || p.pos!==d.pos) && (p.free ? 'titre placé à la main' : 'titre déplacé'),
+      (p.ffree || p.fpos!==d.fpos) && (p.ffree ? 'lignes du bas placées à la main' : 'lignes du bas déplacées')]; },
+      reset:o=>{ const p=tpos(o), d=dpos(o); copy(p,['pos','free','fpos','ffree'],d); }},
+    {id:'textSize', tab:'textes', at:'hTextSize', name:'Tailles des textes', items:s=>{
+      const n=Object.keys(D.textScale).filter(k=>s.textScale[k]!==D.textScale[k]).length;
+      return [s.textScaleAll!==D.textScaleAll && 'tous les textes à '+pct(s.textScaleAll), n>0 && (n>1 ? n+' lignes redimensionnées' : '1 ligne redimensionnée')]; },
+      reset:o=>copy(o,['textScale','textScaleAll'])},
+    {id:'lines', tab:'textes', at:'hLines', name:'Lignes', items:s=>{ const off=Object.keys(D.show).filter(k=>s.show[k]!==D.show[k]); return [
+      off.length>0 && (off.length>1?'masquées : ':'masquée : ')+off.map(k=>LINES[k]||k).join(', '),
+      s.coordFormat!==D.coordFormat && 'coordonnées en degrés, minutes, secondes', !!s.coordsManual && 'coordonnées saisies à la main',
+      s.dedWrap!==D.dedWrap && 'coupure de la dédicace imposée']; },
+      reset:o=>copy(o,['show','coordFormat','coordsManual','dedWrap'])},
+    {id:'paper', tab:'style', at:'hPaper', name:'Papier et dorure', items:s=>[
+      s.texture!==D.texture && `papier « ${nm(TEXTURES,s.texture)} »`, s.folds && lab('folds'),
+      s.mode!=='map' && s.illus.paper && lab('illus.paper'), s.fx.foil && lab('fx.foil')],
+      reset:o=>{ copy(o,['texture','folds']); o.illus.paper=D.illus.paper; o.fx.foil=D.fx.foil; }},
+    {id:'colors', tab:'style', at:'colorsBox', sec:['styleMore','colorsBox'], on:onMap, name:'Couleurs', items:s=>{
+      const t=THEMES[s.theme], n=t ? Object.keys(s.colors).filter(k=>s.colors[k]!==t.c[k]).length : 0;
+      return [n>0 && (n>1 ? n+' teintes personnalisées' : '1 teinte personnalisée')+(t?` (thème « ${t.name} »)`:'')]; },
+      reset:o=>{ const t=THEMES[o.theme]; if(t) o.colors={...t.c}; }},
+    {id:'fx', tab:'style', at:'hFx', sec:['styleMore'], on:onMap, name:'Effets de tracé', items:s=>[
+      ...FX.map(k=>s.fx[k] && lab('fx.'+k)), (s.fx.halo||s.fx.quarter) && s.focusR!==D.focusR && 'rayon '+pct(s.focusR)],
+      reset:o=>{ for(const k of FX) o.fx[k]=D.fx[k]; o.focusR=D.focusR; }},
+    {id:'orn', tab:'style', at:'hOrn', sec:['styleMore'], on:onMap, name:'Ornements', items:s=>Object.keys(D.orn).map(k=>s.orn[k]!==D.orn[k] && lab('orn.'+k)),
+      reset:o=>copy(o,['orn'])},
+    {id:'sky', tab:'style', at:'hSky', sec:['styleMore'], on:s=>onMap(s) && s.layout==='sky', name:'Ciel du jour J', items:s=>[
+      !!s.sky.when && 'ciel du '+fmtWhen(s.sky.when), s.sky.tz!=='auto' && 'fuseau choisi',
+      ['lines','grid','moon','planets','milky'].some(k=>s.sky[k]!==D.sky[k]) && 'options du ciel'],
+      reset:o=>copy(o,['sky'])},
+    {id:'trace', tab:'style', at:'hTrace', sec:['styleMore'], on:onMap, name:'Tracé, calques et mise en page', items:s=>[
+      s.stroke!==D.stroke && 'trait '+pct(s.stroke*100), s.waterMult!==D.waterMult && 'eau '+pct(s.waterMult*100),
+      ...Object.keys(D.layers).map(k=>s.layers[k]!==D.layers[k] && `sans « ${lab('layers.'+k)} »`),
+      s.margin!==D.margin && 'marge '+String(s.margin).replace('.',',')+' %', s.ring!==D.ring && 'sans contour de la forme',
+      s.attribution!==D.attribution && 'mention des sources abrégée'],
+      reset:o=>copy(o,['stroke','waterMult','layers','margin','ring','attribution'])},
+    {id:'export', tab:'export', at:'hRender', name:'Rendu', items:s=>[
+      s.format!==D.format && nm(FORMATS,s.format), s.orient!==D.orient && !(s.mode==='mix' && s.mix.compo==='cote') && 'paysage',
+      s.fileType!==D.fileType && 'document PDF'],
+      reset:o=>{ copy(o,['format','fileType']); if(!(o.mode==='mix' && o.mix.compo==='cote')) o.orient=D.orient; }},
+  ];
+  const tabOn=t=>{ const b=$('tb-'+t); return !!b && !b.hidden; };
+  /** Parties modifiées dans le contexte courant : [{g, items}] */
+  function list(s=st){
+    const out=[];
+    for(const g of GROUPS){
+      if(!tabOn(g.tab) || (g.on && !g.on(s))) continue;
+      const items=g.items(s).filter(Boolean); if(items.length) out.push({g,items});
+    }
+    return out;
+  }
+  function reveal(g){
+    showTab(g.tab); if(isSheet() && ui.sheet==='peek') setSheet('half');
+    if(g.step) document.querySelector(`#illusStepSeg [data-v="${g.step}"]`)?.click();
+    const el=$(g.at); if(!el) return;
+    for(let d=el.closest('details'); d; d=d.parentElement.closest('details')) d.open=true;
+    if(el.tagName==='DETAILS') el.open=true;
+    setTimeout(()=>CMS.panelScroll.to(el,'start',true),60);
+  }
+  function reset(id){
+    const g=GROUPS.find(x=>x.id===id); if(!g) return false;
+    compareBefore(false); clearTimeout(saveT); recordHistory();
+    const {engine,...o}=structuredClone(st); g.reset(o);
+    const s=JSON.stringify(o); if(s===hist.cur) return false;
+    hist.past.push(hist.cur); if(hist.past.length>HIST_MAX) hist.past.shift(); hist.future=[];
+    applySnap(s); hist.quietUntil=Date.now()+1500;
+    toast(`${g.name} : réglages par défaut rétablis · « Annuler » pour revenir en arrière`);
+    update(); return true;
+  }
+  let sig='';
+  function update(){
+    const L=list(), per={}, secs={};
+    for(const {g,items} of L){ (per[g.tab]=per[g.tab]||[]).push(g.name+' : '+items.join(', ')); for(const k of g.sec||[]) secs[k]=(secs[k]||0)+items.length; }
+    // pastilles des onglets
+    document.querySelectorAll('#tabs button').forEach(b=>{
+      const t=b.dataset.tab, d=b.querySelector('.tbd'), txt=per[t] ? 'Réglages modifiés : '+per[t].join(' ; ') : '';
+      if(d) d.hidden=!txt;
+      const desc=$('tbdesc-'+t); if(desc && desc.textContent!==txt) desc.textContent=txt;
+      if(txt) b.setAttribute('aria-describedby','tbdesc-'+t); else b.removeAttribute('aria-describedby');
+      b.title=txt;
+    });
+    // comptes des sections repliables
+    document.querySelectorAll('summary .chg').forEach(c=>{ const n=secs[c.id.slice(4)]||0, t=n ? n+(n>1?' modifiés':' modifié') : '';
+      c.hidden=!n; if(c.textContent!==t) c.textContent=t; });
+    // relecture (onglet Export) : reconstruite seulement si elle change (le focus reste en place)
+    const s=J(L.map(x=>[x.g.id,x.items])); if(s===sig) return; sig=s;
+    const ul=$('changesList'), had=ul.contains(document.activeElement);
+    ul.textContent='';
+    for(const {g,items} of L){
+      const bView=h('button',{type:'button',className:'btn sm','aria-label':'Voir : '+g.name},'Voir'); bView.onclick=()=>reveal(g);
+      const bReset=h('button',{type:'button',className:'btn sm','aria-label':'Réinitialiser : '+g.name},'Réinitialiser'); bReset.dataset.reset=g.id;
+      bReset.onclick=()=>reset(g.id);
+      ul.appendChild(h('li',{},h('div',{className:'cg'},h('span',{className:'ctab'},TABS[g.tab]),h('b',{},g.name),h('small',{},items.join(' · '))),
+        h('div',{className:'acts'},bView,bReset)));
+    }
+    $('changesEmpty').hidden=L.length>0;
+    if(had) (ul.querySelector('button[data-reset]')||$('bReset')).focus({preventScroll:true});
+  }
+  let raf=0; const schedule=()=>{ if(!raf) raf=requestAnimationFrame(()=>{ raf=0; update(); }); };
+  function init(){
+    document.querySelectorAll('#tabs button').forEach(b=>{
+      b.appendChild(h('i',{className:'tbd',hidden:true,'aria-hidden':'true'}));
+      $('panel').appendChild(h('span',{id:'tbdesc-'+b.dataset.tab,hidden:true}));
+    });
+    CMS.on('state:saved',schedule); CMS.on('state:synced',schedule); CMS.on('tab:shown',schedule);
+    $('panel').addEventListener('input',schedule); $('panel').addEventListener('click',schedule);
+    new MutationObserver(schedule).observe($('tabs'),{subtree:true,attributes:true,attributeFilter:['hidden']});
+    update();
+  }
+  return {init, update, list, reset, groups:GROUPS.map(g=>g.id)};
 });
 function initSheet(){
   const g=$('grab'); let drag=null, dragged=false;

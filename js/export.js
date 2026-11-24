@@ -110,10 +110,22 @@ async function runDiagnostics(){
   const line=(label)=>{ const d=h('div',{},h('span',{className:'wt'},'…'),h('span',{},label),h('small')); box.appendChild(d); return d; };
   const set=(d,r)=>{ d.children[0].className=r.ok?'ok':'ko'; d.children[0].textContent=r.ok?'✓':'✗'; d.children[2].textContent=r.info+(r.ms?` · ${r.ms} ms`:''); };
   const env=line('Contexte'); set(env,{ok:!ENV.framed&&navigator.onLine!==false, info:(ENV.framed?'aperçu intégré (sandbox) · ':'')+ENV.proto+(navigator.onLine===false?' · hors ligne':'')});
+  // Version : celle de la page, et celle du cache hors ligne si elle diffère (mise à jour pas encore appliquée)
+  const ver=line('Version'), B=CMS.build, swv=await CMS.pwa.version();
+  set(ver,{ok:!swv || swv===B.version, info:B.label(B.version)+(swv && swv!==B.version ? ' · copie hors ligne : '+B.label(swv)+' → « Mettre à jour » ou rechargez la page' : swv ? ' · copie hors ligne à jour' : ' · sans copie hors ligne')});
   const lib=line('Librairie MapLibre'); set(lib,{ok:mlLib==='ok', info: mlLib==='ok'?('chargée'+(mlCdn?' via '+mlCdn:'')):mlLib==='loading'?'chargement en cours':'aucun CDN joignable'});
   const tests=[
     ['Tuiles OpenFreeMap', s=>fetch(OFM_URL,{signal:s}).then(async r=>({ok:r.ok&&!!(await r.json()).tiles,status:r.status}))],
-    ['Géocodage Nominatim', s=>fetch(CMS.geocoder.statusUrl(),{signal:s}).then(r=>({ok:r.ok,status:r.status}))]   // état du service : ne consomme pas de recherche
+    // État du service : ne consomme pas de recherche. Si la réponse n'est pas lisible par la page (en-tête CORS absent de
+    // /status, filtre de contenu…), un second appel sans lecture (no-cors) distingue un serveur joignable d'un réseau bloqué.
+    ['Géocodage Nominatim', async s=>{
+      try{ const r=await fetch(CMS.geocoder.statusUrl(),{signal:s}); return {ok:r.ok,status:r.status}; }
+      catch(e){
+        if(s.aborted) throw e;
+        const o=await fetch(CMS.geocoder.statusUrl(),{signal:s,mode:'no-cors',cache:'no-store'});   // échoue aussi si le serveur est injoignable
+        return {ok:true,info:o.type==='opaque' ? 'serveur joignable (état non lisible par la page)' : 'HTTP '+o.status};
+      }
+    }]
   ];
   const results=await Promise.all(tests.map(async([label,fn,ms])=>{ const d=line(label); const r=await probe(fn,ms); set(d,r); return r; }));
   const anyOk=results.some(r=>r.ok);

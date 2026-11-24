@@ -87,7 +87,8 @@ Vectoriel GPU a toujours besoin d'Internet ; le moteur Fichier, non.
 
 Quand une nouvelle version est publiée, un bandeau **« Nouvelle version disponible »** propose **Mettre à jour**.
 Rien n'est rechargé sans votre accord ; ✕ reporte la mise à jour. Votre affiche en cours est retrouvée après le
-rechargement. La version installée est indiquée dans **Lieu › Avancé**.
+rechargement. La version (date de publication) est indiquée dans **Lieu › Avancé** ; si la copie hors ligne est en
+retard sur la page, les deux sont affichées.
 
 ---
 
@@ -116,7 +117,7 @@ Export, par le bouton d'export.
 
 ### 3.2. Le panneau coulissant (téléphone)
 
-Le panneau a trois crans : **réduit** (type d'affiche, onglets et barre du bas : l'affiche occupe presque tout
+Le panneau a trois crans : **réduit** (type d'affiche, onglets et barre d'actions : l'affiche occupe presque tout
 l'écran), **mi-hauteur** (par défaut) et **déplié** (réglages en grand, affiche en vignette).
 
 * Glissez la poignée, ou touchez-la pour passer d'un cran à l'autre.
@@ -140,17 +141,30 @@ Les **boutons flottants**, à côté de l'affiche, sont :
 | Placer le repère | Le prochain toucher sur la carte pose le repère. |
 | Centrer sur le repère | Ramène la carte sur le repère (affiche illustrée : recentre l'illustration). |
 | Carte / Image | Carte + illustration seulement : choisit le calque que cadrent les autres boutons et le mode Cadrer. |
-| Œil, « Voir l'affiche seule » | Masque tout ce qui recouvre l'affiche, panneau compris sur téléphone. Un toucher, Échap ou le bouton retour du téléphone ramène aux réglages, sans déplacer la carte ni poser de repère. |
 
-### 3.4. La barre du bas
+### 3.4. La barre d'actions
 
-Toujours visible, elle regroupe **Annuler / Rétablir**, la ligne d'état (moteur, chargement, erreurs ; texte complet
-au survol), le lien **Réinitialiser** et le réglage **A− / A+** de la taille du texte de l'interface. Au-dessus
-peut apparaître le bouton **« Maintenir pour comparer »** (§ 11.2).
+Toujours visible en bas du panneau, même réduit, elle regroupe :
 
-**A− / A+** règle la taille de l'interface de 87,5 à 137,5 %. Le réglage est propre à l'appareil : il n'est
-pas lié à l'affiche, et « Réinitialiser » ne le modifie pas. L'interface suit aussi la taille de texte choisie
-dans les réglages du téléphone.
+| Bouton | Action |
+| :--- | :--- |
+| Œil, **Aperçu** | Affiche seule : masque tout ce qui recouvre l'affiche et le panneau des réglages, et passe en plein écran quand le navigateur le permet. Un toucher, Échap ou le bouton retour du téléphone ramène aux réglages, sans déplacer la carte ni poser de repère. |
+| **Annuler / Rétablir** | Historique des modifications (§ 11.1). |
+| **Comparer** | Apparaît après un changement de thème, d'ambiance, d'effet… : maintenez-le pour revoir l'affiche d'avant (§ 11.2). |
+| **Suivant : …** / **Exporter** | Passe à l'onglet suivant ; sur l'onglet Export, lance l'export. |
+
+Sur un écran étroit, les boutons n'affichent que leur icône ; leur nom apparaît au survol.
+
+Le **voyant d'état**, en haut à gauche de l'aperçu, est une simple pastille verte quand tout est prêt (le moteur
+actif s'affiche au survol) ; il s'écrit pendant un chargement, une attente ou une erreur.
+
+**A− / A+**, dans **Lieu › Avancé**, règle la taille de l'interface de 87,5 à 137,5 %. Le réglage est propre à
+l'appareil : il n'est pas lié à l'affiche, et « Tout réinitialiser » ne le modifie pas. L'interface suit aussi la
+taille de texte choisie dans les réglages du téléphone.
+
+**Pastilles des onglets** : un point doré sur un onglet signale qu'il contient des réglages modifiés ; au survol (ou
+avec un lecteur d'écran), leur liste s'affiche (« Itinéraire : GPX actif ; Plusieurs lieux : 3 lieux »). Les sections
+repliables indiquent aussi leur nombre de réglages modifiés.
 
 ---
 
@@ -234,8 +248,9 @@ Les deux moteurs rendent les mêmes effets, ornements et couleurs, à l'aperçu 
    GeoJSON. La carte se recadre sur les données importées.
 
 **Diagnostiquer la connexion** teste le contexte d'ouverture, la librairie cartographique, OpenFreeMap et Nominatim,
-puis recommande le moteur qui fonctionne. **L'accord aux services tiers** se donne ou se retire ici. **La version**
-de l'application installée est affichée en bas.
+puis recommande le moteur qui fonctionne ; sa première ligne compare la version de la page à celle de la copie hors
+ligne. **L'accord aux services tiers** se donne ou se retire ici. On y règle aussi la **taille du texte de
+l'interface** (A− / A+). **La version** de l'application (date de publication) est affichée en bas.
 
 ---
 
@@ -653,13 +668,21 @@ est désactivé. Réimportez la même image : elle est reconnue (« Illustration
 retouches sont conservés.
 
 > **Astuce** — Pour garder une affiche illustrée en lieu sûr, téléchargez son fichier de configuration avec la case
-> « Inclure les illustrations dans les fichiers » cochée (§ 10.3).
+> « Inclure les illustrations dans les fichiers » cochée (§ 10.4).
 
 ---
 
 ## 10. Onglet Export
 
-### 10.1. Rendu
+### 10.1. Relecture : ce qui a changé
+
+En tête de l'onglet, la liste des réglages qui s'écartent des valeurs par défaut, partie par partie (repère, lieux,
+itinéraire, image, typographie, positions et tailles des textes, papier, couleurs, effets, ornements, ciel, tracé et
+calques, rendu), en clair : « Effets de tracé : Trait crayon · Lueur ». Le lieu, le cadrage, vos textes,
+le gabarit et le thème ne sont pas comptés. **Voir** ouvre le réglage ; **Réinitialiser** ne rétablit que cette
+partie (« Annuler » revient en arrière) ; **Tout réinitialiser** rétablit tout (§ 11.3).
+
+### 10.2. Rendu
 
 **Orientation** : portrait ou paysage, pour tous les gabarits. En paysage, la carte occupe la gauche et le texte une
 colonne à droite.
@@ -689,7 +712,7 @@ alerte le nomme et conseille d'augmenter la marge. En 10 × 15 cm, la mention de
 **Voir l'affiche au mur** : l'affiche dans un cadre (chêne, noir, blanc, doré), avec ou sans passe-partout, sur un
 mur au choix (blanc cassé, sauge, terracotta, béton, nuit). L'image se télécharge.
 
-### 10.2. Mes affiches
+### 10.3. Mes affiches
 
 * **Enregistrer** : la configuration complète de l'affiche est gardée dans le navigateur, avec une vignette. Le nom
   proposé reprend le titre et les noms. **Ctrl + S** (⌘ + S) enregistre l'affiche en cours, depuis n'importe quel
@@ -702,7 +725,7 @@ gabarit, les couleurs, les polices, les effets, les ornements, le papier, le cie
 l'illustration. Elle ne garde pas le moteur cartographique ni les données importées du moteur Fichier, à
 réimporter.
 
-### 10.3. Fichiers
+### 10.4. Fichiers
 
 | Bouton | Fichier produit |
 | :--- | :--- |
@@ -717,14 +740,14 @@ est refusé sans rien modifier.
 > **Astuce** — Les affiches enregistrées restent dans ce seul navigateur. Faites de temps en temps une sauvegarde
 > complète : c'est le seul moyen de les retrouver après un nettoyage du navigateur ou un changement d'appareil.
 
-### 10.4. Partager par lien
+### 10.5. Partager par lien
 
 **Copier le lien de l'affiche** encode toute l'affiche (sans le moteur) dans l'adresse elle-même : rien n'est
 envoyé à un serveur. À l'ouverture du lien, l'affiche est reconstituée, et « Annuler » retrouve celle du
 destinataire. Le lien contient le lieu et les textes : partagez-le avec des personnes de confiance. Un itinéraire
 de plus de 400 points n'est pas inclus, et l'illustration jamais.
 
-### 10.5. Exporter
+### 10.6. Exporter
 
 Le bouton **Exporter l'affiche HD** indique les dimensions, le format, la résolution et le type de fichier.
 L'affiche est entièrement recalculée à pleine résolution : elle est identique à l'aperçu, en plus net. Le
@@ -747,26 +770,27 @@ Noms des fichiers : `affiche-carte-blois-300dpi.png` en A4, `affiche-carte-blois
 
 ### 11.1. Annuler / Rétablir
 
-Jusqu'à 50 étapes, avec les boutons de la barre du bas ou au clavier. Les changements rapprochés (moins de 300 ms)
+Jusqu'à 50 étapes, avec les boutons de la barre d'actions ou au clavier. Les changements rapprochés (moins de 300 ms)
 forment une seule étape. Le moteur cartographique n'entre pas dans l'historique, qui n'est pas conservé après un
 rechargement. Ambiances, modèles, restaurations, liens ouverts et réinitialisation s'annulent tous.
 
 ### 11.2. Maintenir pour comparer
 
 Après un changement de thème ou de palette, d'ambiance, de modèle de texte, d'effet, d'ornement, de plis ou de
-papier, le bouton **« Maintenir pour comparer… »** apparaît au-dessus de la barre du bas (« … avec « Souvenir » »,
-« … : avant l'ambiance « Soirée de gala » »…). Tant que vous le maintenez (souris, doigt, ou Espace / Entrée), l'affiche
+papier, le bouton **Comparer** apparaît dans la barre d'actions (son nom complet, au survol : « Maintenir pour
+comparer avec « Souvenir » », « … : avant l'ambiance « Soirée de gala » »…). Tant que vous le maintenez (souris, doigt, ou Espace / Entrée), l'affiche
 montre l'état d'avant, avec un badge « Avant… » ; relâché, votre choix revient. Rien n'est enregistré pendant la
 comparaison. Le bouton disparaît dès que vous modifiez de nouveau le même réglage ; un changement de titre ou de
 cadrage ne l'efface pas.
 
 ### 11.3. Réinitialiser
 
-Le lien **Réinitialiser** rétablit tous les réglages par défaut : lieu (Blois) et cadrage, gabarit, thème, couleurs,
+Le bouton **Tout réinitialiser**, en bas de la relecture de l'onglet Export (§ 10.1), rétablit tous les réglages par défaut : lieu (Blois) et cadrage, gabarit, thème, couleurs,
 repère, polices, textes, marge, épaisseurs et calques, et le moteur revient au Vectoriel GPU. Un premier appui
 affiche « Confirmer ? » pendant 4 s ; un second réinitialise. Sont conservés : l'accord aux services tiers, les données
 importées (repassez au moteur Fichier pour les retrouver), Mes affiches, les illustrations et la taille de
-l'interface. « Annuler » revient en arrière (sauf pour le moteur).
+l'interface. « Annuler » revient en arrière (sauf pour le moteur). Pour ne rétablir qu'une partie (effets, positions
+des textes…), utilisez son bouton **Réinitialiser** dans la relecture.
 
 ---
 
@@ -803,7 +827,7 @@ polices et la librairie cartographique sont servies par l'application elle-même
 
 **Ce que le navigateur conserve** (sur cet appareil seulement) :
 
-| Donnée | Effacée par « Réinitialiser » |
+| Donnée | Effacée par « Tout réinitialiser » |
 | :--- | :--- |
 | L'affiche en cours | Oui (remise aux valeurs par défaut) |
 | Mes affiches (40 au plus) | Non |
@@ -824,7 +848,7 @@ Fichier avec un fichier déjà téléchargé. Le mode Illustration fonctionne au
 * **Un cadrage précis** : zoomez au maximum, posez le repère, puis dézoomez jusqu'au cadrage voulu. Le repère ne
   bouge pas avec la carte.
 * **Comparer deux thèmes** : appliquez-en un, puis maintenez « Comparer » pour revoir le précédent.
-* **Voir l'affiche comme imprimée** : bouton œil (« Voir l'affiche seule »), puis « Voir l'affiche au mur ».
+* **Voir l'affiche comme imprimée** : bouton **Aperçu** (œil) de la barre d'actions, puis « Voir l'affiche au mur ».
 * **Thèmes sombres** : ajoutez la Lueur ; sur papier sombre, la dorure ressort particulièrement.
 * **Dédicace longue** : passez-la sur deux lignes plutôt que de réduire sa taille.
 * **Couleurs d'un souvenir** : une photo du jour J dans « Couleurs d'après une image » donne une affiche unique.
@@ -852,7 +876,7 @@ Fichier avec un fichier déjà téléchargé. Le mode Illustration fonctionne au
 | Résolution abaissée (A3, 50 × 70) | Limite de mémoire des images sur téléphone. | Exportez depuis un ordinateur pour obtenir la résolution maximale. |
 | « ⚠ certaines tuiles ont pu manquer » | Connexion lente pendant l'export. | Relancez l'export. |
 | « Police de secours » dans le résultat | Une police n'était pas chargée à temps. | Relancez l'export. |
-| Le texte passe sous le bord à l'impression | Imprimante de bureau, marge non imprimable. | Activez la zone de sécurité (§ 10.1) et augmentez la marge. |
+| Le texte passe sous le bord à l'impression | Imprimante de bureau, marge non imprimable. | Activez la zone de sécurité (§ 10.2) et augmentez la marge. |
 | Le lien partagé n'a pas l'illustration | Le lien ne contient jamais l'image. | Envoyez le fichier de configuration, illustrations incluses. |
 | « Enregistrement impossible : espace du navigateur plein » | Trop d'affiches ou d'illustrations stockées. | Supprimez des affiches, après une sauvegarde complète. |
 

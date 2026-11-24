@@ -26,10 +26,17 @@ SEED = "localStorage.setItem('cityMapStudio.consent','1'); localStorage.setItem(
 
 SW = (ROOT / 'sw.js').read_text(encoding='utf-8')
 VERSION = re.search(r"const VERSION = '([^']+)'", SW).group(1)
+CORE = (ROOT / 'js' / 'core.js').read_text(encoding='utf-8')
+
+
+def label(v):
+    """Libellé affiché (CMS.build.label) : cms-2026-11-24h → 24/11/2026 (h)"""
+    m = re.match(r'cms-(\d{4})-(\d\d)-(\d\d)(.*)$', v)
+    return f'{m[3]}/{m[2]}/{m[1]}' + (f' ({m[4]})' if m[4] else '')
 
 
 class Q(SimpleHTTPRequestHandler):
-    """Comme GitHub Pages : Cache-Control max-age=600. deploy : sw.js servi avec une nouvelle VERSION."""
+    """Comme GitHub Pages : Cache-Control max-age=600. deploy : sw.js et js/core.js servis avec une nouvelle VERSION."""
     status = []; reqs = []; deploy = False
     def log_message(self, *a): pass
     def send_response(self, code, *a):
@@ -38,8 +45,8 @@ class Q(SimpleHTTPRequestHandler):
         self.send_header('Cache-Control', 'max-age=600'); super().end_headers()
     def do_GET(self):
         Q.reqs.append((self.path, self.headers.get('Cache-Control', ''), self.headers.get('Service-Worker', '')))
-        if Q.deploy and self.path.split('?')[0].endswith('/sw.js'):
-            body = SW.replace(VERSION, VERSION + '-deploy').encode()
+        if Q.deploy and self.path.split('?')[0].endswith(('/sw.js', '/js/core.js')):
+            body = (SW if self.path.split('?')[0].endswith('/sw.js') else CORE).replace(VERSION, VERSION + '-deploy').encode()
             self.send_response(200); self.send_header('Content-Type', 'text/javascript'); self.send_header('Content-Length', str(len(body)))
             self.end_headers(); self.wfile.write(body); return
         super().do_GET()
@@ -110,8 +117,10 @@ async def main():
               f'réseau d\'abord sans copie du cache HTTP : js/main.js redemandé au serveur ({main_js})')
         sw_reqs = [r for r in Q.reqs if r[0].split('?')[0].endswith('/sw.js')]
         check(sw_reqs, f'vérification de mise à jour au démarrage (sw.js redemandé : {len(sw_reqs)})')
-        await wait_js(page, "document.getElementById('appVersion').textContent.includes('cms-') || false", timeout=5000)
-        check(await page.text_content('#appVersion') == f'Version : {VERSION}', f"version affichée : {await page.text_content('#appVersion')}")
+        await wait_js(page, "!!document.getElementById('appVersion').dataset.sw || false", timeout=5000)
+        check(await page.text_content('#appVersion') == f'Version : {label(VERSION)}', f"version affichée : {await page.text_content('#appVersion')}")
+        check(await page.evaluate("[document.getElementById('appVersion').dataset.version, document.getElementById('appVersion').dataset.sw]") == [VERSION, VERSION],
+              'version de la page = version du service worker (data-version, data-sw)')
         check(not await page.evaluate("document.getElementById('updBanner').classList.contains('show')"),
               'première installation : aucun bandeau de mise à jour')
 
@@ -135,8 +144,8 @@ async def main():
         await page.evaluate("window.__avant=1"); await page.click('#bUpdate')
         await page.wait_for_timeout(3000)
         check(len(loads) == 1 and await page.evaluate("typeof window.__avant") == 'undefined', f'« Mettre à jour » : page rechargée une seule fois ({len(loads)})')
-        await wait_js(page, "document.getElementById('appVersion').textContent.includes('deploy') || false", timeout=5000)
-        check(await page.text_content('#appVersion') == f'Version : {VERSION}-deploy', f"nouvelle version active : {await page.text_content('#appVersion')}")
+        await wait_js(page, "(document.getElementById('appVersion').dataset.sw||'').includes('deploy') || false", timeout=5000)
+        check(await page.text_content('#appVersion') == f'Version : {label(VERSION + "-deploy")}', f"nouvelle version active : {await page.text_content('#appVersion')}")
         check(await page.evaluate("__cms.st.texts.title") == 'Mise à jour 65', 'état de l\'affiche conservé après la mise à jour')
         check(not await page.evaluate("document.getElementById('updBanner').classList.contains('show')"), 'après la mise à jour : plus de bandeau')
         old = await page.evaluate("caches.keys()")
