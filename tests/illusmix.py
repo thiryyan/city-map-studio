@@ -197,7 +197,7 @@ async def main():
         n = await page.evaluate("normState({mode:'mix',mix:{compo:'xx',shape:'star',pos:'gauche',split:'3/4'}}).mix")
         check(n == {'compo': 'med', 'shape': 'circle', 'pos': 'bas', 'split': 'half'}, f'état forgé : composition corrigée {n}')
         await page.click('#modeSeg button[data-v=map]'); await page.wait_for_timeout(300)
-        await page.evaluate("__cms.showTab('style')")
+        await page.evaluate("__cms.showTab('style'); document.getElementById('styleMore').open=true")   # le gabarit est dans « Plus de réglages »
         check(await page.is_hidden('#tb-illus') and await page.is_visible('#tb-repere') and await page.is_visible('#layouts'), 'retour au mode Carte : onglets et gabarits')
         check(await page.evaluate("__cms.geom(__cms.st,1000,1414).mix") is None, 'mode Carte : géométrie des gabarits')
         check(not errs, f'aucune erreur de page {errs}')

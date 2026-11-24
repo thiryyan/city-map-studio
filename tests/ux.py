@@ -84,8 +84,8 @@ async def main():
         MORE = "[document.getElementById('styleMore').open, localStorage.getItem('cityMapStudio.styleMoreOpen')]"
         check(await page.evaluate(MORE) == [False, None] and not await page.is_visible('#colorsBox') and await page.is_visible('#themes'),
               'Style : « Plus de réglages » repliée par défaut, Essentiel visible')
-        ess = await page.evaluate("['#ambiances','#layouts','#themes','#duos','#fontSeg','#textures'].map(q=>!!document.querySelector(q)?.offsetParent)")
-        check(all(ess), f'Style, Essentiel : ambiances, gabarit, thèmes, polices, papier {ess}')
+        ess = await page.evaluate("['#ambiances','#themes','#duos','#fontSeg','#textures'].map(q=>!!document.querySelector(q)?.offsetParent)")
+        check(all(ess), f'Style, Essentiel : ambiances, thèmes, polices, papier {ess}')
         await page.click('#styleMore summary'); await page.wait_for_timeout(150)
         check(await page.evaluate(MORE) == [True, '1'] and await page.is_visible('#colorsBox'), '« Plus de réglages » ouverte et mémorisée')
         await page.click('#styleMore summary'); await page.wait_for_timeout(150)

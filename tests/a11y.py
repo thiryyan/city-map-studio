@@ -44,7 +44,7 @@ async def main():
 
         # 2. Vignettes au clavier
         await ev("f=>__cms.importText(f,'osm.json')", FIX); await page.wait_for_timeout(400)
-        await ev("__cms.showTab('style')")
+        await ev("__cms.showTab('style'); document.getElementById('styleMore').open=true")   # gabarits : dans « Plus de réglages »
         kinds = await ev("['#layouts .card','#themes .theme','#marks .card','#ambiances button'].map(s=>[...document.querySelectorAll(s)].every(e=>e.tagName==='BUTTON' && e.type==='button' && e.hasAttribute('aria-pressed')))")
         check(all(kinds), f'gabarits, thèmes, repères, ambiances : boutons avec aria-pressed {kinds}')
         await page.focus('#layouts .card[data-v=arch]'); await page.keyboard.press('Enter'); await page.wait_for_timeout(300)

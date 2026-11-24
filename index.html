@@ -237,25 +237,6 @@
         <p class="hint">Un toucher pour un ensemble assorti (thème, polices, gabarit, repère, papier) ; tout reste modifiable ensuite.</p>
         <div class="fonts ambs" id="ambiances" role="group" aria-label="Ambiances"></div>
         </div>
-        <div class="layoutonly">
-        <h3>Gabarit</h3>
-        <div class="cards" id="layouts" role="group" aria-label="Gabarits"></div>
-        <div class="slider"><label for="sMargin">Marge (passe-partout)</label><output id="oMargin"></output><input type="range" id="sMargin" data-k="margin" min="3" max="12" step="0.5"></div>
-        <label class="tog" id="ringTog">Contour de la forme<input type="checkbox" data-k="ring"></label>
-        <div id="skyBox" hidden>
-          <h3>Ciel du jour J</h3>
-          <p class="hint">Les étoiles visibles au-dessus du repère, à la date et à l'heure choisies.</p>
-          <label class="f" for="skyWhen">Date et heure (heure locale du lieu)</label>
-          <input type="datetime-local" id="skyWhen" class="dt">
-          <label class="f" for="skyTz">Fuseau horaire du lieu</label>
-          <select id="skyTz" class="sel"></select>
-          <label class="tog">Constellations<input type="checkbox" data-k="sky.lines"></label>
-          <label class="tog">Grille de repérage<input type="checkbox" data-k="sky.grid"></label>
-          <label class="tog">Lune et sa phase<input type="checkbox" data-k="sky.moon"></label>
-          <label class="tog">Planètes visibles<input type="checkbox" data-k="sky.planets"></label>
-          <label class="tog">Voie lactée<input type="checkbox" data-k="sky.milky"></label>
-        </div>
-        </div>
         <div class="maponly">
         <h3>Thème</h3>
         <div class="chips fcats" id="themeCats" role="group" aria-label="Catégories de thèmes"></div>
@@ -275,7 +256,26 @@
         <div class="chips" id="textures"></div>
         <label class="tog">Plis d'une carte dépliée<input type="checkbox" data-k="folds"></label>
         <details class="adv maponly" id="styleMore">
-          <summary><span>Plus de réglages</span><small>effets, calques, ornements, couleurs</small></summary>
+          <summary><span>Plus de réglages</span><small>gabarit, effets, calques, couleurs</small></summary>
+          <div class="layoutonly">
+          <h3>Gabarit</h3>
+          <div class="cards" id="layouts" role="group" aria-label="Gabarits"></div>
+          <div class="slider"><label for="sMargin">Marge (passe-partout)</label><output id="oMargin"></output><input type="range" id="sMargin" data-k="margin" min="3" max="12" step="0.5"></div>
+          <label class="tog" id="ringTog">Contour de la forme<input type="checkbox" data-k="ring"></label>
+          <div id="skyBox" hidden>
+            <h3>Ciel du jour J</h3>
+            <p class="hint">Les étoiles visibles au-dessus du repère, à la date et à l'heure choisies.</p>
+            <label class="f" for="skyWhen">Date et heure (heure locale du lieu)</label>
+            <input type="datetime-local" id="skyWhen" class="dt">
+            <label class="f" for="skyTz">Fuseau horaire du lieu</label>
+            <select id="skyTz" class="sel"></select>
+            <label class="tog">Constellations<input type="checkbox" data-k="sky.lines"></label>
+            <label class="tog">Grille de repérage<input type="checkbox" data-k="sky.grid"></label>
+            <label class="tog">Lune et sa phase<input type="checkbox" data-k="sky.moon"></label>
+            <label class="tog">Planètes visibles<input type="checkbox" data-k="sky.planets"></label>
+            <label class="tog">Voie lactée<input type="checkbox" data-k="sky.milky"></label>
+          </div>
+          </div>
           <label class="btn wide mt8">Palette tirée d'une photo<input type="file" id="photoIn" accept="image/*" hidden></label>
           <div id="photoPal" hidden>
             <div class="pal" id="photoSw" aria-hidden="true"></div>

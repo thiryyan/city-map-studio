@@ -78,10 +78,10 @@ async def main():
                   const top=body.getBoundingClientRect().top, bottom=more.getBoundingClientRect().top + body.scrollTop - top;
                   return {screen: innerHeight, essential: Math.round(bottom)}}""")
                 n = r['essential'] / r['screen']
-                # Objectif de l'issue #62 : 2 écrans. Avec gabarit, thèmes et polices dans l'Essentiel, on mesure environ 2,7 écrans de téléphone
-                # (voir dossier technique § 6) : le test garde ce niveau (pas de régression) en attendant la décision sur le découpage.
+                # Objectif de l'issue #62 : 2 écrans. Gabarit dans « Plus de réglages » : on mesure environ 2,1 écrans de téléphone
+                # (dossier technique § 6) ; le test garde ce niveau (pas de régression).
                 print(f'  Essentiel : {r["essential"]} px pour un écran de téléphone de {r["screen"]} px = {n:.1f} écran(s) (objectif : 2)')
-                check(n <= 2.8, f'360 px : la partie Essentiel ne dépasse pas 2,8 écrans de téléphone ({n:.1f} ; objectif 2)')
+                check(n <= 2.2, f'360 px : la partie Essentiel ne dépasse pas 2,2 écrans de téléphone ({n:.1f} ; objectif 2)')
                 await page.screenshot(path=str(T / 'flow-style.png'))
             check(not errs, f'{name} : aucune erreur de page {errs}')
             await ctx.close()
