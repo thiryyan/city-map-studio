@@ -1,6 +1,6 @@
 # Contribuer à City Map Studio
 
-Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.md). L'état de validation figure au § 9 ; les évolutions prévues sont suivies dans les [issues](https://github.com/thiryyan/city-map-studio/issues).
+Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.md) ; usage : [`USER_GUIDE.md`](USER_GUIDE.md). Les tests et les validations restantes figurent au § 9 du dossier ; les évolutions prévues sont suivies dans les [issues](https://github.com/thiryyan/city-map-studio/issues).
 
 ## Règles non négociables
 - **100 % open source** : aucune clé API, aucun service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps).
@@ -30,60 +30,21 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - `sw.js`, `manifest.webmanifest`, `icons/` : application installable et cache hors ligne.
 - `lib/` : MapLibre GL JS 4.7.1 et sa licence BSD-3. `lib/sky/` : données du ciel (d3-celestial, BSD-3), chargées seulement par le gabarit Ciel. Pour changer de version, remplacer les fichiers et mettre à jour `ML_VERSION`.
 - `lib/fonts/` : polices woff2 (paquets npm `@fontsource/*`, sous-ensembles latin et latin-ext), déclarées dans `lib/fonts/fonts.css`. Pour ajouter une famille : copier ses fichiers woff2 et sa licence `OFL.txt`, ajouter ses `@font-face` (avec `unicode-range`), puis l'entrée correspondante dans `FONTS`.
-- `tests/` : tests de bout en bout Playwright (Python) avec un réseau simulé. Un test qui recharge la page prépare le `localStorage` avec `tests/seed.py`, pas avec `add_init_script` (perte d'écritures au rechargement, cf. dossier § 9.2), et attend que l'état soit enregistré avant de recharger.
+- `tests/` : tests de bout en bout Playwright (Python) avec un réseau simulé. Un test qui recharge la page prépare le `localStorage` avec `tests/seed.py`, pas avec `add_init_script` (perte d'écritures au rechargement, cf. dossier § 9.1), et attend que l'état soit enregistré avant de recharger.
 
 ## Commandes
 ```bash
 pip install playwright mapbox-vector-tile && python -m playwright install chromium   # une fois
-python tests/fixture.py && python tests/make_formats.py && python tests/make_city.py   # génère les données de test
-python tests/run_all.py          # toute la suite, un test par cœur en parallèle (génère les données, résume les échecs) — lancée aussi par la CI
+python tests/run_all.py          # toute la suite, un test par cœur (génère les données, résume les échecs) — lancée aussi par la CI
 python tests/run_all.py -j 1     # un test à la fois
-python tests/run.py              # moteur Fichier + export PNG 2480×3508 / pHYs 300 DPI
-python tests/offline.py          # réseau coupé : diagnostic, import json/osm/geojson, iframe
-python tests/layouts.py          # captures des gabarits
-python tests/maplibre.py         # moteur Vectoriel GPU : lib/ + OpenFreeMap simulé, export hors écran
-python tests/keyboard.py         # clavier : carte du moteur Fichier, résultats de recherche (focus, descriptions, Échap)
-python tests/perf.py             # épaisseurs GPU en expressions de zoom (aucun setStyle pendant les gestes), densité de pixels, graphèmes
-python tests/unit.py             # tests unitaires sans navigateur (node --test tests/unit/*.test.mjs : CMS.geo, normState, CMS.geocoder)
-python tests/globals.py          # garde-fou : nombre de déclarations globales ≤ tests/globals.max
-python tests/attribution.py      # attributions : mention minimale toujours sur l'affiche, sources en légende sous l'aperçu
-python tests/webgl.py            # WebGL : perte et restauration du contexte, rendus hors écran en file d'attente, carte libérée en moteur Fichier
-python tests/geocoder.py         # recherche Nominatim : délai, quota, relance 5xx, cache, réponses piégées
-python tests/mlloader.py         # chargement de MapLibre : CDN de secours, copie tardive, version, CSS de secours
-python tests/coords.py           # saisie des coordonnées du repère
-python tests/texts.py            # lignes de texte optionnelles
-python tests/textsize.py         # taille des textes de l'affiche (par ligne et globale)
-python tests/dedication.py       # dédicace sur deux lignes : Auto, Une ligne, Deux lignes ; la carte fait de la place
-python tests/formats.py          # formats A4, A3, 50 × 70 cm, 10 × 15 cm, limites des canevas (ordinateur, iPhone), export PDF
-python tests/mobile.py           # panneau coulissant, mode Cadrer, affiche seule, paysage, A− / A+
-python tests/ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
-python tests/design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, mur, lien, paysage, GPX, ciel
-python tests/vectors.py          # cache de tracés du moteur Fichier
-python tests/city.py             # ville réaliste (tests/city.json) : import JSON et XML, fleuve, ponts, fluidité, exports
-python tests/saves.py            # Mes affiches : enregistrer, restaurer, fichier de configuration, sauvegarde complète, fichiers piégés
-python tests/make_og.py          # régénère icons/og-image.jpg (aperçu des liens partagés) avec le rendu actuel
-python tests/art.py              # pistes artistiques : effets, dorure, ornements, Lettres, papiers, ciel, palette d'une photo
-python tests/compare.py          # comparer avant / après un changement de thème, d'ambiance, de modèle ou d'effet
-python tests/welcome.py          # ambiance proposée au premier lancement, sans fenêtre bloquante
-python tests/fonts.py            # polices auto-hébergées, aucun appel tiers
-python tests/consent.py          # accord préalable : aucune requête tierce sans accord
-python tests/reset.py            # réinitialisation des réglages par défaut
-python tests/security.py         # lien forgé ou piégé, état corrompu, crochets de test
-python tests/a11y.py             # fenêtres modales, clavier, cibles tactiles, noms accessibles
-python tests/contrast.py         # contrastes de l'interface (WCAG 1.4.3 et 1.4.11), états inactifs compris
-python tests/csp.py              # aucune violation de la politique de sécurité du contenu
-python tests/pwa.py              # sous-chemin GitHub Pages, manifeste, service worker, hors ligne, liste APP, mise à jour (déploiement simulé)
+python tests/run_all.py ux saves # seulement ces tests (ou : python tests/ux.py, après génération des données)
+python tests/fixture.py && python tests/make_formats.py && python tests/make_city.py   # génère seulement les données de test
 python tests/swversion.py        # VERSION de sw.js changée si sw.js ou un fichier de APP diffère de origin/main (lancé par la CI)
-python tests/illus.py            # mode Illustration : prompt, import (refus GIF / fichier endommagé), qualité, cadrage, retouches, titre, export
-python tests/illustore.py        # illustrations conservées : IndexedDB, rechargement, Mes affiches, fichiers avec images, lien, image manquante, nettoyage
-python tests/illusmix.py         # Carte + illustration : médaillon, vignette, haut / bas, côte à côte, fondu ; prompt, qualité, harmonisation, gestes, pistes lues dans la carte, export
-python tests/illustext.py        # déplacer les textes (titre, bloc du bas) : positions, glisser, aimantation, clavier, chevauchement, vignette, prompt
-python tests/illuspaste.py       # coller l'illustration depuis le presse-papiers (simulé) : image, GIF refusé, sans image, refus, API absente
-python tests/deps.py             # réglages dépendants d'un autre choix : masqués ou annotés, bascule annulable
-python tests/safezone.py         # zone de sécurité de 5 mm : repère par format et orientation, export inchangé, alertes
+python tests/layouts.py          # captures des 11 gabarits (contrôle visuel, hors suite)
+python tests/make_og.py          # régénère icons/og-image.jpg (aperçu des liens partagés) avec le rendu actuel
 python -m http.server 8000       # aperçu local : http://localhost:8000
 ```
-Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé.
+Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé. Le rôle et les critères de chaque test sont décrits dans le [catalogue des tests](docs/dossier-technique.md#92-catalogue-et-critères-dacceptation) (dossier, § 9.2) ; un nouveau test y est ajouté, ainsi que dans la liste `TESTS` de `tests/run_all.py`.
 
 `tests/city.json` (généré par `tests/make_city.py`) est une ville fictive mais réaliste — fleuve à îles, vieille ville et château, faubourgs, grand ensemble, pavillons, port, gare, rocade, campagne, ~18 500 bâtiments — à importer aussi dans l'application (onglet Lieu, section Avancé, moteur Fichier) pour juger un rendu sans réseau ; elle est centrée sur la vue par défaut.
 
@@ -91,7 +52,7 @@ Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chr
 - Lancer `python tests/run_all.py` : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports A4 de 2480 × 3508 px). La même suite tourne dans GitHub Actions à chaque pull request et à chaque push sur `main` (un nouveau push annule l'exécution en cours). Un test en échec est relancé seul une fois : s'il passe, il est signalé « INSTABLE » à corriger.
 - Les tests ouvrent la page avec `?test` ; pour attendre une condition, utiliser `wait_js` (`tests/jswait.py`), jamais `page.wait_for_function` (refusé par la CSP).
 - Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
-- Mettre à jour le dossier technique quand un comportement change.
+- Mettre à jour le dossier technique quand un comportement change, et le guide de l'utilisateur quand une commande, une option ou un libellé change.
 
 ## Branches
 - `main` : version publiée sur GitHub Pages.
