@@ -121,10 +121,11 @@ async def main():
         await page.mouse.move(hb['x'] + hb['width'] / 2 + 20, hb['y'] + hb['height'] / 2, steps=4); await page.mouse.up(); await page.wait_for_timeout(200)
         check(await page.evaluate("__cms.st.illus.ox") > 0.05 and await page.evaluate("JSON.stringify(__cms.st.center)") == c0, 'glisser la vignette : l\'image bouge, pas la carte')
 
-        # Couleurs de la carte d'après l'illustration, annulables
+        # Couleurs de la carte d'après l'illustration (onglet Style, « Couleurs d'après une image » ; #77), annulables
         await page.wait_for_timeout(1600)
         before = await page.evaluate("JSON.stringify(__cms.st.colors)")
-        await page.click('#harmSeg button[data-v=light]'); await page.wait_for_timeout(500)
+        await page.evaluate("__cms.showTab('style')"); await page.click('#bPalIllus'); await page.wait_for_timeout(500)
+        check(await page.is_visible('#photoPal') and 'illustration' in await page.text_content('#photoNote'), 'palette de l\'illustration : nuancier affiché, source indiquée')
         after = await page.evaluate("__cms.st.colors")
         check(await page.evaluate("JSON.stringify(__cms.st.colors)") != before and after['paper'] != '#C0392B', 'couleurs de la carte tirées de l\'illustration')
         await page.wait_for_timeout(500)

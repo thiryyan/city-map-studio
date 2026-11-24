@@ -35,8 +35,11 @@ function layoutPreview(){
   const G=geom(st,w,h), g=G.map; ui.slotCss=g; ui.geomCss=G;
   const clip=g.shape && g.shape!=='circle' ? `path('${shapeD(g.shape,g.w,g.h)}')` : '';
   Object.assign(slot.style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px',clipPath:clip});
-  Object.assign($('shield').style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px',borderRadius:g.circle?'50%':'',clipPath:clip});
-  $('shield').classList.toggle('mini',g.w<170);
+  // Verrou « Toucher pour cadrer » : au-dessus du calque cadré, la carte ou l'illustration (#77)
+  const il=CMS.illus?.layer?.()==='illus' && G.illus, sr=il ? G.illus : g;
+  Object.assign($('shield').style,{left:sr.x+'px',top:sr.y+'px',width:sr.w+'px',height:sr.h+'px',borderRadius:!il && g.circle?'50%':'',
+    clipPath:il ? (sr.shape ? `path('${shapeD(sr.shape,sr.w,sr.h)}')` : '') : clip});
+  $('shield').classList.toggle('mini',sr.w<170);
   slot.classList.toggle('circle',!!g.circle);
   // Deux lieux : la vue non éditée est une image figée ; la toucher la rend éditable
   const other=G.rects ? G.rects[1-(st.active||0)] : null, ps=$('placeSwitch');

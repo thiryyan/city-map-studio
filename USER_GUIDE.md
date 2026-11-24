@@ -136,9 +136,10 @@ Les **boutons flottants**, à côté de l'affiche, sont :
 | Bouton | Action |
 | :--- | :--- |
 | Cadrer | Ouvre ou ferme le mode Cadrer (téléphone). |
-| + / − | Zoom d'un demi-cran. |
+| + / − | Zoom d'un demi-cran (affiche illustrée : agrandit ou réduit l'illustration de 10 %). |
 | Placer le repère | Le prochain toucher sur la carte pose le repère. |
-| Centrer sur le repère | Ramène la carte sur le repère. |
+| Centrer sur le repère | Ramène la carte sur le repère (affiche illustrée : recentre l'illustration). |
+| Carte / Image | Carte + illustration seulement : choisit le calque que cadrent les autres boutons et le mode Cadrer. |
 | Œil, « Voir l'affiche seule » | Masque tout ce qui recouvre l'affiche, panneau compris sur téléphone. Un toucher, Échap ou le bouton retour du téléphone ramène aux réglages, sans déplacer la carte ni poser de repère. |
 
 ### 3.4. La barre du bas
@@ -248,7 +249,7 @@ Dix styles : **Cœur géométrique**, **Point**, **Cœur**, **Anneau**, **Éping
 | Plein / Contour | Silhouette pleine ou simple trait. |
 | Taille | 10 à 300 % (100 % = 5,5 % de la largeur de l'affiche). |
 | Opacité | 20 à 100 %. |
-| Couleur | Or, Rouge, Noir, Blanc, ou couleur libre. |
+| Couleur | **Auto** (couleur Repère du thème), Or, Rouge, Noir, Blanc, ou couleur libre. La couleur en cours est enfoncée. |
 
 ### 5.2. Plusieurs lieux
 
@@ -399,13 +400,21 @@ Un toucher applique un ensemble assorti, en gardant le lieu et les textes :
 | Notre quartier | Souvenir | Garamond | Cadre | Cœur | Lisse, halo, quartier en relief |
 | Souvenir | Souvenir | Playfair | Souvenir | Cœur | Lisse (rendu par défaut) |
 
-Une ambiance désactive les effets qu'elle ne cite pas. Tout reste modifiable ensuite.
+Une ambiance désactive les effets qu'elle ne cite pas. Elle ne change que ce qui existe dans le type d'affiche en
+cours : sur une affiche **Illustration**, le thème, les polices, le papier et la dorure (ni gabarit, ni repère, ni
+effets de carte) ; sur une affiche **Carte + illustration**, tout sauf le gabarit (la composition en tient lieu). Le
+message indique ce qui a changé. Tout reste modifiable ensuite, et « Annuler » revient en arrière.
 
 ### 7.2. Thème
 
 Seize thèmes, filtrables par catégorie (**Clairs**, **Sombres**, **Couleurs**) : Souvenir, Galerie Or & Noir,
 Prestige Onyx & Or, Blanc minimaliste, Crème & Encre, Nuit boréale, Sépia vintage, Sauge, Terracotta, Rose poudré,
 Automne, Marine, Encre de Chine, Plan d'architecte, Néon, Risographie.
+
+**Couleurs d'après une image** (pour les trois types d'affiche) : **Une photo** (un coucher de soleil, un bouquet,
+la façade de la maison…) ou, sur une affiche illustrée, **L'illustration** importée. L'application en tire six
+couleurs dominantes et en fait un thème, en version **Claire** ou **Sombre** : papier, textes et carte s'accordent
+à l'image. La photo ne quitte pas l'appareil et n'est pas conservée.
 
 Un **contrôle de contraste** avertit quand, à l'impression, les rues principales ressortent mal sur la terre, quand
 le texte manque de contraste avec le papier, ou quand le repère se distingue mal. Il sert surtout pour les couleurs
@@ -417,7 +426,8 @@ Les polices sont dans l'onglet **Textes** (§ 6.5).
 
 ### 7.4. Papier
 
-**Lisse**, **Grain**, **Aquarelle**, **Kraft**, **Toile**, **Ancien** (papier jauni, bords roussis, rousseurs). La
+**Lisse**, **Grain**, **Aquarelle**, **Kraft**, **Toile**, **Ancien** (papier jauni, bords roussis, rousseurs). Sur
+une affiche illustrée, **Papier jauni sur l'illustration** teinte l'image comme un vieux papier. La
 case **Plis d'une carte dépliée** ajoute les plis d'une carte routière, avec n'importe quel papier. Le papier
 figure à l'identique sur l'aperçu et sur l'export.
 
@@ -439,10 +449,8 @@ l'impression, c'est une illusion de dorure.
 | **Polaroid** | Carte carrée, large marge basse, dédicace en tête du texte. |
 | **Deux lieux**, **Ciel**, **Lettres** | Voir le § 8. |
 
-* **Marge (passe-partout)** : 3 à 12 % de l'affiche.
-* **Palette tirée d'une photo** : choisissez une photo (un coucher de soleil, un bouquet, la façade de la maison…).
-  L'application en tire six couleurs dominantes et en fait un thème, en version **Claire** ou **Sombre**. La photo
-  ne quitte pas l'appareil et n'est pas conservée.
+* **Marge (passe-partout)** : 3 à 12 % de l'affiche (aussi pour la composition Vignette d'une affiche Carte +
+  illustration ; le **Contour de la forme** vaut aussi pour son Médaillon).
 * **Touche d'or** : applique un or `#C5A059` au fleuve, aux grands axes, au repère ou aux filets.
 * **Tracé** : **Épaisseur des rues** (× 0,5 à × 2,5) et **Mise en valeur des cours d'eau** (× 0,5 à × 3).
 
@@ -583,19 +591,28 @@ améliore la note, mais n'invente aucun détail.
 déplacement en glissant l'image sur l'aperçu, **Recentrer**.
 
 **Retouches** : luminosité, contraste et saturation (−50 à +50), **filtre vintage** (aucun, léger, marqué),
-**Grain**, **Papier jauni**, **Aplats** (couleurs réduites, effet sérigraphie).
+**Grain**, **Aplats** (couleurs réduites, effet sérigraphie). **Papier jauni** est rangé avec le papier, onglet
+Style (§ 7.4).
+
+Sur l'aperçu, les boutons flottants **+**, **−** et **Recentrer** agissent sur l'illustration. Sur téléphone,
+l'image est verrouillée comme la carte : touchez-la (« Toucher pour cadrer ») pour la déplacer, puis **Terminer**.
 
 **Remplacer** importe une autre image ; ✕ retire l'illustration (« Annuler » la retrouve).
 
 ### 9.4. Les textes d'une affiche illustrée
 
-L'onglet Textes est le même que pour une affiche Carte (§ 6.5 à 6.7). Sur une affiche illustrée, le titre est
-**Vintage** par défaut, avec une ombre à la couleur du papier, et il se place sur l'illustration. Sa position
+L'onglet Textes est le même que pour une affiche Carte (§ 6.1 à 6.7), et chaque réglage y agit de la même façon :
+dédicace sur une ou deux lignes, taille de chaque ligne (date et coordonnées gardent chacune la leur), légende des
+lieux numérotés en Carte + illustration. Chaque type d'affiche garde ses propres positions de textes. Sur une
+affiche illustrée, le titre est **Vintage** par défaut (« Titre automatique », indiqué sous les polices du titre), avec une ombre à la couleur du papier, et il se place sur l'illustration. Sa position
 est reprise dans le prompt, pour que l'IA laisse cette zone calme. Un chevauchement (bloc du bas sur le titre,
 texte sur la carte) est permis, mais signalé.
 
 L'onglet Style garde, sans carte, ce qui agit sur l'affiche : ambiances, thème (papier et couleur Auto des
-textes), papier, plis et dorure.
+textes), couleurs d'après l'illustration ou une photo, papier, plis et dorure.
+
+L'onglet **Lieu** reste proposé (sans placement sur la carte ni zoom) : la ville et le lieu de rencontre donnent le
+titre, les coordonnées inscrites sur l'affiche et les pistes que l'application lit autour du lieu pour le prompt.
 
 ### 9.5. Carte + illustration
 
@@ -606,11 +623,13 @@ L'onglet Illustration commence par une étape **Composition** :
 | **Médaillon** | Illustration en pleine page, carte dans une forme. | Forme : rond, cœur, arche ; position : haut, centre, bas. |
 | **Vignette** | Carte encadrée, illustration dans une arche en haut à droite, textes dans une bande sous la carte. | — |
 | **Haut / bas** | Illustration en haut, carte en bas. | Moitié · moitié, ou deux tiers · un tiers. |
-| **Côte à côte** | Illustration à gauche, carte à droite. | L'affiche passe en paysage. |
+| **Côte à côte** | Illustration à gauche, carte à droite. | L'affiche passe en paysage ; une autre composition rend l'orientation d'avant. |
 | **Fondu** | La carte émerge du bas de l'illustration. | — |
 
-La phrase transmise au prompt pour cette composition est affichée. **Couleurs de la carte d'après l'illustration**
-(version claire ou sombre) accorde la carte à l'image. À l'inverse, la palette « Thème de l'affiche » de l'étape
+La phrase transmise au prompt pour cette composition est affichée. Pour accorder la carte à l'image : onglet Style,
+**Couleurs d'après une image**, **L'illustration** (version claire ou sombre). Le bouton flottant **Carte / Image**
+choisit le calque cadré : zoom, recentrage et mode Cadrer agissent alors sur la carte ou sur l'illustration (la
+carte reste en place pendant que l'illustration est cadrée). À l'inverse, la palette « Thème de l'affiche » de l'étape
 Prompt transmet les couleurs de la carte à l'IA.
 
 Tous les réglages de la carte restent disponibles, sauf les ambiances et les gabarits, remplacés par la
@@ -805,7 +824,7 @@ Fichier avec un fichier déjà téléchargé. Le mode Illustration fonctionne au
 * **Voir l'affiche comme imprimée** : bouton œil (« Voir l'affiche seule »), puis « Voir l'affiche au mur ».
 * **Thèmes sombres** : ajoutez la Lueur ; sur papier sombre, la dorure ressort particulièrement.
 * **Dédicace longue** : passez-la sur deux lignes plutôt que de réduire sa taille.
-* **Couleurs d'un souvenir** : une photo du jour J dans « Palette tirée d'une photo » donne une affiche unique.
+* **Couleurs d'un souvenir** : une photo du jour J dans « Couleurs d'après une image » donne une affiche unique.
 * **Affiche illustrée** : choisissez le format avant de copier le prompt, et visez une note « Bonne » pour le format
   d'impression.
 * **Garder ses affiches** : sauvegarde complète en fichier, illustrations incluses.

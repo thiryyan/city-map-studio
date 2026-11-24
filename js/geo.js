@@ -41,7 +41,7 @@ function textLine(k){
 }
 /** Légende des lieux numérotés : « 1 Rencontre · 2 Mariage » */
 function legendText(){
-  const ex=st.markers2||[]; if(!st.numbered || !ex.length) return '';
+  const ex=st.markers2||[]; if(!st.numbered || !ex.length || st.mode==='illus') return '';   // Illustration : ni carte ni repères
   return [st.markerLabel,...ex.map(p=>p.label)].map((l,i)=>(l||'').trim()?`${i+1}  ${l.trim()}`:'').filter(Boolean).join('   ·   ');
 }
 function placeCoordText(mk){ return st.coordFormat==='dms' ? `${dms(mk.lat,'N','S')}, ${dms(mk.lon,'E','W')}` : `${mk.lat.toFixed(4)}, ${mk.lon.toFixed(4)}`; }

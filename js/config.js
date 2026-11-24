@@ -176,9 +176,11 @@ const DEFAULT_STATE = {
   // Texte du thème ; ombre aucune en Carte, couleur du papier sinon. v : version (2 : valeurs Auto ; cf. migration de normState).
   // Positions des modes illustrés : pos (9 positions, ILLUS_POS) ; free / ffree : position libre (glissée) du bloc de titre / du bloc
   // du bas, centre en fraction de la zone des textes ({x, y}) ou null ; fpos : bloc du bas (dédicace, noms, date, coordonnées) :
-  // 'auto' (côté opposé au titre) ou une des 9 positions. map : mêmes champs pour le mode Carte, où 'auto' = dans le gabarit (#75).
+  // 'auto' (côté opposé au titre) ou une des 9 positions. map : mêmes champs pour le mode Carte, où 'auto' = dans le gabarit (#75) ;
+  // mix : mêmes champs pour le mode Carte + illustration (#77). Chaque type d'affiche garde ainsi ses propres positions.
   illusText:{v:2,style:'auto',color:'auto',shadow:'auto',outline:'',off:4,pos:'hc',free:null,fpos:'auto',ffree:null,
-    map:{pos:'auto',free:null,fpos:'auto',ffree:null}}
+    map:{pos:'auto',free:null,fpos:'auto',ffree:null},
+    mix:{pos:'hc',free:null,fpos:'auto',ffree:null}}   // Carte + illustration : positions propres (#77)
 };
 // Modes illustrés : listes de valeurs (aussi utilisées par normState pour valider un état venu de l'extérieur)
 CMS.define('illusConf', () => ({

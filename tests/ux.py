@@ -73,7 +73,7 @@ async def main():
         # ---------- Parcours guidé ----------
         seen = []
         for _ in range(3):
-            await page.click('.tab.on [data-next]'); seen.append(await page.evaluate("document.querySelector('#tabs .on').dataset.tab"))
+            await page.click('.tab.on [data-next]:visible'); seen.append(await page.evaluate("document.querySelector('#tabs .on').dataset.tab"))
         check(seen == ['repere', 'textes', 'style'], f'« Étape suivante » : {seen}')
         check(await page.is_visible('#bNextExport'), 'dernière étape : bouton « exporter l\'affiche »')
 

@@ -107,13 +107,13 @@ async def main():
 
         # Médaillon : le bloc du bas posé sur la carte ; le glisser ne déplace ni la carte ni l'image
         await page.evaluate("CMS.illus.setMode('mix'); __cms.st.mix.compo='med'; __cms.st.mix.pos='bas'; layoutPreview(); __cms.showTab('textes')"); await page.wait_for_timeout(500)
-        await page.click('#fPosSeg button[data-v=mc]'); await page.evaluate("__cms.st.illusText.ffree={x:0.5,y:0.75}; scheduleOver()"); await page.wait_for_timeout(300)
+        await page.click('#fPosSeg button[data-v=mc]'); await page.evaluate("__cms.st.illusText.mix.ffree={x:0.5,y:0.75}; scheduleOver()"); await page.wait_for_timeout(300)
         check('débordent sur la carte' in await page.text_content('#textWarn'), 'médaillon : texte sur la carte signalé')
         c0 = await page.evaluate("JSON.stringify(__cms.st.center)"); ox = await page.evaluate("__cms.st.illus.ox")
         fb = await page.locator('#hitFoot').bounding_box()
         await page.mouse.move(fb['x'] + fb['width'] / 2, fb['y'] + fb['height'] / 2); await page.mouse.down()
         await page.mouse.move(fb['x'] + fb['width'] / 2 + 30, fb['y'] + fb['height'] / 2 - 40, steps=6); await page.mouse.up(); await page.wait_for_timeout(300)
-        check(await page.evaluate("JSON.stringify(__cms.st.center)") == c0 and await page.evaluate("__cms.st.illus.ox") == ox and await page.evaluate("__cms.st.illusText.ffree.y") < 0.75,
+        check(await page.evaluate("JSON.stringify(__cms.st.center)") == c0 and await page.evaluate("__cms.st.illus.ox") == ox and await page.evaluate("__cms.st.illusText.mix.ffree.y") < 0.75,
               'médaillon : glisser le texte posé sur la carte ne déplace ni la carte ni l\'image')
         await page.click('#fAutoBtn')
 
@@ -123,11 +123,16 @@ async def main():
         hb = await page.locator('#hitTitle').bounding_box()
         await page.mouse.move(hb['x'] + hb['width'] / 2, hb['y'] + hb['height'] / 2); await page.mouse.down()
         await page.mouse.move(hb['x'] + hb['width'] / 2 - pb['width'] * 0.4, hb['y'] - pb['height'] * 0.4, steps=8); await page.mouse.up(); await page.wait_for_timeout(300)
-        t = await page.evaluate("[__cms.st.illusText.free, __cms.st.illusText.pos]")
+        t = await page.evaluate("[__cms.st.illusText.mix.free, __cms.st.illusText.mix.pos]")
         g = await page.evaluate(GLYPHS, 1240); bl = first(g, 'B')
         check(bl and band[0] < bl[2] < band[1] and bl[1] < 0.3, f'vignette : titre déplacé à gauche, resté dans la bande {bl} {t}')
         check(t[0] is None and t[1][1] == 'g', f'vignette : aimanté à gauche de la bande {t}')
         await page.click('#tPosSeg button[data-v=hc]')
+        # Positions propres à chaque type d'affiche (#77) : celles de l'Illustration n'ont pas bougé
+        pi = await page.evaluate("[__cms.st.illusText.free, __cms.st.illusText.ffree, __cms.st.illusText.fpos]")
+        check(pi == [None, None, 'auto'], f'positions de l\'Illustration indépendantes de la Carte + illustration {pi}')
+        m = await page.evaluate("normState({illusText:{v:2,pos:'bd',fpos:'hg'}}).illusText.mix")
+        check(m['pos'] == 'bd' and m['fpos'] == 'hg', f'état antérieur : la Carte + illustration reprend les positions partagées {m}')
 
         # État forgé
         n = await page.evaluate("normState({illusText:{free:{x:5,y:-1},fpos:'zz',ffree:{x:'a'}}}).illusText")
