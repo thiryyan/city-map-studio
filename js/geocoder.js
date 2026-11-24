@@ -45,7 +45,7 @@
       const a = it?.address && typeof it.address === 'object' ? it.address : {};
       const first = (...k) => k.map(x => clip(typeof a[x] === 'string' ? a[x] : '', 120)).find(Boolean) || '';
       return { lat, lon, name, display: display || name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`, key: `${clip(it?.osm_type, 10)}/${clip(it?.osm_id, 20)}`,
-        city: first('city', 'town', 'village', 'municipality', 'hamlet'), region: first('state', 'county', 'region'), country: first('country') };
+        city: first('city', 'town', 'village', 'municipality', 'hamlet', 'locality', 'isolated_dwelling'), region: first('state', 'county', 'region'), country: first('country') };
     }).filter(Boolean);
   }
 

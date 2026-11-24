@@ -162,7 +162,7 @@ Saisissez une adresse, un monument ou une ville, puis touchez **Chercher**. La r
 validation : il n'y a pas de suggestions pendant la frappe, que le service Nominatim interdit. Cinq résultats au
 plus s'affichent, chacun avec deux actions :
 
-* **Carte + repère** : centre la carte sur le lieu et y pose le repère ; le titre prend le nom de la ville du lieu et le sous-titre sa région et son pays (un titre ou un sous-titre que vous avez personnalisé est conservé) ;
+* **Carte + repère** : centre la carte sur le lieu et y pose le repère ; le titre prend le nom de la ville du lieu (ou, pour un lieu hors d'une ville — site naturel, monument isolé —, le nom du lieu lui-même) et le sous-titre sa région et son pays (un titre ou un sous-titre que vous avez personnalisé est conservé) ;
 * **Repère seul** : pose le repère sans déplacer la carte.
 
 Une recherche à la fois : le bouton est inactif pendant la requête. En cas de recherches trop rapprochées, le

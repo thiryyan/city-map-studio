@@ -16,7 +16,9 @@ NOMI = json.dumps([{'lat': '48.8584', 'lon': '2.2945', 'name': 'Tour Eiffel',
                     'display_name': 'Tour Eiffel, Avenue Gustave Eiffel, Paris, France',
                     'address': {'city': 'Paris', 'state': 'Île-de-France', 'country': 'France'}},
                    {'lat': '45.7578', 'lon': '4.8320', 'name': 'Place Bellecour', 'display_name': 'Place Bellecour, Lyon, France',
-                    'address': {'city': 'Lyon', 'state': 'Auvergne-Rhône-Alpes', 'country': 'France'}}])
+                    'address': {'city': 'Lyon', 'state': 'Auvergne-Rhône-Alpes', 'country': 'France'}},
+                   {'lat': '45.8326', 'lon': '6.8652', 'name': 'Mont Blanc', 'display_name': 'Mont Blanc, Haute-Savoie, France',
+                    'address': {'peak': 'Mont Blanc', 'county': 'Haute-Savoie', 'state': 'Auvergne-Rhône-Alpes', 'country': 'France'}}])
 
 # Cibles tactiles : tout élément interactif visible du panneau, hors liens dans le texte et curseurs.
 TARGETS = """() => {
@@ -213,6 +215,12 @@ async def main():
         lt = await page.evaluate("['cityTxt','markerTxt'].map(i=>document.getElementById(i).innerText)")
         check(lt[0].startswith('Lyon') and 'Auvergne-Rhône-Alpes • France' in lt[0] and lt[1].startswith('Lyon') and 'Dans la ville affichée' in lt[1],
               f'onglet Lieu : ville choisie par la recherche nommée {lt}')
+        # lieu qui n'est pas une ville : le titre prend le nom du lieu
+        await page.fill('#q', 'mont blanc'); await page.press('#q', 'Enter'); await page.wait_for_selector('#results .res button', timeout=5000)
+        await page.evaluate("__cms.st.texts.title=''")
+        await page.click('#results .res:nth-child(3) button:has-text("Carte + repère")'); await page.wait_for_timeout(300)
+        tt = await page.evaluate("[__cms.st.texts.title, __cms.st.texts.subtitle, document.getElementById('cityTxt').querySelector('b').textContent]")
+        check(tt == ['Mont Blanc', 'Auvergne-Rhône-Alpes • France', 'Mont Blanc'], f'lieu hors ville : titre et onglet Lieu au nom du lieu {tt}')
         check(not errs, f'aucune erreur de page {errs}')
         await b.close()
     print('échecs', fails); assert not fails

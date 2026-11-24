@@ -509,12 +509,14 @@ async function search(q){
 function closeResults(){ searchMsg(''); $('q').focus(); }
 /** Un résultat validé (CMS.geocoder) : nom en tête, adresse en dessous, deux actions décrites par le lieu */
 let resultSeq=0;
-/** Le titre (ville) et le sous-titre (région • pays) suivent la ville du résultat choisi, comme pour les villes proposées,
+/** Nom donné au lieu choisi : sa ville, ou à défaut (site naturel, monument isolé, lieu-dit) le nom du lieu lui-même */
+const placeName=it=>{ const d=(it.display||'').split(',')[0].trim(); return it.city || it.name || (/^[-\d.\s]+$/.test(d)?'':d); };   // jamais de simples coordonnées
+/** Le titre (ville ou, à défaut, nom du lieu) et le sous-titre (région • pays) suivent le résultat choisi, comme pour les villes proposées,
  *  sauf s'ils ont été personnalisés : seuls un texte vide, celui d'une ville proposée ou le dernier posé ici sont remplacés.
  *  Rend le nouveau titre, ou '' si rien n'a changé. */
 let autoTexts={title:'',subtitle:''};
 function followCity(it){
-  const city=it.city || '', sub=[it.region,it.country].filter(Boolean).join(' • ');
+  const city=placeName(it), sub=[it.region,it.country].filter(Boolean).join(' • ');
   if(!city) return '';
   const free=(k,i)=>{ const v=(st.texts[k]||'').trim(); return !v || v===autoTexts[k] || PRESETS.some(p=>p[i]===v); };
   const t=free('title',4) && st.texts.title!==city, s=!!sub && free('subtitle',5) && st.texts.subtitle!==sub;
@@ -531,7 +533,7 @@ function resultItem(it){
   const btn=(label,fn)=>{ const b=h('button',{type:'button',className:'btn sm'},label); b.setAttribute('aria-describedby',id);
     b.onclick=e=>{ fn(); if(e.detail===0) $('q').focus({preventScroll:true}); };   // activé au clavier : le focus revient au champ
     return b; };
-  const remember=()=>updateMarkerTxt.remember(lat,lon,it.city,[it.region,it.country].filter(Boolean).join(' • '));
+  const remember=()=>updateMarkerTxt.remember(lat,lon,placeName(it),[it.region,it.country].filter(Boolean).join(' • '));
   const b1=btn('Carte + repère',()=>{ remember(); st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); const t=followCity(it); searchMsg('');
     $('resultsStatus').textContent='Carte centrée et repère placé.'+(t?` Titre : ${t}.`:''); if(t) toast('Titre : '+t); });
   const b2=btn('Repère seul',()=>{ remember(); setMarker(lat,lon); searchMsg(''); toast('Repère placé'); });
