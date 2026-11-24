@@ -88,12 +88,6 @@
         <p class="hint">Thème, polices, gabarit, repère et papier assortis, en un toucher ; tout reste modifiable, et « Annuler » revient en arrière.</p>
         <div class="fonts ambs" id="welAmb" role="group" aria-label="Ambiances proposées"></div>
       </section>
-      <!-- Téléphone (panneau coulissant) : sélecteur dans la zone défilante, pour garder la place des réglages -->
-        <div class="modes inbody" id="modeSegM" role="group" aria-label="Type d'affiche">
-        <button data-v="map" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Carte</button>
-        <button data-v="illus" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Illustration</button>
-      <button data-v="mix" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 9l3-3 3 3 2-2 4 2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="10" cy="13" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Carte + illus.</button>
-      </div>
       <!-- LIEU -->
       <div class="tab on" id="tab-lieu" role="tabpanel" aria-labelledby="tb-lieu">
         <div class="warn" id="envWarn" hidden></div>
@@ -146,7 +140,6 @@
           <div class="diag" id="diag"></div>
         </details>
         <button class="btn next maponly" type="button" data-next="repere">Étape suivante : le repère<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button class="btn next pureillus" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <p class="credit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL) · Tuiles <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · Rendu MapLibre GL · Géocodage Nominatim</p>
       </div>
       <!-- ILLUSTRATION (modes illustrés) : prompt pour une IA externe, puis import et ajustement de l'image -->
@@ -244,81 +237,90 @@
         <p class="hint">Un toucher pour un ensemble assorti (thème, polices, gabarit, repère, papier) ; tout reste modifiable ensuite.</p>
         <div class="fonts ambs" id="ambiances" role="group" aria-label="Ambiances"></div>
         </div>
-        <div class="layoutonly">
-        <h3>Gabarit</h3>
-        <div class="cards" id="layouts" role="group" aria-label="Gabarits"></div>
-        <div class="slider"><label for="sMargin">Marge (passe-partout)</label><output id="oMargin"></output><input type="range" id="sMargin" data-k="margin" min="3" max="12" step="0.5"></div>
-        <label class="tog" id="ringTog">Contour de la forme<input type="checkbox" data-k="ring"></label>
-        <div id="skyBox" hidden>
-          <h3>Ciel du jour J</h3>
-          <p class="hint">Les étoiles visibles au-dessus du repère, à la date et à l'heure choisies.</p>
-          <label class="f" for="skyWhen">Date et heure (heure locale du lieu)</label>
-          <input type="datetime-local" id="skyWhen" class="dt">
-          <label class="f" for="skyTz">Fuseau horaire du lieu</label>
-          <select id="skyTz" class="sel"></select>
-          <label class="tog">Constellations<input type="checkbox" data-k="sky.lines"></label>
-          <label class="tog">Grille de repérage<input type="checkbox" data-k="sky.grid"></label>
-          <label class="tog">Lune et sa phase<input type="checkbox" data-k="sky.moon"></label>
-          <label class="tog">Planètes visibles<input type="checkbox" data-k="sky.planets"></label>
-          <label class="tog">Voie lactée<input type="checkbox" data-k="sky.milky"></label>
-        </div>
-        </div>
         <div class="maponly">
         <h3>Thème</h3>
         <div class="chips fcats" id="themeCats" role="group" aria-label="Catégories de thèmes"></div>
         <div class="themes" id="themes" role="group" aria-label="Thèmes"></div>
         <button class="btn wide mt8 compare" id="bCompare" type="button" aria-pressed="false" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16" stroke="currentColor" stroke-width="1.8"/><rect x="2.5" y="4" width="15" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 5h6.5v10H3.5z" fill="currentColor" opacity=".35"/></svg><span>Maintenir pour comparer</span></button>
-        <label class="btn wide mt8">Palette tirée d'une photo<input type="file" id="photoIn" accept="image/*" hidden></label>
-        <div id="photoPal" hidden>
-          <div class="pal" id="photoSw" aria-hidden="true"></div>
-          <div class="seg" id="photoSeg" role="group" aria-label="Version de la palette"><button data-v="light" type="button">Claire</button><button data-v="dark" type="button">Sombre</button></div>
-          <p class="hint">La photo reste sur votre appareil : seules ses couleurs sont gardées.</p>
-        </div>
         <p class="fitnote" id="contrastWarn" aria-live="polite"></p>
         </div>
+        <h3>Polices</h3>
+        <div class="fonts duos" id="duos" role="radiogroup" aria-label="Duo de polices"></div>
+        <div class="chips fcats" id="fontCats" role="group" aria-label="Catégories de polices"></div>
+        <h3>Police du titre</h3>
+        <div class="fonts" id="fontTitleSeg" role="radiogroup" aria-label="Police du titre"></div>
+        <h3>Police du texte</h3>
+        <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police du texte"></div>
+        <p class="hint">Une police manuscrite n'est jamais mise en capitales : réservez-la à la dédicace et aux noms.</p>
         <h3>Papier</h3>
         <div class="chips" id="textures"></div>
         <label class="tog">Plis d'une carte dépliée<input type="checkbox" data-k="folds"></label>
-        <div class="maponly">
-        <h3>Touche d'or</h3>
-        <div class="chips">
-          <button class="chip" data-gold="water">Fleuve</button>
-          <button class="chip" data-gold="roadMajor">Grands axes</button>
-          <button class="chip" data-gold="marker">Repère</button>
-          <button class="chip" data-gold="frame">Filets</button>
-        </div>
-        <label class="tog">Dorure (reflets métalliques des textes, filets et repères)<input type="checkbox" data-k="fx.foil"></label>
-        <h3>Tracé</h3>
-        <div class="slider"><label for="sStroke">Épaisseur des rues</label><output id="oStroke"></output><input type="range" id="sStroke" data-k="stroke" min="0.5" max="2.5" step="0.05"></div>
-        <div class="slider"><label for="sWater">Mise en valeur des cours d'eau</label><output id="oWater"></output><input type="range" id="sWater" data-k="waterMult" min="0.5" max="3" step="0.1"></div>
-        <h3>Effets de tracé</h3>
-        <label class="tog">Eau hachurée<input type="checkbox" data-k="fx.hatch"></label>
-        <label class="tog">Bâtiments en contour<input type="checkbox" data-k="fx.outline"></label>
-        <label class="tog">Trait crayon (rues tracées deux fois, légèrement décalées)<input type="checkbox" data-k="fx.pencil"></label>
-        <label class="tog">Lueur (rues lumineuses, pour les thèmes sombres)<input type="checkbox" data-k="fx.glow"></label>
-        <label class="tog">Lignes d'eau gravées autour des rives<input type="checkbox" data-k="fx.waterlines"></label>
-        <label class="tog">Bâtiments pointillés<input type="checkbox" data-k="fx.dots"></label>
-        <label class="tog">Parcs hachurés<input type="checkbox" data-k="fx.parkHatch"></label>
-        <label class="tog">Surimpression riso (eau imprimée à part, décalée)<input type="checkbox" data-k="fx.riso"></label>
-        <h3>Autour du repère</h3>
-        <label class="tog">Halo du souvenir (la ville s'efface autour du lieu)<input type="checkbox" data-k="fx.halo"></label>
-        <label class="tog">Quartier en relief (rues proches à la couleur du repère)<input type="checkbox" data-k="fx.quarter"></label>
-        <div class="slider"><label for="sFocus">Rayon autour du repère</label><output id="oFocus"></output><input type="range" id="sFocus" data-k="focusR" min="10" max="60" step="1"></div>
-        <h3>Ornements</h3>
-        <label class="tog">Échelle graphique<input type="checkbox" data-k="orn.scale"></label>
-        <label class="tog">Rose des vents<input type="checkbox" data-k="orn.compass"></label>
-        <label class="tog">Graduations (latitude et longitude)<input type="checkbox" data-k="orn.grid"></label>
-        <h3>Calques</h3>
-        <label class="tog">Parcs et espaces verts<input type="checkbox" data-k="layers.parks"></label>
-        <label class="tog">Bâtiments<input type="checkbox" data-k="layers.buildings"></label>
-        <label class="tog">Voies ferrées<input type="checkbox" data-k="layers.rail"></label>
-        <details class="adv" id="colorsBox">
-          <summary><span>Personnaliser les couleurs</span><small>12 teintes</small></summary>
-          <div class="colors" id="colors"></div>
+        <details class="adv maponly" id="styleMore">
+          <summary><span>Plus de réglages</span><small>gabarit, effets, calques, couleurs</small></summary>
+          <div class="layoutonly">
+          <h3>Gabarit</h3>
+          <div class="cards" id="layouts" role="group" aria-label="Gabarits"></div>
+          <div class="slider"><label for="sMargin">Marge (passe-partout)</label><output id="oMargin"></output><input type="range" id="sMargin" data-k="margin" min="3" max="12" step="0.5"></div>
+          <label class="tog" id="ringTog">Contour de la forme<input type="checkbox" data-k="ring"></label>
+          <div id="skyBox" hidden>
+            <h3>Ciel du jour J</h3>
+            <p class="hint">Les étoiles visibles au-dessus du repère, à la date et à l'heure choisies.</p>
+            <label class="f" for="skyWhen">Date et heure (heure locale du lieu)</label>
+            <input type="datetime-local" id="skyWhen" class="dt">
+            <label class="f" for="skyTz">Fuseau horaire du lieu</label>
+            <select id="skyTz" class="sel"></select>
+            <label class="tog">Constellations<input type="checkbox" data-k="sky.lines"></label>
+            <label class="tog">Grille de repérage<input type="checkbox" data-k="sky.grid"></label>
+            <label class="tog">Lune et sa phase<input type="checkbox" data-k="sky.moon"></label>
+            <label class="tog">Planètes visibles<input type="checkbox" data-k="sky.planets"></label>
+            <label class="tog">Voie lactée<input type="checkbox" data-k="sky.milky"></label>
+          </div>
+          </div>
+          <label class="btn wide mt8">Palette tirée d'une photo<input type="file" id="photoIn" accept="image/*" hidden></label>
+          <div id="photoPal" hidden>
+            <div class="pal" id="photoSw" aria-hidden="true"></div>
+            <div class="seg" id="photoSeg" role="group" aria-label="Version de la palette"><button data-v="light" type="button">Claire</button><button data-v="dark" type="button">Sombre</button></div>
+            <p class="hint">La photo reste sur votre appareil : seules ses couleurs sont gardées.</p>
+          </div>
+          <h3>Touche d'or</h3>
+          <div class="chips">
+            <button class="chip" data-gold="water">Fleuve</button>
+            <button class="chip" data-gold="roadMajor">Grands axes</button>
+            <button class="chip" data-gold="marker">Repère</button>
+            <button class="chip" data-gold="frame">Filets</button>
+          </div>
+          <label class="tog">Dorure (reflets métalliques des textes, filets et repères)<input type="checkbox" data-k="fx.foil"></label>
+          <h3>Tracé</h3>
+          <div class="slider"><label for="sStroke">Épaisseur des rues</label><output id="oStroke"></output><input type="range" id="sStroke" data-k="stroke" min="0.5" max="2.5" step="0.05"></div>
+          <div class="slider"><label for="sWater">Mise en valeur des cours d'eau</label><output id="oWater"></output><input type="range" id="sWater" data-k="waterMult" min="0.5" max="3" step="0.1"></div>
+          <h3>Effets de tracé</h3>
+          <label class="tog">Eau hachurée<input type="checkbox" data-k="fx.hatch"></label>
+          <label class="tog">Bâtiments en contour<input type="checkbox" data-k="fx.outline"></label>
+          <label class="tog">Trait crayon (rues tracées deux fois, légèrement décalées)<input type="checkbox" data-k="fx.pencil"></label>
+          <label class="tog">Lueur (rues lumineuses, pour les thèmes sombres)<input type="checkbox" data-k="fx.glow"></label>
+          <label class="tog">Lignes d'eau gravées autour des rives<input type="checkbox" data-k="fx.waterlines"></label>
+          <label class="tog">Bâtiments pointillés<input type="checkbox" data-k="fx.dots"></label>
+          <label class="tog">Parcs hachurés<input type="checkbox" data-k="fx.parkHatch"></label>
+          <label class="tog">Surimpression riso (eau imprimée à part, décalée)<input type="checkbox" data-k="fx.riso"></label>
+          <h3>Autour du repère</h3>
+          <label class="tog">Halo du souvenir (la ville s'efface autour du lieu)<input type="checkbox" data-k="fx.halo"></label>
+          <label class="tog">Quartier en relief (rues proches à la couleur du repère)<input type="checkbox" data-k="fx.quarter"></label>
+          <div class="slider"><label for="sFocus">Rayon autour du repère</label><output id="oFocus"></output><input type="range" id="sFocus" data-k="focusR" min="10" max="60" step="1"></div>
+          <h3>Ornements</h3>
+          <label class="tog">Échelle graphique<input type="checkbox" data-k="orn.scale"></label>
+          <label class="tog">Rose des vents<input type="checkbox" data-k="orn.compass"></label>
+          <label class="tog">Graduations (latitude et longitude)<input type="checkbox" data-k="orn.grid"></label>
+          <h3>Calques</h3>
+          <label class="tog">Parcs et espaces verts<input type="checkbox" data-k="layers.parks"></label>
+          <label class="tog">Bâtiments<input type="checkbox" data-k="layers.buildings"></label>
+          <label class="tog">Voies ferrées<input type="checkbox" data-k="layers.rail"></label>
+          <details class="adv" id="colorsBox">
+            <summary><span>Personnaliser les couleurs</span><small>12 teintes</small></summary>
+            <div class="colors" id="colors"></div>
+          </details>
+          <label class="tog mt8">Mention complète des sources sur l'affiche<input type="checkbox" data-k="attribution"></label>
+          <p class="hint">« © OpenStreetMap » (et « © OpenMapTiles » avec le moteur Vectoriel GPU) reste toujours inscrit : les licences ODbL et CC-BY l'exigent.</p>
         </details>
-        <label class="tog mt8">Mention complète des sources sur l'affiche<input type="checkbox" data-k="attribution"></label>
-        <p class="hint">« © OpenStreetMap » (et « © OpenMapTiles » avec le moteur Vectoriel GPU) reste toujours inscrit : les licences ODbL et CC-BY l'exigent.</p>
-        </div>
         <button class="btn next" type="button" id="bNextExport">Étape suivante : l'export<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <!-- REPERE -->
@@ -378,14 +380,6 @@
         </div>
         <h3>Modèles de texte</h3>
         <div class="chips" id="occasions"></div>
-        <h3>Duos typographiques</h3>
-        <div class="fonts duos" id="duos" role="radiogroup" aria-label="Duo de polices"></div>
-        <div class="chips fcats" id="fontCats" role="group" aria-label="Catégories de polices"></div>
-        <h3>Police du titre</h3>
-        <div class="fonts" id="fontTitleSeg" role="radiogroup" aria-label="Police du titre"></div>
-        <h3>Police du texte</h3>
-        <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police du texte"></div>
-        <p class="hint">Une police manuscrite n'est jamais mise en capitales : réservez-la à la dédicace et aux noms.</p>
         <h3>Taille des textes</h3>
         <div class="slider"><label for="sTsAll">Tous les textes</label><output id="oTsAll"></output><input type="range" id="sTsAll" data-k="textScaleAll" min="70" max="140" step="5"></div>
         <div class="row end"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>

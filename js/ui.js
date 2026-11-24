@@ -157,6 +157,17 @@ function buildUI(){
   // section Avancé
   try{ if(localStorage.getItem(ADV_KEY)==='1') $('adv').open=true; }catch(e){}
   $('adv').addEventListener('toggle',()=>{ try{ $('adv').open ? localStorage.setItem(ADV_KEY,'1') : localStorage.removeItem(ADV_KEY); }catch(e){} });
+  // Onglet Style, « Plus de réglages » : mémorisée, et ouverte d'office si un réglage avancé diffère du défaut (aucun effet appliqué n'est caché)
+  const MORE_KEY='cityMapStudio.styleMoreOpen'; let moreAuto=false;   // locaux : pas de nouveaux noms globaux
+  function moreActive(){
+    const D=DEFAULT_STATE, diff=(a,b)=>Object.keys(b).some(k=>a?.[k]!==b[k]);
+    return diff(st.fx,D.fx)||diff(st.orn,D.orn)||diff(st.layers,D.layers)||st.stroke!==D.stroke||st.waterMult!==D.waterMult||st.attribution!==D.attribution;
+  }
+  function syncMore(){ const d=$('styleMore'); if(moreActive() && !d.open){ moreAuto=true; d.open=true; } }
+  // section « Plus de réglages » de l'onglet Style : état mémorisé ; ouverte d'office (sans mémoriser) quand un réglage qu'elle contient est actif
+  try{ if(localStorage.getItem(MORE_KEY)==='1') $('styleMore').open=true; }catch(e){}
+  $('styleMore').addEventListener('toggle',()=>{ if(moreAuto){ moreAuto=false; return; } try{ $('styleMore').open ? localStorage.setItem(MORE_KEY,'1') : localStorage.removeItem(MORE_KEY); }catch(e){} });
+  $('styleMore').addEventListener('input',syncMore); CMS.on('state:synced',syncMore); syncMore();
   // date : calendrier natif
   $('dateIn').addEventListener('focus',()=>{ const v=isoFromFr(st.texts.date); if(v) $('dateIn').value=v; });
   $('dateIn').addEventListener('pointerdown',()=>{ const v=isoFromFr(st.texts.date); if(v) $('dateIn').value=v; });

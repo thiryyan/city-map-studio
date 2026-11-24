@@ -284,6 +284,10 @@ details.adv>h3:first-of-type{margin-top:6px}
 .modes button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:44px;padding:6px 4px;font-size:.8125rem;line-height:1.2;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--mut);font-weight:500;cursor:pointer}
 .modes button.on{border-color:var(--acc);color:var(--txt);box-shadow:inset 0 0 0 1px var(--acc)}
 .modes button:focus-visible{outline:2px solid var(--acc2);outline-offset:1px}
+/* Téléphone : le type d'affiche reste épinglé au-dessus des onglets (choix d'abord, étapes ensuite) ; plus compact */
+#app.sheetmode .modes{padding:3px 10px 2px}
+#app.sheetmode .modes button{flex-direction:row;gap:6px;min-height:44px;padding:4px 6px;font-size:.8125rem}
+#app.sheetmode .modes button svg{flex:none}
 /* Visibilité selon le type d'affiche : maponly (carte et carte + illustration), layoutonly (carte seule : ambiances, gabarits),
    illusonly (modes illustrés), pureillus (illustration seule), mixonly (carte + illustration) */
 #app[data-mode=illus] .maponly,#app:not([data-mode=map]) .layoutonly,#app[data-mode=map] .illusonly,#app:not([data-mode=illus]) .pureillus,#app:not([data-mode=mix]) .mixonly{display:none!important}
@@ -324,9 +328,6 @@ h3 .opt{text-transform:none;letter-spacing:0;font-weight:400}
 .posgrid button{min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--mut);font-size:1.1rem;cursor:pointer}
 .posgrid button.on{border-color:var(--acc);color:var(--txt);box-shadow:inset 0 0 0 1px var(--acc)}
 #app[data-mode=illus] #banner{display:none}   /* bandeau de la carte (injoignable, données) : sans objet sans carte */
-.modes.inbody{display:none}
-#app.sheetmode .modes.top{display:none}
-#app.sheetmode .modes.inbody{display:flex;padding:10px 0 2px}
 /* Carte + illustration : compositions, zone de prise de la vignette */
 .compos{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
 .compos button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--txt);cursor:pointer;font-weight:500;min-height:44px}

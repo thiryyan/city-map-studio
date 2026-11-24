@@ -30,7 +30,7 @@ async def main():
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
         ctx = await b.new_context(viewport={'width': 1400, 'height': 900}, accept_downloads=True)
         page = await ctx.new_page(); errs = []
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
+        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):
             u = r.request.url
@@ -45,7 +45,7 @@ async def main():
         # ================= Phase A =================
         print('— Phase A')
         n = await ev("Object.keys(__cms.FONTS).length")
-        await ev("__cms.showTab('textes')")
+        await ev("__cms.showTab('style')")   # les polices sont dans l'onglet Style
         cards = await ev("[document.querySelectorAll('#fontSeg button').length, document.querySelectorAll('#fontTitleSeg button').length, document.querySelectorAll('#duos button').length]")
         check(n == 11 and cards == [11, 12, 6], f'11 polices, cartes titre et texte, 6 duos ({n}, {cards})')
         await page.click('#fontCats .chip:has-text("Manuscrites")')
