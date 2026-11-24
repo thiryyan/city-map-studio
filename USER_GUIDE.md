@@ -38,7 +38,7 @@ justification sont dans le [dossier technique](docs/dossier-technique.md).
 | **Carte du monde entier** | Tracé minimaliste des rues, de l'eau, des parcs, des bâtiments et des voies ferrées, sans aucun nom sur la carte. |
 | **Repère** | 10 styles (cœur, épingle, alliances, petits pieds…), jusqu'à 3 lieux numérotés et reliés, itinéraire GPX. |
 | **11 gabarits** | Souvenir, Cadre, Fondu, Médaillon, Cœur, Arche, Voyage, Polaroid, Deux lieux, Ciel, Lettres ; en portrait ou en paysage. |
-| **Style** | 13 ambiances prêtes à l'emploi, 16 thèmes de couleurs, palette tirée d'une photo, 11 polices et 6 duos, 6 papiers et des plis. |
+| **Style** | 13 ambiances prêtes à l'emploi, 16 thèmes de couleurs, palette tirée d'une photo, 6 papiers et des plis. Les 11 polices et 6 duos sont dans l'onglet Textes. |
 | **Effets** | Eau hachurée, bâtiments en contour ou pointillés, trait crayon, lueur, lignes d'eau gravées, parcs hachurés, surimpression riso, halo et quartier en relief, dorure, échelle, rose des vents, graduations. |
 | **Ciel du jour J** | Étoiles, constellations, Lune et planètes visibles au-dessus du lieu, à la date et à l'heure choisies. |
 | **Export** | PNG 300 DPI (2480 × 3508 px en A4) ou PDF à la taille exacte d'impression ; aperçu au mur. |
@@ -323,6 +323,54 @@ jamais écrasés. Un modèle s'annule comme tout autre changement.
 Tous les gabarits n'affichent pas toutes les lignes. Souvenir et Polaroid, par exemple, n'affichent pas le
 sous-titre : une note sous la ligne l'indique, avec un bouton « Passer au gabarit Cadre ».
 
+L'onglet Textes est le même pour les trois types d'affiche (Carte, Illustration, Carte + illus.). Les sections
+6.5 à 6.7 sont en tête de l'onglet.
+
+### 6.5. Typographie
+
+
+* **Duos** préassortis : Origine (Playfair), Mariage (Italiana + Calligraphie), Voyage (Bebas + Jost), Classique
+  (Bodoni + Garamond), Moderne (Jost), Chaleureux (Fraunces + Montserrat).
+* **Police du titre** et **police du texte**, choisies séparément. La police du titre propose d'abord **Vintage** :
+  grandes capitales condensées, à la manière des affiches de voyage. Viennent ensuite « Comme le texte » et onze
+  familles : Playfair, Garamond, Bodoni, Italiana, Fraunces (classiques), Montserrat, Jost, Mono (modernes), Art
+  déco, Bebas (affiche) et Calligraphie (manuscrite). Les cartes se filtrent par catégorie et montrent votre titre
+  ou vos noms.
+* **Règle de la police manuscrite** : elle n'est jamais mise en capitales ni espacée. Elle ne sert qu'à la dédicace,
+  aux noms et aux légendes des deux lieux ; les autres lignes prennent la police du titre.
+
+Toutes les polices sont incluses dans l'application : rien n'est téléchargé chez un tiers, et l'export utilise
+exactement les polices de l'aperçu.
+
+Choisir une police de titre ou un duo quitte le style Vintage. Une ambiance remet le style du titre sur **Auto** :
+police choisie sur une affiche Carte, Vintage sur une affiche illustrée.
+
+### 6.6. Couleurs des textes
+
+* **Lettres** : **Auto** (couleur Texte du thème, par défaut), une teinte du nuancier ou une couleur libre.
+* **Ombre** : **Auto** (aucune sur une affiche Carte, couleur du papier sur une affiche illustrée), aucune ou
+  une teinte ; **décalage de l'ombre** de 1 à 12.
+* **Contour** : aucun (par défaut) ou une teinte.
+
+La pastille Auto montre, en bas, la couleur que donne le thème actuel. Le style du titre et ces couleurs sont
+communs aux trois types d'affiche. Sur une affiche Carte, ils s'appliquent aux lignes du gabarit : cartouche,
+en-tête et pied de Souvenir, Voyage… La mention des sources n'est pas concernée.
+
+### 6.7. Position des textes
+
+* **Titre** (et sous-titre) : grille de 9 positions. Sur une affiche Carte, **Dans le gabarit** (par défaut) le
+  laisse à la place prévue par le gabarit.
+* **Lignes du bas** (dédicace, noms, date et coordonnées) : un bloc. **Auto** le place à l'opposé du titre sur une
+  affiche illustrée, **Dans le gabarit** sur une affiche Carte, ou choisissez l'une des 9 positions.
+* Sur une affiche Carte, un bloc sorti du gabarit est posé sur l'affiche, au-dessus de la carte, et sa place
+  dans le gabarit reste vide. Choisissez une ombre ou un contour pour qu'il reste lisible. Dans le gabarit
+  Lettres, le titre forme la carte : il reste en place.
+* **Glisser sur l'aperçu** : un bloc posé sur l'affiche se déplace au doigt ou à la souris, aimanté sur les axes
+  du centre et sur les positions de la grille. Au clavier : Tab jusqu'au bloc, flèches (1 %, Maj : 5 %), Origine
+  pour revenir à la grille (affiche Carte : dans le gabarit), Échap pour sortir.
+* Les positions sont propres à chaque type d'affiche : un titre déplacé sur une illustration ne bouge pas sur la
+  carte.
+
 ---
 
 ## 7. Onglet Style
@@ -365,23 +413,17 @@ personnalisées : aucun thème fourni ne le déclenche.
 
 ### 7.3. Polices
 
-* **Duos** préassortis : Origine (Playfair), Mariage (Italiana + Calligraphie), Voyage (Bebas + Jost), Classique
-  (Bodoni + Garamond), Moderne (Jost), Chaleureux (Fraunces + Montserrat).
-* **Police du titre** (« Comme le texte » par défaut) et **police du texte**, choisies séparément parmi onze
-  familles : Playfair, Garamond, Bodoni, Italiana, Fraunces (classiques), Montserrat, Jost, Mono (modernes), Art
-  déco, Bebas (affiche) et Calligraphie (manuscrite). Les cartes se filtrent par catégorie et montrent votre titre
-  ou vos noms.
-* **Règle de la police manuscrite** : elle n'est jamais mise en capitales ni espacée. Elle ne sert qu'à la dédicace,
-  aux noms et aux légendes des deux lieux ; les autres lignes prennent la police du titre.
-
-Toutes les polices sont incluses dans l'application : rien n'est téléchargé chez un tiers, et l'export utilise
-exactement les polices de l'aperçu.
+Les polices sont dans l'onglet **Textes** (§ 6.5).
 
 ### 7.4. Papier
 
 **Lisse**, **Grain**, **Aquarelle**, **Kraft**, **Toile**, **Ancien** (papier jauni, bords roussis, rousseurs). La
 case **Plis d'une carte dépliée** ajoute les plis d'une carte routière, avec n'importe quel papier. Le papier
 figure à l'identique sur l'aperçu et sur l'export.
+
+**Dorure** (sous le papier, pour tous les types d'affiche) : textes, filets, contours et repères prennent un reflet
+métallique tiré de leur propre couleur (l'or devient feuille d'or, le blanc argent, le terracotta cuivre). À
+l'impression, c'est une illusion de dorure.
 
 ### 7.5. Plus de réglages
 
@@ -402,8 +444,6 @@ figure à l'identique sur l'aperçu et sur l'export.
   L'application en tire six couleurs dominantes et en fait un thème, en version **Claire** ou **Sombre**. La photo
   ne quitte pas l'appareil et n'est pas conservée.
 * **Touche d'or** : applique un or `#C5A059` au fleuve, aux grands axes, au repère ou aux filets.
-* **Dorure** : textes, filets, contours et repères prennent un reflet métallique tiré de leur propre couleur (l'or
-  devient feuille d'or, le blanc argent, le terracotta cuivre). À l'impression, c'est une illusion de dorure.
 * **Tracé** : **Épaisseur des rues** (× 0,5 à × 2,5) et **Mise en valeur des cours d'eau** (× 0,5 à × 3).
 
 **Effets de tracé** (cumulables)
@@ -549,19 +589,13 @@ déplacement en glissant l'image sur l'aperçu, **Recentrer**.
 
 ### 9.4. Les textes d'une affiche illustrée
 
-L'onglet Textes gagne quelques réglages :
+L'onglet Textes est le même que pour une affiche Carte (§ 6.5 à 6.7). Sur une affiche illustrée, le titre est
+**Vintage** par défaut, avec une ombre à la couleur du papier, et il se place sur l'illustration. Sa position
+est reprise dans le prompt, pour que l'IA laisse cette zone calme. Un chevauchement (bloc du bas sur le titre,
+texte sur la carte) est permis, mais signalé.
 
-* **Style du titre** : **Vintage** (grandes capitales condensées, ombre décalée, à la manière des affiches de
-  voyage) ou **Police choisie** (polices de l'onglet Style).
-* **Couleurs des textes** : lettres (nuancier ou couleur libre), ombre et contour (ou aucun) ; **décalage de
-  l'ombre** de 1 à 12.
-* **Position des textes** : le titre et son sous-titre se placent sur une grille de 9 positions.
-* **Position des lignes du bas** : dédicace, noms, date et coordonnées forment un bloc ; **Auto** le place à
-  l'opposé du titre, ou choisissez l'une des 9 positions.
-* **Glisser sur l'aperçu** : le titre et le bloc du bas se déplacent aussi au doigt ou à la souris, avec une
-  aimantation sur les axes du centre et sur les positions de la grille. Au clavier : Tab jusqu'au bloc, flèches
-  (1 %, Maj : 5 %), Origine pour revenir à la grille, Échap pour sortir.
-* Un chevauchement (bloc du bas sur le titre, texte sur la carte) est permis, mais signalé.
+L'onglet Style garde, sans carte, ce qui agit sur l'affiche : ambiances, thème (papier et couleur Auto des
+textes), papier, plis et dorure.
 
 ### 9.5. Carte + illustration
 

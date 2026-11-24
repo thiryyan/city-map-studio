@@ -453,7 +453,7 @@ CMS.define('illus', () => {
   }
   /** Carte + illustration (drawPoster) : médaillon (carte dans une forme sur l'illustration) ou vignette (illustration sur la carte) */
   function drawMix(ctx, W, H, pass, g, mapFn){
-    const c=st.colors, U=g.U, T=st.illusText, med=g.mix==='med', r=g.map;
+    const c=st.colors, U=g.U, T=textStyle(), med=g.mix==='med', r=g.map;
     if(pass!=='over'){
       ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H);
       if(g.mix!=='vig'){ if(ready()) drawImageIn(ctx,g.illus,W,H); else if(med || g.mix==='fondu') placeholder(ctx,W,H,U,st.illus.img); else placeholderIn(ctx,g.illus,U); }
@@ -547,7 +547,7 @@ CMS.define('illus', () => {
   const footRC=T=>T.ffree ? rowOf(T.ffree.y)+colOf(T.ffree.x) : footSpec(T).pos;
   /** Mise en page des deux blocs dans une zone W × H (coordonnées de la zone) */
   function textLayout(ctx, W, H, U, over){
-    const T={...st.illusText,...(over||{})}, m=0.06*U, vint=T.style==='vintage', maxW=W-2*m;
+    const T={...textStyle(),...posOf(),...(over||{})}, m=0.06*U, vint=T.vint, maxW=W-2*m;
     const shadow=T.shadow ? {color:T.shadow, dx:T.off*0.0016*U, dy:T.off*0.0016*U} : null;
     const stroke=w=>T.outline ? {color:T.outline, w:Math.max(1,w*U)} : null;
     const title=textLine('title'), sub=textLine('subtitle');
@@ -569,7 +569,7 @@ CMS.define('illus', () => {
   }
   /** Textes dans une zone (l'affiche, ou l'illustration en mode Carte + illustration) ; avoid : cadre de la carte à signaler */
   function drawTexts(ctx, PW, PH, U, area, avoid){
-    const A=area||{x:0,y:0,w:PW,h:PH}, col=st.illusText.color;
+    const A=area||{x:0,y:0,w:PW,h:PH}, col=textStyle().color;
     ctx.save(); ctx.translate(A.x,A.y);
     let L;
     try{
@@ -578,9 +578,26 @@ CMS.define('illus', () => {
     } finally{ ctx.restore(); }
     noteLayout(ctx,PW,PH,'area',A,L,avoid);
   }
+  /** Mode Carte (#75) : blocs sortis du gabarit (une des 9 positions, ou glissés). Gabarit Lettres : le titre forme la carte. */
+  function mapMoved(s=st){
+    const P=s.illusText.map;
+    return {title:s.layout!=='typo' && (!!P.free || P.pos!=='auto'), foot:!!P.ffree || P.fpos!=='auto'};
+  }
+  /** Mode Carte : blocs sortis du gabarit, dessinés sur toute l'affiche (au-dessus de la carte) avec la mise en page des modes illustrés */
+  function drawMapTexts(ctx, W, H, U, mv){
+    let L=null;
+    if(mv.title || mv.foot){
+      const P=posOf(), col=textStyle().color;
+      L=textLayout(ctx,W,H,U,{pos:P.pos==='auto' ? 'hc' : P.pos});
+      if(!mv.title) L.title=null;
+      if(!mv.foot) L.foot=null;
+      for(const b of [L.title,L.foot]) if(b) for(const l of b.lines) drawText(ctx,l.t,b.ax,b.top+l.at,{...l.o,align:b.align,color:col});
+    }
+    noteLayout(ctx,W,H,'area',{x:0,y:0,w:W,h:H},L);
+  }
   /** Vignette : titre et bloc du bas empilés dans la bande sous la carte ; chacun se place à gauche, au centre ou à droite */
   function drawBand(ctx, W, H, U, g, ink){
-    const T=st.illusText, vint=T.style==='vintage', b=g.band, m=g.m+0.02*U, maxW=W-2*m;
+    const T={...textStyle(),...posOf()}, vint=T.vint, b=g.band, m=g.m+0.02*U, maxW=W-2*m;
     const shadow=T.shadow && contrast(T.shadow,st.colors.paper)>=1.3 ? {color:T.shadow, dx:T.off*0.001*U, dy:T.off*0.001*U} : null;
     const rows=[['title',textLine('title'),(vint?0.13:0.075)*U*tScale('title'),{spacing:vint?0.04:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow},vint?0.84:0.72],
       ['title',textLine('subtitle'),0.021*U*tScale('subtitle'),{spacing:0.3,upper:true,key:'subtitle'},0.75],
@@ -623,25 +640,25 @@ CMS.define('illus', () => {
   function placeHits(){
     const P=ui.posterCss;
     for(const k of ['title','foot']){
-      const el=$(k==='title'?'hitTitle':'hitFoot'), r=st.mode!=='map' && hitInfo?.[k];
+      const el=$(k==='title'?'hitTitle':'hitFoot'), r=hitInfo?.[k];
       el.hidden=!r; if(!r) continue;
       const pad=6, w=r.w*P.w+2*pad, h=Math.max(44,r.h*P.h+2*pad), cy=(r.y+r.h/2)*P.h;
       Object.assign(el.style,{left:(r.x*P.w-pad)+'px',top:(cy-h/2)+'px',width:w+'px',height:h+'px'});
     }
   }
-  const setFree=(k,p)=>{ if(k==='title') st.illusText.free=p; else st.illusText.ffree=p; scheduleOver(); };
+  const setFree=(k,p)=>{ if(k==='title') posOf().free=p; else posOf().ffree=p; scheduleOver(); };
   /** Centre actuel d'un bloc, en fraction de la zone des textes */
   function centerOf(k){ const r=hitInfo[k], A=hitInfo.area; return {x:(r.x+r.w/2-A.x)/A.w, y:(r.y+r.h/2-A.y)/A.h}; }
   /** Fin d'un déplacement : aimantation sur les positions prédéfinies (et « Auto » pour le bloc du bas) */
   function snapToPreset(k){
-    const T=st.illusText, c=k==='title' ? T.free : T.ffree; if(!c) return;
+    const T=posOf(), c=k==='title' ? T.free : T.ffree; if(!c) return;
     if(hitInfo.kind==='band'){   // bande de la vignette : gauche, centre, droite
       const i=[0,0.5,1].findIndex(v=>Math.abs(c.x-v)<0.04); if(i<0) return;
       if(k==='title'){ T.pos=T.pos[0]+'gcd'[i]; T.free=null; } else { T.fpos=(T.fpos==='auto'?'b':T.fpos[0])+'gcd'[i]; T.ffree=null; }
       return;
     }
     const cv=$('cvOver'), ctx=cv.getContext('2d'), A=hitInfo.area, W=A.w*cv.width, H=A.h*cv.height, U=Math.min(cv.width,cv.height);
-    const cands=k==='title' ? C.POS.map(p=>[p,{free:null,pos:p}]) : [['auto',{ffree:null,fpos:'auto'}],...C.POS.map(p=>[p,{ffree:null,fpos:p}])];
+    const cands=k==='title' ? C.POS.map(p=>[p,{free:null,pos:p}]) : [...(st.mode==='map' ? [] : [['auto',{ffree:null,fpos:'auto'}]]),...C.POS.map(p=>[p,{ffree:null,fpos:p}])];   // Carte : « Auto » = gabarit, pas une cible
     for(const [p,over] of cands){
       const b=textLayout(ctx,W,H,U,over)[k]; if(!b) continue;
       if(Math.hypot((b.rect.x+b.rect.w/2)/W-c.x,(b.rect.y+b.rect.h/2)/H-c.y)<0.04){ Object.assign(T,over); return; }
@@ -672,9 +689,9 @@ CMS.define('illus', () => {
       el.addEventListener('keydown',e=>{
         if(!hitInfo?.[k]) return;
         const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
-        if(d){ const s=e.shiftKey?0.05:0.01, c=centerOf(k), T=st.illusText, cur=(k==='title'?T.free:T.ffree)||c;
+        if(d){ const s=e.shiftKey?0.05:0.01, c=centerOf(k), T=posOf(), cur=(k==='title'?T.free:T.ffree)||c;
           setFree(k,{x:clamp(cur.x+d[0]*s,0,1),y:hitInfo.kind==='band'?0.5:clamp(cur.y+d[1]*s,0,1)}); syncText(); saveState(); }
-        else if(e.key==='Home'){ if(k==='title') st.illusText.free=null; else Object.assign(st.illusText,{ffree:null,fpos:'auto'}); syncText(); scheduleOver(); saveState(); }
+        else if(e.key==='Home'){ if(k==='title') Object.assign(posOf(),{free:null},st.mode==='map'?{pos:'auto'}:{}); else Object.assign(posOf(),{ffree:null,fpos:'auto'}); syncText(); scheduleOver(); saveState(); }
         else if(e.key==='Escape') el.blur();
         else return;
         e.preventDefault();
@@ -682,9 +699,18 @@ CMS.define('illus', () => {
     }
   }
 
+  /** Style des textes résolu pour le type d'affiche (#74) : les valeurs 'auto' prennent celle du mode.
+   *  vint : titre Vintage ; color : lettres ; shadow, outline : '' = aucun ; off : décalage de l'ombre. */
+  function textStyle(s=st){
+    const T=s.illusText, map=s.mode==='map', c=s.colors;
+    return {vint:T.style==='auto' ? !map : T.style==='vintage', color:T.color==='auto' ? c.text : T.color,
+      shadow:T.shadow==='auto' ? (map ? '' : c.paper) : T.shadow, outline:T.outline, off:T.off};
+  }
+  /** Positions des blocs de texte du type d'affiche : modes illustrés, ou mode Carte (illusText.map, 'auto' = dans le gabarit) */
+  const posOf=(s=st)=>s.mode==='map' ? s.illusText.map : s.illusText;
   // ---------- Interface ----------
-  const SW_TEXT=[['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#F3EAD8','Crème'],['#FFFFFF','Blanc']];
-  const SW_SHADOW=[['','Sans ombre'],['#F3EAD8','Crème'],['#D9CDB5','Sable'],['#C5A059','Or'],['#24365A','Bleu nuit'],['#2C2A29','Encre']];
+  const SW_TEXT=[['auto','Auto : couleur Texte du thème'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#F3EAD8','Crème'],['#FFFFFF','Blanc']];
+  const SW_SHADOW=[['auto','Auto : aucune en Carte, couleur du papier sur une illustration'],['','Sans ombre'],['#F3EAD8','Crème'],['#D9CDB5','Sable'],['#C5A059','Or'],['#24365A','Bleu nuit'],['#2C2A29','Encre']];
   const SW_OUTLINE=[['','Sans contour'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#F3EAD8','Crème'],['#FFFFFF','Blanc'],['#C5A059','Or']];
   const POS_NAMES={h:'en haut',m:'au milieu',b:'en bas'}, COL_NAMES={g:'à gauche',c:'au centre',d:'à droite'};
   const POS_ARROWS=['↖','↑','↗','←','•','→','↙','↓','↘'];
@@ -781,8 +807,9 @@ CMS.define('illus', () => {
   function swatches(id, list, field, custom){
     const box=$(id); box.replaceChildren();
     for(const [hex,name] of list){
-      const b=h('button',{type:'button',className:'sw'+(hex?'':' none'),dataset:{v:hex},title:name,'aria-label':name});
-      if(hex) b.style.background=hex;
+      const auto=hex==='auto', b=h('button',{type:'button',className:'sw'+(auto?' auto':hex?'':' none'),dataset:{v:hex},title:name,'aria-label':name},
+        ...(auto ? [h('span',{},'Auto'),h('i',{'aria-hidden':'true'})] : []));
+      if(hex && !auto) b.style.background=hex;
       b.onclick=()=>{ st.illusText[field]=hex; syncText(); scheduleOver(); saveState(); };
       box.append(b);
     }
@@ -792,18 +819,27 @@ CMS.define('illus', () => {
       box.append(l);
     }
   }
+  /** Position d'un bloc ('title' | 'foot') : une des 9 positions, ou 'auto' (bas : à l'opposé du titre ; Carte : dans le gabarit) */
+  function setPos(k,p){
+    Object.assign(posOf(),k==='title' ? {pos:p,free:null} : {fpos:p,ffree:null});
+    syncText(); scheduleOver(); saveState();
+  }
   function syncText(){
-    const T=st.illusText;
-    setSeg('tStyleSeg',T.style);
+    const T=st.illusText, R=textStyle(), P=posOf();
+    syncFonts();   // Vintage : option de la police du titre (#72)
     for(const [id,f] of [['swText','color'],['swShadow','shadow'],['swOutline','outline']])
       $(id).querySelectorAll('button').forEach(b=>pressed(b,b.dataset.v===T[f]));
-    const cu=$('swText').querySelector('input'); if(cu){ cu.value=T.color; cu.parentElement.classList.toggle('on',!SW_TEXT.some(([x])=>x===T.color)); }
-    $('sShadowOff').closest('.slider').hidden=!T.shadow;   // décalage : seulement avec une ombre
-    $('tPosSeg').querySelectorAll('button').forEach(b=>pressed(b,!T.free && b.dataset.v===T.pos));
-    $('fPosSeg').querySelectorAll('button').forEach(b=>pressed(b,!T.ffree && b.dataset.v===T.fpos));
-    pressed($('fAutoBtn'),!T.ffree && T.fpos==='auto');
-    $('tFreeNote').firstChild.textContent=T.free ? 'Titre placé librement (glissé sur l\u2019aperçu) : touchez une position pour revenir à la grille. ' : '';
-    $('fFreeNote').firstChild.textContent=T.ffree ? 'Lignes du bas placées librement : touchez « Auto » ou une position pour revenir à la grille. ' : '';
+    for(const [id,f] of [['swText','color'],['swShadow','shadow']]){ const i=$(id).querySelector('.sw.auto i'); if(i) i.style.background=R[f]||'transparent'; }   // couleur que donne « Auto »
+    const cu=$('swText').querySelector('input'); if(cu){ cu.value=R.color; cu.parentElement.classList.toggle('on',!SW_TEXT.some(([x])=>x===T.color)); }
+    $('sShadowOff').closest('.slider').hidden=!R.shadow;   // décalage : seulement avec une ombre
+    const map=st.mode==='map', inLay=v=>map && v==='auto';   // mode Carte : 'auto' = dans le gabarit
+    $('tPosSeg').querySelectorAll('button').forEach(b=>pressed(b,!P.free && b.dataset.v===P.pos));
+    $('fPosSeg').querySelectorAll('button').forEach(b=>pressed(b,!P.ffree && b.dataset.v===P.fpos));
+    pressed($('fAutoBtn'),!P.ffree && P.fpos==='auto'); pressed($('tLayBtn'),!P.free && inLay(P.pos));
+    $('fAutoBtn').textContent=map ? 'Dans le gabarit' : 'Auto : à l\u2019opposé du titre';
+    const back=map ? '« Dans le gabarit » ou une position' : 'une position';
+    $('tFreeNote').firstChild.textContent=P.free ? `Titre placé librement (glissé sur l\u2019aperçu) : touchez ${back} pour revenir à la grille. ` : '';
+    $('fFreeNote').firstChild.textContent=P.ffree ? `Lignes du bas placées librement : touchez ${map?back:'« Auto » ou une position'} pour revenir à la grille. ` : '';
     $('oShadowOff').textContent=T.off;
   }
   function syncPrompt(){
@@ -913,6 +949,7 @@ CMS.define('illus', () => {
       syncImage(); redraw(); saveState();
     });
     CMS.on('state:synced',sync);
+    CMS.on('colors:changed',syncText);   // thème : couleur que donne « Auto »
     CMS.on('state:saved',()=>{ if(st.mode!=='map' && ui.tab==='illus' && step==='prompt') updatePrompt(); });
     // Déplacer l'image en la glissant sur l'aperçu
     let drag=null;
@@ -942,18 +979,17 @@ CMS.define('illus', () => {
     $('bToPrompt').onclick=()=>setStep('prompt');
     new ResizeObserver(()=>placeHit()).observe(poster);
     // Style du titre
-    document.querySelectorAll('#tStyleSeg button').forEach(b=>b.onclick=async()=>{ st.illusText.style=b.dataset.v; syncText(); saveState(); await loadFonts(); scheduleOver(); });
     swatches('swText',SW_TEXT,'color',true); swatches('swShadow',SW_SHADOW,'shadow'); swatches('swOutline',SW_OUTLINE,'outline');
     C.POS.forEach((p,i)=>{ const b=h('button',{type:'button',dataset:{v:p},'aria-label':`Titre ${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`,title:`${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`},POS_ARROWS[i]);
-      b.onclick=()=>{ Object.assign(st.illusText,{pos:p,free:null}); syncText(); scheduleOver(); saveState(); }; $('tPosSeg').append(b);
+      b.onclick=()=>setPos('title',p); $('tPosSeg').append(b);
       const f=h('button',{type:'button',dataset:{v:p},'aria-label':`Lignes du bas ${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`,title:`${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`},POS_ARROWS[i]);
-      f.onclick=()=>{ Object.assign(st.illusText,{fpos:p,ffree:null}); syncText(); scheduleOver(); saveState(); }; $('fPosSeg').append(f); });
-    $('fAutoBtn').onclick=()=>{ Object.assign(st.illusText,{fpos:'auto',ffree:null}); syncText(); scheduleOver(); saveState(); };
+      f.onclick=()=>setPos('foot',p); $('fPosSeg').append(f); });
+    $('fAutoBtn').onclick=()=>setPos('foot','auto'); $('tLayBtn').onclick=()=>setPos('title','auto');
     initHits();
     sync();
     setTimeout(()=>gc().catch(()=>{}),2000);   // images orphelines (affiches supprimées, autre image importée)
   }
-  return {init, draw, drawMix, textLayout, get hitInfo(){ return hitInfo; }, harmonize, compoLine, region, ratioText, osmPiste, omtPiste, rankPistes, scanPistes, get found(){ return found; }, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
+  return {init, draw, drawMix, textLayout, textStyle, posOf, mapMoved, drawMapTexts, get hitInfo(){ return hitInfo; }, harmonize, compoLine, region, ratioText, osmPiste, omtPiste, rankPistes, scanPistes, get found(){ return found; }, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
     get missing(){ return missing; }, get loading(){ return !!loading; }, buildPrompt, quality, cropPct, placement, adjust, processPixels,
     get step(){ return step; }, get image(){ return img && {w:img.w, h:img.h, name:img.name}; }};
 });

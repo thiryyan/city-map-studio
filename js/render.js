@@ -49,12 +49,26 @@ CMS.define('ink', () => ({
     ui.inkSink.push({k, x1:Math.min(...xs), y1:Math.min(...ys), x2:Math.max(...xs), y2:Math.max(...ys)});
   }
 }));
+/** Mode Carte : style des textes de l'affiche (#74) appliqué aux lignes du gabarit pendant leur dessin (ui.textFx, posé par
+ *  drawPosterAt) : couleur des lettres, ombre et contour proportionnés à la taille, police Vintage du titre. La mention des
+ *  sources (sans clé de ligne) n'est pas concernée. */
+CMS.define('textFx', () => ({
+  styled(o){
+    const fx=ui.textFx; if(!fx || !o.key) return o;
+    const q={...o,color:fx.color}, sz=o.size||0;
+    if(fx.vint && o.role==='title') q.fk='bebas';
+    if(fx.shadow) q.shadow={color:fx.shadow, dx:fx.off*0.008*sz, dy:fx.off*0.008*sz};
+    if(fx.outline) q.stroke={color:fx.outline, w:Math.max(1,0.035*sz)};
+    return q;
+  }
+}));
 /** Dessine un texte avec interlettrage et réduction automatique ; renvoie la largeur dessinée.
  *  Une police manuscrite n'est jamais mise en capitales ni espacée.
  *  Options des modes illustrés : fk (police imposée, clé de FONTS), shadow {color, dx, dy} (ombre décalée, nette),
  *  stroke {color, w} (contour des lettres, sous le remplissage). */
 function drawText(ctx, t, x, y, o){
   if(!t) return 0;
+  o=CMS.textFx.styled(o);
   const F=o.fk ? FONTS[o.fk] : fontOf(o.role,o.key);
   if(o.upper && !F.script) t=t.toUpperCase();
   let size=o.size; const sp=F.script?0:(o.spacing||0);
@@ -75,14 +89,18 @@ function drawText(ctx, t, x, y, o){
 /** Dessine bout à bout plusieurs segments de tailles différentes, alignés sur la même ligne de base,
  *  avec une réduction commune s'ils dépassent maxW. parts : [{t, size, key, italic, role}] ; renvoie la largeur. */
 function drawRun(ctx, parts, x, y, o){
-  parts=parts.filter(p=>p.t); if(!parts.length) return 0;
+  parts=parts.filter(p=>p.t).map(p=>({...p,fk:CMS.textFx.styled(p).fk})); if(!parts.length) return 0;
+  const fx=ui.textFx; if(fx) o={...o,color:fx.color};   // mode Carte : style des textes (#74)
   const ws=parts.map(p=>{ ctx.font=fontStr(p.size,p); return ctx.measureText(p.t).width; });
   let tot=ws.reduce((a,b)=>a+b,0), f=1;
   if(o.maxW && tot>o.maxW){ f=o.maxW/tot; parts.forEach(p=>(p.keys||[p.key]).forEach(k=>noteFit(k,f))); }
   let sx = o.align==='right' ? x-tot*f : o.align==='center' ? x-tot*f/2 : x;
   if(ui.inkSink) CMS.ink.box(ctx,o.ink||parts.find(p=>p.key)?.key||parts.find(p=>p.keys)?.keys[0]||'text',sx,y-Math.max(...parts.map(p=>p.size))*f*0.75,sx+tot*f,y);
   ctx.fillStyle=paint(o.color); ctx.textBaseline='alphabetic'; ctx.textAlign='left';
-  parts.forEach((p,i)=>{ ctx.font=fontStr(p.size*f,p); ctx.fillText(p.t,sx,y); sx+=ws[i]*f; });
+  parts.forEach((p,i)=>{ ctx.font=fontStr(p.size*f,p); const sz=p.size*f;
+    if(fx?.shadow){ ctx.fillStyle=fx.shadow; ctx.fillText(p.t,sx+fx.off*0.008*sz,y+fx.off*0.008*sz); }
+    if(fx?.outline){ ctx.save(); ctx.strokeStyle=fx.outline; ctx.lineWidth=Math.max(1,0.035*sz); ctx.lineJoin='round'; ctx.miterLimit=2; ctx.strokeText(p.t,sx,y); ctx.restore(); }
+    ctx.fillStyle=paint(o.color); ctx.fillText(p.t,sx,y); sx+=ws[i]*f; });
   return tot*f;
 }
 // ---------- Dédicace sur deux lignes ----------
@@ -559,7 +577,7 @@ function drawLetters(ctx, g){
  *  mapFn(ctx, rect, view, index) dessine la carte d'une vue (export : une ou deux vues). */
 function drawPoster(ctx, W, H, pass, mapFn){
   foilCtx = st.fx?.foil ? {W,H,cache:new Map()} : null;   // dorure : dégradés propres à ce rendu
-  try{ return drawPosterAt(ctx,W,H,pass,mapFn); } finally{ foilCtx=null; }
+  try{ return drawPosterAt(ctx,W,H,pass,mapFn); } finally{ foilCtx=null; ui.textFx=null; ui.textHide=null; }
 }
 function drawPosterAt(ctx, W, H, pass, mapFn){
   const c=st.colors, g=geom(st,W,H), m=g.m, U=g.U, r=g.map;
@@ -595,12 +613,15 @@ function drawPosterAt(ctx, W, H, pass, mapFn){
   // Repères (et itinéraires) de chaque vue
   for(const p of g.places){ ctx.save(); clipMap(ctx,p.rect); drawMarkers(ctx,p.rect,p.view,U,W,p.main); ctx.restore(); }
 
-  // Filets & textes
+  // Filets & textes : style des textes (#74) ; blocs sortis du gabarit (#75) retirés de celui-ci, dessinés à la fin
+  const mv=CMS.illus.mapMoved();
+  ui.textFx={...CMS.illus.textStyle()};
+  ui.textHide=new Set([...(mv.title?['title','subtitle']:[]),...(mv.foot?['dedication','names','date','coords']:[])]);
   if(lay==='souvenir' && !g.land){
     const yH=m+0.061*U, inner=W-2*m;
     const title=textLine('title'), date=textLine('date'), coords=textLine('coords'), hs=0.031*U;
     // En-tête : « Titre - Date », chaque partie à sa taille et dans sa police, sur une même ligne de base
-    const same=tScale('title')===tScale('date') && fontKey('title')===fontKey('','date');
+    const same=tScale('title')===tScale('date') && fontKey('title')===fontKey('','date') && !ui.textFx?.vint;   // Vintage : titre dans sa police
     const left = title&&date&&same ? [{t:title+' - '+date,size:hs*tScale('title'),keys:['title','date']}]
                : title&&date ? [{t:title,size:hs*tScale('title'),key:'title',role:'title'},{t:' - ',size:hs*Math.min(tScale('title'),tScale('date'))},{t:date,size:hs*tScale('date'),key:'date'}]
                : [{t:title||date,size:hs*tScale(title?'title':'date'),key:title?'title':'date',role:title?'title':''}];
@@ -646,6 +667,8 @@ function drawPosterAt(ctx, W, H, pass, mapFn){
     }
     drawCartouche(ctx,U,{...g.text,rows:lay==='polaroid'?POLA_ROWS:CART_ROWS,only:lay==='typo'?TYPO_ROWS:null});
   }
+  ui.textFx=null; ui.textHide=null;
+  CMS.illus.drawMapTexts(ctx,W,H,U,mv);
   // Attributions (ODbL, CC-BY 4.0) : la mention minimale est toujours inscrite ; la case « Mention complète » l'étend
   ctx.globalAlpha=0.55;
   drawText(ctx,attributionText(!!g.sky),W-m,H-m*0.38,{size:0.0085*U,align:'right',color:c.text,ink:'attribution'});

@@ -45,14 +45,14 @@ async def main():
         # ================= Phase A =================
         print('— Phase A')
         n = await ev("Object.keys(__cms.FONTS).length")
-        await ev("__cms.showTab('style')")   # les polices sont dans l'onglet Style
+        await ev("__cms.showTab('textes')")   # les polices sont dans l'onglet Textes (section Typographie, #72)
         cards = await ev("[document.querySelectorAll('#fontSeg button').length, document.querySelectorAll('#fontTitleSeg button').length, document.querySelectorAll('#duos button').length]")
-        check(n == 11 and cards == [11, 12, 6], f'11 polices, cartes titre et texte, 6 duos ({n}, {cards})')
+        check(n == 11 and cards == [11, 13, 6], f'11 polices, cartes titre (avec Vintage et « Comme le texte ») et texte, 6 duos ({n}, {cards})')
         await page.click('#fontCats .chip:has-text("Manuscrites")')
         # affichage réel (offsetParent), pas l'attribut hidden : un display:flex l'emportait sur hidden
         VIS = "s=>[...document.querySelectorAll(s)].filter(b=>b.offsetParent!==null).map(b=>b.dataset.v)"
         vis = await ev(VIS, '#fontSeg button'); vt = await ev(VIS, '#fontTitleSeg button')
-        check(vis == ['vibes'] and vt == ['', 'vibes'], f'filtre « Manuscrites » : seules les polices manuscrites restent affichées {vis} {vt}')
+        check(vis == ['vibes'] and vt == ['*vintage', '', 'vibes'], f'filtre « Manuscrites » : seules les polices manuscrites restent affichées {vis} {vt}')
         await page.click('#fontCats .chip:has-text("Affiche")')
         vis = await ev(VIS, '#fontSeg button')
         check(vis == ['deco', 'bebas'], f'filtre « Affiche » {vis}')

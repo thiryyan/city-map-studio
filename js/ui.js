@@ -219,14 +219,17 @@ function buildUI(){
   const fam=k=>FONTS[k].fam;
   DUOS.forEach(([k,n,ft,fx])=>{ const b=h('button',{type:'button',dataset:{v:k},role:'radio'},
       h('span',{className:'t',style:{fontFamily:fam(ft)}}),h('span',{className:'d',style:{fontFamily:fam(fx)}}),h('small',{},n));
-    b.onclick=async()=>{ st.fontTitle=ft===fx?'':ft; st.font=fx; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('duos').appendChild(b); });
+    b.onclick=async()=>{ st.fontTitle=ft===fx?'':ft; st.font=fx; st.illusText.style='font'; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('duos').appendChild(b); });
   FONT_CATS.forEach(([k,n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'+(i?'':' on'); b.textContent=n;
     b.onclick=()=>{ document.querySelectorAll('#fontCats .chip').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll('#fontSeg button,#fontTitleSeg button').forEach(f=>f.hidden=!!k && f.dataset.cat && f.dataset.cat!==k); }; $('fontCats').appendChild(b); });
   const fbtn=(k,n,cat)=>h('button',{type:'button',dataset:cat?{v:k,cat}:{v:k},role:'radio'},
     h('span',{className:'smp',style:k?{fontFamily:fam(k),fontSize:FONTS[k].scale?(1.25*FONTS[k].scale).toFixed(2)+'rem':''}:{}}),h('small',{},n));
-  const same=fbtn('','Comme le texte'); same.onclick=async()=>{ st.fontTitle=''; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(same);
+  // Police du titre : « Vintage » (capitales condensées, #72), puis « Comme le texte » et les polices ; choisir une police quitte Vintage
+  const vint=h('button',{type:'button',dataset:{v:'*vintage'},role:'radio'},h('span',{className:'smp',style:{fontFamily:fam('bebas'),fontSize:(1.25*(FONTS.bebas.scale||1)).toFixed(2)+'rem'}}),h('small',{},'Vintage'));
+  vint.onclick=async()=>{ st.illusText.style='vintage'; syncFonts(); CMS.emit('state:synced'); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(vint);
+  const same=fbtn('','Comme le texte'); same.onclick=async()=>{ st.fontTitle=''; st.illusText.style='font'; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(same);
   FONT_LIST.forEach(([k,n,cat])=>{
-    const t=fbtn(k,n,cat); t.onclick=async()=>{ st.fontTitle=k===st.font?'':k; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(t);
+    const t=fbtn(k,n,cat); t.onclick=async()=>{ st.fontTitle=k===st.font?'':k; st.illusText.style='font'; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(t);
     const x=fbtn(k,n,cat); x.onclick=async()=>{ if(!st.fontTitle && FONTS[k].script) st.fontTitle=st.font; st.font=k; if(st.fontTitle===k) st.fontTitle=''; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontSeg').appendChild(x); });
   // plusieurs lieux, itinéraire, aperçu au mur, lien
   $('bAddPlace').onclick=addPlace;
@@ -340,7 +343,7 @@ function syncInputs(){
 }
 /** Polices : sélection des cartes (titre, texte, duo) et aperçus */
 function syncFonts(){
-  setSeg('fontSeg',st.font); setSeg('fontTitleSeg',st.fontTitle||'');
+  setSeg('fontSeg',st.font); setSeg('fontTitleSeg',CMS.illus.textStyle().vint ? '*vintage' : st.fontTitle||'');
   const duo=DUOS.find(([,,ft,fx])=>fx===st.font && (st.fontTitle||st.font)===ft);
   setSeg('duos',duo?duo[0]:'—'); updateFontSamples();
 }
@@ -365,7 +368,7 @@ function colorChanged(k){
 }
 /** État « choisi » d'un bouton de sélection : classe visuelle et état ARIA */
 function pressed(b,on){ b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); }
-function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker; updateContrast(); drawTexture(); }
+function refreshColors(){ document.querySelectorAll('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c]); $('mColor').value=st.colors.marker; updateContrast(); drawTexture(); CMS.emit('colors:changed'); }
 /** Exécute fn avec un état provisoirement modifié (vignettes) */
 /** Vignettes : drawPoster lit l'état global ; il est modifié le temps d'un rendu SYNCHRONE puis rétabli.
  *  Une fonction asynchrone rendrait la main avec l'état modifié : elle est refusée. */
@@ -498,7 +501,7 @@ async function loadFonts(){
   CMS.glyphs.clear();   // largeurs mesurées avec une police de secours pendant le chargement
 }
 /** true si toutes les variantes de la famille active sont chargées (sinon l'export utiliserait une police de secours) */
-loadFonts.used=()=>[fontOf('title'),fontOf('','dedication'),fontOf('','date'),...(st.mode!=='map' && st.illusText.style==='vintage' ? [FONTS.bebas] : [])];
+loadFonts.used=()=>[fontOf('title'),fontOf('','dedication'),fontOf('','date'),...(CMS.illus.textStyle().vint ? [FONTS.bebas] : [])];
 function fontsReady(){ try{ return loadFonts.used().flatMap(f=>f.load).every(f=>document.fonts.check(f)); }catch(e){ return true; } }
 
 // ---------- Comparer avant / après un changement (thème, ambiance, modèle, effet) ----------

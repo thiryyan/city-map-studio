@@ -36,7 +36,7 @@ function dms(v,pos,neg){
 /** Texte d'une ligne de l'affiche, ou '' si la ligne est masquée */
 function textLine(k){
   if(k==='legend') return legendText();
-  if(st.show[k]===false) return '';
+  if(st.show[k]===false || ui.textHide?.has(k)) return '';   // ui.textHide : bloc sorti du gabarit (mode Carte, #75)
   return k==='coords' ? coordText() : (st.texts[k]||'').trim();
 }
 /** Légende des lieux numérotés : « 1 Rencontre · 2 Mariage » */

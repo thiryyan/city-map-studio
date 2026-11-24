@@ -130,7 +130,8 @@ async def main():
         seen = await page.evaluate(TEXTS, 1240)
         tt = [s for s in seen if 'Bebas Neue' in s[1]]   # interlettrage : une lettre par appel
         check(''.join(s[0] for s in tt) == 'BLOISBLOIS', f'titre « BLOIS » en Bebas Neue, tracé deux fois (ombre puis lettres) {"".join(s[0] for s in tt)}')
-        check(len(tt) == 10 and all(s[2].lower() == '#f3ead8' for s in tt[:5]) and all(s[2].lower() == '#24365a' for s in tt[5:]), 'ombre crème sous des lettres bleu nuit')
+        pc = await page.evaluate("[__cms.st.colors.paper.toLowerCase(), __cms.st.colors.text.toLowerCase()]")
+        check(len(tt) == 10 and all(s[2].lower() == pc[0] for s in tt[:5]) and all(s[2].lower() == pc[1] for s in tt[5:]), f'« Auto » (#74) : ombre à la couleur du papier sous des lettres à la couleur Texte du thème {pc}')
         check(not any('©' in s[0] for s in seen), 'pas de mention cartographique sans carte')
         px = """async ()=>{ const r=await __cms.composePoster(620,877); const d=r.canvas.getContext('2d').getImageData(310,700,1,1).data; r.canvas.width=0; return [...d].slice(0,3); }"""
         a = await page.evaluate(px)
@@ -167,7 +168,13 @@ async def main():
         check(n['mode'] == 'map' and n['illus']['zoom'] == 300 and n['illus']['fit'] == 'cover' and n['illus']['vintage'] == 'none', 'état forgé : mode, zoom, cadrage et filtre corrigés')
         check(len(n['illus']['prompt']['pistes']) == 8 and n['illus']['prompt']['moment'] == 'any' and n['illus']['prompt']['lang'] == 'fr', 'état forgé : pistes bornées à 8, choix du prompt corrigés')
         t = n['illusText']
-        check(t['style'] == 'vintage' and t['color'] == '#24365A' and t['shadow'] == '' and t['outline'] == '' and t['off'] == 12 and t['pos'] == 'hc', f'état forgé : style du titre corrigé {t}')
+        # sans v:2, affiche Carte : état d'avant les valeurs Auto, migré (lettres, ombre et contour à Auto : rendu de la carte inchangé)
+        check(t['style'] == 'auto' and t['color'] == 'auto' and t['shadow'] == 'auto' and t['outline'] == '' and t['off'] == 12 and t['pos'] == 'hc' and t['v'] == 2, f'état forgé : style du titre corrigé {t}')
+        t = await page.evaluate("normState({illusText:{v:2,style:'neon',color:'red',shadow:'',outline:'#12345G',pos:'zz',map:{pos:'zz',free:{x:9,y:0.5},fpos:'bd',ffree:'x'}}}).illusText")
+        check(t['style'] == 'auto' and t['color'] == 'auto' and t['shadow'] == '' and t['map'] == {'pos': 'auto', 'free': {'x': 1, 'y': 0.5}, 'fpos': 'bd', 'ffree': None},
+              f'état forgé (v2) : « aucune ombre » gardée, positions du mode Carte vérifiées {t}')
+        t = await page.evaluate("normState({mode:'illus',illusText:{style:'vintage',color:'#24365A',shadow:'#F3EAD8',outline:''}}).illusText")
+        check([t['style'], t['color'], t['shadow']] == ['auto', '#24365A', '#F3EAD8'], f'état d\'avant les valeurs Auto, affiche illustrée : couleurs conservées {t}')
 
         # Accessibilité : chaque commande des nouveaux panneaux a un nom ; boutons de sélection avec aria-pressed
         await page.evaluate("CMS.illus.setMode('illus')")

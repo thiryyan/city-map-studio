@@ -171,10 +171,14 @@ const DEFAULT_STATE = {
   illus:{fit:'cover',zoom:100,ox:0,oy:0,bright:0,contrast:0,satur:0,vintage:'none',grain:false,paper:false,flat:false,upscale:false,
     img:null,   // image importée : {ref (empreinte SHA-256), name, w, h} ; l'image est dans IndexedDB (js/illus.js)
     prompt:{pistes:[],moment:'any',saison:'any',palette:'ia',lang:'fr'}},
-  // Textes des modes illustrés : style du titre, couleurs (ombre et contour : '' = aucun), décalage de l'ombre, position (ILLUS_POS)
-  // free / ffree : position libre (glissée) du bloc de titre / du bloc du bas, centre en fraction de la zone des textes ({x, y}) ou null ;
-  // fpos : bloc du bas (dédicace, noms, date, coordonnées) : 'auto' (côté opposé au titre) ou une des 9 positions
-  illusText:{style:'vintage',color:'#24365A',shadow:'#F3EAD8',outline:'',off:4,pos:'hc',free:null,fpos:'auto',ffree:null}
+  // Style des textes, commun aux trois types d'affiche (#71) : style du titre, couleurs (ombre et contour : '' = aucun), décalage de l'ombre.
+  // 'auto' : valeur propre au type d'affiche (CMS.illus.textStyle) : titre Police en Carte, Vintage sinon ; lettres à la couleur
+  // Texte du thème ; ombre aucune en Carte, couleur du papier sinon. v : version (2 : valeurs Auto ; cf. migration de normState).
+  // Positions des modes illustrés : pos (9 positions, ILLUS_POS) ; free / ffree : position libre (glissée) du bloc de titre / du bloc
+  // du bas, centre en fraction de la zone des textes ({x, y}) ou null ; fpos : bloc du bas (dédicace, noms, date, coordonnées) :
+  // 'auto' (côté opposé au titre) ou une des 9 positions. map : mêmes champs pour le mode Carte, où 'auto' = dans le gabarit (#75).
+  illusText:{v:2,style:'auto',color:'auto',shadow:'auto',outline:'',off:4,pos:'hc',free:null,fpos:'auto',ffree:null,
+    map:{pos:'auto',free:null,fpos:'auto',ffree:null}}
 };
 // Modes illustrés : listes de valeurs (aussi utilisées par normState pour valider un état venu de l'extérieur)
 CMS.define('illusConf', () => ({
@@ -185,6 +189,6 @@ CMS.define('illusConf', () => ({
   POS:['hg','hc','hd','mg','mc','md','bg','bc','bd'],
   MOMENTS:[['any','Au choix','any time'],['aube','Aube','dawn'],['matin','Matin','morning'],['midi','Midi','midday'],['couchant','Couchant','sunset'],['nuit','Nuit','night']],
   SAISONS:[['any','Au choix','any season'],['printemps','Printemps','spring'],['ete','Été','summer'],['automne','Automne','autumn'],['hiver','Hiver','winter']],
-  PALETTES:['ia','theme','photo'], LANGS:['fr','en'], VINTAGE:['none','light','strong'], FITS:['cover','contain'], TSTYLES:['vintage','font'],
+  PALETTES:['ia','theme','photo'], LANGS:['fr','en'], VINTAGE:['none','light','strong'], FITS:['cover','contain'], TSTYLES:['auto','vintage','font'],
   PISTES_MAX:8
 }));

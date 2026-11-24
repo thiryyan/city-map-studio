@@ -62,9 +62,9 @@ async def main():
             await page.evaluate("__cms.showTab('style')")
             await page.click('#modeSeg [data-v=illus]'); await page.wait_for_timeout(300)
             check(await page.evaluate("document.querySelector('#tabs .on').dataset.tab") == 'style', f'{name} : l\'onglet actif est conservé s\'il existe dans le nouveau type')
-            # Style en Illustration : polices et papier ; pas de réglages de carte
-            sty = await page.evaluate("['#duos','#fontSeg','#textures'].map(q=>!!document.querySelector(q).offsetParent).concat(['#themes','#styleMore'].map(q=>!document.querySelector(q).offsetParent))")
-            check(all(sty), f'{name} : Style (Illustration) = polices et papier, sans thèmes ni réglages de carte {sty}')
+            # Style en Illustration (#73) : ambiances, thème, papier et dorure ; pas de réglages de carte ; polices dans Textes (#72)
+            sty = await page.evaluate("['#ambiances','#themes','#textures'].map(q=>!!document.querySelector(q).offsetParent).concat(['#styleMore','#duos','#fontSeg'].map(q=>!document.querySelector(q).offsetParent))")
+            check(all(sty), f'{name} : Style (Illustration) = ambiances, thème, papier, sans réglages de carte ni polices {sty}')
             await page.click('#modeSeg [data-v=map]'); await page.wait_for_timeout(300)
             check(await page.evaluate(TABS) == ['lieu', 'repere', 'textes', 'style', 'export'], f'{name} : retour en Carte, onglet Illustration retiré')
             # Le changement de type ne perd rien

@@ -58,7 +58,7 @@ async def main():
         await page.evaluate("__cms.showTab('illus')")
         check(await page.is_visible('#illusCompo') and await page.evaluate("CMS.illus.step") == 'compo', 'étape Composition ouverte en premier (sans image)')
         await page.evaluate("__cms.showTab('style')")
-        check(await page.is_hidden('#layouts') and await page.is_hidden('#ambiances') and await page.is_visible('#themes'), 'Style : gabarits et ambiances masqués, thèmes visibles')
+        check(await page.is_hidden('#layouts') and await page.is_visible('#ambiances') and await page.is_visible('#themes'), 'Style : gabarits masqués, ambiances et thèmes visibles (#73)')
         check(await page.is_visible('#slot') and await page.is_visible('#mapCredit'), 'carte et sources visibles')
         await page.evaluate("__cms.showTab('illus')")
 
