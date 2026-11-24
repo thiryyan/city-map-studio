@@ -766,9 +766,10 @@ CMS.define('illus', () => {
   }
   function applyMode(){
     const m=st.mode, ill=m==='illus';
-    $('app').dataset.mode=m; setSeg('modeSeg',m); setSeg('modeSegM',m);
-    $('tb-repere').hidden=ill; $('tb-illus').hidden=m==='map';
-    if(ill && ui.tab==='repere') showTab('illus');
+    $('app').dataset.mode=m; setSeg('modeSeg',m);
+    // Parcours selon le type : Carte = Lieu, Repère, Textes… ; Illustration = Illustration, Textes… (ni lieu ni repère, sans carte) ; mixte = tout
+    $('tb-lieu').hidden=ill; $('tb-repere').hidden=ill; $('tb-illus').hidden=m==='map';
+    if(ill && (ui.tab==='repere' || ui.tab==='lieu')) showTab('illus');
     if(m==='map' && ui.tab==='illus') showTab('lieu');
     if(m!=='mix' && step==='compo') step='prompt';
     exportState(); placeHit(); applyFade(); if(m==='map'){ hitInfo=null; } placeHits();

@@ -23,7 +23,7 @@ async def main():
         async def open_page(vp, mobile=True):
             ctx = await b.new_context(viewport=vp, is_mobile=mobile, has_touch=mobile)
             page = await ctx.new_page(); errs = []
-            await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
+            await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
             page.on('pageerror', lambda e: errs.append(str(e)))
             async def route(r):
                 u = r.request.url
@@ -142,7 +142,7 @@ async def main():
 
         # ---------- Petit téléphone (360 px) : jusqu'à six onglets, sans défilement ni libellé tronqué (issue #51) ----------
         ctx, page, errs = await open_page({'width': 360, 'height': 740})
-        for mode, n in [('map', 5), ('illus', 5), ('mix', 6)]:
+        for mode, n in [('map', 5), ('illus', 4), ('mix', 6)]:
             await page.evaluate(f"CMS.illus.setMode('{mode}')"); await page.wait_for_timeout(250)
             t = await page.evaluate("""(()=>{ const bs=[...document.querySelectorAll('#tabs button:not([hidden])')];
               return {n:bs.length, cut:bs.filter(b=>[...b.querySelectorAll('span')].concat(b.children.length?[]:[b]).some(e=>e.offsetParent!==null && e.scrollWidth>e.clientWidth+1)).map(b=>b.textContent),

@@ -64,6 +64,7 @@ async def main():
         for k in KEYS: await page.click(f'input[data-k="show.{k}"]')
         # Polices : chaque famille modifie le rendu et le choix est persisté
         snaps = set()
+        await page.click('#tabs [data-tab=style]')   # les polices sont dans l'onglet Style
         for f in ['serif', 'sans', 'mono', 'garamond', 'deco']:
             await page.click(f'#fontSeg [data-v={f}]'); await page.wait_for_timeout(300); snaps.add(await page.evaluate(SNAP))
         await wait_js(page, "JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').font==='deco'")   # choix enregistré avant de recharger

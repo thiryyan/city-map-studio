@@ -10,7 +10,7 @@ async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(executable_path=CHROME,args=['--no-sandbox'])
         page=await b.new_page(viewport={'width':1400,'height':900})
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
+        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
         async def route(r):
             u=r.request.url
             if u.startswith('file:'): await r.continue_()

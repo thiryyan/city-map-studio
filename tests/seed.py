@@ -10,7 +10,7 @@ seed() écrit donc les clés une seule fois, dans la page elle-même, puis recha
 les chargements suivants se font sans aucun script injecté.
 """
 
-DEFAULT = {'cityMapStudio.consent': '1', 'cityMapStudio.advOpen': '1', 'cityMapStudio.welcomed': '1'}
+DEFAULT = {'cityMapStudio.consent': '1', 'cityMapStudio.advOpen': '1', 'cityMapStudio.styleMoreOpen': '1', 'cityMapStudio.welcomed': '1'}
 
 
 async def seed(page, url, items=None, wait=1200):

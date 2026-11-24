@@ -34,8 +34,8 @@ async def main():
         # Modifications
         await page.click('#tabs [data-tab=style]')
         await page.click('#layouts .card[data-v=medallion]'); await page.click('#themes .theme[data-v=onyx]')
+        await page.click('#fontSeg [data-v=deco]')   # polices : onglet Style (déjà ouvert)
         await page.click('#tabs [data-tab=textes]')
-        await page.click('#fontSeg [data-v=deco]')
         await page.fill('input[data-k="texts.title"]', 'Paris'); await page.click('input[data-k="show.names"]')
         await page.click('#tabs [data-tab=lieu]')
         await page.fill('#markerIn', '48.853, 2.3499'); await page.press('#markerIn', 'Enter')

@@ -80,6 +80,20 @@ async def main():
         # ---------- Sections repliées ----------
         check(not await page.evaluate("document.getElementById('colorsBox').open") and not await page.is_visible('#colors input'),
               'couleurs repliées par défaut')
+        # Onglet Style : « Plus de réglages » (#62) repliée par défaut, mémorisée, ouverte d'office si un réglage avancé est actif
+        MORE = "[document.getElementById('styleMore').open, localStorage.getItem('cityMapStudio.styleMoreOpen')]"
+        check(await page.evaluate(MORE) == [False, None] and not await page.is_visible('#colorsBox') and await page.is_visible('#themes'),
+              'Style : « Plus de réglages » repliée par défaut, Essentiel visible')
+        ess = await page.evaluate("['#ambiances','#layouts','#themes','#duos','#fontSeg','#textures'].map(q=>!!document.querySelector(q)?.offsetParent)")
+        check(all(ess), f'Style, Essentiel : ambiances, gabarit, thèmes, polices, papier {ess}')
+        await page.click('#styleMore summary'); await page.wait_for_timeout(150)
+        check(await page.evaluate(MORE) == [True, '1'] and await page.is_visible('#colorsBox'), '« Plus de réglages » ouverte et mémorisée')
+        await page.click('#styleMore summary'); await page.wait_for_timeout(150)
+        check(await page.evaluate(MORE) == [False, None], '« Plus de réglages » refermée : mémoire effacée')
+        await page.evaluate("()=>{ const c=document.querySelector('[data-k=\"fx.hatch\"]'); c.checked=true; c.dispatchEvent(new Event('input',{bubbles:true})); }")
+        await page.wait_for_timeout(150)
+        check(await page.evaluate(MORE) == [True, None], 'effet de tracé actif : section ouverte d\'office, sans être mémorisée')
+        await page.evaluate("()=>{ const c=document.querySelector('[data-k=\"fx.hatch\"]'); c.checked=false; c.dispatchEvent(new Event('input',{bubbles:true})); }")
         await page.click('#colorsBox summary')
         check(await page.is_visible('#colors input'), 'couleurs dépliées au toucher')
         await page.evaluate("__cms.showTab('lieu')")
@@ -92,7 +106,7 @@ async def main():
         # Relecture au démarrage : nouvelle page avec la préférence déjà enregistrée (un rechargement immédiat
         # peut précéder l'écriture différée de localStorage par Chromium)
         p2 = await ctx.new_page(); await p2.route('**/*', route)
-        await p2.add_init_script("try{localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
+        await p2.add_init_script("try{localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
         await p2.goto(APP); await p2.wait_for_timeout(1000)
         check(await p2.evaluate("document.getElementById('adv').open"), '« Avancé » rouvert au démarrage suivant')
         await p2.close()
@@ -150,6 +164,7 @@ async def main():
         check(box == [True, True], 'bouton calendrier ≥ 44 px, entièrement couvert par le champ date natif (iOS)')
 
         # ---------- Polices ----------
+        await page.evaluate("__cms.showTab('style')")   # les polices sont dans l'onglet Style
         smp = await page.evaluate("[...document.querySelectorAll('#fontTitleSeg button:not([data-v=\\'\\']) .smp')].map(e=>e.textContent)")
         check(len(smp) == 11 and all(t == 'Tours' for t in smp), f'aperçu des polices du titre avec le titre saisi {smp}')
         await page.click('#fontSeg [data-v=garamond]')
