@@ -3,7 +3,7 @@
 Vérifie :
 - les dimensions et la résolution de chaque format, en portrait et en paysage, sur ordinateur (300 DPI tant que le
   canevas tient dans 40 Mpx) et sur iPhone (limite de 16,7 Mpx de Safari iOS : résolution abaissée par pas de 10 DPI) ;
-- le choix du format dans l'onglet Style : bouton d'export, indication sous le choix, rapport de l'aperçu (7/5 en 50 × 70) ;
+- le choix du format dans l'onglet Export (section Rendu) : bouton d'export, indication sous le choix, rapport de l'aperçu (7/5 en 50 × 70) ;
 - la validation d'un état forgé (format ou type de fichier inconnus) et la conservation du format dans un lien partagé ;
 - l'export PNG A3 (3508 × 4961 px, pHYs 300 DPI) ;
 - l'export PDF 50 × 70 cm et A4 paysage : structure du fichier (en-tête, table xref exacte, fin), page à la taille

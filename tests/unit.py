@@ -1,6 +1,8 @@
 """Tests unitaires sans navigateur (node --test, scripts chargés dans un contexte node:vm : tests/unit/load.mjs).
 
-Couvre les fonctions pures (CMS.geo, normState, CMS.geocoder.sanitize) et le socle CMS (define, on, emit).
+Couvre le socle CMS (define, on, emit) et les fonctions pures : CMS.geo, exportSpec, normState, CMS.geocoder.sanitize
+(tests/unit/geo.test.mjs) ; CMS.illus : qualité d'impression, placement, retouches, prompt, pistes, proportions
+(tests/unit/illus.test.mjs).
 """
 import pathlib, subprocess, sys
 

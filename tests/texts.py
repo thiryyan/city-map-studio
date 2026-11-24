@@ -1,8 +1,9 @@
 """e2e : lignes de texte optionnelles (cases à cocher de l'onglet Textes).
 
-Pour chaque gabarit : capture avec toutes les lignes, puis avec une sélection
-masquée. Vérifie que chaque case modifie l'affiche, que le texte masqué est
-conservé, que l'état est persisté, et que l'export fonctionne sans aucune ligne.
+Pour chacun des 11 gabarits : chaque case modifie l'affiche (sauf le sous-titre, que Souvenir et Polaroid
+n'affichent pas), la réactiver rend le rendu d'origine, capture avec une sélection masquée. Puis : texte masqué
+conservé, état persisté au rechargement, export A4 sans aucune ligne ; chaque police de texte (11 familles) donne
+un rendu distinct et le choix est persisté.
 """
 import pathlib, os, asyncio, struct
 from playwright.async_api import async_playwright
@@ -13,7 +14,11 @@ APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
 KEYS = ['title', 'subtitle', 'coords', 'dedication', 'names', 'date']
-SNAP = "(()=>{const c=document.getElementById('cvOver');return c.toDataURL()})()"
+# Couches haute et basse : le gabarit Lettres découpe le titre dans la carte, le gabarit Ciel dessine sous la carte
+SNAP = "(()=>['cvOver','cvUnder'].map(id=>document.getElementById(id).toDataURL()).join())()"
+LAYOUTS = ['souvenir', 'classic', 'fade', 'medallion', 'heart', 'arch', 'travel', 'polaroid', 'diptych', 'sky', 'typo']
+NO_SUBTITLE = {'souvenir', 'polaroid'}   # gabarits qui n'affichent pas le sous-titre (note dans l'onglet Textes, tests/deps.py)
+FAMILIES = ['serif', 'garamond', 'bodoni', 'italiana', 'fraunces', 'sans', 'jost', 'mono', 'deco', 'bebas', 'vibes']
 
 async def main():
     async with async_playwright() as p:
@@ -30,12 +35,12 @@ async def main():
         await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
         await page.click('#tabs [data-tab=textes]')
         fails = []
-        for lay in ['souvenir', 'classic', 'fade', 'medallion']:
+        for lay in LAYOUTS:
             await page.click('#tabs [data-tab=style]'); await page.click(f'#layouts .card[data-v={lay}]')
-            await page.click('#tabs [data-tab=textes]'); await page.wait_for_timeout(300)
+            await page.click('#tabs [data-tab=textes]'); await page.wait_for_timeout(500)
             base = await page.evaluate(SNAP)
             for k in KEYS:
-                if lay == 'souvenir' and k == 'subtitle': continue   # le gabarit Souvenir n'affiche pas le sous-titre
+                if k == 'subtitle' and lay in NO_SUBTITLE: continue
                 await page.click(f'input[data-k="show.{k}"]'); await page.wait_for_timeout(120)
                 if await page.evaluate(SNAP) == base: fails.append(f'{lay}:{k} sans effet')
                 await page.click(f'input[data-k="show.{k}"]'); await page.wait_for_timeout(120)
@@ -65,12 +70,13 @@ async def main():
         # Polices : chaque famille modifie le rendu et le choix est persisté
         snaps = set()
         await page.click('#tabs [data-tab=style]')   # les polices sont dans l'onglet Style
-        for f in ['serif', 'sans', 'mono', 'garamond', 'deco']:
+        await page.click('#layouts .card[data-v=souvenir]')
+        for f in FAMILIES:
             await page.click(f'#fontSeg [data-v={f}]'); await page.wait_for_timeout(300); snaps.add(await page.evaluate(SNAP))
-        await wait_js(page, "JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').font==='deco'")   # choix enregistré avant de recharger
+        await wait_js(page, "JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').font==='vibes'")   # choix enregistré avant de recharger
         await page.reload(); await page.wait_for_timeout(1200)
         font = await page.evaluate('__cms.st.font'); print('polices : rendus distincts', len(snaps), '| après rechargement', font)
-        if len(snaps) != 5 or font != 'deco': fails.append('polices')
+        if len(snaps) != len(FAMILIES) or font != 'vibes': fails.append('polices')
         await page.evaluate("__cms.st.font='serif'")
         print('échecs', fails, '| errors', errs)
         await b.close()

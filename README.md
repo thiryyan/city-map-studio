@@ -4,7 +4,7 @@ Atelier web de création d'affiches cartographiques souvenir : tracé minimalist
 
 - **100 % open source** : MapLibre GL JS, tuiles OpenFreeMap, Nominatim, polices SIL OFL auto-hébergées. Aucune clé API, aucun appel à Google.
 - **Deux moteurs** : Vectoriel GPU (par défaut) et Fichier (hors ligne, tracé vectoriel au détail maximal : `.osm`, JSON OSM, GeoJSON).
-- **Onze gabarits** (Souvenir, Cadre, Fondu, Médaillon, Cœur, Arche, Voyage, Polaroid, Deux lieux, Ciel, Lettres) en portrait ou paysage, seize thèmes et une palette tirée d'une photo, treize ambiances, dix repères, onze polices en duos, cinq papiers et des plis de carte dépliée.
+- **Onze gabarits** (Souvenir, Cadre, Fondu, Médaillon, Cœur, Arche, Voyage, Polaroid, Deux lieux, Ciel, Lettres) en portrait ou paysage, seize thèmes et une palette tirée d'une photo, treize ambiances, dix repères, onze polices et six duos, six papiers et des plis de carte dépliée.
 - **Effets artistiques** : lueur, lignes d'eau gravées, motifs (eau hachurée, bâtiments pointillés, parcs hachurés), surimpression riso, trait crayon ; halo du souvenir et quartier en relief autour du lieu ; dorure ; échelle, rose des vents et graduations.
 - **Affiche illustrée** : un mode Illustration pour une affiche de voyage façon vintage, et un mode Carte + illustration (carte en médaillon sur l'illustration, ou illustration en vignette sur la carte). L'application rédige le prompt à coller dans votre IA (ChatGPT, Gemini…), puis importe l'image obtenue, la cadre, la retouche (filtre vintage, grain) et pose un grand titre ; indicateur de qualité d'impression par format.
 - **Plus que la carte** : jusqu'à trois lieux, itinéraire GPX, carte du ciel du jour J (Lune en phase, planètes, Voie lactée), aperçu au mur, partage par lien.
@@ -20,6 +20,7 @@ python3 -m http.server 8000   # puis http://localhost:8000
 Ouvrir directement `index.html` en `file://` fonctionne aussi (scripts classiques, sans module ES), mais l'application n'est alors ni installable ni mise en cache.
 
 ## Documentation
+- [Guide de l'utilisateur](USER_GUIDE.md) : toutes les fonctions, leurs options et des astuces.
 - [Dossier technique](docs/dossier-technique.md) : exigences, architecture, rendu, export et tests.
 - [Issues](https://github.com/thiryyan/city-map-studio/issues) : évolutions prévues et validations à mener.
 - [Contribuer](CONTRIBUTING.md) : règles de développement et commandes de test.

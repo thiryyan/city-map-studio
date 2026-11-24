@@ -1,6 +1,8 @@
 # City Map Studio — Dossier technique de référence
 
-> **Objet** : atelier web de création d'affiches cartographiques souvenir. L'application trace de façon minimaliste les rues et les cours d'eau d'une ville, marque d'un repère discret le lieu exact d'une rencontre, et exporte une affiche d'impression A4 à 300 DPI, A3 ou 50 × 70 cm, en PNG ou en PDF.
+> **Objet** : atelier web de création d'affiches cartographiques souvenir. L'application trace de façon minimaliste les rues et les cours d'eau d'une ville, marque d'un repère discret le lieu exact d'une rencontre, et exporte une affiche d'impression A4 à 300 DPI, A3, 50 × 70 cm ou 10 × 15 cm, en PNG ou en PDF. Deux types d'affiche s'y ajoutent : l'affiche illustrée (§ 4.13) et la carte associée à une illustration (§ 4.14).
+>
+> **Portée** : ce dossier décrit les exigences, l'architecture, les algorithmes et les tests. L'usage de chaque fonction est décrit dans le [guide de l'utilisateur](../USER_GUIDE.md) ; les règles de contribution et les commandes, dans [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 ---
 
@@ -12,7 +14,7 @@
 | E2 | Navigateurs | Chromium ≥ 110, Safari ≥ 16, Firefox ≥ 115. |
 | E3 | Rendu | L'export est identique à l'aperçu ; le gabarit et le thème **Souvenir** (par défaut) définissent le rendu de référence (§ 4.1 et 4.2). |
 | E4 | Moteurs cartographiques | **Vectoriel GPU** (MapLibre GL + OpenFreeMap, par défaut) et **Fichier** (import hors ligne, Canvas 2D). |
-| E5 | Gabarits | **Souvenir** (par défaut), **Cadre classique**, **Fondu moderne**, **Médaillon**. |
+| E5 | Gabarits | 11 gabarits (§ 4.1), **Souvenir** par défaut ; portrait ou paysage. |
 | E6 | Coordonnées | Affichage au choix en décimal (par défaut) ou en DMS. |
 | E7 | Libellés | Aucun libellé sur la carte : le tracé est purement graphique. |
 | E8 | Ville au lancement | Blois et la Loire. |
@@ -38,7 +40,7 @@
 | Moteur vectoriel GPU | MapLibre GL JS **4.7.1**, chargé depuis `lib/`, puis en secours depuis unpkg, jsDelivr et cdnjs (version figée) | BSD-3-Clause |
 | Tuiles vectorielles | OpenFreeMap (`https://tiles.openfreemap.org/planet`, schéma OpenMapTiles, sans clé) | Données ODbL, schéma CC-BY |
 | Géocodage | Nominatim (`nominatim.openstreetmap.org`) | GPL / ODbL |
-| Polices | Playfair Display, Montserrat, Space Mono, Cormorant Garamond, Josefin Sans, **auto-hébergées** dans `lib/fonts/` (woff2, sous-ensembles latin et latin-ext, `OFL.txt` par famille) | SIL OFL 1.1 |
+| Polices | 11 familles (§ 4.4) **auto-hébergées** dans `lib/fonts/` (woff2, sous-ensembles latin et latin-ext, `OFL.txt` par famille), déclarées dans `lib/fonts/fonts.css` | SIL OFL 1.1 |
 | Rendu de l'affiche | Canvas 2D natif | — |
 
 ### 2.2. Moteurs cartographiques
@@ -48,17 +50,21 @@
 | **1. Vectoriel GPU (défaut)** | MapLibre + OpenFreeMap | Instantané, monde entier, mers et côtes correctes, fluide sur mobile. | Généralisation des tuiles : certaines petites voies disparaissent aux zooms faibles. |
 | **2. Fichier (hors ligne)** | Fichier importé : `.osm` XML, JSON OSM (`{"elements":[…]}`) ou GeoJSON → Canvas 2D | Aucun accès réseau requis ; géométrie OSM brute au niveau de détail maximal, contrôle total du tracé. | L'utilisateur obtient le fichier lui-même (§ 7.3) ; le trait de côte marin n'est pas traité (villes continentales et fluviales). |
 
-**Chaîne de secours** : MapLibre est chargé par `js/maplibre-loader.js` (`CMS.maplibre`) depuis `lib/`, puis depuis 3 CDN (12 s par source, CDN seulement après l'accord). Une seule promesse de chargement à la fois ; la version (`getVersion() === ML_VERSION`) est vérifiée pour toutes les sources, copie locale comprise ; un script arrivé après son délai (qu'on ne peut pas annuler) est neutralisé si une autre source a gagné, ou adopté si toutes avaient échoué (événement `cms:maplibre-ready`, la carte est relancée). La feuille de style est chargée avec `onload`/`onerror`, depuis la même source puis les autres sources autorisées. Les tuiles sont surveillées pendant 15 s. **Style de la carte interactive** : les épaisseurs suivent le zoom de la carte par des expressions (`interpolate` exponentielle de base √2 entre les paliers 12 et 16 du zoom de l'affiche, exactement `zoomFactor` borné entre 0,5 et 2) : un geste ne reconstruit pas le style ; seul le disque du quartier en relief est remis à jour par `setFilter`. Le style n'est reconstruit (`mlRestyle`) que si un réglage ou la largeur du cadre change. Les exports gardent des valeurs figées. **Contexte WebGL** : MapLibre rétablit seul un contexte perdu ; l'application l'affiche (« Carte GPU suspendue ») et refuse l'export pendant ce temps. Les rendus hors écran (`mlSnapshot` : vue figée, export, tuiles) passent par une file d'attente (`gpuQueue`, un seul contexte hors écran à la fois) et échouent immédiatement si leur contexte est perdu (au lieu d'attendre 45 s). En moteur Fichier, la carte MapLibre est libérée au bout de 30 s et recréée au retour. En cas d'échec, un bandeau « Diagnostiquer » oriente vers le moteur qui fonctionne, et en dernier recours vers le moteur Fichier.
+* **Chargement de MapLibre** (`js/maplibre-loader.js`, `CMS.maplibre`) : depuis `lib/`, puis depuis 3 CDN (12 s par source ; CDN seulement après l'accord, avec empreinte SRI). Une seule promesse de chargement à la fois ; la version (`getVersion() === ML_VERSION`) est vérifiée pour toutes les sources, copie locale comprise. Un script arrivé après son délai (qu'on ne peut pas annuler) est neutralisé si une autre source a gagné, ou adopté si toutes avaient échoué (événement `cms:maplibre-ready`, la carte est relancée). La feuille de style est chargée avec `onload` / `onerror`, depuis la même source puis les autres sources autorisées (8 s).
+* **Surveillance des tuiles** : sans tuile reçue au bout de 15 s, `mlFail` affiche le bandeau « Carte indisponible → Diagnostiquer », qui oriente vers le moteur qui fonctionne, et en dernier recours vers le moteur Fichier.
+* **Style de la carte interactive** : les épaisseurs suivent le zoom par des expressions (`interpolate` exponentielle de base √2 entre les paliers 12 et 16 du zoom de l'affiche, soit exactement `zoomFactor` borné entre 0,5 et 2) : un geste ne reconstruit pas le style ; seul le disque du quartier en relief est remis à jour par `setFilter`. Le style n'est reconstruit (`mlRestyle`) que si un réglage ou la largeur du cadre change. Les exports gardent des valeurs figées.
+* **Contexte WebGL** : MapLibre rétablit seul un contexte perdu ; l'application l'affiche (« Carte GPU suspendue ») et refuse l'export pendant ce temps. Les rendus hors écran (`mlSnapshot` : vue figée, export, tuiles, lecture des pistes `mlQuery`) passent par une file d'attente (`gpuQueue`, un seul contexte hors écran à la fois) et échouent immédiatement si leur contexte est perdu, au lieu d'attendre le délai de 45 s (`SNAP_TIMEOUT`). En moteur Fichier, la carte MapLibre est libérée au bout de 30 s (`ML_RELEASE_MS`) et recréée au retour.
+* **Moteur Fichier au démarrage** : les données importées ne sont pas conservées ; un état enregistré avec le moteur Fichier redémarre avec le moteur Vectoriel GPU (`boot`).
 
 ### 2.3. Rendu en trois couches (WYSIWYG)
 
 Une fonction unique, `drawPoster(ctx, W, H, pass, mapFn)`, dessine l'affiche à n'importe quelle résolution. L'aperçu et l'export partagent donc le même code :
 
 1. **Couche basse** (canvas) : le papier.
-2. **Couche carte** : un conteneur placé exactement sur le cadre de la carte, qui accueille MapLibre ou le canvas vectoriel du moteur Fichier. Il est découpé en cercle pour le gabarit Médaillon.
+2. **Couche carte** : un conteneur placé exactement sur le cadre de la carte, qui accueille MapLibre ou le canvas vectoriel du moteur Fichier. Il est découpé selon la forme des gabarits Médaillon, Cœur et Arche (`clip-path`, même tracé que l'export : `shapeD`).
 3. **Couche haute** (canvas, `pointer-events: none`) : fondu, filets, repère, typographie et attribution.
 
-À l'export, les trois couches sont recomposées dans un canvas unique de 2480 × 3508 px.
+À l'export, les trois couches sont recomposées dans un canvas unique aux dimensions du format (`exportSpec` : 2480 × 3508 px en A4 portrait ; § 5).
 
 Les canevas de l'aperçu sont à la densité de l'écran (`devicePixelRatio`, 3 au plus), suivie aussi sans redimensionnement (fenêtre déplacée vers un autre écran : `CMS.surface.watchDpr`) ; ils ne sont réalloués que si leur taille change (`CMS.surface.fit`).
 
@@ -70,7 +76,20 @@ Les canevas de l'aperçu sont à la densité de l'écran (`devicePixelRatio`, 3 
 
   Tant que l'accord n'est pas donné, chaque point d'accès au réseau (`initMaplibre`, `search`, `runDiagnostics`, `exportPoster` avec le moteur Vectoriel GPU, CDN de secours de MapLibre) affiche la demande au lieu d'appeler le service. L'onglet Lieu indique l'état de l'accord et permet de le retirer, ce qui recharge la page dans l'état initial.
 * **Nominatim** : appel uniquement à la validation de la recherche (jamais à la frappe), 5 résultats, `accept-language=fr`, par `CMS.geocoder` (`js/geocoder.js`) : délai de 10 s, au plus une requête par seconde, la plus récente annule la précédente, validation répétée ignorée pendant 300 ms ; 429 / 403 → attente de 60 s (l'en-tête `Retry-After` n'est pas exposé par CORS) sans aucune requête ; 5xx → une relance ; cache des 50 dernières requêtes. Les réponses sont validées (coordonnées finies et dans les bornes Mercator, textes tronqués) puis insérées via `textContent` (aucune injection HTML). Le diagnostic interroge `/status` (aucune recherche consommée).
-* **Persistance** : l'état de l'atelier est sauvegardé dans `localStorage` (clé `cityMapStudio.v2`, sous `try/catch`). La clé `cityMapStudio.opBlocked`, laissée par une version antérieure, est effacée au démarrage.
+* **Persistance** : tout accès au stockage est protégé par `try/catch` (navigation privée, stockage plein ou refusé : l'application fonctionne, sans mémoire).
+
+  | Clé | Contenu | Remise à zéro par « Réinitialiser » |
+  | :--- | :--- | :--- |
+  | `cityMapStudio.v2` | État de l'affiche (`st`), écrit 300 ms après la dernière modification (`saveState`), relu par `normState` | oui (valeurs par défaut) |
+  | `cityMapStudio.saves` | Mes affiches (§ 4.12) | non |
+  | `cityMapStudio.consent` | Accord aux services tiers | non |
+  | `cityMapStudio.welcomed` | Proposition d'ambiance déjà vue (§ 4.6) | non |
+  | `cityMapStudio.uiScale`, `cityMapStudio.safeZone` | Taille de l'interface (§ 6), zone de sécurité (§ 5.4) : réglages de l'appareil | non |
+  | `cityMapStudio.advOpen`, `cityMapStudio.styleMoreOpen` | Sections « Avancé » et « Plus de réglages » ouvertes | non |
+  | `cityMapStudio.debug` | `'1'` : expose `window.__cms` (§ 8.2) | non |
+  | IndexedDB `cityMapStudio`, magasin `images` | Illustrations, par empreinte SHA-256 (§ 4.13) | non (nettoyage des images orphelines) |
+
+  La clé `cityMapStudio.opBlocked`, laissée par l'ancien moteur Overpass (cf. [`evolution-overpass.md`](evolution-overpass.md)), est effacée au démarrage.
 
 ### 2.5. Villes préréglées
 
@@ -152,7 +171,7 @@ Les variantes `*_link` suivent la classe de leur axe.
 9. **Deux lieux** (§ 4.7) et 10. **Ciel** (§ 4.8).
 11. **Lettres** : le nom de la ville, en capitales géantes, est découpé dans la carte (§ 4.11) ; cartouche dessous, sans le titre.
 
-**Orientation** : portrait (2480 × 3508) ou paysage (3508 × 2480) pour tous les gabarits. En paysage, la carte (ou le ciel) occupe la gauche et le texte une colonne à droite, centrée verticalement ; Deux lieux place les cartes côte à côte. Les tailles s'expriment en fraction du petit côté (`U`), si bien qu'un texte garde la même taille physique dans les deux orientations. En portrait, les gabarits d'origine sont rendus au pixel près comme avant cette évolution.
+**Orientation** : portrait (2480 × 3508) ou paysage (3508 × 2480) pour tous les gabarits. En paysage, la carte (ou le ciel) occupe la gauche et le texte une colonne à droite, centrée verticalement ; Deux lieux place les cartes côte à côte. Les tailles s'expriment en fraction du petit côté (`U`), si bien qu'un texte garde la même taille physique dans les deux orientations.
 
 ### 4.2. Couleurs (12 variables)
 
@@ -200,7 +219,7 @@ Le repère (point de rencontre) est indépendant du centre de la carte. Il se pl
 
 **Plusieurs lieux** (onglet Repère) : jusqu'à deux lieux de plus que le repère principal, chacun avec un nom, placé d'un toucher sur la carte. Options : **numéroter** les lieux (pastilles 1, 2, 3 et légende « 1 Rencontre · 2 Mariage » dans le texte de l'affiche) et les **relier** par un trait en pointillés. Les lieux supplémentaires sont dessinés au même style, à 75 % de la taille.
 
-**Itinéraire** : import d'un fichier GPX (traces `trkpt`, routes `rtept` ou, à défaut, points `wpt`), simplifié par Douglas-Peucker à 1 500 points au plus, puis cadrage automatique de la carte (zoom borné à 10–18). Couleur (repère, rues ou filets), épaisseur et pointillés réglables. L'itinéraire est conservé dans le navigateur avec les autres réglages.
+**Itinéraire** : import d'un fichier GPX (traces `trkpt`, routes `rtept` ou, à défaut, points `wpt`), simplifié par Douglas-Peucker à 1 500 points au plus, puis cadrage automatique de la carte (zoom borné à 10–18). Couleur (repère, rues ou filets), épaisseur et pointillés réglables. L'itinéraire fait partie de l'état (`st.route`, 5 000 points au plus à la relecture : `ROUTE_MAX_PTS`) ; le lien partagé l'omet au-delà de 400 points (§ 5.6).
 
 ### 4.4. Typographie (6 champs, 11 familles)
 
@@ -233,18 +252,16 @@ Le coefficient de corps (`scale`) et la graisse par défaut (`weight`) sont déf
 Chaque ligne est **optionnelle** : une case à cocher devant chaque champ l'affiche ou la masque, sans effacer le texte saisi (état `show`, persisté). Dans les gabarits à cartouche (Cadre, Fondu, Médaillon), les lignes masquées ou vides sont retirées et les suivantes remontent ; le gabarit Fondu garde le bloc calé en bas. Dans le gabarit Souvenir, une ligne d'en-tête seule occupe toute la largeur, et les noms sans dédicace s'affichent seuls, sans filet.
 Les textes trop longs sont réduits automatiquement pour tenir dans leur zone.
 
-**Taille des textes.** Chaque ligne a son curseur de taille (60 à 150 %, état `textScale`), complété d'un curseur global « Tous les textes » (70 à 140 %, `textScaleAll`) ; les deux se multiplient (`tScale(k)`). Le lien « Tailles par défaut » les remet à 100 %, comme « Réinitialiser ». À 100 %, le rendu est identique à celui d'avant les curseurs.
+**Taille des textes.** Chaque ligne a son curseur de taille (60 à 150 %, état `textScale`), complété d'un curseur global « Tous les textes » (70 à 140 %, `textScaleAll`) ; les deux se multiplient (`tScale(k)`). Le lien « Tailles par défaut » les remet à 100 %, comme « Réinitialiser ». Exception : dans le gabarit Lettres, les lettres du titre prennent toujours la plus grande taille possible (§ 4.11) ; le curseur du titre y est sans effet.
 * **Gabarits à cartouche** : quand une ligne grandit, les interlignes suivent (0,8 × l'écart de corps de la ligne, 0,25 × celui de la précédente). Si le bloc dépasse la hauteur disponible, il est réduit en entier pour tenir. Le gabarit Fondu garde le bloc calé en bas et le fait grandir vers le haut, sur la zone en fondu.
-* **Gabarit Souvenir** : le titre et la date de l'en-tête gardent chacun leur taille, sur la même ligne de base (`drawRun`). En pied de page, si la dédicace et les noms dépassent la largeur, ils sont réduits du même facteur, ce qui garde le rapport entre les tailles choisies. Avant, la dédicace était plafonnée à 72 % de la largeur et les noms prenaient le reste.
+* **Gabarit Souvenir** : le titre et la date de l'en-tête gardent chacun leur taille, sur la même ligne de base (`drawRun`). En pied de page, si la dédicace et les noms dépassent la largeur, ils sont réduits du même facteur, ce qui garde le rapport entre les tailles choisies.
 * **Réduction signalée** : pendant le rendu de l'aperçu, `drawText`, `drawRun` et `drawCartouche` relèvent les réductions automatiques (`noteFit`). Au-delà de 10 %, l'onglet Textes l'indique (« ↘ Réduit pour tenir dans l'affiche : dédicace (67 %) ») et le curseur de la ligne passe en orange. Si la dédicace réduite tient sur une ligne, l'avertissement propose « Passer la dédicace sur deux lignes ».
 * **Dédicace sur deux lignes** (état `dedWrap`, sous le champ : Auto, Une ligne, Deux lignes) : en **Auto**, la dédicace passe sur deux lignes dès que, sur une seule, elle serait réduite de plus de 20 % (`WRAP_AT`, en tenant compte des noms à côté dans le gabarit Souvenir). La coupure se fait à l'espace qui rend la plus longue ligne la plus courte (`splitBalanced`) ; un mot seul n'est jamais coupé. Les mesures se font en unités `U`, à une taille de référence (`dedLines`, mises en cache, recalculées au chargement des polices) : la décision est la même dans l'aperçu, les vignettes et l'export. **La carte fait de la place** : dans le gabarit Souvenir, elle cède la hauteur de la deuxième ligne au pied (`souvenirFoot`), et le filet entre dédicace et noms s'allonge ; dans les cartouches sous une carte qui dépend de la hauteur (Cadre, Arche, Lettres), la carte raccourcit d'autant et le cartouche descend (`cartDed`). Les autres cartouches (Fondu, Médaillon, Cœur, Polaroid, Ciel, Deux lieux, paysage) ont déjà la place et ajoutent simplement la ligne ; le gabarit Voyage garde sa dédicace sur une ligne, à côté de la date. Quand la hauteur de la carte change, l'aperçu replace son cadre (`drawOver` → `layoutPreview`).
 
 ### 4.5. Réinitialisation
 
 Le lien **« Réinitialiser »**, dans la barre du bas (visible depuis tous les onglets), rétablit tous les réglages par défaut : lieu et cadrage (Blois), gabarit, thème et couleurs, repère, police, textes et lignes affichées, marge, épaisseurs et calques. Un premier appui affiche « Confirmer ? » pendant 4 s ; un second appui réinitialise (`resetAll`). La confirmation est intégrée à la page, car `confirm()` est bloqué dans les aperçus intégrés.
-Sont conservés : l'accord aux services tiers et les données déjà importées.
-
----
+L'état est remplacé par `DEFAULT_STATE`, moteur compris : l'application revient au moteur Vectoriel GPU (la demande d'accord s'affiche s'il manque). Sont conservés : l'accord aux services tiers, les données déjà importées (en mémoire : un retour au moteur Fichier les retrouve), Mes affiches, les illustrations et les réglages de l'appareil (taille de l'interface, zone de sécurité). La réinitialisation est une étape d'historique (`commitHistory`) : « Annuler » revient en arrière, moteur excepté.
 
 ### 4.6. Ambiances et papier
 
@@ -338,11 +355,11 @@ La section **Mes affiches** (onglet Export, « Sauvegarde » ; ouverte aussi par
 
 ### 4.13. Affiche illustrée (mode Illustration)
 
-Un sélecteur placé avant les onglets choisit le **type d'affiche** (`st.mode`) : **Carte** (`map`, l'affiche cartographique) ou **Illustration** (`illus`) : une affiche de voyage façon vintage, faite d'une illustration de la ville et d'un grand titre. Sur ordinateur, il est au-dessus des onglets ; sur téléphone (panneau coulissant), il ouvre la zone défilante, pour garder 180 px de réglages au cran mi-hauteur. Changer de mode conserve le lieu, les textes, les polices, le format et l'image. Un troisième mode, **Carte + illustration** (`mix`), associe les deux (§ 4.14).
+Le **type d'affiche** (`st.mode`, sélecteur `#modeSeg` épinglé au-dessus des onglets, § 6) vaut **Carte** (`map`, l'affiche cartographique), **Illustration** (`illus`) : une affiche de voyage façon vintage, faite d'une illustration de la ville et d'un grand titre, ou **Carte + illustration** (`mix`, § 4.14). Changer de mode conserve le lieu, les textes, les polices, le format et l'image.
 
 **Principe** : l'application **ne génère pas l'image**. Elle rédige un **prompt** pour l'IA de l'utilisateur (ChatGPT, Gemini…), qui pose ses questions, propose des thèmes et livre une illustration **sans texte ni marge** ; l'utilisateur l'importe, l'application la cadre, la retouche et pose le titre avec de vraies polices. Aucune clé API, aucune requête réseau, aucun service tiers : la carte n'est pas affichée (`renderMap` ne crée ni ne réveille MapLibre) et aucune mention cartographique n'est inscrite.
 
-* **Onglets** : Lieu, **Illustration** (à la place de Repère), Textes, Style. Les réglages propres à la carte (repère et cadrage de l'onglet Lieu ; ambiances, gabarits, thèmes, touche d'or, tracé, effets, ornements, calques, couleurs de l'onglet Style) sont masqués (classes `maponly` / `illusonly`).
+* **Onglets** : **Illustration**, Textes, Style, Export (ni Lieu ni Repère : il n'y a pas de carte ; le titre et le sous-titre se saisissent dans l'onglet Textes). Les réglages propres à la carte (ambiances, thème, gabarits, touche d'or, tracé, effets, ornements, calques, couleurs de l'onglet Style) sont masqués (classes `maponly` / `illusonly`).
 * **Étape 1 · Prompt** (`CMS.illus.buildPrompt`, fonction pure) : ville et région (titre et sous-titre de l'affiche), pistes facultatives (8 au plus ; « L'IA propose » par défaut ; saisies, ou trouvées dans la carte, ci-dessous), moment de la journée, saison, palette (proposée par l'IA, couleurs du thème de l'affiche, d'une photo), langue (français ou anglais). Le prompt interdit **tout texte et toute marge** en tête, puis au moment de générer (« no text, no letters, no title, no typography, no border, no frame, full bleed »), et demande à l'IA de **vérifier elle-même** l'image et de la régénérer au besoin (premiers essais : titre ajouté, marge crème). Il impose les proportions du format (A4 et A3 : 1:1,414 ; 50 × 70 : 5:7, avec au moins 4000 px ; sinon 2:3 ; paysage à l'avenant), réserve une zone calme à la position du titre et, si des lignes de pied sont affichées, du côté opposé. Les choix déjà tranchés sortent de la liste des questions. **Copier le prompt** passe par le presse-papiers (repli : texte sélectionné et `execCommand('copy')`).
 * **Pistes lues dans la carte** (bouton « Trouver des pistes dans la carte ») : monuments (château, palais, phare, fort, ruines, cathédrale ou basilique — une simple église compte moins —, attraction, musée, point de vue), cours d'eau, plans d'eau, sommets, parcs, et paysages génériques (vignobles, bord de mer, port). Moteur Fichier : éléments nommés gardés à l'import (`osmData.named`, 5 000 au plus, étiquettes utiles seulement). Moteur GPU : carte MapLibre hors écran du lieu (`CMS.engines.mlQuery`, même file d'attente que les rendus d'export ; tuiles OpenFreeMap, donc avec l'accord préalable), couches OpenMapTiles `poi`, `waterway`, `water_name`, `mountain_peak`, `park`, `landcover`, `water`. Classement (`rankPistes`, fonction pure) : poids du type, rang OpenMapTiles (importance), distance au centre ; un nom une seule fois ; 6 pistes au plus, proposées en puces (« + nom ») qu'un toucher ajoute au prompt. Aucun nouveau service réseau (Wikipédia : issue #46).
 * **Étape 2 · Image** : glisser-déposer (zone ou aperçu), collage (Ctrl + V), bouton **« Coller l'image »** (issue #57 : `navigator.clipboard.read()`, au toucher seulement, proposé si l'API existe ; presse-papiers sans image ou accès refusé : message et renvoi au fichier ; aucun lien vers une IA tierce) ou choix d'un fichier ; sur écran tactile (`pointer: coarse`), le texte d'aide ne parle ni de glisser-déposer ni de Ctrl + V ; **PNG, JPEG ou WebP** (HEIC : issue #47), 40 Mo au plus, 64 px de côté au moins. L'image est décodée (`createImageBitmap`) puis **ré-encodée** dans un canevas : seuls les pixels sont gardés (métadonnées, coordonnées GPS comprises, écartées) ; au-delà de `min(36 Mpx, 0,6 × CANVAS_MAX_PX)`, elle est réduite. Une copie de 1600 px de côté au plus sert à l'aperçu.
@@ -364,7 +381,7 @@ Un sélecteur placé avant les onglets choisit le **type d'affiche** (`st.mode`)
 
 ### 4.14. Carte + illustration (mode `mix`)
 
-* **Onglets** : Lieu, Repère, **Illustration**, Textes, Style. Tous les réglages de la carte restent disponibles (moteur, repère, halo, thèmes, effets, ornements, calques, attributions), sauf les ambiances et les gabarits, remplacés par la composition (classes `layoutonly`, `maponly`, `illusonly`, `pureillus`, `mixonly`). Deux lieux, ciel et légendes des deux lieux ne s'appliquent pas.
+* **Onglets** : Lieu, Repère, **Illustration**, Textes, Style, Export. Tous les réglages de la carte restent disponibles (moteur, repère, halo, thèmes, effets, ornements, calques, attributions), sauf les ambiances et les gabarits, remplacés par la composition (classes `layoutonly`, `maponly`, `illusonly`, `pureillus`, `mixonly`). Deux lieux, ciel et légendes des deux lieux ne s'appliquent pas.
 * **Étape Composition** (avant Prompt et Image ; ouverte d'office tant qu'aucune image n'est importée), `st.mix = {compo, shape, pos, split}` :
   * **Médaillon** (`med`) : l'illustration couvre l'affiche ; la carte est dans une forme de 45 % du petit côté (**rond**, **cœur** à 92 % de hauteur, **arche** à 120 %), centrée en largeur, **en haut** (à 24 % de la hauteur), **au centre** ou **en bas** (12 % au-dessus du bord). Un anneau couleur papier et un filet de la couleur du titre l'entourent. Titre et lignes de pied comme en mode Illustration (9 positions).
   * **Vignette** (`vig`) : la carte encadrée (double filet du gabarit Cadre, marge de l'onglet Style) ; l'illustration dans une **arche** de proportions 3:4 (30 % de la largeur ; 22 % en paysage), en haut à droite de la carte, bordée de papier avec une ombre portée ; une **bande** de 24 % du petit côté sous la carte reçoit titre, sous-titre, dédicace, date et coordonnées, centrés et réduits ensemble pour y tenir (couleur du titre si elle se lit sur le papier, sinon l'encre du thème).
@@ -379,6 +396,8 @@ Un sélecteur placé avant les onglets choisit le **type d'affiche** (`st.mode`)
 
 ## 5. Export haute définition
 
+### 5.1. Formats et résolution
+
 * **Formats** (onglet Export, section « Rendu », état `format`, table `FORMATS`) : A4 (2480 × 3508 px à 300 DPI, par défaut), A3, 50 × 70 cm et **10 × 15 cm** (tirage photo chez un labo : 1181 × 1772 px à 300 DPI, sans marge de fond perdu ; la question d'un fond perdu de 3 mm reste ouverte, issue #50), en portrait ou en paysage. A4 et A3 ont le rapport √2 ; 50 × 70 cm, le rapport 7/5 ; 10 × 15 cm, le rapport 3/2 : l'aperçu, les vignettes et la mise en page suivent (tailles en `U`). Le format ne change pas le contenu de la carte : une affiche plus grande montre la même zone, plus détaillée. L'export est un **recalcul intégral** à pleine résolution, jamais un agrandissement de l'aperçu.
 * **Résolution et limites des canevas** (`exportSpec`) : 300 DPI si le canevas tient dans `CANVAS_MAX_PX`, sinon la plus haute résolution qui tient, par pas de 10 DPI. La limite est de 16,7 Mpx sur iPhone, iPad et Android (au-delà, Safari iOS rend un canevas vide) et de 40 Mpx ailleurs (mémoire). La résolution abaissée est annoncée sous le choix du format, sur le bouton d'export et dans le résultat de l'export.
 
@@ -390,71 +409,42 @@ Un sélecteur placé avant les onglets choisit le **type d'affiche** (`st.mode`)
   | 10 × 15 cm | 1181 × 1772 px, 300 DPI (2,1 Mpx) | identique |
 
   170 DPI suffisent pour une affiche de 50 × 70 cm regardée à plus d'un mètre.
-* **Fichier** (« Image PNG » ou « Document PDF », état `fileType`) : le PNG est sans perte et porte sa résolution (`pHYs`). Le PDF (`pdfFromJpeg`, écrit sans bibliothèque : six objets, table `xref` exacte) contient une page à la taille exacte d'impression (mm → points PostScript, `MediaBox` et `TrimBox`), où l'affiche est une image JPEG qualité 0,95 (`DCTDecode`) aux dimensions de l'export, sans rééchantillonnage ; titre en UTF-16 (accents). jsPDF n'a pas été retenu : 350 Ko à embarquer pour une seule image par page. Noms : `affiche-carte-[ville]-300dpi.png` en A4, `affiche-carte-[ville]-a3-300dpi.png`, `affiche-carte-[ville]-50x70-270dpi.pdf`, `affiche-carte-[ville]-10x15-300dpi.png` (page PDF de 100 × 150 mm, soit 283,46 × 425,20 pt)… ; en mode illustré, `affiche-illustration-…`
-* **Étapes** :
-  1. Attente du chargement des polices (`document.fonts.load`), puis contrôle par `document.fonts.check` : si une variante manque, l'export se fait avec une police de secours et le signale dans le résultat de l'export.
-  2. Création d'un canvas aux dimensions du format (2480 × 3508 en A4) et dessin de la couche basse.
-  3. Carte :
-     * **MapLibre** : instance hors écran de 800 px CSS de large, `pixelRatio` = largeur du cadre / 800 (environ 2,7 en A4), `preserveDrawingBuffer`, `maxCanvasSize` 8192, attente de l'événement `idle` (45 s au plus), puis `drawImage` dans le cadre. Au-delà du côté maximal d'un canevas WebGL (`glMax` : 4096 px au plus, moins si l'appareil l'impose), la carte est rendue **en tuiles** : même zoom, centres décalés en Mercator (tuiles de 512 px), chaque tuile débordant de 8 px CSS sur ses voisines puis découpée au recollage, ce qui évite tout effet de bord sur les traits et les motifs. Le rendu en 2 × 3 tuiles est identique au rendu d'un seul tenant (`tests/maplibre.py`) ;
-     * **Fichier** : re-projection directe des géométries dans le cadre, à pleine résolution (cache de tracés propre à cette taille, cf. § 4.10).
-  4. Couche haute (repère, filets, textes) à la même échelle.
-  5. `toBlob('image/png')`, injection d'un chunk **`pHYs`** (11 811 px/m = 300 DPI) pour que les logiciels ouvrent le fichier à la bonne résolution, puis téléchargement de `affiche-carte-[ville]-300dpi.png` (en PDF : `toBlob('image/jpeg', 0.95)` puis `pdfFromJpeg`). Sur mobile, le partage natif (`navigator.share`) est proposé quand il est disponible ; si le téléchargement est bloqué, l'image reste enregistrable par appui long.
-* **Zone de sécurité** (issue #60 ; onglet Export, section « Rendu ») : les imprimantes de bureau n'impriment pas jusqu'au bord (3 à 5 mm). Une case affiche un **trait pointillé à 5 mm du bord** (`#safeGuide`, élément posé sur l'aperçu : il n'est jamais exporté), calculé selon la largeur imprimée du format et l'orientation. Pendant le rendu de l'aperçu, les textes (`drawText`, `drawRun`, boîte de la ligne de base à 75 % de la taille, jambages ignorés) et les repères sont relevés (`CMS.ink`, transformation courante appliquée) ; ceux qui entrent dans la bande sont nommés dans une alerte, avec le conseil d'augmenter la marge. La mention des sources est placée à 0,38 × la marge du bas : elle entre dans la bande en dessous d'une marge d'environ 6 % (A4, A3), et toujours en 10 × 15 cm (moins de 5 mm même à 12 %) : l'alerte conseille alors d'imprimer sans marge ou de confier le tirage à un laboratoire photo. Réglage de l'appareil (`cityMapStudio.safeZone`), hors de l'état de l'affiche. Un conseil près du bouton d'export rappelle d'imprimer en « Taille réelle / 100 % », et non « Ajuster à la page ». Pas de fond perdu ni de traits de coupe (impression maison). `tests/safezone.py`.
-* **Mémoire** : en A4, 8,7 Mpx, sous la limite de 16,7 Mpx de Safari iOS, et un canvas WebGL d'environ 2160 × 2500 px, sous la limite de 4096 px. Les grands formats restent sous ces limites grâce à `exportSpec` et au rendu en tuiles ; le canevas de l'affiche est libéré dès l'image encodée, avant d'assembler le fichier final.
+* **Mémoire** : en A4, 8,7 Mpx, sous la limite de 16,7 Mpx de Safari iOS, et un canvas WebGL d'environ 2160 × 2500 px, sous la limite de 4096 px. Les grands formats restent sous ces limites grâce à `exportSpec` et au rendu en tuiles (§ 5.3) ; le canevas de l'affiche est libéré dès l'image encodée, avant d'assembler le fichier final.
 
----
+### 5.2. Fichiers produits
+
+* **Type** (« Image PNG » ou « Document PDF », état `fileType`) : le PNG est sans perte et porte sa résolution (`pHYs`). Le PDF (`pdfFromJpeg`, écrit sans bibliothèque : six objets, table `xref` exacte) contient une page à la taille exacte d'impression (mm → points PostScript, `MediaBox` et `TrimBox`), où l'affiche est une image JPEG qualité 0,95 (`DCTDecode`) aux dimensions de l'export, sans rééchantillonnage ; titre en UTF-16 (accents). jsPDF n'a pas été retenu : 350 Ko à embarquer pour une seule image par page. Noms : `affiche-carte-[ville]-300dpi.png` en A4, `affiche-carte-[ville]-a3-300dpi.png`, `affiche-carte-[ville]-50x70-270dpi.pdf`, `affiche-carte-[ville]-10x15-300dpi.png` (page PDF de 100 × 150 mm, soit 283,46 × 425,20 pt)… ; en mode illustré, `affiche-illustration-…`
+
+### 5.3. Étapes de l'export (`exportPoster`)
+
+1. Attente du chargement des polices (`document.fonts.load`), puis contrôle par `document.fonts.check` : si une variante manque, l'export se fait avec une police de secours et le signale dans le résultat de l'export.
+2. Création d'un canvas aux dimensions du format (2480 × 3508 en A4) et dessin de la couche basse.
+3. Carte :
+   * **MapLibre** : instance hors écran de 800 px CSS de large, `pixelRatio` = largeur du cadre / 800 (environ 2,7 en A4), `preserveDrawingBuffer`, `maxCanvasSize` 8192, attente de l'événement `idle` (45 s au plus), puis `drawImage` dans le cadre. Au-delà du côté maximal d'un canevas WebGL (`glMax` : 4096 px au plus, moins si l'appareil l'impose), la carte est rendue **en tuiles** : même zoom, centres décalés en Mercator (tuiles de 512 px), chaque tuile débordant de 8 px CSS sur ses voisines puis découpée au recollage, ce qui évite tout effet de bord sur les traits et les motifs. Le rendu en 2 × 3 tuiles est identique au rendu d'un seul tenant (`tests/maplibre.py`) ;
+   * **Fichier** : re-projection directe des géométries dans le cadre, à pleine résolution (cache de tracés propre à cette taille, cf. § 4.10).
+4. Couche haute (repère, filets, textes) à la même échelle.
+5. `toBlob('image/png')`, injection d'un chunk **`pHYs`** (11 811 px/m = 300 DPI) pour que les logiciels ouvrent le fichier à la bonne résolution, puis téléchargement de `affiche-carte-[ville]-300dpi.png` (en PDF : `toBlob('image/jpeg', 0.95)` puis `pdfFromJpeg`). Sur mobile, le partage natif (`navigator.share`) est proposé quand il est disponible ; si le téléchargement est bloqué, l'image reste enregistrable par appui long.
+
+Préalables : accord réseau avec le moteur Vectoriel GPU, données importées avec le moteur Fichier, illustration présente dans les modes illustrés, contexte WebGL disponible ; sinon l'export est refusé avec un message.
+
+### 5.4. Zone de sécurité (impression maison)
+
+Issue #60 ; onglet Export, section « Rendu ». Les imprimantes de bureau n'impriment pas jusqu'au bord (3 à 5 mm). Une case affiche un **trait pointillé à 5 mm du bord** (`#safeGuide`, élément posé sur l'aperçu : il n'est jamais exporté), calculé selon la largeur imprimée du format et l'orientation. Pendant le rendu de l'aperçu, les textes (`drawText`, `drawRun`, boîte de la ligne de base à 75 % de la taille, jambages ignorés) et les repères sont relevés (`CMS.ink`, transformation courante appliquée) ; ceux qui entrent dans la bande sont nommés dans une alerte, avec le conseil d'augmenter la marge. La mention des sources est placée à 0,38 × la marge du bas : elle entre dans la bande en dessous d'une marge d'environ 6 % (A4, A3), et toujours en 10 × 15 cm (moins de 5 mm même à 12 %) : l'alerte conseille alors d'imprimer sans marge ou de confier le tirage à un laboratoire photo. Réglage de l'appareil (`cityMapStudio.safeZone`), hors de l'état de l'affiche. Un conseil près du bouton d'export rappelle d'imprimer en « Taille réelle / 100 % », et non « Ajuster à la page ». Pas de fond perdu ni de traits de coupe (impression maison). `tests/safezone.py`.
+
+### 5.5. Composition commune et aperçu au mur
 
 * **Composition commune** (`composePoster`) : la même fonction produit l'export, l'aperçu au mur et les vues des deux lieux ; elle rend chaque vue (une ou deux), puis l'affiche et enfin le papier.
 * **Aperçu au mur** (onglet Export, section « Rendu ») : l'affiche rendue à 1 100 px environ, dans un cadre (chêne, noir, blanc, doré) avec ou sans passe-partout, sur un mur au choix (blanc cassé, sauge, terracotta, béton, nuit), avec une ombre portée. L'image se télécharge en PNG.
-* **Partage par lien** (onglet Style) : l'état de l'affiche, sans le moteur cartographique, est compressé (`CompressionStream` deflate) dans l'ancre de l'adresse (`#a=…`). Rien n'est envoyé à un serveur ; le lien contient le lieu et les textes, ce que l'interface rappelle. À l'ouverture, l'affiche est reconstituée, l'ancre effacée, et « Annuler » retrouve l'affiche précédente. Un itinéraire de plus de 400 points n'est pas inclus, et c'est signalé.
+
+### 5.6. Partage par lien
+
+Onglet Export, section « Sauvegarde ». L'état de l'affiche, sans le moteur cartographique, est compressé (`CompressionStream('deflate-raw')`, préfixe `z` ; sans cette API, JSON brut, préfixe `j`), encodé en base64url dans l'ancre de l'adresse (`#a=…`). Rien n'est envoyé à un serveur ; le lien contient le lieu et les textes, ce que l'interface rappelle. À l'ouverture, l'ancre est lue (64 Ko au plus, 512 Ko une fois décompressée : `SHARE_MAX_CHARS`, `SHARE_MAX_BYTES`), l'affiche reconstituée par `applyConfig` (validation `normState`), l'ancre effacée, et « Annuler » retrouve l'affiche précédente. Un itinéraire de plus de 400 points n'est pas inclus, et c'est signalé ; l'illustration n'y figure jamais (seule sa référence, § 4.13).
+
+---
 
 ## 6. Interface (mobile en priorité)
 
-* **Mobile portrait** : aperçu de l'affiche en haut, **panneau coulissant** en bas avec, **d'abord**, le choix du type d'affiche, puis les onglets (voir « Type d'affiche d'abord » ci-dessous) et la barre d'état. Trois crans :
-  * **réduit** : type d'affiche, onglets et barre d'état seuls, l'affiche occupe presque tout l'écran (cadrage, placement du repère) ;
-  * **mi-hauteur** (55 %, par défaut) ;
-  * **déplié** (84 %) : réglages en grand, l'affiche réduite à une vignette.
-
-  On glisse la poignée (aimantation au cran le plus proche, dans le sens du geste), ou on la touche pour passer d'un cran à l'autre (flèches haut et bas au clavier). Toucher un onglet depuis le cran réduit ouvre la mi-hauteur ; toucher l'onglet actif bascule entre mi-hauteur et déplié. Le panneau se déplie pendant la saisie d'un texte, puis reprend sa place.
-* **Type d'affiche d'abord** (lot 4 de #55, #62) : le choix **Carte / Illustration / Carte + illus.** est une barre unique (`#modeSeg`), épinglée au-dessus des onglets sur tous les écrans, y compris au cran réduit du téléphone (le calcul de ce cran l'inclut). Elle n'est plus dans la zone défilante, où elle disparaissait dès qu'on faisait défiler (l'ancienne copie `#modeSegM` est supprimée). Les onglets en découlent (`applyMode`, `js/illus.js`) :
-
-  | Type | Onglets |
-  |---|---|
-  | Carte | Lieu · Repère · Textes · Style · Export |
-  | Illustration | Illustration · Textes · Style · Export (ni Lieu ni Repère : il n'y a pas de carte) |
-  | Carte + illus. | Lieu · Repère · Illustration · Textes · Style · Export |
-
-  Changer de type ne perd rien (état, textes, illustration). L'onglet actif est conservé s'il existe dans le nouveau type, sinon on passe à Illustration (modes illustrés) ou à Lieu (retour en Carte). Cibles de 44 px au moins ; hauteur de la barre : 48 px environ sur téléphone. Vérifié par `tests/flow.py` (360 px et ordinateur).
-* **Onglet Style : Essentiel et « Plus de réglages »** (#62). Aucun changement d'état ni de rendu : seule l'organisation change.
-  * **Essentiel**, visible d'office : ambiances (Carte), thème (Carte), **polices** (déplacées de l'onglet Textes, mêmes identifiants), papier et plis.
-  * **« Plus de réglages »** (`#styleMore`, Carte et Carte + illus.) : **gabarit** (cartes, marge, contour, ciel du jour J ; l'ambiance le choisit déjà, donc il n'ouvre pas la section d'office), palette d'une photo, touche d'or et dorure, tracé, effets de tracé, halo et quartier, ornements, calques, couleurs détaillées, mention des sources. Section repliable à état mémorisé (`cityMapStudio.styleMoreOpen`), comme « Avancé » de l'onglet Lieu.
-  * **Ouverte d'office, sans mémoriser**, dès qu'un réglage qu'elle contient diffère du défaut (effet de tracé, ornement, calque masqué, épaisseur du tracé ou des cours d'eau, mention des sources) : aucun effet appliqué n'est caché. Contrôle à chaque saisie dans la section et à chaque resynchronisation de l'état (annuler, restauration, ambiance). Elle ne se referme jamais seule. Les couleurs ne comptent pas : tout thème les modifie.
-  * Hauteur de l'Essentiel à 360 px : environ 2,1 écrans de téléphone (objectif de l'issue : 2, un peu dépassé ; gabarit déplacé dans « Plus de réglages » sur décision du propriétaire). `tests/flow.py` la mesure.
-  * Les tests qui touchent ces contrôles ouvrent la section en posant `cityMapStudio.styleMoreOpen` avec les autres clés de départ (`tests/seed.py` et les scripts d'initialisation).
-* **Carte verrouillée et mode « Cadrer » (mobile portrait)** : un glissement sur l'affiche ne la décadre pas. Un toucher sur la carte, ou le bouton Cadrer, ouvre le mode Cadrer : panneau réduit, carte déverrouillée (glisser, pincer), barre « Terminer ». « Placer le repère » réduit aussi le panneau et le rétablit une fois le repère posé.
-* **Boutons flottants** (cadrer, zoom, repère, centrer) : à droite ou en bas de l'aperçu, selon ce qui laisse l'affiche la plus grande ; masqués quand l'aperçu n'est qu'une vignette.
-* **Voir l'affiche seule** (issue #56) : bouton œil parmi les boutons flottants (seul bouton flottant en mode Illustration). Il referme le mode Cadrer ou le placement en cours, masque tout ce qui recouvre l'aperçu (boutons flottants, « Toucher pour cadrer », « Modifier le lieu 2 », badge de comparaison, légende des sources, zone de prise de la vignette) et, sur mobile, le panneau (`--sheetH` à 0) : l'affiche occupe tout l'écran. Une couche transparente (`#cleanExit`, « Revenir aux réglages ») reçoit le toucher de sortie : il ne déplace pas la carte et ne pose aucun repère. Sortie aussi par Échap ou par le bouton retour du système (une entrée d'historique du navigateur, sans changer l'adresse). Le panneau revient à son cran et le focus au bouton. Aucun état de l'affiche n'est modifié (`tests/mobile.py`).
-* **Deux colonnes** (ordinateur ≥ 900 px, tablette ou téléphone en paysage ≥ 560 px) : panneau à gauche (400 px au plus, 46 % de la largeur), table lumineuse à droite. Pas de poignée ni de verrou : la carte se manipule directement (glisser, pincer, molette).
-* **Barre du bas** : **Annuler / Rétablir**, état courant (texte complet au survol), lien « Réinitialiser » (§ 4.5) et réglage **A− / A+**. Le bouton d'export n'y est plus : il est dans l'onglet Export.
-* **Onglet Export** (issue #51 ; dernier onglet, dans les trois modes) : trois sections.
-  * **Rendu** : orientation, format d'impression, type de fichier (PNG ou PDF), résolution annoncée (et abaissement éventuel), aperçu au mur.
-  * **Sauvegarde** : Mes affiches (enregistrer, Ctrl + S, restaurer, supprimer, télécharger), fichier de configuration, sauvegarde complète, illustrations incluses ou non, partage par lien. À l'ouverture de l'onglet, le nom proposé est rempli et la liste mise à jour.
-  * **Export** : bouton d'export (dimensions, format, DPI, PDF) ; après l'export, un encart montre l'aperçu, les informations du fichier (nom, taille d'impression, pixels, DPI, poids) et les avertissements (tuiles manquantes, police de secours), avec « Télécharger », le partage natif et « Masquer l'aperçu ». L'onglet Export s'ouvre et le focus va sur « Télécharger ». Mes affiches et le résultat ne sont plus des fenêtres modales.
-  * Papier et plis restent dans l'onglet Style. L'état et les fichiers de configuration ne changent pas.
-  * Téléphone : jusqu'à six onglets (quatre en Illustration) (Carte + illustration) se partagent la largeur ; l'onglet « Illustration » s'affiche « Illus. » (nom accessible complet), le libellé entier ne tenant pas dans un panneau de 400 px. Vérifié à 360 px sans défilement ni libellé tronqué (`tests/mobile.py`).
-* **Parcours guidé** : les onglets suivent l'ordre de création **Lieu → Repère (ou Illustration) → Textes → Style → Export** ; en mode Illustration seule, le parcours commence à l'Illustration. Chaque onglet se termine par un bouton « Étape suivante » ; l'onglet Export se termine par le bouton d'export.
-* **Onglet Lieu** : recherche, « Ma position actuelle », villes, lieu de rencontre et cadrage. Le moteur cartographique, l'import de fichier, le diagnostic et l'accord aux services tiers sont dans la section repliable **« Avancé »**. Son état est mémorisé (`cityMapStudio.advOpen`), et elle s'ouvre d'office quand elle devient utile : moteur Fichier, « Travailler hors ligne », diagnostic lancé depuis le bandeau. Les calques sont dans l'onglet Style, et les 12 couleurs dans une section repliable « Personnaliser les couleurs ».
-* **Recherche d'adresse** : uniquement à la validation, une seule à la fois (bouton inactif pendant la requête). Il n'y a pas d'autocomplétion, que la politique d'usage de Nominatim interdit. Chaque résultat affiche le nom en tête et l'adresse en dessous.
-* **Clavier** : la carte du moteur Fichier est atteignable par Tab (rôle « application », consignes dans son nom) : flèches = déplacement de 10 % du cadre (Maj : 50 %), + / − = zoom de 0,5, Entrée = repère au centre en mode placement. Résultats de recherche en liste : focus sur le premier bouton, chaque bouton décrit par son lieu (`aria-describedby`), seule la phrase « N résultats pour « … » » est annoncée (zone d'état séparée), Échap ferme la liste et rend le focus au champ.
-* **Ma position actuelle** : géolocalisation de l'appareil (`navigator.geolocation`, permission demandée par le navigateur, page sécurisée requise). Elle place le repère et y centre la carte, à un zoom d'au moins 15.
-* **Date** : un bouton calendrier, couvert par un champ `date` natif transparent pour fonctionner aussi sur iOS, remplit le champ au format de l'affiche (« Le 1er juillet 2023 ») et réaffiche la ligne si elle était masquée. Le texte reste modifiable, et le calendrier s'ouvre sur la date déjà saisie quand elle est reconnue.
-* **Polices** (onglet Style, Essentiel) : cartes à défilement horizontal, chacune montrant le titre saisi dans sa police.
-* **Annuler / Rétablir** : jusqu'à 50 étapes, regroupées comme l'enregistrement (300 ms de calme), avec les boutons ou Ctrl/Cmd+Z et Ctrl/Cmd+Maj+Z (ou Ctrl+Y) hors des champs de texte, qui gardent leur annulation native. « Réinitialiser » peut être annulé. Le moteur cartographique n'entre pas dans l'historique, et les petits recentrages de la carte qui suivent un retour arrière, une réinitialisation ou un changement de moteur sont ignorés. L'historique n'est pas conservé après un rechargement.
-* **Accessibilité** : onglets selon le motif ARIA (`tablist`, `tab`, `tabpanel`, `aria-selected`, flèches, Début, Fin) ; segments en `aria-pressed` et polices en `radio` ; focus clavier visible ; cibles tactiles d'au moins 44 px (36 px dans la barre du bas, poignée de 28 px sur toute la largeur) ; transitions courtes, coupées si `prefers-reduced-motion`.
-* **Contrastes de l'interface** (WCAG 2.2, critères 1.4.3 et 1.4.11 ; `tests/contrast.py` les mesure sur le rendu réel, mobile et ordinateur, à l'agrandissement A+ compris) : textes 4,5:1 au moins (`--txt` 13:1, texte secondaire `--mut` 5,4:1 sur les panneaux, avertissement de réduction 9,7:1, texte d'erreur `--danger` 4,8:1) ; composants 3:1 (bordure des champs `--field` 3,3:1, pastilles d'état 5,3 à 10,8:1, icônes des boutons). L'audit a corrigé la bordure des champs (1,35:1), Annuler / Rétablir et A− / A+ inactifs (2,5 et 1,9:1), le texte d'erreur du diagnostic et la pastille d'erreur (3,8 et 4,2:1) et le réglage de taille d'une ligne masquée (2,2:1). Les boutons inactifs, exemptés par les WCAG, sont tenus à 3:1 (opacité `--off` .65) : lisibles, et nettement plus pâles que les boutons actifs. Une ligne masquée sur l'affiche garde un champ modifiable : sa bordure reste à 3:1, et seul son texte passe en couleur secondaire. La case « Date » atténue désormais aussi sa ligne (le champ est dans une rangée, que le sélecteur ne visait pas).
-* **Taille du texte de l'interface** : les tailles sont en `rem`. L'interface suit le réglage du système (taille de police d'Android ; Dynamic Type d'iOS via `font: -apple-system-body`). A− / A+ propose 87,5 à 137,5 %. Ce réglage est mémorisé dans l'appareil (`cityMapStudio.uiScale`), hors de l'état de l'affiche, et « Réinitialiser » ne le modifie pas. Les champs de saisie font au moins 16 px pour éviter le zoom automatique d'iOS.
-* **Superpositions** : la demande d'accord aux services tiers est un panneau modal en bas d'écran, avec un texte court et un repli « En savoir plus ». Le bandeau d'action (« Carte indisponible → Diagnostiquer », « Aucun fichier importé → Importer ») s'affiche en tête du panneau, plus sur l'affiche. Les bulles d'information apparaissent au-dessus du panneau, sans masquer les réglages.
-* **États visibles** : moteur actif, chargement, attente d'accord et mode hors ligne (pastille orange), erreurs réseau en clair.
+L'usage de chaque commande est décrit dans le [guide de l'utilisateur](../USER_GUIDE.md) ; cette section fixe les règles de mise en page et de comportement.
 
 ### 6.1. Réglages dépendants d'un autre choix (issue #58)
 
@@ -462,21 +452,77 @@ Règle unique, appliquée par une table (`CMS.deps`, `js/features.js`) : un rég
 
 | Réglage | Condition | Comportement |
 | :--- | :--- | :--- |
-| Contour de la forme | gabarits Médaillon, Cœur, Arche | masqué ailleurs (inchangé) |
-| Ciel du jour J | gabarit Ciel | masqué ailleurs (inchangé) |
-| Lieux 1 et 2, noms des lieux | gabarit Deux lieux | masqués ailleurs (inchangé) ; note fixe « un repère par carte » |
+| Contour de la forme | gabarits Médaillon, Cœur, Arche | masqué ailleurs |
+| Ciel du jour J | gabarit Ciel | masqué ailleurs |
+| Lieux 1 et 2, noms des lieux | gabarit Deux lieux | masqués ailleurs ; note fixe « un repère par carte » |
 | Rayon autour du repère | Halo du souvenir ou Quartier en relief | **masqué** sans l'un d'eux |
 | Numéroter les lieux, Relier les lieux | au moins deux lieux, hors Deux lieux | **masqués** sinon |
 | Parcs hachurés | calque Parcs | note + « Afficher les parcs » |
 | Bâtiments en contour | calque Bâtiments | note + « Afficher les bâtiments » |
 | Bâtiments pointillés | calque Bâtiments, sans Bâtiments en contour (qui l'emporte) | note + « Afficher les bâtiments » ou « Retirer le contour » |
 | Lueur | thème sombre (luminance du papier < 0,3) ; reste visible, mais faiblement, sur fond clair | note + « Voir les thèmes sombres » (filtre des thèmes) |
-| Sous-titre | gabarits autres que Souvenir et Polaroid | note + « Passer au gabarit Cadre » (remplace l'ancienne aide fixe, qui oubliait Polaroid) |
+| Sous-titre | gabarits autres que Souvenir et Polaroid | note + « Passer au gabarit Cadre » |
 | Itinéraire GPX | gabarits autres que Deux lieux | note + « Passer au gabarit Souvenir » |
-| Décalage de l'ombre (titre illustré) | une ombre | masqué sans ombre (inchangé) |
-| Réglages de la carte en mode Illustration ou Carte + illustration | mode | sections masquées (`maponly`, `mixonly`…, inchangé) |
+| Décalage de l'ombre (titre illustré) | une ombre | masqué sans ombre |
+| Réglages de la carte en mode Illustration ou Carte + illustration | mode | sections masquées (`maponly`, `mixonly`…) |
+| Taille du titre | gabarits autres que Lettres (lettres à la plus grande taille possible, § 4.11) | **sans effet et non signalé** : écart à la règle, à traiter (note à ajouter dans `CMS.deps`) |
 
 Aucun réglage ne dépend du moteur : les effets de tracé, motifs, calques, ornements, halo et dorure sont rendus à l'identique par le moteur Vectoriel GPU et le moteur Fichier ; seule la mention « © OpenMapTiles » suit le moteur (note fixe). La marge, les ornements, la dorure, les plis et les effets agissent dans tous les gabarits (`tests/deps.py`).
+
+### 6.2. Disposition
+
+* **Mobile portrait** : aperçu de l'affiche en haut, **panneau coulissant** en bas : type d'affiche, onglets, zone défilante des réglages, pied (bouton de comparaison et barre d'état). Trois crans (`sheetHeights`, `setSheet`) :
+  * **réduit** (`peek`) : type d'affiche, onglets et pied seuls ; sa hauteur est calculée sur ces éléments et sur les bandeaux affichés ;
+  * **mi-hauteur** (`half`, 55 % de la hauteur, par défaut ; 120 px de réglages au moins) ;
+  * **déplié** (`full`, 84 %) : l'affiche réduite à une vignette.
+
+  On glisse la poignée (aimantation au cran le plus proche, avec une préférence pour le sens du geste), ou on la touche pour passer d'un cran à l'autre (flèches haut et bas au clavier). Toucher un onglet depuis le cran réduit ouvre la mi-hauteur ; toucher l'onglet actif bascule entre mi-hauteur et déplié. Le panneau se déplie pendant la saisie d'un texte, puis reprend sa place.
+* **Deux colonnes** (`TWO_COL` : largeur ≥ 900 px, ou paysage et largeur ≥ 560 px) : panneau à gauche (`min(400px, 46vw)`), table lumineuse à droite. Pas de poignée ni de verrou : la carte se manipule directement (glisser, pincer, molette).
+* **Carte verrouillée et mode « Cadrer »** (panneau coulissant seulement) : un glissement sur l'affiche ne la décadre pas ; un calque (`#shield`, « Toucher pour cadrer ») reçoit le toucher. Un toucher sur la carte, ou le bouton Cadrer, ouvre le mode Cadrer : panneau réduit, carte déverrouillée (glisser, pincer), barre « Terminer ». « Placer le repère » réduit aussi le panneau et le rétablit une fois le repère posé (`stageMode`).
+* **Boutons flottants** (cadrer, zoom, repère, centrer, affiche seule) : à droite ou en bas de l'aperçu, selon ce qui laisse l'affiche la plus grande ; masqués quand l'aperçu n'est qu'une vignette. En mode Illustration, seul le bouton « Voir l'affiche seule » reste.
+* **Voir l'affiche seule** (`CMS.clean`, issue #56) : referme le mode Cadrer ou le placement en cours, masque tout ce qui recouvre l'aperçu (boutons flottants, `#shield`, « Modifier le lieu 2 », badge de comparaison, légende des sources, zone de prise de la vignette) et, sur mobile, le panneau (`--sheetH` à 0). Une couche transparente (`#cleanExit`) reçoit le toucher de sortie : il ne déplace pas la carte et ne pose aucun repère. Sortie aussi par Échap ou par le bouton retour du système (entrée d'historique `pushState`, sans changer l'adresse). Le panneau revient à son cran et le focus au bouton. Aucun état de l'affiche n'est modifié.
+* **Pied du panneau** : bouton « Maintenir pour comparer » (§ 4.2), puis **Annuler / Rétablir**, état courant (texte complet au survol), lien « Réinitialiser » (§ 4.5) et réglage **A− / A+**. Il reste visible depuis tous les onglets, y compris au cran réduit.
+* **Superpositions** : la demande d'accord est un `<dialog>` modal en bas d'écran, avec un texte court et un repli « En savoir plus ». Le bandeau d'action (`#banner` : « Carte indisponible → Diagnostiquer », « Aucun fichier importé → Importer ») et celui des mises à jour (`#updBanner`, § 7.5) s'affichent en tête du panneau, hors de l'affiche. Les bulles d'information (`#toast`) apparaissent au-dessus du panneau.
+* **États visibles** (pastille et texte de la barre d'état, `setStatus`) : moteur actif, chargement, attente d'accord et mode hors ligne (pastille orange), erreurs réseau en clair.
+
+### 6.3. Type d'affiche et onglets
+
+* **Type d'affiche d'abord** (#62) : le choix **Carte / Illustration / Carte + illus.** est une barre unique (`#modeSeg`), épinglée au-dessus des onglets sur tous les écrans, y compris au cran réduit. Les onglets en découlent (`applyMode`, `js/illus.js`) :
+
+  | Type | Onglets |
+  |---|---|
+  | Carte | Lieu · Repère · Textes · Style · Export |
+  | Illustration | Illustration · Textes · Style · Export (ni Lieu ni Repère : il n'y a pas de carte) |
+  | Carte + illus. | Lieu · Repère · Illustration · Textes · Style · Export |
+
+  Changer de type ne perd rien (état, textes, illustration). L'onglet actif est conservé s'il existe dans le nouveau type, sinon on passe à Illustration (modes illustrés) ou à Lieu (retour en Carte). Sur téléphone, jusqu'à six onglets se partagent la largeur ; l'onglet « Illustration » s'affiche « Illus. » (nom accessible complet) : rien n'est tronqué ni ne défile à 360 px.
+* **Parcours guidé** : les onglets suivent l'ordre de création ; chaque onglet se termine par un bouton « Étape suivante » (`data-next`), et l'onglet Export par le bouton d'export.
+* **Onglet Lieu** : recherche, « Ma position actuelle », villes, lieu de rencontre et cadrage. Le moteur cartographique, l'import de fichier, le diagnostic, l'accord aux services tiers et la version (§ 7.5) sont dans la section repliable **« Avancé »** (`#adv`) : état mémorisé (`cityMapStudio.advOpen`), ouverture d'office quand elle devient utile (moteur Fichier, « Travailler hors ligne », diagnostic lancé depuis le bandeau).
+* **Onglet Style : Essentiel et « Plus de réglages »** (#62) :
+  * **Essentiel**, visible d'office : ambiances et thème (Carte), **polices**, papier et plis.
+  * **« Plus de réglages »** (`#styleMore`, Carte et Carte + illus.) : gabarit (cartes, marge, contour, ciel du jour J), palette d'une photo, touche d'or et dorure, tracé, effets de tracé, halo et quartier, ornements, calques, couleurs détaillées (section repliable « Personnaliser les couleurs »), mention des sources. État mémorisé (`cityMapStudio.styleMoreOpen`).
+  * **Ouverte d'office, sans mémoriser**, dès qu'un réglage qu'elle contient diffère du défaut (`moreActive` : effet de tracé, ornement, calque masqué, épaisseur du tracé ou des cours d'eau, mention des sources) : aucun effet appliqué n'est caché. Contrôle à chaque saisie dans la section et à chaque resynchronisation de l'état (`state:synced` : annuler, restauration, ambiance). Elle ne se referme jamais seule. Les couleurs ne comptent pas (tout thème les modifie), ni le gabarit (l'ambiance le choisit déjà).
+  * Hauteur de l'Essentiel à 360 px : environ 2,1 écrans de téléphone, mesurée par `tests/flow.py` (objectif de #62 : 2).
+* **Onglet Export** (#51 ; dernier onglet, dans les trois modes) : trois sections, sans fenêtre modale.
+  * **Rendu** : orientation, format d'impression, type de fichier (PNG ou PDF), résolution annoncée (et abaissement éventuel), zone de sécurité, aperçu au mur.
+  * **Sauvegarde** : Mes affiches (§ 4.12), fichiers, illustrations incluses ou non, partage par lien (§ 5.6). À l'ouverture de l'onglet (événement `tab:export`), le nom proposé est rempli et la liste mise à jour.
+  * **Export** : conseil d'impression « Taille réelle », bouton d'export (dimensions, format, DPI, PDF) ; après l'export, un encart (`#result`) montre l'aperçu, les informations du fichier (nom, taille d'impression, pixels, DPI, poids) et les avertissements (tuiles manquantes, police de secours), avec « Télécharger », le partage natif et « Masquer l'aperçu ». L'onglet Export s'ouvre et le focus va sur « Télécharger ».
+
+### 6.4. Commandes
+
+* **Recherche d'adresse** : uniquement à la validation (`debounceSubmit` : validation répétée ignorée pendant 300 ms), une seule à la fois (bouton inactif pendant la requête). Pas d'autocomplétion, que la politique d'usage de Nominatim interdit. Chaque résultat affiche le nom en tête et l'adresse en dessous, avec deux actions : « Carte + repère » et « Repère seul ».
+* **Ma position actuelle** : `navigator.geolocation` (haute précision, 15 s au plus ; permission demandée par le navigateur, page sécurisée requise). Elle place le repère et y centre la carte, à un zoom d'au moins 15.
+* **Villes préréglées** : un toucher pose le repère, remplit le titre et le sous-titre, recadre la carte et retire les données importées du moteur Fichier (`osmData = null`).
+* **Date** : un bouton calendrier, couvert par un champ `date` natif transparent pour fonctionner aussi sur iOS, remplit le champ au format de l'affiche (`frDate` : « Le 1er juillet 2023 ») et réaffiche la ligne si elle était masquée. Le texte reste modifiable, et le calendrier s'ouvre sur la date déjà saisie quand elle est reconnue (`isoFromFr`).
+* **Polices** : cartes à défilement horizontal, chacune montrant le titre (police du titre) ou les noms (police du texte) saisis.
+* **Clavier** : la carte du moteur Fichier est atteignable par Tab (rôle « application », consignes dans son nom) : flèches = déplacement de 10 % du cadre (Maj : 50 %), + / − = zoom de 0,5, Entrée = repère au centre en mode placement. Résultats de recherche en liste : focus sur le premier bouton, chaque bouton décrit par son lieu (`aria-describedby`), seule la phrase « N résultats pour « … » » est annoncée (zone d'état séparée), Échap ferme la liste et rend le focus au champ. Ctrl/Cmd + S enregistre dans Mes affiches (§ 4.12).
+* **Annuler / Rétablir** (`hist`, `js/ui.js`) : jusqu'à 50 étapes (`HIST_MAX`), une par enregistrement de l'état (300 ms de calme), avec les boutons ou Ctrl/Cmd + Z et Ctrl/Cmd + Maj + Z (ou Ctrl + Y) hors des champs de texte, qui gardent leur annulation native. Les actions ponctuelles (ambiance, modèle, restauration, lien, réinitialisation) figent l'étape en cours avant d'agir (`commitHistory`) : elles s'annulent en une fois. Le moteur cartographique n'entre pas dans l'historique, et les petits recentrages de la carte qui suivent un retour arrière, une réinitialisation ou un changement de moteur sont ignorés. L'historique n'est pas conservé après un rechargement.
+
+### 6.5. Accessibilité et lisibilité
+
+* **Accessibilité** : fenêtres en `<dialog>` modal (`openDialog` / `closeDialog` : focus placé et retenu, Échap via `dlgCancel`, focus rendu) ; onglets selon le motif ARIA (`tablist`, `tab`, `tabpanel`, `aria-selected`, flèches, Début, Fin) ; segments et vignettes en `aria-pressed`, polices en `radio` ; focus clavier visible ; cibles tactiles d'au moins 44 px, barre du bas comprise (poignée : 28 px de haut sur toute la largeur) ; texte de remplacement de l'aperçu qui suit les réglages ; transitions courtes, coupées si `prefers-reduced-motion`.
+* **Contrastes de l'interface** (WCAG 2.2, critères 1.4.3 et 1.4.11, mesurés sur le rendu réel par `tests/contrast.py`, mobile et ordinateur, à l'agrandissement A+ compris) : textes 4,5:1 au moins (`--txt` 13:1, texte secondaire `--mut` 5,4:1 sur les panneaux, avertissement de réduction 9,7:1, texte d'erreur `--danger` 4,8:1) ; composants 3:1 (bordure des champs `--field` 3,3:1, pastilles d'état 5,3 à 10,8:1, icônes des boutons). Les boutons inactifs, exemptés par les WCAG, sont tenus à 3:1 (opacité `--off` .65) : lisibles, et nettement plus pâles que les boutons actifs. Une ligne masquée sur l'affiche garde un champ modifiable : sa bordure reste à 3:1, et seul son texte passe en couleur secondaire.
+* **Taille du texte de l'interface** : les tailles sont en `rem`. L'interface suit le réglage du système (taille de police d'Android ; Dynamic Type d'iOS via `font: -apple-system-body`). A− / A+ propose 87,5 à 137,5 % (`UI_SCALES`), mémorisé dans l'appareil (`cityMapStudio.uiScale`), hors de l'état de l'affiche ; « Réinitialiser » ne le modifie pas. Sous 900 px de large, les champs de saisie font au moins 16 px pour éviter le zoom automatique d'iOS.
 
 ---
 
@@ -514,7 +560,7 @@ Les deux services distants (tuiles OpenFreeMap, Nominatim) et, en secours, les C
 | Serveur local (`python3 -m http.server`) | 1, 2 | Pour développer. |
 | Fichier ouvert dans un navigateur (`file://`) | 1, 2 | Ni installable ni mis en cache. |
 | Aperçu intégré d'une application ou visionneuse | 2 uniquement | Réseau et téléchargements bloqués. |
-| Entièrement hors ligne | 2 (+ 1 si les tuiles sont autohébergées) | Une extraction **PMTiles** (Protomaps) peut être servie localement. |
+| Entièrement hors ligne | 2 uniquement | Après une première visite en http(s) (application en cache, § 7.5), ou en `file://`. Le moteur 1 exige le réseau : l'adresse des tuiles est fixe (`OFM_URL`) ; des tuiles autohébergées (extraction PMTiles, par exemple) demanderaient une évolution. |
 
 ### 7.5. Application installée et mises à jour (issue #65)
 
@@ -539,11 +585,11 @@ city-map-studio/
 ├── index.html              # balisage, CSP, métadonnées ; charge css/ et js/ (sans build)
 ├── css/app.css             # feuille de styles de l'application
 ├── js/                     # scripts classiques, chargés dans cet ordre (cf. § 8.2)
-│   ├── config.js  state.js  geo.js  render.js  engines.js
-│   └── preview.js  features.js  ui.js  illus.js  export.js  main.js
-├── sw.js                   # service worker (cache de l'application, http(s) seulement)
+│   ├── core.js  config.js  maplibre-loader.js  geocoder.js  state.js  geo.js  render.js
+│   └── engines.js  preview.js  features.js  ui.js  illus.js  export.js  main.js
+├── sw.js                   # service worker (cache de l'application, http(s) seulement ; constante VERSION, liste APP)
 ├── manifest.webmanifest    # application installable
-├── icons/                  # icône SVG, PNG 192 / 512 / maskable / apple-touch, image d'aperçu des liens
+├── icons/                  # icône SVG, PNG 192 / 512 / maskable / apple-touch, image d'aperçu des liens (og-image.jpg)
 ├── .github/workflows/      # tests.yml : suite de bout en bout à chaque pull request et push sur main
 ├── lib/                    # dépendances embarquées
 │   ├── maplibre-gl.js/.css # MapLibre GL JS 4.7.1 (licence BSD-3)
@@ -551,45 +597,20 @@ city-map-studio/
 │   └── sky/                # données du ciel (sky-data.js, milkyway.js) + licence BSD-3 de d3-celestial
 ├── .nojekyll               # GitHub Pages : fichiers servis tels quels
 ├── LICENSE                 # MIT (code de l'application) + rappel des licences tierces
-├── README.md
+├── README.md               # présentation
+├── USER_GUIDE.md           # guide de l'utilisateur
 ├── CONTRIBUTING.md         # règles de développement et commandes
 ├── docs/
-│   └── dossier-technique.md
-└── tests/
-    ├── fixture.py          # génère une ville synthétique (tests/osm.json, JSON OSM)
-    ├── make_formats.py     # convertit la ville synthétique en .osm et .geojson
-    ├── run.py              # moteur Fichier, export PNG, DMS, assemblage des anneaux (mobile + ordinateur)
-    ├── offline.py          # réseau coupé : diagnostic, import des 3 formats, iframe
-    ├── layouts.py          # captures des gabarits Cadre / Fondu / Médaillon
-    ├── maplibre.py         # MapLibre local + OpenFreeMap simulé (tuiles MVT générées), export hors écran
-    ├── coords.py           # saisie des coordonnées du repère
-    ├── texts.py            # lignes de texte optionnelles, dans les 4 gabarits
-    ├── fonts.py            # polices auto-hébergées, file:// et HTTP, aucun appel tiers
-    ├── consent.py          # accord préalable : aucune requête tierce sans accord
-    ├── reset.py            # réinitialisation des réglages par défaut
-    ├── textsize.py         # taille des textes de l'affiche
-    ├── mobile.py           # panneau coulissant, mode Cadrer, paysage, A− / A+
-    ├── ux.py               # parcours guidé, accessibilité, annuler / rétablir, date, position, recherche
-    ├── design.py           # polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel
-    ├── vectors.py          # cache de tracés du moteur Fichier : réutilisation, invalidation, rendu identique, carreaux
-    ├── art.py              # pistes artistiques : effets, halo, dorure, ornements, Lettres, papiers, ciel, palette d'une photo
-    ├── make_city.py        # génère city.json : ville fictive réaliste (fleuve à îles, vieille ville, château, faubourgs, grand ensemble, pavillons, port, gare, ~18 500 bâtiments)
-    ├── city.py             # moteur Fichier sur city.json : import JSON et XML, fleuve assemblé, points de contrôle, fluidité, exports
-    ├── saves.py            # Mes affiches : enregistrer, restaurer, persistance, fichiers de configuration et de sauvegarde, fichiers piégés
-    ├── make_og.py          # régénère icons/og-image.jpg avec le rendu actuel (ville de test, trois ambiances)
-    ├── compare.py          # comparer avant / après un thème, une ambiance, un modèle, un effet (souris, toucher, clavier)
-    ├── welcome.py          # ambiance proposée au premier lancement, sans fenêtre bloquante
-    ├── deps.py             # réglages dépendants d'un autre choix : masqués ou annotés, bascule annulable
-    ├── illuspaste.py       # coller l'illustration depuis le presse-papiers (simulé)
-    ├── safezone.py         # zone de sécurité de 5 mm : repère par format, export inchangé, alertes
-    ├── flow.py             # type d'affiche épinglé, parcours d'onglets par type, Style Essentiel / Plus de réglages (#62)
-    ├── security.py         # lien forgé ou piégé, état corrompu, crochets de test, libellé d'export
-    ├── a11y.py             # fenêtres modales, clavier, aria-pressed, cibles tactiles, noms accessibles
-    ├── csp.py              # aucune violation de la CSP (file:// et HTTP), aucun style ni script en ligne
-    ├── pwa.py              # sous-chemin GitHub Pages, manifeste, service worker, démarrage hors ligne
+│   ├── dossier-technique.md
+│   └── evolution-overpass.md   # proposition : réintroduire le moteur Overpass, retiré en novembre 2026
+└── tests/                  # tests automatisés (catalogue : § 9.2)
+    ├── *.py                # un test de bout en bout par fichier (Playwright), lancés par run_all.py
+    ├── unit/               # tests unitaires sous Node (*.test.mjs ; load.mjs charge les scripts dans node:vm)
     ├── run_all.py          # génère les données puis lance toute la suite (utilisé par la CI)
-    ├── jswait.py           # attente d'une condition sans eval (compatible avec la CSP)
-    └── seed.py             # préparation du localStorage sans script injecté (tests qui rechargent la page)
+    ├── fixture.py, make_formats.py, make_city.py   # données de test : osm.json, data.osm, data.geojson, frame.html, city.json
+    ├── jswait.py, seed.py  # attente d'une condition compatible avec la CSP ; préparation du localStorage (§ 9.1)
+    ├── globals.max         # plafond des déclarations globales (tests/globals.py)
+    └── layouts.py, make_og.py   # outils hors suite : captures des gabarits, image d'aperçu des liens
 ```
 
 ### 8.2. Fichiers et sections du script
@@ -597,23 +618,33 @@ city-map-studio/
 Le script est découpé en fichiers `js/*.js`, eux-mêmes organisés en sections balisées `// ---------- Titre ----------`.
 Ce sont des scripts classiques : leurs déclarations de premier niveau sont partagées et le **code exécuté au chargement
 d'un fichier ne peut utiliser que les fichiers précédents** (les fonctions, elles, peuvent s'appeler d'un fichier à l'autre).
-Pour réduire cette portée partagée, les fichiers migrent vers des modules `CMS.define(…)` (aujourd'hui `CMS.maplibre`, `CMS.geocoder`, `CMS.geo`, `CMS.engines`, `CMS.export`) : leur code est privé, seules leurs fonctions publiques sont reprises en tête de portée. `tests/globals.py` interdit toute hausse du nombre de déclarations globales (433 → 382 avec cette première migration) ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur.
+Pour réduire cette portée partagée, le code migre vers des modules `CMS.define('nom', () => {…})` : leur code est privé, seules leurs fonctions publiques sont reprises en tête de portée (`const {a, b} = CMS.nom`). Les fichiers se parlent par des événements synchrones (`CMS.on` / `CMS.emit`) plutôt que par des tests de présence :
+
+| Événement | Émis par | Écouté par |
+| :--- | :--- | :--- |
+| `state:saved` | `saveState` (état écrit dans `localStorage`) | historique, comparaison, réglages dépendants, prompt de l'illustration |
+| `state:synced` | `syncInputs` (interface resynchronisée avec l'état) | modes illustrés, « Plus de réglages », réglages dépendants |
+| `tab:export` | `showTab('export')` | Mes affiches (nom proposé, liste) |
+| `illus:input` | champs liés `illus.*` / `illusText.*` | `CMS.illus` |
+| `illus:loaded` | `CMS.illus` (image rechargée depuis IndexedDB) | — (point d'accroche) |
+
+`tests/globals.py` interdit toute hausse du nombre de déclarations globales (plafond `tests/globals.max` : 378, à abaisser quand il baisse) ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur.
 
 | Fichier | Contenu |
 | :--- | :--- |
-| `core.js` | Socle : espace de noms `CMS`, `CMS.define` (module défini une seule fois, figé), bus d'événements `CMS.on` / `CMS.emit`. |
-| `config.js` | Constantes : polices, thèmes, gabarits, repères, ambiances, villes, hiérarchie routière, `DEFAULT_STATE`. |
+| `core.js` | Socle : espace de noms `CMS`, `CMS.define` (module défini une seule fois, figé), bus d'événements `CMS.on` / `CMS.emit`. Chargé en premier. |
+| `config.js` | Constantes : formats, polices, thèmes, gabarits, repères, ambiances, villes, hiérarchie routière, `DEFAULT_STATE` ; `CMS.illusConf` (listes de valeurs des modes illustrés, partagées avec `normState`). |
 | `maplibre-loader.js` | `CMS.maplibre` : chargement résilient de MapLibre (sources, délais, version, CSS de secours). |
 | `geocoder.js` | `CMS.geocoder` : client Nominatim (délai, annulation, une requête par seconde, quota 429 / 403, relance 5xx, cache, réponses validées). |
 | `state.js` | Validation (`normState`), état `st`, fenêtres modales (`openDialog`, `closeDialog`, `setBusy`), accord préalable, enregistrement. |
-| `geo.js` | Mercator, `geom` (géométrie des gabarits), formes. |
-| `render.js` | Typographie, cartouche, repères, ciel, `drawPoster`. |
-| `engines.js` | Données OSM, cache de tracés et tracé Canvas (moteur Fichier), effets de tracé, moteur MapLibre. |
-| `preview.js` | `$`, `h` (création d'éléments sans `innerHTML`), aperçu, deux lieux, gestes, papier, `composePoster`, aperçu au mur. |
-| `features.js` | Lieux multiples, GPX, partage par lien, ambiances, panneau coulissant. |
-| `ui.js` | Taille de l'interface, coordonnées, historique, `buildUI`, `changed`, vignettes, recherche, polices, comparaison avant / après un changement (`CMS.compare`). |
-| `illus.js` | `CMS.illus` : mode Illustration (§ 4.13) : prompt, import et ré-encodage de l'image, qualité d'impression, retouches, rendu de l'image et des textes, interface (sélecteur de mode, onglet Illustration, style du titre). |
-| `export.js` | Export PNG et PDF, contexte d'exécution, diagnostic, import de fichier. |
+| `geo.js` | `CMS.geo` : Mercator, `geom` (géométrie des gabarits), formes (`shapeD`), `exportSpec`. |
+| `render.js` | Typographie (`CMS.glyphs` : graphèmes et largeurs), relevé des zones d'encre pour la zone de sécurité (`CMS.ink`), cartouche, repères, ciel, `drawPoster`. |
+| `engines.js` | `CMS.engines` : données OSM, cache de tracés et tracé Canvas (moteur Fichier), effets de tracé, moteur MapLibre, rendus hors écran (`gpuQueue`, `mlQuery`). |
+| `preview.js` | `$`, `h` (création d'éléments sans `innerHTML`), canevas de l'aperçu (`CMS.surface`), défilement du panneau (`CMS.panelScroll`), aperçu, deux lieux, gestes, papier, `composePoster`, aperçu au mur. |
+| `features.js` | Lieux multiples, GPX, partage par lien et `applyConfig`, proposition d'ambiance, ambiances et modèles, panneau coulissant, réglages dépendants (`CMS.deps`), zone de sécurité (`CMS.safe`), affiche seule (`CMS.clean`), palette d'une photo, Mes affiches. |
+| `ui.js` | Taille de l'interface, coordonnées, historique, `buildUI`, `changed`, vignettes, recherche (`CMS.searchUI`), polices, comparaison avant / après un changement (`CMS.compare`). |
+| `illus.js` | `CMS.illus` : modes Illustration et Carte + illustration (§ 4.13 et 4.14) : prompt, pistes lues dans la carte, conservation dans IndexedDB, import et ré-encodage de l'image, qualité d'impression, retouches, rendu de l'image et des textes, interface (sélecteur de mode, onglet Illustration, style du titre). |
+| `export.js` | `CMS.export` : export PNG et PDF, contexte d'exécution, diagnostic, import de fichier. |
 | `main.js` | `boot`, application installable et mises à jour (`CMS.pwa` : `install`, `check`, `version`), crochets de test. |
 
 Principales sections :
@@ -638,91 +669,70 @@ Principales sections :
 
 ## 9. Tests et critères d'acceptation
 
-### 9.1. Critères d'acceptation
+### 9.1. Organisation des tests
 
-| Test | Critère |
-| :--- | :--- |
-| Lancement | Blois centré, gabarit Souvenir, thème Souvenir, cœur rouge. |
-| Rendu Souvenir | Terre gris clair, eau bleu-gris, axes noirs ; en-tête et pied conformes au gabarit Souvenir (§ 4.1). |
-| WYSIWYG | Cadrage et position du repère identiques entre l'aperçu (mobile et ordinateur) et l'export. |
-| Export | PNG 2480 × 3508, métadonnée 300 DPI, polices correctes, aucun flou. |
-| DMS | 47,5861 → 47° 35′ 10.0″ N ; 1,99999 → 2° 00′ 00.0″ E (retenue). |
-| Réinitialisation | Un appui demande confirmation sans rien modifier ; deux appuis rétablissent l'état et l'affiche par défaut, accord conservé, résultat persisté. |
-| Accord préalable | Au premier lancement, aucune requête tierce ; demande modale ; « Travailler hors ligne » passe au moteur Fichier (pastille orange) ; recherche et diagnostic redemandent l'accord, sans requête ; après accord, l'action en attente s'exécute et le choix est mémorisé ; retrait possible ; « Travailler hors ligne » passe au moteur Fichier sans requête. |
-| Polices | Les 5 familles (normale et italique) se chargent depuis `lib/fonts/`, y compris hors ligne et en `file://` ; elles s'appliquent à l'aperçu et à l'export ; le choix est conservé ; aucune requête vers Google. |
-| Lignes de texte | Chaque ligne se masque et se réaffiche dans les 4 gabarits, sans perte du texte ; export possible sans aucune ligne. |
-| Taille des textes | Chaque curseur (par ligne et global) modifie l'affiche dans les 4 gabarits ; retour à 100 % = rendu d'origine ; réduction automatique signalée ; tailles persistées et remises à 100 % par « Réinitialiser » ; export 2480 × 3508. |
-| Fluidité du moteur Fichier | Déplacement sans reconstruction du cache ; nouveau cache au changement de zoom ou de données ; rendu identique avec un cache neuf, pour chaque effet ; carreaux visibles seuls ; croisement de tracés transparents non repeint ; export 2480 × 3508. |
-| Comparer avant / après | Bouton absent sans changement comparable ; nommé d'après le thème précédent, ou la nature du changement (ambiance, modèle, effet activé ou retiré, papier) ; accessible depuis tous les onglets ; maintenu (souris, toucher, clavier) : affiche identique à l'avant, badge ; relâché : état courant rétabli exactement ; rien d'enregistré ni d'ajouté à l'historique ; titre et cadrage modifiés ensuite : conservés, ni comparés ni effaçant la comparaison ; bouton retiré après « Annuler » ou une retouche de couleur. |
-| Effets de tracé | Eau hachurée, bâtiments en contour et trait crayon : rendus distincts, retour exact au rendu d'origine, export aux bonnes dimensions ; moteur GPU : motif fourni, couche en contour, deux passes décalées, hachures présentes à l'export ; effets fixés par les ambiances et annulables. |
-| Premier lancement | Une seule fenêtre modale (l'accord), puis l'affiche visible et une proposition d'ambiance non bloquante en tête des réglages ; ambiance appliquée et annulable ; proposition unique (utilisée ou fermée) ; rien pour une affiche existante ni pour un lien partagé (#59). |
-| Évolutions graphiques | 11 polices et duos, police manuscrite limitée à la dédicace et aux noms ; 16 thèmes, palette tirée d'une photo, filtres, contraste ; gabarits distincts, cœur découpé dans l'aperçu ; ambiances et modèles annulables ; 10 repères distincts ; 3 lieux numérotés et reliés ; 5 textures et plis ; aperçu au mur téléchargeable ; lien reconstituant l'affiche ; paysage 3508 × 2480 ; deux vues conservées ; GPX simplifié et cadré ; Polaire à la hauteur de la latitude ; exports aux bonnes dimensions. Gabarits d'origine identiques au pixel près. |
-| Lisibilité et confort | Onglets dans l'ordre du parcours, rôles ARIA et navigation au clavier ; « Étape suivante » ; « Avancé » et « Plus de réglages » repliés, rouverts d'office s'ils sont utiles et mémorisés ; type d'affiche épinglé, parcours d'onglets par type ; cibles tactiles ; annuler / rétablir (boutons, clavier, après réinitialisation, moteur exclu) ; calendrier (« 1er », lecture inverse) ; aperçu des polices ; « Ma position » ; recherche unique, sans requête pendant la frappe. |
-| Mobile | iPhone 13 (390 × 664) : au moins 180 px de réglages à mi-hauteur ; poignée (toucher, glisser) ; dépliage à la saisie ; carte verrouillée hors du mode Cadrer ; placement du repère ; bulle au-dessus du panneau ; A− / A+ persistant, sans défilement horizontal ; paysage en deux colonnes ; ordinateur inchangé. |
-| Saisie du repère | Formats du § 3.3 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
-| Résilience | MapLibre indisponible → bascule possible vers le moteur Fichier, recommandée par le diagnostic. |
-| Licence | Aucune dépendance propriétaire ; attribution OSM toujours présente (mention complète par défaut, minimale sinon). |
-| Hors ligne | Réseau coupé : diagnostic en échec, import `.json` / `.osm` / `.geojson` réussi, export PNG 2480 × 3508. |
-| Aperçu intégré | Page dans une iframe : avertissement explicite dans l'onglet Lieu. |
-| Sécurité | Lien forgé (types faux, valeurs hors bornes, champs inconnus) : application intacte, valeurs invalides remplacées, rien d'invalide enregistré ; lien piégé (contenu décompressé > 512 Ko) refusé ; aucune violation de la CSP en `file://` ni en HTTP. |
-| Accessibilité | Fenêtres modales : focus placé et retenu, Échap, focus rendu ; vignettes utilisables au clavier ; cibles de 44 px ; tous les champs nommés. |
-| GitHub Pages et hors ligne | Servi sous `/city-map-studio/` sans ressource manquante ; manifeste et icônes valides ; après une visite, démarrage et export (moteur Fichier) sans réseau ; cache HTTP contourné ; nouvelle version proposée par un bandeau (pas à la première installation), un seul rechargement, état conservé ; version affichée ; liste `APP` complète ; `VERSION` changée à chaque modification (CI). |
+Tests de bout en bout Playwright (Python), un fichier par domaine, avec un **réseau simulé** : OpenFreeMap (TileJSON et tuiles MVT générées à partir des données de test) et Nominatim sont simulés, tout autre accès externe est coupé. Les données de test sont générées avant la suite (`fixture.py`, `make_formats.py`, `make_city.py` ; non versionnées). `python tests/run_all.py` lance toute la suite, plusieurs tests à la fois ; le workflow `.github/workflows/tests.yml` l'exécute à chaque pull request et à chaque push sur `main`, avec le Google Chrome de l'image du runner, et lance `tests/swversion.py` sur les pull requests. Les commandes figurent dans `CONTRIBUTING.md`.
 
-### 9.2. Tests automatisés
+**Verdict** : un test échoue si son code de sortie n'est pas nul, ou si sa sortie contient une vérification en échec (ligne commençant par « ✗ » suivie d'un texte), une erreur de page (`PAGEERROR`) ou une trace Python. Chaque test imprime ses vérifications (« ✓ » / « ✗ ») et se termine par une assertion. Un test en échec sous charge est relancé seul une fois : s'il passe, il est signalé « INSTABLE ».
 
-**Visibilité** : un test vérifie l'affichage réel d'un élément (`offsetParent`, `is_visible`), pas son attribut `hidden`. Une règle `display` de composant l'emportait sur `hidden` : les filtres de polices semblaient fonctionner en test, mais rien ne changeait à l'écran. La règle globale `[hidden]{display:none!important}` corrige ce piège.
+**Règles du banc de test** :
+* **Crochets de test** : les tests ouvrent la page avec `?test` (sinon `window.__cms` n'existe pas) ; `__cmsTestConfig` abaisse certains délais (chargeur MapLibre, géocodeur). Le service worker n'est pas enregistré pendant les tests, sauf avec `?test&sw` (`tests/pwa.py`).
+* **CSP et attentes** : `page.wait_for_function()` évalue sa condition avec `eval()` dans la page, ce que la CSP refuse. Les tests utilisent `tests/jswait.py`, qui interroge la condition avec `page.evaluate()` (protocole DevTools, non soumis à la CSP). La CSP n'est jamais désactivée dans les tests.
+* **Persistance et rechargement** : un script injecté par Playwright (`add_init_script`) qui accède à `localStorage` au démarrage de chaque document fait perdre, au rechargement suivant, des écritures récentes de la page (mesuré sur une page minimale : 0 perte sur 25 rechargements sans script injecté, 3 à 4 sur 25 avec). Les tests qui rechargent la page préparent donc le stockage avec `tests/seed.py` (écriture par la page elle-même, puis rechargement) et attendent que l'état soit enregistré avant de recharger. Un utilisateur réel n'est pas concerné. Les clés de départ ouvrent aussi les sections « Avancé » et « Plus de réglages » (`advOpen`, `styleMoreOpen`) et marquent la proposition d'ambiance comme vue.
+* **Visibilité** : un test vérifie l'affichage réel d'un élément (`offsetParent`, `is_visible`), pas son attribut `hidden` : une règle `display` de composant peut l'emporter sur `hidden` (la règle globale `[hidden]{display:none!important}` l'empêche).
 
-**Persistance et rechargement** : un script injecté par Playwright (`add_init_script`) qui accède à `localStorage` au démarrage de chaque document fait perdre, au rechargement suivant, les écritures récentes de la page. Mesuré sur une page minimale, sans l'application : 0 perte sur 25 rechargements sans script injecté, 3 à 4 sur 25 avec. C'était la cause d'échecs intermittents d'un test de persistance, et un risque pour tous les tests qui rechargent la page. Ces tests préparent désormais le stockage avec `tests/seed.py` (écriture par la page elle-même, puis rechargement), et attendent que l'état soit enregistré avant de recharger. Un utilisateur réel n'est pas concerné.
+### 9.2. Catalogue et critères d'acceptation
 
-**CSP et attentes** : `page.wait_for_function()` évalue sa condition avec `eval()` dans la page, ce que la CSP refuse. Les tests utilisent `tests/jswait.py`, qui interroge la condition avec `page.evaluate()` (protocole DevTools, non soumis à la CSP). La CSP n'est jamais désactivée dans les tests.
-
-**Crochets de test** : les tests ouvrent la page avec `?test` (sinon `window.__cms` n'existe pas). Le service worker n'est pas enregistré pendant les tests, sauf avec `?test&sw` (`tests/pwa.py`).
-
-Tests de bout en bout Playwright (Python), avec un réseau simulé : OpenFreeMap et Nominatim sont simulés, tout autre accès externe est coupé. `python tests/run_all.py` lance toute la suite ; le workflow `.github/workflows/tests.yml` l'exécute à chaque pull request et à chaque push sur `main`, plusieurs tests à la fois, avec le Google Chrome de l'image du runner. Les commandes figurent dans `CONTRIBUTING.md`.
-
-### 9.3. État de validation
-
-| Élément | Statut | Moyen |
+| Test | Domaine | Critères vérifiés |
 | :--- | :--- | :--- |
-| Gabarits, thèmes, repères, typographie, DMS (dont la retenue) | ✅ | Captures automatisées. |
-| Moteur Fichier, assemblage des anneaux, îles `evenodd` | ✅ | `tests/run.py` |
-| Import JSON OSM / `.osm` / GeoJSON, export hors ligne | ✅ | `tests/offline.py` |
-| Export PNG 2480 × 3508 et chunk `pHYs` 300 DPI | ✅ | Lecture binaire du PNG. |
-| Détection d'iframe, diagnostic tout en échec | ✅ | `tests/offline.py` |
-| MapLibre embarqué, style (filtres 4.7.1), aperçu, export hors écran | ✅ | `tests/maplibre.py` (tuiles OpenMapTiles simulées). |
-| Saisie des coordonnées du repère | ✅ | `tests/coords.py` |
-| Lignes de texte optionnelles | ✅ | `tests/texts.py` |
-| Taille des textes de l'affiche | ✅ | `tests/textsize.py` |
-| Dédicace sur deux lignes (Auto, Une ligne, Deux lignes ; la carte fait de la place ; avertissement) | ✅ | `tests/dedication.py` |
-| Formats A3, 50 × 70 cm et 10 × 15 cm, limites des canevas (ordinateur, iPhone), export PDF | ✅ | `tests/formats.py` (structure du PDF, dimensions de l'image) ; rendu MapLibre en tuiles : `tests/maplibre.py` ; ⏳ export A3 et 50 × 70 sur un iPhone réel, impression du PDF chez un imprimeur. |
-| Contrastes de l'interface (textes, composants, états inactifs) | ✅ | `tests/contrast.py` |
-| Polices, thèmes, gabarits, ambiances, lieux, papier, aperçu au mur, lien, paysage, deux lieux, GPX, ciel | ✅ | `tests/design.py` (moteur Fichier, sans réseau) ; ⏳ Deux lieux et aperçu au mur avec les vraies tuiles OpenFreeMap. |
-| Cache de tracés du moteur Fichier | ✅ | `tests/vectors.py` ; ⏳ fluidité des gestes sur un téléphone réel. |
-| Moteur Fichier sur une ville réaliste (6,4 × 5,2 km, ~18 500 bâtiments, 7,8 Mo) | ✅ | `tests/city.py` : import JSON (≈ 0,15 s) et XML, fleuve assemblé depuis 7 membres avec 2 îles, eau et pont aux points de contrôle, cache en ≈ 0,2 s, déplacement ≈ 2 ms par image (Chromium, ordinateur) ; ⏳ mêmes mesures sur un téléphone réel et sur un vrai extrait OSM. |
-| Mes affiches (sauvegarde et restauration de la configuration) | ✅ | `tests/saves.py` : aller-retour exact de l'état, annulation, persistance, Ctrl + S, fichiers, fusion sans doublon, fichiers piégés, navigateur plein ; ⏳ Safari iOS (quota du stockage, téléchargement des fichiers). |
-| Pistes artistiques (effets, autour du repère, dorure, ornements, Lettres, papier Ancien et plis, Lune, planètes, Voie lactée, palette d'une photo) | ✅ | `tests/art.py` (moteur Fichier) et `tests/maplibre.py` (couches GPU, tuiles simulées) ; ⏳ rendu avec les vraies tuiles OpenFreeMap, impression réelle de la dorure et du riso. |
-| Comparer avant / après un changement de thème, d'ambiance, de modèle ou d'effet | ✅ | `tests/compare.py` (émulation du toucher) ; ⏳ appui long sur iOS Safari et Chrome Android. |
-| Parcours guidé, accessibilité, historique, date, géolocalisation, recherche | ✅ | `tests/ux.py` (émulation) ; ⏳ géolocalisation et calendrier natif à valider sur iOS et Android. |
-| Panneau coulissant, mode Cadrer, paysage, A− / A+ | ✅ | `tests/mobile.py` (émulation) ; ⏳ gestes à valider sur iOS Safari et Chrome Android. |
-| Déplacement des textes (titre, bloc du bas) : positions, glisser, aimantation, clavier, chevauchement, vignette, prompt | ✅ | `tests/illustext.py` ; « Auto » comparé lettre par lettre au rendu d'avant (9 configurations) ; ⏳ glisser au doigt sur iOS Safari et Chrome Android. |
-| Voir l'affiche seule : rien sur l'aperçu, sortie par toucher, Échap ou retour sans cadrer ni placer (#56) | ✅ | `tests/mobile.py` (émulation) ; ⏳ bouton retour à valider sur iOS Safari et Chrome Android. |
-| Coller l'illustration depuis le presse-papiers (#57) | ✅ | `tests/illuspaste.py` (presse-papiers simulé) ; ⏳ à valider sur iOS Safari et Chrome Android (demande d'autorisation). |
-| Réglages dépendants : masqués ou annotés, bascule annulable (#58) | ✅ | `tests/deps.py` |
-| Proposition d'ambiance non bloquante après l'accord (#59) | ✅ | `tests/welcome.py`, `tests/a11y.py` |
-| Zone de sécurité de 5 mm et alertes (#60) | ✅ | `tests/safezone.py` ; ⏳ marges réelles à vérifier sur une imprimante de bureau. |
-| Type d'affiche d'abord, parcours par type, Style « Essentiel » / « Plus de réglages » (#62) | ✅ | `tests/flow.py`, `tests/ux.py` |
-| Pistes du prompt lues dans la carte (moteur Fichier, moteur GPU) | ✅ | `tests/illusmix.py` (données importées), `tests/maplibre.py` (tuiles simulées : château, cathédrale, musée, fleuve), `tests/unit/illus.test.mjs` (pondération, classement) ; ⏳ pertinence sur de vraies villes avec les tuiles OpenFreeMap. |
-| Conservation des illustrations (IndexedDB, Mes affiches, fichiers avec images, lien, image manquante, nettoyage) | ✅ | `tests/illustore.py` (rechargement, navigateur vierge, fichiers piégés) ; ⏳ effacement réel par Safari iOS après 7 jours, quota en navigation privée. |
-| Carte + illustration : Médaillon (3 formes, 3 positions), Vignette, Haut / bas, Côte à côte, Fondu ; prompt, qualité, harmonisation, gestes, export | ✅ | `tests/illusmix.py` (moteur Fichier) et `tests/unit/illus.test.mjs` ; ⏳ rendu avec les vraies tuiles OpenFreeMap, gestes tactiles du médaillon et de la vignette sur téléphone. |
-| Mode Illustration (prompt, import, qualité, cadrage, retouches, titre Vintage, export) | ✅ | `tests/illus.py` et `tests/unit/illus.test.mjs` ; ⏳ prompt à éprouver sur ChatGPT et Gemini avec d'autres villes ; collage et glisser-déposer sur iOS Safari et Chrome Android ; impression A4 d'une illustration. |
-| MapLibre avec les vraies tuiles OpenFreeMap (aperçu, déplacement et zoom, export, rendu Souvenir) | ✅ | Sur l'URL GitHub Pages, dans un vrai navigateur ([#5](https://github.com/thiryyan/city-map-studio/issues/5)). |
-| Diagnostic réel (MapLibre, OpenFreeMap, Nominatim) | ✅ mobile ; ⏳ ordinateur | Diagnostic depuis GitHub Pages ([#4](https://github.com/thiryyan/city-map-studio/issues/4)). |
-| Polices auto-hébergées dans l'aperçu et l'export, contrôle `document.fonts.check` | ✅ | `tests/fonts.py` |
-| Accord préalable aux services tiers | ✅ | `tests/consent.py` |
-| Réinitialisation des réglages | ✅ | `tests/reset.py` |
-| Lien forgé ou piégé, état corrompu, crochets de test | ✅ | `tests/security.py` |
-| Accessibilité au clavier et aux lecteurs d'écran | ✅ | `tests/a11y.py` (Chromium) ; ⏳ VoiceOver (iOS) et TalkBack (Android) à valider sur appareil. |
-| Politique de sécurité du contenu | ✅ | `tests/csp.py`, `tests/maplibre.py` |
-| Sous-chemin GitHub Pages, application installable, hors ligne, mises à jour | ✅ | `tests/pwa.py` (serveur local, déploiement simulé), `tests/swversion.py` (CI) ; ⏳ installation, hors ligne et mise à jour après un vrai déploiement sur l'URL publiée, Chrome Android et ordinateur, iOS ([#65](https://github.com/thiryyan/city-map-studio/issues/65)). |
-| Image d'aperçu des liens partagés | ⏳ à valider | L'adresse `https://thiryyan.github.io/city-map-studio/icons/og-image.jpg` suppose la publication à cette adresse ; à adapter en cas de domaine personnalisé. Image régénérée par `tests/make_og.py` à partir du rendu actuel. |
-| Téléchargement sur iOS Safari et Chrome Android (bouton, partage natif, appui long, 2480 × 3508 et 300 DPI conservés) | ✅ | Appareils réels ([#7](https://github.com/thiryyan/city-map-studio/issues/7)). |
+| `run.py` | Parcours de référence | Moteur Fichier sur mobile et ordinateur ; DMS (47,5861 → 47° 35′ 10.0″ N ; 1,99999 → 2° 00′ 00.0″ E, retenue) ; fleuve assemblé avec ses îles ; export PNG 2480 × 3508 avec `pHYs` 300 DPI. |
+| `offline.py` | Hors ligne | Réseau coupé : MapLibre depuis `lib/`, carte signalée indisponible, diagnostic en échec avec recommandation du moteur Fichier ; import `.json`, `.osm`, `.geojson` ; export 2480 × 3508 ; avertissement dans une iframe. |
+| `maplibre.py` | Moteur Vectoriel GPU | `lib/` sans CDN, style valide (filtres 4.7.1), tuiles reçues, couches des effets, export hors écran 2480 × 3508 non vide, rendu en 2 × 3 tuiles identique au rendu d'un seul tenant, pistes lues dans les tuiles. |
+| `mlloader.py` | Chargement de MapLibre | Bascule vers un CDN, pas de double instance, adoption d'une copie tardive, refus d'une autre version, CSS de secours, aucun CDN sans accord. |
+| `webgl.py` | Contexte WebGL | Perte et restauration (état affiché, export refusé puis rétabli), échec rapide hors écran, un seul rendu hors écran à la fois, carte libérée en moteur Fichier. |
+| `perf.py` | Performance, netteté | Épaisseurs GPU en expressions de zoom égales à `zoomFactor`, aucun `setStyle` pendant les gestes ; densité de pixels suivie ; graphèmes tracés d'un bloc. |
+| `vectors.py`, `city.py` | Moteur Fichier | Cache de tracés réutilisé au déplacement, reconstruit au zoom ou aux données, rendu identique avec un cache neuf, carreaux visibles seuls, croisement transparent non repeint ; ville réaliste : import JSON (≈ 0,15 s) et XML, fleuve assemblé (7 membres, 2 îles), points de contrôle, cache ≈ 0,2 s, déplacement ≈ 2 ms par image, exports. |
+| `coords.py` | Saisie du repère | Formats du § 3.3 acceptés, saisies invalides refusées avec un message, recentrage si le point sort du cadre. |
+| `geocoder.py`, `keyboard.py` | Recherche, clavier | Délai, quota 429 sans requête, relance 5xx, cache, une requête par seconde, réponse piégée rendue comme texte, diagnostic sur `/status` ; carte du moteur Fichier et résultats au clavier (§ 6.4). |
+| `texts.py`, `textsize.py`, `dedication.py` | Textes | Dans les 11 gabarits : chaque ligne se masque et se réaffiche sans perte, chaque curseur de taille agit (sauf lignes non affichées et titre de Lettres), retour à 100 % = rendu d'origine ; réduction signalée ; persistance ; 11 polices distinctes ; dédicace Auto / Une / Deux lignes, carte qui fait de la place, même décision à l'export ; exports 2480 × 3508. |
+| `fonts.py` | Polices | Les 11 familles (normale et italique quand elle existe) se chargent depuis `lib/fonts/` en `file://` et en HTTP ; export sans police de secours ; aucune requête vers Google. |
+| `formats.py`, `safezone.py` | Formats, impression | Dimensions et DPI de chaque format et orientation (ordinateur, iPhone) ; état forgé corrigé ; export A3 PNG ; PDF 50 × 70 et A4 paysage (structure, `xref`, page en points, image JPEG) ; zone de 5 mm par format, export inchangé, alertes, conseil du 10 × 15. |
+| `design.py`, `art.py` | Évolutions graphiques | 11 polices et duos, règle de la police manuscrite ; 16 thèmes, filtres, contraste ; gabarits distincts, cœur découpé dans l'aperçu ; ambiances et modèles annulables ; 10 repères ; 3 lieux numérotés et reliés ; papiers et plis ; aperçu au mur ; lien ; paysage 3508 × 2480 ; deux lieux ; GPX simplifié et cadré ; Polaire à la hauteur de la latitude ; effets (rendu modifié, identique avec un cache neuf), halo, dorure, ornements, Lettres, Lune, planètes, Voie lactée, palette d'une photo ; gabarits d'origine identiques au pixel près. |
+| `compare.py` | Comparer avant / après | Critères du § 4.2 : bouton absent sans changement comparable, nommé d'après le changement, accessible depuis tous les onglets, maintenu à la souris, au toucher et au clavier, état courant rétabli exactement, rien d'enregistré, titre et cadrage ni comparés ni effaçant la comparaison. |
+| `deps.py` | Réglages dépendants | Inventaire du § 6.1 : masquage, notes, bascule annulable, notes lisibles (4,5:1). |
+| `saves.py`, `illustore.py` | Sauvegarde | Mes affiches : aller-retour exact de l'état, annulation, persistance, Ctrl + S, fichiers, fusion sans doublon, fichiers piégés, navigateur plein ; illustrations : IndexedDB, rechargement, image manquante, réimport, fichiers version 2, nettoyage. |
+| `illus.py`, `illusmix.py`, `illustext.py`, `illuspaste.py` | Affiches illustrées | Onglets par mode, aucune requête en mode Illustration ; prompt ; import (refus GIF, fichier endommagé) ; qualité ; cadrage, retouches, titre Vintage ; 5 compositions ; harmonisation ; gestes ; déplacement des textes (« Auto » identique au rendu d'avant, lettre par lettre) ; collage depuis le presse-papiers simulé ; exports et export bloqué sans image. |
+| `mobile.py`, `ux.py`, `flow.py`, `welcome.py` | Interface | Panneau coulissant (au moins 180 px de réglages à mi-hauteur sur 390 × 664), mode Cadrer, affiche seule, paysage en deux colonnes, A− / A+ ; onglets ARIA, « Étape suivante », sections repliées puis ouvertes d'office, annuler / rétablir, calendrier, « Ma position », recherche unique ; type d'affiche épinglé et parcours par type, Essentiel en ≈ 2 écrans à 360 px ; une seule fenêtre au premier lancement, proposition d'ambiance non bloquante. |
+| `a11y.py`, `contrast.py` | Accessibilité | Fenêtres modales (focus placé, retenu, rendu ; Échap), vignettes au clavier, `aria-pressed`, cibles de 44 px, champs nommés ; contrastes du § 6.5, états inactifs compris. |
+| `consent.py`, `attribution.py` | RGPD, licences | Aucune requête tierce avant l'accord ; demande modale ; action en attente exécutée après accord ; retrait ; « Travailler hors ligne » sans requête ; mention minimale toujours inscrite, complète par défaut, légende sous l'aperçu. |
+| `reset.py` | Réinitialisation | Un appui demande confirmation sans rien modifier ; deux appuis rétablissent l'état et l'affiche par défaut ; accord conservé ; résultat persisté. |
+| `security.py`, `csp.py` | Sécurité | Lien forgé (types faux, valeurs hors bornes, champs inconnus) : valeurs remplacées, rien d'invalide enregistré ; lien piégé (> 512 Ko décompressé) refusé ; `window.__cms` seulement avec `?test` ; aucune violation de la CSP en `file://` et en HTTP, aucun style ni script en ligne. |
+| `pwa.py`, `swversion.py` | Déploiement | Servi sous `/city-map-studio/` sans ressource manquante ; manifeste et icônes ; service worker sans ressource tierce, liste `APP` complète ; cache HTTP contourné ; mise à jour proposée par un bandeau, un seul rechargement, état conservé ; démarrage hors ligne ; `VERSION` changée quand `sw.js` ou un fichier de `APP` change (CI). |
+| `unit.py` | Fonctions pures (Node) | Socle `CMS`, Mercator, `zoomFactor`, `dms`, `exportSpec`, `normState`, `CMS.geocoder.sanitize` ; `CMS.illus` : qualité, placement, retouches, prompt, pistes, proportions. |
+| `globals.py` | Architecture | Aucun nom global déclaré deux fois ; nombre de déclarations globales ≤ `tests/globals.max`. |
+
+Outils hors suite : `layouts.py` (captures des 11 gabarits, contrôle visuel) et `make_og.py` (régénère `icons/og-image.jpg` à partir du rendu actuel).
+
+### 9.3. Validations sur appareil réel
+
+Validées sur l'URL GitHub Pages :
+
+| Élément | Référence |
+| :--- | :--- |
+| MapLibre avec les vraies tuiles OpenFreeMap (aperçu, déplacement et zoom, export, rendu Souvenir) | [#5](https://github.com/thiryyan/city-map-studio/issues/5) |
+| Diagnostic réel (MapLibre, OpenFreeMap, Nominatim), sur mobile | [#4](https://github.com/thiryyan/city-map-studio/issues/4) |
+| Téléchargement sur iOS Safari et Chrome Android (bouton, partage natif, appui long, 2480 × 3508 et 300 DPI conservés) | [#7](https://github.com/thiryyan/city-map-studio/issues/7) |
+
+Restent à valider (⏳), faute de pouvoir les automatiser :
+
+| Domaine | Validation à mener |
+| :--- | :--- |
+| Rendu réel | Deux lieux, aperçu au mur, pistes artistiques, Carte + illustration et pertinence des pistes avec les vraies tuiles OpenFreeMap ; mêmes mesures de fluidité sur un téléphone réel et sur un vrai extrait OSM. |
+| Impression | Export A3 et 50 × 70 sur un iPhone réel ; PDF chez un imprimeur ; dorure et riso imprimés ; marges réelles d'une imprimante de bureau ; A4 d'une illustration. |
+| Gestes tactiles (iOS Safari, Chrome Android) | Panneau coulissant, mode Cadrer, appui long de la comparaison, glisser des textes, du médaillon et de la vignette, bouton retour de l'affiche seule, collage et glisser-déposer d'une illustration (demande d'autorisation). |
+| Fonctions natives | Géolocalisation et calendrier natif sur iOS et Android ; diagnostic réel sur ordinateur. |
+| Stockage | Quota de Safari iOS (Mes affiches, téléchargement des fichiers) ; effacement réel des illustrations par Safari après 7 jours ; quota en navigation privée. |
+| Lecteurs d'écran | VoiceOver (iOS) et TalkBack (Android). |
+| Application installée | Installation, hors ligne et mise à jour après un vrai déploiement, Chrome Android et ordinateur, iOS ([#65](https://github.com/thiryyan/city-map-studio/issues/65)). |
+| Prompt | À éprouver sur ChatGPT et Gemini avec d'autres villes. |
+| Aperçu des liens | `https://thiryyan.github.io/city-map-studio/icons/og-image.jpg` suppose la publication à cette adresse ; à adapter en cas de domaine personnalisé. |

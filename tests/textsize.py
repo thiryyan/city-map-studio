@@ -1,7 +1,8 @@
 """e2e : taille des textes de l'affiche (onglet Textes).
 
-Vérifie que chaque curseur de taille (par ligne et global) modifie l'affiche dans chaque
-gabarit, que la réduction automatique est signalée, que « Tailles par défaut » et
+Vérifie que chaque curseur de taille (par ligne et global) modifie l'affiche dans chacun des 11
+gabarits (sauf les lignes qu'un gabarit n'affiche pas, et le titre du gabarit Lettres, dont les lettres prennent
+toujours la plus grande taille possible), que le retour à 100 % rend le rendu d'origine, que la réduction automatique est signalée, que « Tailles par défaut » et
 « Réinitialiser » rétablissent 100 %, que le réglage est persisté, et que l'export à
 150 % mesure toujours 2480 × 3508 px.
 """
@@ -13,7 +14,10 @@ APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
 KEYS = ['title', 'subtitle', 'coords', 'dedication', 'names', 'date']
-SNAP = "(()=>document.getElementById('cvOver').toDataURL())()"
+SNAP = "(()=>['cvOver','cvUnder'].map(id=>document.getElementById(id).toDataURL()).join())()"
+LAYOUTS = ['souvenir', 'classic', 'fade', 'medallion', 'heart', 'arch', 'travel', 'polaroid', 'diptych', 'sky', 'typo']
+# Lignes sans curseur effectif : sous-titre non affiché (Souvenir, Polaroid), titre du gabarit Lettres (taille calculée)
+NO_SIZE = {('souvenir', 'subtitle'), ('polaroid', 'subtitle'), ('typo', 'title')}
 SET = """([k,v])=>{const i=document.querySelector(`[data-k="${k}"]`); i.value=v; i.dispatchEvent(new Event('input'));}"""
 
 async def main():
@@ -35,12 +39,12 @@ async def main():
         await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(500)
         setv = lambda k, v: page.evaluate(SET, [k, v])
 
-        for lay in ['souvenir', 'classic', 'fade', 'medallion']:
+        for lay in LAYOUTS:
             await page.evaluate(f"__cms.st.layout='{lay}'"); await page.click('#tabs [data-tab=style]')
-            await page.click(f'#layouts .card[data-v={lay}]'); await page.click('#tabs [data-tab=textes]'); await page.wait_for_timeout(250)
+            await page.click(f'#layouts .card[data-v={lay}]'); await page.click('#tabs [data-tab=textes]'); await page.wait_for_timeout(500)
             base = await page.evaluate(SNAP); dead = []
             for k in KEYS:
-                if lay == 'souvenir' and k == 'subtitle': continue   # le gabarit Souvenir n'affiche pas le sous-titre
+                if (lay, k) in NO_SIZE: continue
                 await setv(f'textScale.{k}', 130); await page.wait_for_timeout(80)
                 if await page.evaluate(SNAP) == base: dead.append(k)
                 await setv(f'textScale.{k}', 100); await page.wait_for_timeout(80)

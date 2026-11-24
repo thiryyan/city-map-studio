@@ -35,7 +35,7 @@ async def main():
             await page.evaluate("f=>{__cms.setEngine('file'); __cms.importText(f,'osm.json')}", FIX); await page.wait_for_timeout(400)
 
             # 1. Le type d'affiche est en tête : une seule barre, au-dessus des onglets, visible dès le cran réduit
-            check(await page.evaluate("document.querySelectorAll('#modeSegM').length") == 0 and await page.evaluate("document.querySelectorAll('.modes').length") == 1,
+            check(await page.evaluate("document.querySelectorAll('.modes').length") == 1,
                   f'{name} : une seule barre « Type d\'affiche »')
             if mobile:
                 await page.evaluate("__cms.setSheet('peek')"); await page.wait_for_timeout(250)

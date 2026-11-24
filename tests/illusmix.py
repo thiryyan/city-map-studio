@@ -1,6 +1,6 @@
-"""e2e : mode Carte + illustration, compositions Médaillon et Vignette (issue #44).
+"""e2e : mode Carte + illustration (issues #44, #45) : Médaillon, Vignette, Haut / bas, Côte à côte, Fondu.
 
-Vérifie : onglets (Lieu, Repère, Illustration, Textes, Style) et réglages visibles ; étape Composition ; prompt selon la
+Vérifie : onglets (Lieu, Repère, Illustration, Textes, Style, Export) et réglages visibles ; étape Composition ; prompt selon la
 composition (zone du médaillon, vignette en 3:4) ; géométrie (formes et positions du médaillon, découpe de la carte à
 l'aperçu) ; rendu (illustration hors du médaillon, carte dedans ; vignette sur la carte ; titre dans la bande ;
 attribution OSM) ; qualité calculée sur la zone de l'illustration ; couleurs de la carte d'après l'illustration
