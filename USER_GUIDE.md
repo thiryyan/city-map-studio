@@ -125,35 +125,35 @@ l'écran), **mi-hauteur** (par défaut) et **déplié** (réglages en grand, aff
   mi-hauteur et déplié.
 * Pendant la saisie d'un texte, le panneau se déplie, puis reprend sa place.
 
-### 3.3. Cadrer la carte
+### 3.3. Lecture et Modification de l'affiche
 
-* **Sur ordinateur** : glissez la carte pour la déplacer, utilisez la molette ou les boutons + et − pour zoomer.
-* **Sur téléphone** : la carte est verrouillée, pour qu'un geste de défilement ne la décadre pas. Touchez-la, ou
-  touchez le bouton **Cadrer**, pour entrer dans le mode Cadrer : le panneau se réduit, vous glissez et pincez,
-  puis vous touchez **Terminer**.
+Par défaut, l'affiche est **en lecture** : rien n'y bouge, ni la carte, ni l'illustration, ni les textes, sur
+téléphone comme sur ordinateur. Un geste de défilement ou un clic ne la dérange donc jamais.
 
-**Que déplacer ?** Dans le mode Cadrer, un sélecteur en bas de l'écran indique ce que vos doigts déplacent. Un seul
-choix est actif à la fois ; le reste de l'affiche ne bouge pas :
+Pour la modifier, touchez **Modifier** (crayon) dans la barre d'actions, ou touchez directement l'affiche (une
+invitation « Toucher pour modifier » le rappelle les premières fois). Le bouton devient **Terminer** : touchez-le
+pour revenir en lecture. Sur téléphone, le panneau se réduit pendant la modification.
+
+**Que déplacer ?** Pendant la modification, un sélecteur en bas de l'écran indique ce que vos doigts (ou la souris)
+déplacent. Un seul choix est actif à la fois ; le reste de l'affiche ne bouge pas :
 
 | Choix | Ce qu'il fait |
 | :--- | :--- |
-| Carte | Glisser et pincer déplacent la carte, même si le geste part d'un titre posé dessus. |
+| Carte | Glisser et pincer (molette sur ordinateur) déplacent et zooment la carte, même si le geste part d'un titre posé dessus. |
 | Repère | Le prochain toucher sur la carte pose le repère, puis le choix revient à Carte. |
-| Illustration | Glisser déplace l'image ; la carte reste en place (+ et − agrandissent l'image). |
-| Textes | Glisser déplace le titre ou les lignes du bas (cadre en pointillés) ; la carte et l'image restent en place. « Textes » n'est proposé que si un bloc a été placé ou glissé sur l'affiche. |
+| Illustration | Glisser déplace l'image ; pincer (molette sur ordinateur) l'agrandit ou la réduit, de 30 à 300 % ; un double toucher la remet ajustée et centrée. Sous 100 %, l'image laisse voir le papier : vous la posez où vous voulez sur la page. Un contour en pointillés montre sa zone (en Carte + illustration, celle de la composition : l'image n'en sort jamais). La carte reste en place. |
+| Textes | Glisser déplace le titre ou les lignes du bas (cadre en pointillés) ; la carte et l'image restent en place. « Textes » n'est jamais choisi d'office : touchez-le pour l'activer, touchez-le de nouveau pour revenir au choix d'avant. Il n'est proposé que si un bloc peut bouger (en Carte : placé ou glissé sur l'affiche). |
 
-Le choix de départ suit l'onglet ouvert (onglet Repère : Repère ; Textes : Textes ; Illustration : Illustration). En
-Illustration seule, seuls Illustration et Textes sont proposés.
+Le choix de départ suit l'onglet ouvert (Repère : Repère ; Illustration : Illustration), sinon l'endroit touché :
+en Carte + illustration, toucher l'image ouvre sur Illustration, toucher la carte sur Carte. En Illustration seule,
+seuls Illustration et Textes sont proposés.
 
 Les **boutons flottants**, à côté de l'affiche, sont :
 
 | Bouton | Action |
 | :--- | :--- |
-| Cadrer | Ouvre ou ferme le mode Cadrer (téléphone). |
-| + / − | Zoom d'un demi-cran (affiche illustrée : agrandit ou réduit l'illustration de 10 %). |
-| Placer le repère | Le prochain toucher sur la carte pose le repère (ordinateur ; sur téléphone : choix « Repère » de « Que déplacer ? »). |
+| + / − | Zoom d'un demi-cran (affiche illustrée, ou choix Illustration : agrandit ou réduit l'image de 10 %). |
 | Centrer sur le repère | Ramène la carte sur le repère (affiche illustrée : recentre l'illustration). |
-| Carte / Image | Carte + illustration seulement, sur ordinateur : choisit le calque que cadrent les autres boutons (sur téléphone : « Que déplacer ? »). |
 
 ### 3.4. La barre d'actions
 
@@ -161,6 +161,7 @@ Toujours visible en bas du panneau, même réduit, elle regroupe :
 
 | Bouton | Action |
 | :--- | :--- |
+| Crayon, **Modifier** / **Terminer** | Ouvre ou ferme la modification de l'affiche (§ 3.3). Pendant la modification, Comparer et Suivant laissent la place au sélecteur. |
 | Œil, **Aperçu** | Affiche seule : masque tout ce qui recouvre l'affiche et le panneau des réglages, et passe en plein écran quand le navigateur le permet. Un toucher, Échap ou le bouton retour du téléphone ramène aux réglages, sans déplacer la carte ni poser de repère. |
 | **Annuler / Rétablir** | Historique des modifications (§ 11.1). |
 | **Comparer** | Apparaît après un changement de thème, d'ambiance, d'effet… : maintenez-le pour revoir l'affiche d'avant (§ 11.2). |
@@ -618,8 +619,8 @@ le zoom. Le format choisi est mis en avant.
 **Agrandir ×2 dans le navigateur** lisse l'image puis renforce légèrement ses contours, à l'export seulement. Cela
 améliore la note, mais n'invente aucun détail.
 
-**Cadrage** : **Remplir l'affiche** ou **Image entière** (bandes de la couleur du fond), zoom de 100 à 300 %,
-déplacement en glissant l'image sur l'aperçu, **Recentrer**.
+**Cadrage** : **Remplir l'affiche** ou **Image entière** (bandes de la couleur du fond), zoom de 30 à 300 %,
+déplacement et pincement sur l'aperçu (**Modifier**, choix Illustration, § 3.3), **Recentrer**.
 
 **Retouches** : luminosité, contraste et saturation (−50 à +50), **filtre vintage** (aucun, léger, marqué),
 **Grain**, **Aplats** (couleurs réduites, effet sérigraphie). **Papier jauni** est rangé avec le papier, onglet
@@ -658,8 +659,8 @@ L'onglet Illustration commence par une étape **Composition** :
 | **Fondu** | La carte émerge du bas de l'illustration. | — |
 
 La phrase transmise au prompt pour cette composition est affichée. Pour accorder la carte à l'image : onglet Style,
-**Couleurs d'après une image**, **L'illustration** (version claire ou sombre). Le bouton flottant **Carte / Image**
-(sur téléphone, le choix **Carte** ou **Illustration** de « Que déplacer ? », § 3.3) choisit le calque cadré : zoom, recentrage et mode Cadrer agissent alors sur la carte ou sur l'illustration (la
+**Couleurs d'après une image**, **L'illustration** (version claire ou sombre). Le choix **Carte** ou **Illustration** de
+« Que déplacer ? » (§ 3.3) choisit le calque cadré : zoom, recentrage et Modification agissent alors sur la carte ou sur l'illustration (la
 carte reste en place pendant que l'illustration est cadrée). À l'inverse, la palette « Thème de l'affiche » de l'étape
 Prompt transmet les couleurs de la carte à l'IA.
 

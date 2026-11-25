@@ -1,7 +1,7 @@
 """e2e : ergonomie mobile.
 
 Panneau coulissant à trois crans (réduit / mi-hauteur / déplié), dépliage à la saisie,
-carte verrouillée et mode « Cadrer », placement du repère, boutons flottants adaptatifs,
+carte verrouillée et Lecture et Modification, placement du repère, boutons flottants adaptatifs,
 mode paysage en deux colonnes, bulle et bandeau hors de l'affiche, taille du texte de
 l'interface (A− / A+), et rien de tout cela sur ordinateur.
 """
@@ -84,23 +84,23 @@ async def main():
         await page.evaluate("__cms.setSheet('peek')"); await page.wait_for_timeout(250)
         c0 = await center(page); s = await rect(page, '#slot')
         cx, cy = s['x'] + s['w'] / 2, s['y'] + s['h'] / 2
-        check(await page.is_visible('#shield'), 'carte verrouillée : invitation « Toucher pour cadrer »')
+        check(await page.is_visible('#shield'), 'Lecture : affiche verrouillée, un toucher ouvre la Modification')
         await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx + 60, cy + 40, steps=6); await page.mouse.up()
         await page.wait_for_timeout(200)
         check(await center(page) == c0, 'carte verrouillée : un glissement ne décadre pas')
-        await page.evaluate("__cms.setFraming(false)")   # le glissement a ouvert le mode Cadrer (clic sur le verrou)
+        await page.evaluate("__cms.setFraming(false)")   # le glissement a ouvert la Modification (clic sur le verrou)
         await page.evaluate("__cms.setSheet('half')"); await page.wait_for_timeout(200)
 
-        # mode Cadrer
+        # Modification
         await page.tap('#shield'); await page.wait_for_timeout(300)
-        check(await page.evaluate('__cms.ui.framing') and await page.is_visible('#frameBar'), 'toucher la carte : mode Cadrer et barre « Terminer »')
-        check(await sheet(page) == 'peek' and not await page.is_visible('#shield'), 'mode Cadrer : panneau réduit, carte déverrouillée')
+        check(await page.evaluate('__cms.ui.framing') and await page.is_visible('#frameBar'), 'toucher l\'affiche : Modification, indication en haut')
+        check(await sheet(page) == 'peek' and not await page.is_visible('#shield'), 'Modification : panneau réduit, carte déverrouillée')
         s = await rect(page, '#slot'); cx, cy = s['x'] + s['w'] / 2, s['y'] + s['h'] / 2
         await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx + 60, cy + 40, steps=6); await page.mouse.up()
         await page.wait_for_timeout(200)
-        check(await center(page) != c0, 'mode Cadrer : le glissement déplace la carte')
+        check(await center(page) != c0, 'Modification : le glissement déplace la carte')
         await page.screenshot(path=str(T / 'mobile-framing.png'))
-        await page.tap('#bFrameDone'); await page.wait_for_timeout(300)
+        await page.tap('#bEdit'); await page.wait_for_timeout(300)
         check(not await page.evaluate('__cms.ui.framing') and await sheet(page) == 'half' and await page.is_visible('#shield'),
               '« Terminer » : carte reverrouillée, panneau revenu à mi-hauteur')
 
@@ -203,15 +203,15 @@ async def main():
         ctx, page, errs = await open_page({'width': 844, 'height': 390})
         pn, sg = await rect(page, '#panel'), await rect(page, '#stage')
         check(pn['x'] == 0 and sg['x'] >= pn['r'] - 1 and pn['h'] >= 380, 'paysage : deux colonnes, panneau à gauche sur toute la hauteur')
-        check(not await page.is_visible('#shield') and not await page.is_visible('#grab'), 'paysage : ni poignée ni verrou')
+        check(await page.is_visible('#shield') and not await page.is_visible('#grab'), 'paysage : pas de poignée, affiche en Lecture (verrou)')
         await page.screenshot(path=str(T / 'mobile-landscape.png'))
         check(not errs, f'paysage : aucune erreur de page {errs}')
         await ctx.close()
 
         # ---------- Ordinateur : comportement inchangé ----------
         ctx, page, errs = await open_page({'width': 1400, 'height': 900}, mobile=False)
-        check(not await page.is_visible('#shield') and not await page.is_visible('#grab') and not await page.is_visible('#bFrame'),
-              'ordinateur : ni poignée, ni verrou, ni bouton Cadrer')
+        check(await page.is_visible('#shield') and not await page.is_visible('#grab') and await page.is_visible('#bEdit'),
+              'ordinateur : pas de poignée ; Lecture par défaut (verrou), bouton Modifier')
         check(await page.evaluate("document.getElementById('stage').dataset.fab") == 'side', 'ordinateur : boutons flottants à droite')
         check(not errs, f'ordinateur : aucune erreur de page {errs}')
         await ctx.close()

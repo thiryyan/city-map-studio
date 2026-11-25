@@ -71,7 +71,7 @@ function normState(src){
   function normIllus(src,d){
     const o=V.obj(src), p=V.obj(o.prompt), C=CMS.illusConf, keys=a=>a.map(x=>x[0]);
     const pistes=[...new Set((Array.isArray(p.pistes)?p.pistes:[]).filter(x=>typeof x==='string').map(x=>x.replace(/\s+/g,' ').trim().slice(0,80)).filter(Boolean))].slice(0,C.PISTES_MAX);
-    return {fit:V.oneOf(o.fit,C.FITS,d.fit), zoom:V.num(o.zoom,d.zoom,100,300), ox:V.num(o.ox,d.ox,-1,1), oy:V.num(o.oy,d.oy,-1,1),
+    return {fit:V.oneOf(o.fit,C.FITS,d.fit), zoom:V.num(o.zoom,d.zoom,30,300), ox:V.num(o.ox,d.ox,-1,1), oy:V.num(o.oy,d.oy,-1,1),
       bright:V.num(o.bright,d.bright,-50,50), contrast:V.num(o.contrast,d.contrast,-50,50), satur:V.num(o.satur,d.satur,-50,50),
       vintage:V.oneOf(o.vintage,C.VINTAGE,d.vintage), grain:V.bool(o.grain,d.grain), paper:V.bool(o.paper,d.paper), flat:V.bool(o.flat,d.flat),
       upscale:V.bool(o.upscale,d.upscale),
