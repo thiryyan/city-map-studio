@@ -15,7 +15,7 @@
  * doit figurer dans APP (tests/pwa.py).
  */
 'use strict';
-const VERSION = 'cms-2026-11-24h';
+const VERSION = 'cms-2026-11-25a';
 const APP = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png',
   'css/app.css',
