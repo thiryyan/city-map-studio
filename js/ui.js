@@ -319,8 +319,7 @@ function buildUI(){
   // Boutons flottants : ils agissent sur le calque cadré, carte ou illustration (#77)
   const onIllus=()=>CMS.illus.layer()==='illus';
   $('bZoomIn').onclick=()=>onIllus() ? CMS.illus.zoomBy(10) : setZoom(st.zoom+0.5); $('bZoomOut').onclick=()=>onIllus() ? CMS.illus.zoomBy(-10) : setZoom(st.zoom-0.5);
-  $('bLayer').onclick=()=>CMS.illus.setLayer(onIllus() ? 'map' : 'illus');
-  $('bPlace').onclick=$('bPlace2').onclick=()=>setPlacing(!ui.placing);
+  $('bPlace2').onclick=()=>setPlacing(!ui.placing);
   $('markerForm').onsubmit=e=>{ e.preventDefault(); placeMarkerFromInput(); };
   $('bMarkerCenter').onclick=()=>setMarker(st.center.lat,st.center.lon);
   $('bToMarker').onclick=()=>onIllus() ? CMS.illus.recenter() : goTo(st.marker.lat,st.marker.lon);

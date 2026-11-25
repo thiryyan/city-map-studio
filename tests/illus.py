@@ -115,12 +115,14 @@ async def main():
         await wait_js(page, "CMS.illus.image && CMS.illus.image.w===1696", 5000)
         check(True, 'image déposée (glisser-déposer) importée')
 
-        # Cadrage par glisser sur l'aperçu, recentrage
+        # Cadrage par glisser sur l'aperçu (Modification, choix « Illustration » ; #82), recentrage
+        await page.evaluate("CMS.intent.open('illus')"); await page.wait_for_timeout(200)
         box = await page.locator('#poster').bounding_box()
         await page.mouse.move(box['x'] + box['width'] / 2, box['y'] + box['height'] / 2); await page.mouse.down()
         await page.mouse.move(box['x'] + box['width'] / 2 + box['width'] * 0.1, box['y'] + box['height'] / 2, steps=5); await page.mouse.up()
         ox = await page.evaluate("__cms.st.illus.ox")
         check(0.08 < ox < 0.12, f'glisser l\'image de 10 % de la largeur : décalage {ox:.3f}')
+        await page.evaluate("__cms.setFraming(false)")
         await page.click('#bIllusCenter')
         check(await page.evaluate("__cms.st.illus.ox") == 0, 'Recentrer')
         await page.screenshot(path=str(T / 'illus-image.png'))

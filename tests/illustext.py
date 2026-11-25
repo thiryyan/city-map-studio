@@ -50,7 +50,8 @@ async def main():
         hb = await page.locator('#hitTitle').bounding_box(); pb = await page.locator('#poster').bounding_box()
         check(hb['y'] < pb['y'] + pb['height'] * 0.3 and hb['height'] >= 44, f'zone du titre en haut, 44 px de haut au moins ({round(hb["height"])})')
 
-        # Glisser le titre vers le bas à gauche : position libre ; l'image ne bouge pas
+        # Glisser le titre vers le bas à gauche (Modification, choix « Textes » ; #82) : position libre ; l'image ne bouge pas
+        await page.evaluate("CMS.intent.open('text')"); await page.wait_for_timeout(200)
         ox = await page.evaluate("__cms.st.illus.ox")
         await page.mouse.move(hb['x'] + hb['width'] / 2, hb['y'] + hb['height'] / 2); await page.mouse.down()
         await page.mouse.move(hb['x'] + hb['width'] / 2 - pb['width'] * 0.2, hb['y'] + hb['height'] / 2 + pb['height'] * 0.4, steps=8); await page.mouse.up()
@@ -110,6 +111,7 @@ async def main():
         await page.click('#fPosSeg button[data-v=mc]'); await page.evaluate("__cms.st.illusText.mix.ffree={x:0.5,y:0.75}; scheduleOver()"); await page.wait_for_timeout(300)
         check('débordent sur la carte' in await page.text_content('#textWarn'), 'médaillon : texte sur la carte signalé')
         c0 = await page.evaluate("JSON.stringify(__cms.st.center)"); ox = await page.evaluate("__cms.st.illus.ox")
+        await page.evaluate("CMS.intent.open('text')"); await page.wait_for_timeout(200)
         fb = await page.locator('#hitFoot').bounding_box()
         await page.mouse.move(fb['x'] + fb['width'] / 2, fb['y'] + fb['height'] / 2); await page.mouse.down()
         await page.mouse.move(fb['x'] + fb['width'] / 2 + 30, fb['y'] + fb['height'] / 2 - 40, steps=6); await page.mouse.up(); await page.wait_for_timeout(300)
@@ -120,6 +122,7 @@ async def main():
         # Vignette : déplacement horizontal dans la bande
         await page.evaluate("__cms.st.mix.compo='vig'; layoutPreview()"); await page.wait_for_timeout(500)
         band = await page.evaluate("(()=>{ const g=__cms.geom(__cms.st,1000,1414); return [g.band.y/1414,(g.band.y+g.band.h)/1414]; })()")
+        await page.evaluate("CMS.intent.open('text')"); await page.wait_for_timeout(200)
         hb = await page.locator('#hitTitle').bounding_box()
         await page.mouse.move(hb['x'] + hb['width'] / 2, hb['y'] + hb['height'] / 2); await page.mouse.down()
         await page.mouse.move(hb['x'] + hb['width'] / 2 - pb['width'] * 0.4, hb['y'] - pb['height'] * 0.4, steps=8); await page.mouse.up(); await page.wait_for_timeout(300)

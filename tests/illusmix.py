@@ -91,11 +91,14 @@ async def main():
             await page.mouse.move(box['x'] + x * box['width'], box['y'] + y * box['height']); await page.mouse.down()
             await page.mouse.move(box['x'] + x * box['width'] + dx, box['y'] + y * box['height'], steps=4); await page.mouse.up(); await page.wait_for_timeout(200)
         c0 = await page.evaluate("JSON.stringify(__cms.st.center)")
+        await page.evaluate("CMS.intent.open('illus')"); await page.wait_for_timeout(200)   # Modification, choix « Illustration » (#82)
         await drag(0.15, 0.4, 40)
         check(await page.evaluate("__cms.st.illus.ox") > 0.05 and await page.evaluate("JSON.stringify(__cms.st.center)") == c0, 'glisser hors du médaillon : l\'image bouge, pas la carte')
         ox = await page.evaluate("__cms.st.illus.ox")
+        await page.evaluate("CMS.intent.open('map')"); await page.wait_for_timeout(200)   # choix « Carte »
         await drag(0.5, 0.75, 40)
         check(await page.evaluate("__cms.st.illus.ox") == ox and await page.evaluate("JSON.stringify(__cms.st.center)") != c0, 'glisser dans le médaillon : la carte bouge, pas l\'image')
+        await page.evaluate("__cms.setFraming(false)")
         await page.click('#bIllusCenter')
 
         # Vignette
@@ -115,11 +118,13 @@ async def main():
         qm = await page.evaluate("CMS.illus.quality({...__cms.st,mix:{...__cms.st.mix,compo:'med'}},1200,1700)[0].dpi")
         check(qv > qm * 2.5, f'qualité calculée sur la zone de la vignette ({qm} → {qv} ppp)')
         check(await page.is_visible('#illusHit'), 'vignette : zone de prise au-dessus de la carte')
+        await page.evaluate("CMS.intent.open('illus')"); await page.wait_for_timeout(200)
         hb = await page.locator('#illusHit').bounding_box()
         c0 = await page.evaluate("JSON.stringify(__cms.st.center)")
         await page.mouse.move(hb['x'] + hb['width'] / 2, hb['y'] + hb['height'] / 2); await page.mouse.down()
         await page.mouse.move(hb['x'] + hb['width'] / 2 + 20, hb['y'] + hb['height'] / 2, steps=4); await page.mouse.up(); await page.wait_for_timeout(200)
         check(await page.evaluate("__cms.st.illus.ox") > 0.05 and await page.evaluate("JSON.stringify(__cms.st.center)") == c0, 'glisser la vignette : l\'image bouge, pas la carte')
+        await page.evaluate("__cms.setFraming(false)")
 
         # Couleurs de la carte d'après l'illustration (onglet Style, « Couleurs d'après une image » ; #77), annulables
         await page.wait_for_timeout(1600)

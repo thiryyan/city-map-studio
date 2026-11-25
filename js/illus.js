@@ -807,21 +807,38 @@ CMS.define('illus', () => {
   /** Calque que cadrent les boutons flottants et le mode Cadrer : la carte (Carte), l'image (Illustration), au choix (Carte + illustration) */
   const layer=()=>st.mode==='illus' ? 'illus' : st.mode==='map' || !ready() ? 'map' : layerPref;
   function syncLayer(){
-    const il=layer()==='illus', app=$('app'), was=app.dataset.layer;
+    const il=layer()==='illus', app=$('app');
     app.dataset.layer=layer(); app.classList.toggle('illusready',ready());
-    const b=$('bLayer'), t=il ? 'Cadrage : l\u2019illustration (toucher pour la carte)' : 'Cadrage : la carte (toucher pour l\u2019illustration)';
-    pressed(b,il); b.title=t; b.setAttribute('aria-label',t); b.querySelector('.lm').hidden=il; b.querySelector('.li').hidden=!il;
     const set=(id,x)=>{ const e=$(id); e.title=x; e.setAttribute('aria-label',x); };
     set('bZoomIn',il?'Agrandir l\u2019illustration':'Zoom avant'); set('bZoomOut',il?'Réduire l\u2019illustration':'Zoom arrière');
     set('bToMarker',il?'Recentrer l\u2019illustration':'Centrer sur le repère');
-    CMS.emit('layer:synced');   // sélecteur « Que déplacer ? » et indication du mode Cadrer (CMS.intent)
-    if(was && was!==app.dataset.layer && ui.posterCss.w) layoutPreview();   // verrou déplacé sur le calque cadré
+    CMS.emit('layer:synced');   // sélecteur « Que déplacer ? » et indication de la Modification (CMS.intent)
   }
   function setLayer(v,quiet){
     const was=layer(); layerPref=v==='illus' ? 'illus' : 'map'; syncLayer();
     if(!quiet && layer()!==was) toast(layer()==='illus' ? 'Cadrage de l\u2019illustration : la carte reste en place' : 'Cadrage de la carte');
   }
-  function zoomBy(d){ if(!ready()) return; st.illus.zoom=clamp(st.illus.zoom+d,100,300); syncInputs(); syncImage(); redraw(); saveState(); }
+  function zoomBy(d){
+    if(!ready()) return; const I=st.illus; I.zoom=clamp(I.zoom+d,ZMIN,ZMAX); Object.assign(I,bound(I.ox,I.oy,I.zoom,false));
+    badge(I.zoom); syncInputs(); syncImage(); redraw(); saveState();
+  }
+  // ---------- Illustration sur la page : déplacer, agrandir, réduire (#82) ----------
+  // Zoom de 30 à 300 % de l'ajustement (« Remplir » ou « Image entière ») dans la zone de l'illustration, celle de la
+  // composition : sous 100 %, l'image rapetisse et laisse voir le papier ; elle reste toujours découpée par sa zone.
+  const ZMIN=30, ZMAX=300;
+  /** Décalage borné : le centre de l'image reste dans sa zone, ou ses bords restent atteignables quand elle déborde.
+   *  snap : aimantation au centre et aux bords de la zone */
+  function bound(ox,oy,z,snap){
+    const r=geom(st,ui.posterCss.w||1,ui.posterCss.h||1).illus; if(!img || !r.w) return {ox,oy};
+    const P=placement(r.w,r.h,img.w,img.h,{...st.illus,zoom:z,ox:0,oy:0});
+    const ex=(P.w/r.w-1)/2, ey=(P.h/r.h-1)/2;   // décalage qui aligne un bord de l'image sur celui de la zone
+    if(snap){ const s=(v,e)=>{ for(const t of [0,e,-e]) if(Math.abs(v-t)<0.02) return t; return v; }; ox=s(ox,ex); oy=s(oy,ey); }
+    const lx=Math.max(0.5,Math.abs(ex)), ly=Math.max(0.5,Math.abs(ey));
+    return {ox:clamp(ox,-lx,lx), oy:clamp(oy,-ly,ly)};
+  }
+  /** Taille affichée pendant le pincement, la molette ou les boutons + et − */
+  let badgeT=0;
+  function badge(z){ const b=$('zoomBadge'); b.textContent=Math.round(z)+' %'; b.hidden=false; clearTimeout(badgeT); badgeT=setTimeout(()=>{ b.hidden=true; },900); }
   function recenter(){ if(!ready()) return; Object.assign(st.illus,{ox:0,oy:0}); redraw(); saveState(); }
   function exportState(){
     syncLayer();
@@ -1004,23 +1021,54 @@ CMS.define('illus', () => {
     CMS.on('state:synced',sync);
     CMS.on('colors:changed',syncText);   // thème : couleur que donne « Auto »
     CMS.on('state:saved',()=>{ if(st.mode!=='map' && ui.tab==='illus' && step==='prompt') updatePrompt(); });
-    // Déplacer l'image en la glissant sur l'aperçu
-    let drag=null;
+    // Modification, choix « Illustration » : un doigt déplace l'image, deux doigts l'agrandissent ou la réduisent autour
+    // d'eux, double toucher la remet ajustée ; molette (ordinateur) autour du pointeur. En Lecture, rien ne bouge.
+    const pts=new Map(); let g0=null, moved=false, t0=0, lastTap=0, wheelT=0;
+    const editing=()=>ready() && st.mode!=='map' && ui.framing && ui.intent==='illus';
+    const local=e=>{ const R=poster.getBoundingClientRect(); return {x:e.clientX-R.left, y:e.clientY-R.top}; };
+    const mid=P=>({x:P.reduce((a,p)=>a+p.x,0)/P.length, y:P.reduce((a,p)=>a+p.y,0)/P.length});
+    const dist=P=>P.length>1 ? Math.hypot(P[0].x-P[1].x,P[0].y-P[1].y) : 0;
+    /** Nouveau geste (ou doigt ajouté, retiré) : point de départ */
+    function base(){ const P=[...pts.values()]; g0={c:mid(P), d:dist(P), ox:st.illus.ox, oy:st.illus.oy, z:st.illus.zoom}; }
+    /** Zoom z autour du point c (affiche, px), le point du départ restant sous les doigts */
+    function apply(c,z,snap){
+      const r=geom(st,ui.posterCss.w,ui.posterCss.h).illus, k=z/g0.z;
+      const icx=r.x+r.w/2+g0.ox*r.w, icy=r.y+r.h/2+g0.oy*r.h;   // centre de l'image au départ
+      const nx=c.x-(g0.c.x-icx)*k, ny=c.y-(g0.c.y-icy)*k;
+      Object.assign(st.illus,{zoom:z},bound((nx-r.x-r.w/2)/r.w,(ny-r.y-r.h/2)/r.h,z,snap));
+    }
     poster.addEventListener('pointerdown',e=>{
-      if(st.mode==='map' || !ready() || e.button>0 || e.target.closest('button')) return;
-      if(st.mode==='mix' && isSheet() && layer()!=='illus') return;   // mobile : seul le calque cadré se déplace (#77)
-      if(isSheet() && ui.intent==='text' && ui.framing) return;       // mode Cadrer, choix « Textes » : l'image reste en place
-      // Carte + illustration : la carte garde ses gestes ; la vignette se déplace par sa zone de prise
+      if(!editing() || e.button>0 || e.target.closest('button')) return;
+      // Carte + illustration : la vignette se prend par sa zone ; ailleurs, la carte (figée) ne compte pas
       if(st.mode==='mix' && (st.mix.compo==='vig' ? e.target.id!=='illusHit' : e.target.closest('#slot'))) return;
-      drag={x:e.clientX,y:e.clientY,ox:st.illus.ox,oy:st.illus.oy,id:e.pointerId}; poster.setPointerCapture(e.pointerId); poster.classList.add('dragging');
+      e.preventDefault(); try{ poster.setPointerCapture(e.pointerId); }catch(_){} pts.set(e.pointerId,local(e));
+      if(pts.size===1){ moved=false; t0=Date.now(); }
+      base(); poster.classList.add('dragging');
     });
     poster.addEventListener('pointermove',e=>{
-      if(!drag || e.pointerId!==drag.id) return;
-      const r=geom(st,ui.posterCss.w,ui.posterCss.h).illus;   // décalage en fraction du cadre de l'illustration
-      st.illus.ox=clamp(drag.ox+(e.clientX-drag.x)/r.w,-1,1); st.illus.oy=clamp(drag.oy+(e.clientY-drag.y)/r.h,-1,1); redraw();
+      if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,local(e));
+      const P=[...pts.values()], c=mid(P);
+      const z=P.length>1 && g0.d>0 ? clamp(Math.round(g0.z*dist(P)/g0.d),ZMIN,ZMAX) : g0.z;
+      if(Math.hypot(c.x-g0.c.x,c.y-g0.c.y)>3 || z!==g0.z) moved=true;
+      apply(c,z,P.length===1); if(P.length>1) badge(z); redraw();
     });
-    const end=e=>{ if(!drag || e.pointerId!==drag.id) return; drag=null; poster.classList.remove('dragging'); saveState(); };
+    const end=e=>{
+      if(!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
+      if(pts.size){ base(); return; }
+      poster.classList.remove('dragging');
+      if(!moved && Date.now()-t0<300){   // double toucher : image ajustée, centrée
+        if(Date.now()-lastTap<350){ Object.assign(st.illus,{zoom:100,ox:0,oy:0}); badge(100); redraw(); lastTap=0; }
+        else lastTap=Date.now();
+      }
+      syncInputs(); syncImage(); saveState();
+    };
     poster.addEventListener('pointerup',end); poster.addEventListener('pointercancel',end);
+    poster.addEventListener('wheel',e=>{
+      if(!editing()) return; e.preventDefault();
+      const c=local(e); pts.clear(); g0={c, d:0, ox:st.illus.ox, oy:st.illus.oy, z:st.illus.zoom};
+      const z=clamp(Math.round(st.illus.zoom*Math.exp(-e.deltaY*0.0015)),ZMIN,ZMAX); apply(c,z,false); badge(z); redraw();
+      clearTimeout(wheelT); wheelT=setTimeout(()=>{ syncInputs(); syncImage(); saveState(); },300);
+    },{passive:false});
     // Composition (Carte + illustration)
     // Côte à côte impose le paysage ; une autre composition rend l'orientation d'avant (#77)
     let coteFrom=null;

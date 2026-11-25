@@ -118,6 +118,7 @@ async def main():
         check(await page.is_visible('#hitTitle') and await page.is_hidden('#hitFoot'), 'zone de prise du seul titre déplacé')
         # Glisser le titre : position libre ; la carte ne bouge pas
         c0 = await ev("JSON.stringify(__cms.st.center)")
+        await ev("CMS.intent.open('text')"); await page.wait_for_timeout(200)   # Modification, choix « Textes » (#82)
         hb = await page.locator('#hitTitle').bounding_box(); pb = await page.locator('#poster').bounding_box()
         await page.mouse.move(hb['x'] + hb['width'] / 2, hb['y'] + hb['height'] / 2); await page.mouse.down()
         await page.mouse.move(hb['x'] + hb['width'] / 2 + pb['width'] * 0.2, hb['y'] + hb['height'] / 2 + pb['height'] * 0.35, steps=8); await page.mouse.up()

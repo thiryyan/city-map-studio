@@ -145,7 +145,7 @@ label.f.show:has(input:not(:checked))+input+.tsz,label.f.show:has(input:not(:che
 #stage[data-fab=none] .mapcredit{display:none}
 #cvOver{pointer-events:none;z-index:3}
 #cvTex{pointer-events:none;z-index:3}
-.placeSwitch{z-index:5;align-items:center}
+#placeSwitch{z-index:5;align-items:center}   /* au-dessus du verrou de Lecture (pleine affiche) : choisir le lieu édité ne déplace rien */
 .placeSwitch span{margin:0}
 #cvUnder{z-index:1}
 #slot{position:absolute;z-index:2;overflow:hidden}
@@ -159,16 +159,13 @@ label.f.show:has(input:not(:checked))+input+.tsz,label.f.show:has(input:not(:che
 .fab button.on{background:var(--acc);color:#141414}
 #stage[data-fab=bottom] .fab{top:auto;right:auto;left:50%;bottom:10px;transform:translateX(-50%);flex-direction:row}
 #stage[data-fab=none] .fab{display:none}
-#bFrame{display:none}
-#app.sheetmode #bFrame{display:flex}
 /* Verrou de la carte (mobile) : un toucher sur la carte ouvre le mode Cadrer au lieu de la déplacer par erreur */
-.shield{position:absolute;z-index:4;border:0;padding:0;margin:0;background:none;cursor:pointer;display:flex;align-items:flex-end;justify-content:center}
-.shield.mini span{display:none}
+.shield{position:absolute;inset:0;z-index:4;border:0;padding:0;margin:0;background:none;cursor:pointer;display:flex;align-items:flex-end;justify-content:center}
 .shield span{white-space:nowrap;margin-bottom:8px;background:#1e1e23d9;color:var(--txt);border:1px solid #ffffff22;border-radius:999px;padding:5px 11px;font-size:.8125rem;display:flex;gap:6px;align-items:center;backdrop-filter:blur(6px);pointer-events:none}   /* « Modifier le lieu 2 » ; le verrou de cadrage n'a pas de libellé visible */
 .stagebar{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:11;display:flex;flex-direction:column;align-items:center;gap:6px;width:max-content;max-width:calc(100% - 20px)}
 .placehint{background:var(--acc);color:#141414;border-radius:999px;padding:6px 14px;font-size:.875rem;font-weight:600;display:none;text-align:center}
 .placehint.show{display:block}
-.framebar{display:none;align-items:center;gap:10px;white-space:nowrap;background:#1e1e23f2;border:1px solid var(--acc);border-radius:999px;padding:6px 14px;font-size:.875rem;box-shadow:0 6px 20px #0008}
+.framebar{display:none;align-items:center;gap:10px;text-align:center;background:#1e1e23f2;border:1px solid var(--acc);border-radius:999px;padding:6px 14px;font-size:.875rem;box-shadow:0 6px 20px #0008}
 .framebar.show{display:flex}
 /* Bandeau d'action (zone modifiée, carte indisponible) : en tête du panneau, il ne masque plus l'affiche */
 .banner{flex:none;display:none;align-items:center;gap:10px;background:#2a2418;border-bottom:1px solid #8a6a2a;padding:4px 10px 4px 14px;font-size:.875rem}
@@ -311,13 +308,12 @@ details.adv>h3:first-of-type{margin-top:6px}
    illusonly (modes illustrés), pureillus (illustration seule), mixonly (carte + illustration) */
 #app[data-mode=illus] .maponly,#app:not([data-mode=map]) .layoutonly,#app[data-mode=map] .illusonly,#app:not([data-mode=illus]) .pureillus,#app:not([data-mode=mix]) .mixonly{display:none!important}
 #app[data-mode=mix] #placeBox,#app[data-mode=mix] #labelsBox,#app[data-mode=mix] #skyBox{display:none!important}
-#app[data-mode=illus] #slot,#app[data-mode=illus] #bPlace,#app[data-mode=illus] .mapcredit,#app[data-mode=illus] #placeSwitch{display:none!important}
-/* Cadrage unifié (#77) : en Illustration, zoom, recentrage et mode Cadrer agissent sur l'image (rien à cadrer avant son import) ;
-   en Carte + illustration, sur le calque choisi (#bLayer) : la carte est alors figée quand l'illustration est cadrée */
-#app[data-mode=illus]:not(.illusready) .fab button:not(#bClean),#app[data-mode=illus]:not(.illusready) #shield{display:none!important}
-#app[data-mode=mix]:not(.illusready) #bLayer{display:none!important}
+#app[data-mode=illus] #slot,#app[data-mode=illus] .mapcredit,#app[data-mode=illus] #placeSwitch{display:none!important}
+/* Cadrage unifié (#77) : en Illustration, zoom, recentrage et Modification agissent sur l'image (rien à cadrer avant son import) ;
+   en Carte + illustration, sur le calque choisi (« Que déplacer ? ») : la carte est alors figée quand l'illustration est choisie */
+#app[data-mode=illus]:not(.illusready) .fab button,#app[data-mode=illus]:not(.illusready) #shield{display:none!important}
 #app[data-layer=illus] #slot{pointer-events:none}
-#app[data-mode=illus] #poster{touch-action:none;cursor:grab}
+#app[data-intent=illus] #poster{touch-action:none;cursor:grab}
 #poster.dragging{cursor:grabbing}
 h3 .opt{text-transform:none;letter-spacing:0;font-weight:400}
 .seg.wrap{flex-wrap:wrap}.seg.wrap button{flex:1 1 30%}
@@ -414,8 +410,9 @@ details.adv>summary .chg{flex:none;font-size:.75rem;font-weight:600;color:var(--
 .changes .cg small{color:var(--mut);font-size:.8125rem}
 .changes .ctab{color:var(--acc2);font-size:.75rem;font-weight:600}
 .changes .acts{display:flex;gap:4px}
-/* Que déplacer ? (#82, point 2) : sélecteur d'intention du mode Cadrer, dans le pied du panneau (à portée du pouce).
-   Seul le choix actif reçoit les gestes ; les autres calques sont inertes. data-intent : posé par CMS.intent (mobile, Cadrer). */
+/* Lecture et Modification (#82) : en Lecture (par défaut), rien ne bouge sur l'affiche ; le verrou #shield, sur toute l'affiche,
+   ouvre la Modification. En Modification, « Que déplacer ? » (pied du panneau, à portée du pouce) : seul le choix actif reçoit
+   les gestes, les autres calques sont inertes. data-intent : posé par CMS.intent pendant la Modification. */
 .intentbar{display:flex;gap:8px;align-items:stretch;margin-bottom:6px}
 .intentbar[hidden]{display:none}
 .iseg{flex:1;min-width:0;display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel2)}
@@ -426,11 +423,23 @@ details.adv>summary .chg{flex:none;font-size:.75rem;font-weight:600;color:var(--
 .iseg button:focus-visible{outline:2px solid var(--acc2);outline-offset:-3px}
 .iseg .ts{display:inline}.iseg .tl{display:none}
 @container (min-width:400px){.iseg .ts{display:none}.iseg .tl{display:inline}}
-.intentbar .btn{flex:none;min-height:44px;padding:0 14px;background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600}
-#app.sheetmode #bLayer,#app.sheetmode #bPlace{display:none!important}   /* remplacés par le sélecteur du mode Cadrer */
-#app[data-intent] .texthit,#app[data-intent] .illushit{pointer-events:none}
+.texthit,.illushit{pointer-events:none}   /* Lecture : inertes au pointeur (le clavier reste possible sur les textes) */
 #app[data-intent=text] .texthit{pointer-events:auto;outline:1.5px dashed var(--acc2);background:#c5a05914}
 #app[data-intent=illus] .illushit{pointer-events:auto}
 #app[data-intent=text] #slot{pointer-events:none}
 .framebar{pointer-events:none}
-#app[data-intent] .stpill{display:none}   /* l'indication du mode Cadrer prend la place du voyant d'état */
+#app[data-intent] .stpill{display:none}   /* l'indication de la Modification prend la place du voyant d'état */
+/* Bouton Modifier / Terminer (barre d'actions) ; pendant la Modification, ni comparaison ni étape suivante */
+.abtn.edit .id{display:none}
+.abtn.edit.on{background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600}
+.abtn.edit.on .ie{display:none}.abtn.edit.on .id{display:inline}
+.abtn.edit.on .al{display:inline}
+#app.editing .abnext,#app.editing #bCompare{display:none!important}
+/* Invitation visible en Lecture (premières utilisations) */
+.shield span[hidden]{display:none}
+.shield b{font-weight:600}
+/* Illustration choisie : contour de sa zone (celle de la composition) et taille pendant le pincement */
+.illusframe{position:absolute;z-index:4;display:none;pointer-events:none;outline:1.5px dashed var(--acc2);outline-offset:-1.5px}
+#app[data-intent=illus] .illusframe{display:block}
+.zoombadge{pointer-events:none;background:#1e1e23e6;color:var(--txt);border:1px solid var(--acc);border-radius:999px;padding:4px 12px;font-size:.8125rem;font-weight:600}
+#app.clean .illusframe,#app.clean .zoombadge{display:none!important}
