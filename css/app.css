@@ -168,9 +168,8 @@ label.f.show:has(input:not(:checked))+input+.tsz,label.f.show:has(input:not(:che
 .stagebar{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:11;display:flex;flex-direction:column;align-items:center;gap:6px;width:max-content;max-width:calc(100% - 20px)}
 .placehint{background:var(--acc);color:#141414;border-radius:999px;padding:6px 14px;font-size:.875rem;font-weight:600;display:none;text-align:center}
 .placehint.show{display:block}
-.framebar{display:none;align-items:center;gap:10px;white-space:nowrap;background:#1e1e23f2;border:1px solid var(--acc);border-radius:999px;padding:5px 5px 5px 14px;font-size:.875rem;box-shadow:0 6px 20px #0008}
+.framebar{display:none;align-items:center;gap:10px;white-space:nowrap;background:#1e1e23f2;border:1px solid var(--acc);border-radius:999px;padding:6px 14px;font-size:.875rem;box-shadow:0 6px 20px #0008}
 .framebar.show{display:flex}
-.framebar .btn{min-height:36px;border-radius:999px;background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600}
 /* Bandeau d'action (zone modifiée, carte indisponible) : en tête du panneau, il ne masque plus l'affiche */
 .banner{flex:none;display:none;align-items:center;gap:10px;background:#2a2418;border-bottom:1px solid #8a6a2a;padding:4px 10px 4px 14px;font-size:.875rem}
 .banner.show{display:flex}
@@ -415,3 +414,23 @@ details.adv>summary .chg{flex:none;font-size:.75rem;font-weight:600;color:var(--
 .changes .cg small{color:var(--mut);font-size:.8125rem}
 .changes .ctab{color:var(--acc2);font-size:.75rem;font-weight:600}
 .changes .acts{display:flex;gap:4px}
+/* Que déplacer ? (#82, point 2) : sélecteur d'intention du mode Cadrer, dans le pied du panneau (à portée du pouce).
+   Seul le choix actif reçoit les gestes ; les autres calques sont inertes. data-intent : posé par CMS.intent (mobile, Cadrer). */
+.intentbar{display:flex;gap:8px;align-items:stretch;margin-bottom:6px}
+.intentbar[hidden]{display:none}
+.iseg{flex:1;min-width:0;display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel2)}
+.iseg button{flex:1 1 0;min-width:44px;height:44px;padding:2px 2px;border:0;background:none;color:var(--mut);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:.6875rem;line-height:1.1}
+.iseg button+button{border-left:1px solid var(--line)}
+.iseg button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iseg button[aria-checked=true]{background:var(--acc);color:#141414;font-weight:600}
+.iseg button:focus-visible{outline:2px solid var(--acc2);outline-offset:-3px}
+.iseg .ts{display:inline}.iseg .tl{display:none}
+@container (min-width:400px){.iseg .ts{display:none}.iseg .tl{display:inline}}
+.intentbar .btn{flex:none;min-height:44px;padding:0 14px;background:var(--acc);border-color:var(--acc);color:#141414;font-weight:600}
+#app.sheetmode #bLayer,#app.sheetmode #bPlace{display:none!important}   /* remplacés par le sélecteur du mode Cadrer */
+#app[data-intent] .texthit,#app[data-intent] .illushit{pointer-events:none}
+#app[data-intent=text] .texthit{pointer-events:auto;outline:1.5px dashed var(--acc2);background:#c5a05914}
+#app[data-intent=illus] .illushit{pointer-events:auto}
+#app[data-intent=text] #slot{pointer-events:none}
+.framebar{pointer-events:none}
+#app[data-intent] .stpill{display:none}   /* l'indication du mode Cadrer prend la place du voyant d'état */

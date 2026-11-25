@@ -132,15 +132,28 @@ l'écran), **mi-hauteur** (par défaut) et **déplié** (réglages en grand, aff
   touchez le bouton **Cadrer**, pour entrer dans le mode Cadrer : le panneau se réduit, vous glissez et pincez,
   puis vous touchez **Terminer**.
 
+**Que déplacer ?** Dans le mode Cadrer, un sélecteur en bas de l'écran indique ce que vos doigts déplacent. Un seul
+choix est actif à la fois ; le reste de l'affiche ne bouge pas :
+
+| Choix | Ce qu'il fait |
+| :--- | :--- |
+| Carte | Glisser et pincer déplacent la carte, même si le geste part d'un titre posé dessus. |
+| Repère | Le prochain toucher sur la carte pose le repère, puis le choix revient à Carte. |
+| Illustration | Glisser déplace l'image ; la carte reste en place (+ et − agrandissent l'image). |
+| Textes | Glisser déplace le titre ou les lignes du bas (cadre en pointillés) ; la carte et l'image restent en place. « Textes » n'est proposé que si un bloc a été placé ou glissé sur l'affiche. |
+
+Le choix de départ suit l'onglet ouvert (onglet Repère : Repère ; Textes : Textes ; Illustration : Illustration). En
+Illustration seule, seuls Illustration et Textes sont proposés.
+
 Les **boutons flottants**, à côté de l'affiche, sont :
 
 | Bouton | Action |
 | :--- | :--- |
 | Cadrer | Ouvre ou ferme le mode Cadrer (téléphone). |
 | + / − | Zoom d'un demi-cran (affiche illustrée : agrandit ou réduit l'illustration de 10 %). |
-| Placer le repère | Le prochain toucher sur la carte pose le repère. |
+| Placer le repère | Le prochain toucher sur la carte pose le repère (ordinateur ; sur téléphone : choix « Repère » de « Que déplacer ? »). |
 | Centrer sur le repère | Ramène la carte sur le repère (affiche illustrée : recentre l'illustration). |
-| Carte / Image | Carte + illustration seulement : choisit le calque que cadrent les autres boutons et le mode Cadrer. |
+| Carte / Image | Carte + illustration seulement, sur ordinateur : choisit le calque que cadrent les autres boutons (sur téléphone : « Que déplacer ? »). |
 
 ### 3.4. La barre d'actions
 
@@ -646,7 +659,7 @@ L'onglet Illustration commence par une étape **Composition** :
 
 La phrase transmise au prompt pour cette composition est affichée. Pour accorder la carte à l'image : onglet Style,
 **Couleurs d'après une image**, **L'illustration** (version claire ou sombre). Le bouton flottant **Carte / Image**
-choisit le calque cadré : zoom, recentrage et mode Cadrer agissent alors sur la carte ou sur l'illustration (la
+(sur téléphone, le choix **Carte** ou **Illustration** de « Que déplacer ? », § 3.3) choisit le calque cadré : zoom, recentrage et mode Cadrer agissent alors sur la carte ou sur l'illustration (la
 carte reste en place pendant que l'illustration est cadrée). À l'inverse, la palette « Thème de l'affiche » de l'étape
 Prompt transmet les couleurs de la carte à l'IA.
 

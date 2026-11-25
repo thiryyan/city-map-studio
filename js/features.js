@@ -243,7 +243,9 @@ function showBanner(show,txt,label,action){
 }
 function setPlacing(on,idx=0){ ui.placing=on; ui.placeIdx=on?idx:0;
   $('placeHint').textContent = idx ? `Touchez la carte pour placer le lieu ${idx+1}` : 'Touchez la carte pour placer le repère';
-  if(on && idx && isSheet()) setSheet(ui.sheet); $('bPlace').classList.toggle('on',on); $('bPlace2').classList.toggle('on',on); $('placeHint').classList.toggle('show',on); slot.classList.toggle('placing',on); stageMode(); }
+  if(on && idx && isSheet()) setSheet(ui.sheet); $('bPlace').classList.toggle('on',on); $('bPlace2').classList.toggle('on',on); slot.classList.toggle('placing',on);
+  if(ui.framing) CMS.intent.placing(on);   // dans le mode Cadrer, « Repère » est un choix du sélecteur
+  stageMode(); }
 
 // ---------- Panneau coulissant et mode Cadrer (mobile portrait) ----------
 // Trois crans : « peek » (onglets + export, affiche presque plein écran), « half » (défaut), « full » (réglages, affiche en vignette).
@@ -272,11 +274,17 @@ function stageMode(){
   const active=ui.framing||ui.placing;
   if(active && isSheet() && ui.sheetBefore==null){ ui.sheetBefore=ui.sheet; setSheet('peek'); }
   else if(!active && ui.sheetBefore!=null){ const s=ui.sheetBefore; ui.sheetBefore=null; setSheet(s); }
-  $('frameBar').classList.toggle('show',ui.framing && !ui.placing);
+  const bar=ui.framing && isSheet();   // mobile, mode Cadrer : indication en haut, sélecteur « Que déplacer ? » et « Terminer » en bas
+  $('frameBar').classList.toggle('show',ui.framing);
+  $('placeHint').classList.toggle('show',ui.placing && !ui.framing);
   $('bFrame').classList.toggle('on',ui.framing); $('bFrame').setAttribute('aria-pressed',String(ui.framing));
   $('shield').hidden = !(isSheet() && !ui.framing && !ui.placing);
+  if(CMS.intent.sync(bar)) applySheet();   // le pied change de hauteur avec le sélecteur
 }
-function setFraming(on){ ui.framing=!!on; stageMode(); }
+function setFraming(on){
+  on=!!on; if(on!==ui.framing){ ui.framing=on; if(on) CMS.intent.begin(); else CMS.intent.end(); }
+  stageMode();
+}
 
 // ---------- Réglages dépendants d'un autre choix (issue #58) ----------
 // Une seule table, inventoriée dans le dossier technique (§ 6.1). Règle : un réglage qui n'a aucun sens dans le contexte
@@ -461,6 +469,91 @@ CMS.define('actbar', () => {
     update();
   }
   return {init, update, next};
+});
+
+// ---------- Que déplacer ? Sélecteur d'intention du mode Cadrer (mobile ; #82, point 2) ----------
+// Sur téléphone, plusieurs choses répondent à un glissement : la carte, le repère (toucher pour le poser), l'illustration et
+// les blocs de texte. Dans le mode Cadrer, un seul choix est actif à la fois (Carte · Repère · Illustration · Textes, selon le
+// type d'affiche) : ce qui est choisi reçoit les gestes, le reste est inerte (CSS `#app[data-intent]`, calque cadré de
+// CMS.illus). Le choix de départ découle de l'onglet ouvert (Repère, Textes, Illustration), sinon du calque touché. Hors du
+// mode Cadrer, rien ne change : carte verrouillée, blocs de texte déplaçables. Le choix reste hors de l'état de l'affiche
+// (pas d'historique, pas d'enregistrement). Ordinateur : sans objet (pointeur précis, boutons flottants).
+CMS.define('intent', () => {
+  const NAMES={map:'Carte',mark:'Repère',illus:'Illustration',text:'Textes'};
+  const HINT={map:'Glissez · pincez pour zoomer', illus:'Glissez l’illustration · + et − pour zoomer', text:'Glissez un texte pour le déplacer'};
+  let sig='', shown=false;
+  const illusReady=()=>!!CMS.illus?.ready?.();
+  const hasText=()=>{ const h=CMS.illus?.hitInfo; return !!(h && (h.title || h.foot)); };
+  /** Choix proposés selon le type d'affiche : Illustration seule = image et textes ; sinon carte, repère, image (si importée), textes (s'il y a un bloc à déplacer) */
+  function available(){
+    const m=st.mode, a=[];
+    if(m!=='illus') a.push('map','mark');
+    if(m!=='map' && illusReady()) a.push('illus');
+    if(hasText()) a.push('text');
+    return a;
+  }
+  const fallback=a=>a.includes('map') ? 'map' : a[0] || 'map';
+  /** Choix de départ : onglet Repère, Textes ou Illustration ; sinon le calque cadré */
+  function initial(a){
+    if(ui.placing && a.includes('mark')) return 'mark';
+    const v={repere:'mark',textes:'text',illus:'illus'}[ui.tab];
+    if(v && a.includes(v)) return v;
+    return CMS.illus?.layer?.()==='illus' && a.includes('illus') ? 'illus' : fallback(a);
+  }
+  /** Applique le choix : calque cadré, placement du repère. quiet : sans bulle d'information */
+  function apply(v,quiet){
+    ui.intent=v;
+    if(st.mode==='mix' && v!=='text') CMS.illus.setLayer(v==='illus' ? 'illus' : 'map',quiet);   // Carte + illustration : calque cadré ; sinon il est imposé par le type d'affiche
+    const wantPlacing=v==='mark';
+    if(wantPlacing!==ui.placing){ ui.intent=v; setPlacing(wantPlacing,0); }
+    sync(isSheet() && ui.framing);
+  }
+  /** Choix de l'utilisateur */
+  function set(v){
+    const a=available(); if(!a.includes(v) || v===ui.intent) return;
+    apply(v,false);
+    if(v==='text') toast('Glissez un texte pour le déplacer');
+  }
+  /** Début du mode Cadrer */
+  const begin=()=>{ if(!isSheet()) return; apply(initial(available()),true); };
+  /** Fin du mode Cadrer : le placement du repère lancé depuis le sélecteur se termine avec lui */
+  function end(){ if(ui.placing) setPlacing(false); ui.intent='map'; }
+  /** Placement du repère terminé (ou lancé) pendant le mode Cadrer : le sélecteur suit */
+  function placing(on){
+    if(on) ui.intent='mark';
+    else if(ui.intent==='mark') ui.intent=fallback(available());
+    sync(isSheet() && ui.framing);
+  }
+  /** Affichage : choix proposés, choix actif (radio ARIA), indication en haut de la scène. Un choix devenu impossible
+   *  (texte replacé dans le gabarit, image retirée) est remplacé. Renvoie vrai si le sélecteur apparaît ou disparaît
+   *  (le pied change de hauteur). */
+  function sync(bar){
+    bar = bar===undefined ? isSheet() && ui.framing : bar;
+    const was=shown, a=bar ? available() : [];
+    if(bar && a.length && !a.includes(ui.intent)){ apply(fallback(a),true); return was!==shown; }
+    const hint = ui.intent==='mark' ? $('placeHint').textContent : HINT[ui.intent] || HINT.map;
+    if(bar) app.dataset.intent=ui.intent; else delete app.dataset.intent;
+    const s=(bar?'1':'0')+a.join()+ui.intent+hint;
+    if(s===sig) return false; sig=s;
+    document.querySelectorAll('#intentSeg button').forEach(b=>{
+      const v=b.dataset.v, on=a.includes(v), cur=on && v===ui.intent; b.hidden=!on; b.setAttribute('aria-checked',String(cur)); b.tabIndex=cur ? 0 : -1;
+    });
+    if(bar && $('frameTxt').textContent!==hint) $('frameTxt').textContent=hint;
+    $('intentBar').hidden=!bar; shown=bar;
+    return was!==bar;
+  }
+  function init(){
+    const seg=$('intentSeg');
+    seg.addEventListener('click',e=>{ const b=e.target.closest('button'); if(b && !b.hidden) set(b.dataset.v); });
+    seg.addEventListener('keydown',e=>{   // motif ARIA des boutons radio : flèches, Début, Fin
+      const bs=[...seg.querySelectorAll('button:not([hidden])')], i=bs.findIndex(x=>x.dataset.v===ui.intent);
+      const j={ArrowRight:i+1,ArrowDown:i+1,ArrowLeft:i-1,ArrowUp:i-1,Home:0,End:bs.length-1}[e.key]; if(j==null) return;
+      e.preventDefault(); const b=bs[(j+bs.length)%bs.length]; set(b.dataset.v); b.focus();
+    });
+    // les blocs de texte, l'illustration et le type d'affiche changent les choix possibles
+    for(const ev of ['hits:placed','layer:synced','state:synced']) CMS.on(ev,()=>{ if(ui.framing) sync(); });
+  }
+  return {init, begin, end, placing, sync, set, available, NAMES};
 });
 
 // ---------- Réglages modifiés : pastilles, comptes et relecture (évolutions 5 et 7) ----------
@@ -653,6 +746,7 @@ function initSheet(){
   $('shield').onclick=()=>setFraming(true);
   $('bFrame').onclick=()=>setFraming(!ui.framing);
   $('bFrameDone').onclick=()=>setFraming(false);
+  CMS.intent.init();
   TWO_COL.addEventListener('change',()=>{ setFraming(false); setPlacing(false); ui.sheetBefore=null; setSheet(ui.sheet); stageMode(); });
   CMS.clean.init();
   setSheet('half'); stageMode();

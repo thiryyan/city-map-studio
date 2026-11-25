@@ -680,6 +680,7 @@ CMS.define('illus', () => {
       const pad=6, w=r.w*P.w+2*pad, h=Math.max(44,r.h*P.h+2*pad), cy=(r.y+r.h/2)*P.h;
       Object.assign(el.style,{left:(r.x*P.w-pad)+'px',top:(cy-h/2)+'px',width:w+'px',height:h+'px'});
     }
+    CMS.emit('hits:placed');   // le choix « Textes » du mode Cadrer n'existe que s'il y a un bloc à déplacer
   }
   const setFree=(k,p)=>{ if(k==='title') posOf().free=p; else posOf().ffree=p; scheduleOver(); };
   /** Centre actuel d'un bloc, en fraction de la zone des textes */
@@ -813,10 +814,13 @@ CMS.define('illus', () => {
     const set=(id,x)=>{ const e=$(id); e.title=x; e.setAttribute('aria-label',x); };
     set('bZoomIn',il?'Agrandir l\u2019illustration':'Zoom avant'); set('bZoomOut',il?'Réduire l\u2019illustration':'Zoom arrière');
     set('bToMarker',il?'Recentrer l\u2019illustration':'Centrer sur le repère');
-    $('frameTxt').textContent=il ? 'Glissez l\u2019illustration · + et − pour zoomer' : 'Glissez · pincez pour zoomer';
+    CMS.emit('layer:synced');   // sélecteur « Que déplacer ? » et indication du mode Cadrer (CMS.intent)
     if(was && was!==app.dataset.layer && ui.posterCss.w) layoutPreview();   // verrou déplacé sur le calque cadré
   }
-  function setLayer(v){ layerPref=v==='illus' ? 'illus' : 'map'; syncLayer(); toast(layer()==='illus' ? 'Cadrage de l\u2019illustration : la carte reste en place' : 'Cadrage de la carte'); }
+  function setLayer(v,quiet){
+    const was=layer(); layerPref=v==='illus' ? 'illus' : 'map'; syncLayer();
+    if(!quiet && layer()!==was) toast(layer()==='illus' ? 'Cadrage de l\u2019illustration : la carte reste en place' : 'Cadrage de la carte');
+  }
   function zoomBy(d){ if(!ready()) return; st.illus.zoom=clamp(st.illus.zoom+d,100,300); syncInputs(); syncImage(); redraw(); saveState(); }
   function recenter(){ if(!ready()) return; Object.assign(st.illus,{ox:0,oy:0}); redraw(); saveState(); }
   function exportState(){
@@ -1005,6 +1009,7 @@ CMS.define('illus', () => {
     poster.addEventListener('pointerdown',e=>{
       if(st.mode==='map' || !ready() || e.button>0 || e.target.closest('button')) return;
       if(st.mode==='mix' && isSheet() && layer()!=='illus') return;   // mobile : seul le calque cadré se déplace (#77)
+      if(isSheet() && ui.intent==='text' && ui.framing) return;       // mode Cadrer, choix « Textes » : l'image reste en place
       // Carte + illustration : la carte garde ses gestes ; la vignette se déplace par sa zone de prise
       if(st.mode==='mix' && (st.mix.compo==='vig' ? e.target.id!=='illusHit' : e.target.closest('#slot'))) return;
       drag={x:e.clientX,y:e.clientY,ox:st.illus.ox,oy:st.illus.oy,id:e.pointerId}; poster.setPointerCapture(e.pointerId); poster.classList.add('dragging');
