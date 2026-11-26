@@ -95,7 +95,8 @@ function normState(src){
     const T={v:2, style:V.oneOf(o.style,C.TSTYLES,d.style), color:orAuto(o.color,()=>V.hex(o.color,d.color)), shadow:orAuto(o.shadow,()=>hexOrNone(o.shadow,d.shadow)),
       outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,C.POS,d.pos),
       free:pt(o.free), fpos:V.oneOf(o.fpos,['auto',...C.POS],d.fpos), ffree:pt(o.ffree), deco:deco(o.deco),
-      plate:(q=>({line:V.oneOf(q.line,C.PLATE_LINES,d.plate.line), w:V.num(q.w,d.plate.w,0.5,3), color:orAuto(q.color,()=>V.hex(q.color,'#2C2A29')), gap:V.num(q.gap,d.plate.gap,0.5,2.5)}))(V.obj(o.plate)), ftpl:ftpl(o.ftpl),
+      plate:(q=>({line:V.oneOf(q.line,C.PLATE_LINES,d.plate.line), w:V.num(q.w,d.plate.w,0.5,3), color:orAuto(q.color,()=>V.hex(q.color,'#2C2A29')), gap:V.num(q.gap,d.plate.gap,0.5,2.5),
+        fill:orAuto(q.fill,()=>V.hex(q.fill,'#F3EAD8')), alpha:V.num(q.alpha,d.plate.alpha,0,1)}))(V.obj(o.plate)), ftpl:ftpl(o.ftpl),
       map:{pos:V.oneOf(m.pos,['auto',...C.POS],dm.pos), free:pt(m.free), fpos:V.oneOf(m.fpos,['auto',...C.POS],dm.fpos), ffree:pt(m.ffree), deco:deco(m.deco), ftpl:ftpl(m.ftpl)}};
     // Carte + illustration : positions propres (#77). Un état antérieur, où elles étaient partagées avec l'Illustration, les reprend.
     const x=o.mix ? V.obj(o.mix) : {pos:T.pos,free:T.free,fpos:T.fpos,ffree:T.ffree};

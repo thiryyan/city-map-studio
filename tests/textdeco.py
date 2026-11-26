@@ -214,7 +214,7 @@ async def main():
         await page.click('#textMore summary'); await page.wait_for_timeout(200)
         await page.click('#plateLineSeg [data-v=double]'); await page.click('#swPlate [data-v="#B5654B"]')
         await page.fill('#sPlateW', '2'); await page.dispatch_event('#sPlateW', 'input'); await page.wait_for_timeout(300)
-        check(await ev("JSON.stringify(__cms.st.illusText.plate)") == '{"line":"double","w":2,"color":"#B5654B","gap":1}', 'trait : double, × 2, terracotta enregistrés')
+        check(await ev("JSON.stringify(__cms.st.illusText.plate)") == '{"line":"double","w":2,"color":"#B5654B","gap":1,"fill":"auto","alpha":0.92}', 'trait : double, × 2, terracotta enregistrés')
         sr2 = await ev(STROKES)
         check(len(sr2) == 2 and all(x[0].lower() == '#b5654b' for x in sr2) and sr2[0][1] > sr[0][1] * 1.5, f'trait double, épais, à la couleur choisie {sr2}')
         await page.click('#plateLineSeg [data-v=dashed]'); await page.wait_for_timeout(200)

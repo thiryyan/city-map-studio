@@ -670,8 +670,8 @@ CMS.define('illus', () => {
   // marges intérieures (en U) : horizontale, verticale ; multipliées par l'éloignement du trait (st.illusText.plate.gap, #90)
   const PADS={cartouche:[0.06,0.045], bandeau:[0,0.04], etiquette:[0.075,0.045], capsule:[0.06,0.03], filets:[0.012,0.04]};
   /** Encre des plaques (cartouche, bandeau, étiquette, capsule, cachet) : couleur des lettres si elle se lit à 4,5:1 sur le papier, sinon Texte du thème */
-  function plateInk(col){
-    const p=st.colors.paper;
+  function plateInk(col, bg){
+    const p=bg||st.colors.paper;
     for(const x of [col,st.colors.text]) if(/^#[0-9A-Fa-f]{6}$/.test(x||'') && contrast(x,p)>=4.5) return x;
     return contrast('#000000',p)>=contrast('#FFFFFF',p) ? '#000000' : '#FFFFFF';
   }
@@ -821,22 +821,24 @@ CMS.define('illus', () => {
   /** Dessine un bloc mis en page par textLayout (coordonnées de sa zone), avec sa présentation ; col : couleur des lettres */
   function drawBlock(ctx, b, U, col){
     const c=st.colors, d=b.deco||'libre', ink=plateInk(col), r=b.box;
+    // fond des plaques à fond papier (cartouche, bandeau, étiquette) : couleur et opacité réglables ; encre lisible sur ce fond
+    const PL=st.illusText.plate||{}, bg=PL.fill && PL.fill!=='auto' ? PL.fill : c.paper, fillC=hexA(bg)(PL.alpha??0.92), pink=plateInk(col,bg);
     if(d==='cartouche'){
-      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.92); ctx.fillRect(r.x,r.y,r.w,r.h); ctx.restore();
-      const o=0.012*U; plateLine(ctx,U,ink,e=>ctx.strokeRect(r.x+o+e,r.y+o+e,r.w-2*(o+e),r.h-2*(o+e)));
+      ctx.save(); ctx.fillStyle=fillC; ctx.fillRect(r.x,r.y,r.w,r.h); ctx.restore();
+      const o=0.012*U; plateLine(ctx,U,pink,e=>ctx.strokeRect(r.x+o+e,r.y+o+e,r.w-2*(o+e),r.h-2*(o+e)));
     } else if(d==='bandeau'){
-      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.9); ctx.fillRect(r.x,r.y,r.w,r.h); ctx.restore();
-      const o=0.006*U; plateLine(ctx,U,ink,e=>{ ctx.beginPath(); for(const y of [r.y+o+e,r.y+r.h-o-e]){ ctx.moveTo(r.x,y); ctx.lineTo(r.x+r.w,y); } ctx.stroke(); });
+      ctx.save(); ctx.fillStyle=fillC; ctx.fillRect(r.x,r.y,r.w,r.h); ctx.restore();
+      const o=0.006*U; plateLine(ctx,U,pink,e=>{ ctx.beginPath(); for(const y of [r.y+o+e,r.y+r.h-o-e]){ ctx.moveTo(r.x,y); ctx.lineTo(r.x+r.w,y); } ctx.stroke(); });
     } else if(d==='etiquette'){   // coins coupés ; le trait suit la forme
       const cc=Math.min(0.035*U,r.h*0.28), o=0.011*U;
-      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.92); chamfer(ctx,r.x,r.y,r.w,r.h,cc); ctx.fill(); ctx.restore();
-      plateLine(ctx,U,ink,e=>{ const q=o+e; chamfer(ctx,r.x+q,r.y+q,r.w-2*q,r.h-2*q,Math.max(0,cc-q*0.6)); ctx.stroke(); });
+      ctx.save(); ctx.fillStyle=fillC; chamfer(ctx,r.x,r.y,r.w,r.h,cc); ctx.fill(); ctx.restore();
+      plateLine(ctx,U,pink,e=>{ const q=o+e; chamfer(ctx,r.x+q,r.y+q,r.w-2*q,r.h-2*q,Math.max(0,cc-q*0.6)); ctx.stroke(); });
     } else if(d==='capsule'){   // plaque pleine aux bouts arrondis, lettres couleur papier
       ctx.save(); ctx.fillStyle=paint(ink); pill(ctx,r.x,r.y,r.w,r.h); ctx.fill(); ctx.restore();
       const o=0.008*U; plateLine(ctx,U,c.paper,e=>{ const q=o+e; pill(ctx,r.x+q,r.y+q,r.w-2*q,r.h-2*q); ctx.stroke(); });
     } else if(d==='filets') drawRules(ctx,r,U,col);
     else if(d==='cachet') drawSeal(ctx,b.seal,ink);
-    const tc=d==='capsule' ? c.paper : ['cartouche','bandeau','etiquette','cachet'].includes(d) ? ink : col;
+    const tc=d==='capsule' ? c.paper : ['cartouche','bandeau','etiquette'].includes(d) ? pink : d==='cachet' ? ink : col;
     // filets d'un gabarit du bas (Souvenir, Carnet)
     if(b.rules?.length){ ctx.save(); ctx.strokeStyle=paint(tc); ctx.lineWidth=0.0016*U; ctx.beginPath();
       for(const q of b.rules){ ctx.moveTo(b.cl+q.x1,b.top+q.y1); ctx.lineTo(b.cl+q.x2,b.top+q.y2); } ctx.stroke(); ctx.restore(); }
@@ -1039,6 +1041,7 @@ CMS.define('illus', () => {
     cachet:'Le cachet se glisse sur l\u2019aperçu, comme un tampon ; le sous-titre court en bas de la couronne.',
     vertical:'Le titre longe le bord le plus proche : à gauche il se lit de bas en haut, à droite de haut en bas.'};
   // Trait des plaques et ordre des lignes (Textes, Plus de réglages)
+  const SW_FILL=[['auto','Auto : couleur du papier'],['#F3EAD8','Crème'],['#D9CDB5','Sable'],['#FFFFFF','Blanc'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#C5A059','Or']];
   const SW_PLATE=[['auto','Auto : encre de la plaque (couleur papier sur la capsule, couleur des lettres pour les filets)'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#C5A059','Or'],['#F3EAD8','Crème'],['#FFFFFF','Blanc']];
   const LINE_NAMES={title:'Titre',subtitle:'Sous-titre',coords:'Coordonnées',dedication:'Dédicace',names:'Noms',date:'Date'};
   const MORE_KEY='cityMapStudio.textMoreOpen';
@@ -1074,6 +1077,10 @@ CMS.define('illus', () => {
     const P=st.illusText.plate;
     setSeg('plateLineSeg',P.line); $('oPlateW').textContent='× '+String(P.w).replace('.',','); $('sPlateW').value=P.w;
     $('oPlateGap').textContent='× '+String(P.gap).replace('.',','); $('sPlateGap').value=P.gap;
+    $('oPlateAlpha').textContent=Math.round(P.alpha*100)+' %'; $('sPlateAlpha').value=P.alpha;
+    $('swPlateFill').querySelectorAll('button').forEach(b=>pressed(b,b.dataset.v===P.fill));
+    { const cu=$('swPlateFill').querySelector('input'), own=P.fill!=='auto' && !SW_FILL.some(([x])=>x===P.fill); cu.parentElement.classList.toggle('on',own); if(own) cu.value=P.fill; }
+    const ai=$('swPlateFill').querySelector('.sw.auto i'); if(ai) ai.style.background=st.colors.paper;
     $('swPlate').querySelectorAll('button').forEach(b=>pressed(b,b.dataset.v===P.color));
     const cu=$('swPlate').querySelector('input'); if(cu){ const own=P.color!=='auto' && !SW_PLATE.some(([x])=>x===P.color); cu.parentElement.classList.toggle('on',own); if(own) cu.value=P.color; }
     $('sPlateW').closest('.slider').hidden=P.line==='none'; $('swPlate').closest('.swrow').hidden=P.line==='none';
@@ -1136,6 +1143,7 @@ CMS.define('illus', () => {
       if(mix){ const zs=$(k==='title' ? 'tZoneSeg' : 'fZoneSeg'); setSeg(zs.id,zoneOf(k)); zs.querySelector('[data-v=illus]').textContent=st.mix.compo==='vig' ? 'Dans la bande' : 'Sur l\'illustration'; }
     }
     const tpl=P.ftpl||'classique'; setSeg('fTplSeg',tpl);
+    $('bPlateOpts').hidden=!['title','foot'].some(k=>['cartouche','bandeau','etiquette','capsule','filets'].includes(decoOf(k)));
     const tn=st.mode==='map' && !mapMoved().foot ? 'Choisir une mise en forme pose ce bloc sur l\u2019affiche, hors du gabarit.'
       : mix && st.mix.compo==='vig' && zoneOf('foot')==='illus' ? 'Dans la bande de la vignette, la mise en forme reste classique ; une autre pose le bloc sur la carte.' : '';
     { const n=$('fTplNote'); if(n.textContent!==tn) n.textContent=tn; n.hidden=!tn; }
@@ -1494,6 +1502,11 @@ CMS.define('illus', () => {
     for(const [hex,name] of SW_PLATE){ const auto=hex==='auto', b=h('button',{type:'button',className:'sw'+(auto?' auto':''),dataset:{v:hex},title:name,'aria-label':name},...(auto ? [h('span',{},'Auto')] : []));
       if(!auto) b.style.background=hex; b.onclick=()=>setPlate('color',hex); $('swPlate').append(b); }
     { const i=h('input',{type:'color','aria-label':'Autre couleur du trait'}); i.oninput=()=>setPlate('color',i.value.toUpperCase()); $('swPlate').append(h('label',{className:'sw custom',title:'Autre couleur'},i)); }
+    for(const [hex,name] of SW_FILL){ const auto=hex==='auto', b=h('button',{type:'button',className:'sw'+(auto?' auto':''),dataset:{v:hex},title:name,'aria-label':'Fond : '+name},...(auto ? [h('span',{},'Auto'),h('i',{'aria-hidden':'true'})] : []));
+      if(!auto) b.style.background=hex; b.onclick=()=>setPlate('fill',hex); $('swPlateFill').append(b); }
+    { const i=h('input',{type:'color','aria-label':'Autre couleur du fond'}); i.oninput=()=>setPlate('fill',i.value.toUpperCase()); $('swPlateFill').append(h('label',{className:'sw custom',title:'Autre couleur'},i)); }
+    // depuis la carte d'un bloc : ouvrir les réglages du fond et du trait
+    $('bPlateOpts').onclick=()=>{ $('textMore').open=true; CMS.panelScroll.to($('hPlate'),'start',true); };
     $('bOrderReset').onclick=()=>{ st.lineOrder=null; syncOrder(); changed(); toast('Lignes dans l\u2019ordre du gabarit · « Annuler » pour revenir'); };
     try{ if(localStorage.getItem(MORE_KEY)==='1') $('textMore').open=true; }catch(e){}
     $('textMore').addEventListener('input',syncMoreOpen); $('textMore').addEventListener('click',e=>{ if(!e.target.closest('summary')) setTimeout(syncMoreOpen); });

@@ -757,8 +757,8 @@ CMS.define('changes', () => {
       !!p.zone && !same(p.zone,d.zone) && 'textes posés sur la carte ou sur toute l\'affiche',   // Carte + illustration (#86)
       !same(p.deco,d.deco) && 'présentation des textes', (p.ftpl||'classique')!==d.ftpl && 'mise en forme des lignes du bas'];  },
       reset:o=>{ const p=tpos(o), d=dpos(o); copy(p,['pos','free','fpos','ffree','deco','ftpl',...(p.zone?['zone']:[])],d); }},
-    {id:'textMore', tab:'textes', at:'hPlate', sec:['textMore'], name:'Trait des plaques et ordre des lignes', items:s=>[
-      !same(s.illusText.plate,D.illusText.plate) && 'trait des plaques (style, épaisseur, couleur ou éloignement)', !!s.lineOrder && 'ordre des lignes'],
+    {id:'textMore', tab:'textes', at:'hPlate', sec:['textMore'], name:'Plaques (fond et trait) et ordre des lignes', items:s=>[
+      !same(s.illusText.plate,D.illusText.plate) && 'plaques (fond, opacité, trait ou éloignement)', !!s.lineOrder && 'ordre des lignes'],
       reset:o=>{ o.illusText.plate=structuredClone(D.illusText.plate); o.lineOrder=null; }},
     {id:'textSize', tab:'textes', at:'hTextSize', name:'Taille de tous les textes', items:s=>[s.textScaleAll!==D.textScaleAll && 'tous les textes à '+pct(s.textScaleAll)],
       reset:o=>copy(o,['textScaleAll'])},

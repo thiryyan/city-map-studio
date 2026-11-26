@@ -195,7 +195,8 @@ const DEFAULT_STATE = {
     deco:{title:'libre',foot:'libre'},
     // trait des plaques (cartouche, bandeau, étiquette, capsule, filets) : style (PLATE_LINES), épaisseur (× 0,5 à 3), couleur ('auto' =
     // encre de la plaque), éloignement entre le trait et le texte (gap, × 0,5 à 2,5 ; #90)
-    plate:{line:'solid',w:1,color:'auto',gap:1},
+    // fond des plaques à fond papier (cartouche, bandeau, étiquette) : couleur ('auto' = papier) et opacité (0 à 1)
+    plate:{line:'solid',w:1,color:'auto',gap:1,fill:'auto',alpha:0.92},
     ftpl:'classique',
     map:{pos:'auto',free:null,fpos:'auto',ffree:null,deco:{title:'libre',foot:'libre'},ftpl:'classique'},
     mix:{pos:'hc',free:null,fpos:'auto',ffree:null,deco:{title:'libre',foot:'libre'},zone:{title:'illus',foot:'illus'},ftpl:'classique'}}   // Carte + illustration : positions propres (#77)

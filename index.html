@@ -416,6 +416,7 @@
           <div class="chips decos" id="fDecoSeg" role="group" aria-labelledby="fDecoLbl"></div>
           <p class="hint" id="fDecoNote" aria-live="polite"></p>
         </section>
+        <div class="row end"><button class="lnk" type="button" id="bPlateOpts" hidden>Fond, transparence et trait des plaques…</button></div>
         <p class="fitnote" id="textWarn" aria-live="polite"></p>
         <h3 id="hTypo">Typographie</h3>
         <p class="hint">Les duos accordent la police du titre et celle du texte ; Vintage met le titre en capitales condensées.</p>
@@ -425,7 +426,7 @@
         <div class="row end"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>
         <div class="swrow"><span id="swTextLbl">Lettres</span><div class="swatches" id="swText" role="group" aria-labelledby="swTextLbl"></div></div>
         <details class="adv" id="textMore">
-          <summary><span>Plus de réglages</span><small>polices, ombre, tailles, trait, ordre</small><b class="chg" id="chg-textMore" hidden></b></summary>
+          <summary><span>Plus de réglages</span><small>polices, ombre, tailles, plaques, ordre</small><b class="chg" id="chg-textMore" hidden></b></summary>
           <h3 id="hFonts">Polices</h3>
           <div class="chips fcats" id="fontCats" role="group" aria-label="Catégories de polices"></div>
           <p class="sublbl">Police du titre</p>
@@ -451,12 +452,15 @@
           <div class="seg mt6" id="dedWrapSeg" role="group" aria-label="Retour à la ligne de la dédicace"><button data-v="auto" type="button" title="Deux lignes si, sur une seule, la dédicace devait être trop réduite">Auto</button><button data-v="one" type="button">Une ligne</button><button data-v="two" type="button">Deux lignes</button></div>
           <p class="sublbl">Format des coordonnées</p>
           <div class="seg" id="coordSeg" role="group" aria-label="Format des coordonnées"><button data-v="dec" type="button">Décimal</button><button data-v="dms" type="button">Degrés ° ′ ″</button></div>
-          <h3 id="hPlate">Trait des plaques</h3>
-          <p class="hint">Cartouche, bandeau, étiquette, capsule et filets art déco. Le cachet garde ses filets.</p>
+          <h3 id="hPlate">Plaques : fond et trait</h3>
+          <p class="hint">Fond : cartouche, bandeau et étiquette. Trait : ces trois plaques, la capsule et les filets art déco. Le cachet garde ses filets.</p>
+          <div class="swrow"><span id="swPlateFillLbl">Fond</span><div class="swatches" id="swPlateFill" role="group" aria-labelledby="swPlateFillLbl"></div></div>
+          <div class="slider"><label for="sPlateAlpha">Opacité du fond</label><output id="oPlateAlpha"></output><input type="range" id="sPlateAlpha" data-k="illusText.plate.alpha" min="0" max="1" step="0.05"></div>
+          <p class="sublbl">Trait</p>
           <div class="seg wrap" id="plateLineSeg" role="group" aria-label="Style du trait"><button data-v="solid" type="button">Plein</button><button data-v="double" type="button">Double</button><button data-v="dashed" type="button">Tirets</button><button data-v="dotted" type="button">Pointillés</button><button data-v="none" type="button">Aucun</button></div>
           <div class="slider"><label for="sPlateW">Épaisseur du trait</label><output id="oPlateW"></output><input type="range" id="sPlateW" data-k="illusText.plate.w" min="0.5" max="3" step="0.25"></div>
           <div class="slider"><label for="sPlateGap">Éloignement du trait et du texte</label><output id="oPlateGap"></output><input type="range" id="sPlateGap" data-k="illusText.plate.gap" min="0.5" max="2.5" step="0.25"></div>
-          <div class="swrow"><span id="swPlateLbl">Couleur</span><div class="swatches" id="swPlate" role="group" aria-labelledby="swPlateLbl"></div></div>
+          <div class="swrow"><span id="swPlateLbl">Couleur du trait</span><div class="swatches" id="swPlate" role="group" aria-labelledby="swPlateLbl"></div></div>
           <h3 id="hOrder">Ordre des lignes</h3>
           <p class="hint">Gabarits à cartouche (Cadre, Fondu, Médaillon, Cœur, Arche, Polaroid, Ciel, Lettres) : les lignes suivent cet ordre. Affiches illustrées et blocs posés sur l'affiche : l'ordre s'applique dans chaque bloc (titre et sous-titre ; dédicace, noms, date et coordonnées, ces deux dernières sur une même ligne).</p>
           <ol class="lorder" id="lineOrderList" aria-labelledby="hOrder"></ol>

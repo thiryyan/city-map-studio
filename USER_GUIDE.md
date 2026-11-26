@@ -473,7 +473,11 @@ Section repliable en bas de l'onglet, ouverte d'office quand l'un de ses réglag
 l'ouvre pas). Elle reprend les polices détaillées (§ 6.5), l'ombre et le contour (§ 6.6), la taille de chaque ligne
 (§ 6.1), la coupure de la dédicace (§ 6.2) et le format des coordonnées, puis :
 
-* **Trait des plaques** : style **Plein** (par défaut), **Double**, **Tirets**, **Pointillés** ou **Aucun** ; épaisseur
+* **Plaques : fond et trait** — **Fond** du cartouche, du bandeau et de l'étiquette : **Auto** (couleur du papier) ou
+  une teinte ; **Opacité du fond** de 0 à 100 % (92 % par défaut ; plus bas, l'illustration ou la carte transparaît).
+  Les lettres gardent leur couleur si elle se lit sur ce fond, sinon elles prennent une encre lisible. Le lien
+  **Fond, transparence et trait des plaques…**, sous les cartes de la mise en page, ouvre directement ces réglages.
+* **Trait** : style **Plein** (par défaut), **Double**, **Tirets**, **Pointillés** ou **Aucun** ; épaisseur
   × 0,5 à × 3 ; couleur **Auto** (encre de la plaque, couleur papier sur la capsule, couleur des lettres pour les
   filets art déco) ou une teinte ; **Éloignement du trait et du texte** × 0,5 à × 2,5 (marges intérieures de la
   plaque). S'applique au cartouche, au bandeau, à l'étiquette, à la capsule et aux filets ; le cachet garde ses filets.

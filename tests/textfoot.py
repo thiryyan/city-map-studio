@@ -78,6 +78,24 @@ async def main():
         r2 = await ev("CMS.illus.hitInfo.title")
         check(await ev("__cms.st.illusText.plate.gap") == 2 and r2['w'] > r1['w'] + 0.03 and r2['h'] > r1['h'] + 0.02, f'éloignement × 2 : plaque plus grande ({r1["w"]:.3f} → {r2["w"]:.3f})')
         check(await page.text_content('#oPlateGap') == '× 2', 'éloignement affiché')
+        # Fond des plaques : couleur, opacité ; encre lisible sur ce fond ; lien depuis la carte du bloc
+        await page.evaluate("$('textMore').open=false")
+        check(await page.is_visible('#bPlateOpts'), 'plaque choisie : lien « Fond, transparence et trait des plaques… »')
+        await page.click('#bPlateOpts'); await page.wait_for_timeout(300)
+        check(await ev("$('textMore').open"), 'lien : réglages des plaques ouverts')
+        await page.click('#swPlateFill [data-v="#24365A"]'); await page.fill('#sPlateAlpha', '1'); await page.dispatch_event('#sPlateAlpha', 'input'); await page.wait_for_timeout(300)
+        PX = """async ()=>{ const r=await __cms.composePoster(620,877), c=r.canvas.getContext('2d'), h=CMS.illus.hitInfo.title;
+          const p=[...c.getImageData(Math.round((h.x+0.006)*620),Math.round((h.y+h.h/2)*877),1,1).data]; r.canvas.width=0; return p; }"""
+        px = await ev(PX)
+        check(abs(px[0] - 0x24) < 12 and abs(px[1] - 0x36) < 12 and abs(px[2] - 0x5A) < 12, f'fond bleu nuit opaque sous le titre {px[:3]}')
+        gf = await ev(GLYPHS, 620); tf = word(gf, 'BLOIS')
+        ratio = await ev("c=>contrast(c,'#24365A')", tf[2]) if tf else 0
+        check(ratio >= 4.5, f'lettres lisibles sur le fond choisi ({tf and tf[2]}, {ratio:.1f}:1)')
+        await page.fill('#sPlateAlpha', '0.3'); await page.dispatch_event('#sPlateAlpha', 'input'); await page.wait_for_timeout(300)
+        px2 = await ev(PX)
+        check(px2[:3] != px[:3] and await page.text_content('#oPlateAlpha') == '30 %', f'opacité 30 % : le fond laisse voir l\'image {px2[:3]}')
+        check(await ev("normState({illusText:{v:2,plate:{fill:'zz',alpha:7}}}).illusText.plate.alpha") == 1, 'état forgé : opacité bornée')
+        await page.click('#swPlateFill [data-v=auto]'); await page.fill('#sPlateAlpha', '0.92'); await page.dispatch_event('#sPlateAlpha', 'input')
 
         # ---------- Carte : une mise en forme sort le bloc du gabarit ; Vignette ----------
         await ev("CMS.illus.setMode('map'); __cms.setLayout('classic',true)"); await page.wait_for_timeout(300)
