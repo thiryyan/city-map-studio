@@ -27,7 +27,7 @@
 // Identique à VERSION de sw.js (vérifié par tests/swversion.py et tests/pwa.py) : la page connaît sa version même
 // sans service worker (file://, première visite, hors ligne, tests). Format : cms-AAAA-MM-JJ suivi d'une lettre.
 CMS.define('build', () => {
-  const version = 'cms-2026-11-27b';
+  const version = 'cms-2026-11-27c';
   /** Libellé lisible : « 24/11/2026 (h) » ; identifiant d'un autre format rendu tel quel */
   const label = v => { const m = /^cms-(\d{4})-(\d\d)-(\d\d)(.*)$/.exec(v || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` + (m[4] ? ` (${m[4]})` : '') : (v || 'inconnue'); };
   return { version, label };

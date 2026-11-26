@@ -36,19 +36,26 @@ function simplify(pts,tol){
     if(md>tol && mi>0){ keep[mi]=1; stack.push([a,mi],[mi,b]); } }
   return pts.filter((_,i)=>keep[i]);
 }
-function parseGpx(txt){
+/** GPX → {name, pts (1 500 points au plus), show, wpts?} ; info.raw reçoit les points lus avant simplification (contrôle
+ *  de vraisemblance, CMS.route). Un tracé (trk) accompagné de points nommés (wpt) garde leurs noms : wpts [{lat, lon, name}] */
+function parseGpx(txt,info={}){
   const x=new DOMParser().parseFromString(txt,'application/xml'); if(x.querySelector('parsererror')) throw new Error('fichier GPX illisible');
-  let nodes=[...x.getElementsByTagName('trkpt')]; if(!nodes.length) nodes=[...x.getElementsByTagName('rtept')]; if(!nodes.length) nodes=[...x.getElementsByTagName('wpt')];
-  let pts=nodes.map(n=>[+n.getAttribute('lat'),+n.getAttribute('lon')]).filter(([a,b])=>isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180);
+  const ll=n=>[+n.getAttribute('lat'),+n.getAttribute('lon')], ok=([a,b])=>isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180;
+  const wnodes=[...x.getElementsByTagName('wpt')];
+  let nodes=[...x.getElementsByTagName('trkpt')]; if(!nodes.length) nodes=[...x.getElementsByTagName('rtept')]; if(!nodes.length) nodes=wnodes;
+  let pts=nodes.map(ll).filter(ok);
   if(pts.length<2) throw new Error('aucun tracé trouvé (points trkpt, rtept ou wpt)');
+  info.raw=pts;
   let tol=0.00002; while(pts.length>1500){ pts=simplify(pts,tol); tol*=2; }
   pts=pts.map(([a,b])=>[+a.toFixed(6),+b.toFixed(6)]);
-  return {name:(x.querySelector('trk > name, rte > name, metadata > name, name')?.textContent||'').trim(), pts, show:true};
+  const nm=['trk > name','rte > name','metadata > name','name'].map(q=>x.querySelector(q)).find(Boolean);   // tracé d'abord (pas le nom d'une étape)
+  const r={name:(nm?.textContent||'').trim().slice(0,120), pts, show:true};
+  if(nodes!==wnodes){ const w=wnodes.map(n=>{ const p=ll(n); return ok(p) && {lat:+p[0].toFixed(6), lon:+p[1].toFixed(6),
+      name:([...n.children].find(c=>c.localName==='name')?.textContent||'').replace(/\s+/g,' ').trim().slice(0,80)}; }).filter(Boolean).slice(0,20);
+    if(w.length) r.wpts=w; }
+  return r;
 }
-async function importGpx(f){
-  try{ st.route=parseGpx(await f.text()); renderRoute(); fitRoute(); changed(); toast(`Itinéraire importé · ${st.route.pts.length} points`); }
-  catch(e){ toast('Import GPX impossible : '+e.message,true); }
-}
+async function importGpx(f){ CMS.route.importGpxText(await f.text(),false); }
 function fitRoute(){
   const pts=[...(st.route?.pts||[])]; if(pts.length<2) return;
   let y0=90,y1=-90,x0=180,x1=-180; for(const [a,b] of pts){ y0=Math.min(y0,a); y1=Math.max(y1,a); x0=Math.min(x0,b); x1=Math.max(x1,b); }

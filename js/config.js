@@ -163,8 +163,10 @@ const DEFAULT_STATE = {
   lineOrder:null,               // ordre des lignes : null = celui du gabarit, sinon permutation de LINE_KEYS (CMS.order)
   texture:'none',               // papier (TEXTURES)
   markers2:[], markerLabel:'', numbered:false, linkMarkers:false,   // lieux supplémentaires (2 au plus)
-  route:null,                   // itinéraire importé : {name, pts:[[lat,lon],…], show}
+  route:null,                   // itinéraire importé : {name, pts:[[lat,lon],…], show, wpts?:[{lat,lon,name}]} (wpts : étapes nommées du GPX)
   routeStyle:{color:'marker',width:1,dash:false},
+  // itinéraire préparé avec une IA (#85, CMS.route) : type de parcours, boucle, lieux décochés (indices), étapes libres, langue du prompt
+  routePrompt:{kind:'walk',loop:false,off:[],extra:'',lang:'fr'},
   active:0, place2:null,        // gabarit « Deux lieux » : vue éditée (0 ou 1) et l'autre vue {center, zoom, marker}
   sky:{when:'',tz:'auto',lines:true,grid:true,moon:true,planets:true,milky:false},  // gabarit « Ciel » : date et heure locales, fuseau (minutes ou 'auto'), Lune, planètes, Voie lactée
   // effets de tracé : eau hachurée, bâtiments en contour, trait crayon ; lueur, lignes d'eau, bâtiments pointillés, parcs hachurés,

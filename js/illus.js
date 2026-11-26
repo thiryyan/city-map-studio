@@ -3,7 +3,8 @@
  *
  * L'application ne génère pas l'image : elle rédige un prompt pour l'IA de l'utilisateur (ChatGPT, Gemini…), qui pose
  * ses questions puis livre une illustration sans texte ni marge ; l'image importée est cadrée, retouchée, et le titre
- * est posé par drawPoster (aperçu et export identiques). Aucune requête réseau : tout reste dans le navigateur.
+ * est posé par drawPoster (aperçu et export identiques). L'image reste dans le navigateur ; seules les pistes peuvent, à la
+ * demande et après accord, lire les tuiles de la carte ou interroger Wikipédia (option désactivée par défaut, CMS.wiki).
  * L'image n'est pas dans l'état (st) : elle est tenue ici (image source ré-encodée, copie réduite pour l'aperçu).
  */
 'use strict';
@@ -1195,6 +1196,44 @@ CMS.define('illus', () => {
     }catch(e){ toast('Lecture de la carte impossible : '+(e.message||e),true); }
     finally{ btn.disabled=false; lab.textContent='Trouver des pistes dans la carte'; }
   }
+  // ---------- Pistes Wikipédia (#46) : option désactivée par défaut, accord préalable, coordonnées du lieu seulement ----------
+  const WIKI_KEY='cityMapStudio.wiki';
+  let wikiOn=(()=>{ try{ return localStorage.getItem(WIKI_KEY)==='1'; }catch(e){ return false; } })(), wikiBusy=false;
+  function setWiki(on){
+    wikiOn=!!on; try{ on ? localStorage.setItem(WIKI_KEY,'1') : localStorage.removeItem(WIKI_KEY); }catch(e){}
+    syncWiki();
+  }
+  function syncWiki(){
+    $('wikiOn').checked=wikiOn; $('wikiBox').hidden=!wikiOn;
+    const off=navigator.onLine===false, b=$('bWikiPistes');
+    b.disabled=off || wikiBusy;
+    if(!wikiBusy) $('wikiHint').textContent=off ? 'Hors ligne : la recherche Wikipédia reviendra avec le réseau ; les pistes de la carte restent disponibles.'
+      : 'Articles de Wikipédia situés autour du lieu, classés par notoriété.';
+  }
+  /** Rayon de recherche (m) : demi-diagonale de la carte affichée, entre 1 et 10 km */
+  function wikiRadius(){
+    const r=ui.slotCss, b=viewBounds({center:st.marker,zoom:st.zoom},r?.w>0 ? r.h/r.w : ratio()), dx=(b.e-b.w)/2*111.32*Math.cos(st.marker.lat*Math.PI/180), dy=(b.n-b.s)/2*110.57;
+    return Math.round(clamp(Math.hypot(dx,dy)*1000,1000,10000));
+  }
+  async function scanWiki(){
+    if(!wikiOn || wikiBusy) return;
+    if(navigator.onLine===false){ syncWiki(); toast('Hors ligne : recherche Wikipédia indisponible',true); return; }
+    if(!needConsent(()=>scanWiki())) return;
+    const lab=$('bWikiPistes').querySelector('span'), m=st.marker;
+    wikiBusy=true; syncWiki(); lab.textContent='Recherche dans Wikipédia…'; $('wikiHint').textContent='Recherche en cours (10 s au plus)…';
+    try{
+      const pages=await CMS.wiki.search({lat:m.lat, lon:m.lon, radius:wikiRadius()});
+      const list=CMS.wiki.rankWiki(pages, m, {city:st.texts.title||''}), seen=new Set(list.map(x=>x.toLowerCase()));
+      found=[...list, ...found.filter(x=>!seen.has(x.toLowerCase()))].slice(0,12); syncPrompt();
+      toast(list.length ? `${list.length} lieu${list.length>1?'x':''} remarquable${list.length>1?'s':''} trouvé${list.length>1?'s':''} dans Wikipédia : touchez-les pour les ajouter`
+        : 'Aucun lieu remarquable dans Wikipédia autour du lieu : dézoomez la carte ou ajoutez vos pistes', !list.length);
+    }catch(e){
+      if(e?.code==='ABORTED') return;
+      toast(e?.code==='TIMEOUT' ? 'Wikipédia ne répond pas : réessayez plus tard (les pistes de la carte restent disponibles)'
+        : e?.code==='RATE_LIMITED' ? 'Wikipédia limite les requêtes : réessayez dans une minute'
+        : 'Recherche Wikipédia impossible : '+(e?.message||e),true);
+    }finally{ wikiBusy=false; lab.textContent='Lieux remarquables (Wikipédia)'; syncWiki(); }
+  }
   /** Fondu : la carte de l'aperçu s'efface vers le haut, comme à l'export */
   function applyFade(){
     const on=st.mode==='mix' && st.mix.compo==='fondu', m=on ? `linear-gradient(to bottom, transparent, #000 ${FADE_STOP*100}%)` : '';
@@ -1489,6 +1528,11 @@ CMS.define('illus', () => {
       syncCompo(); syncImage(); ui.snap=null; layoutPreview(); placeHit(); saveState(); };
     document.querySelectorAll('#mixSplitSeg button').forEach(b=>b.onclick=()=>mixSet('split',b.dataset.v));
     $('bScanPistes').onclick=scanPistes;
+    // Wikipédia : cocher l'option vaut accord pour ce service, après l'accord général (needConsent) ; aucune requête avant le bouton
+    $('wikiOn').onchange=e=>{ if(!e.target.checked){ CMS.wiki.cancel(); setWiki(false); return; }
+      if(needConsent(()=>setWiki(true))) setWiki(true); else e.target.checked=false; };
+    $('bWikiPistes').onclick=scanWiki;
+    addEventListener('online',syncWiki); addEventListener('offline',syncWiki); syncWiki();
     document.querySelectorAll('#compoSeg button').forEach(b=>b.onclick=()=>mixSet('compo',b.dataset.v));
     document.querySelectorAll('#mixShapeSeg button').forEach(b=>b.onclick=()=>mixSet('shape',b.dataset.v));
     document.querySelectorAll('#mixPosSeg button').forEach(b=>b.onclick=()=>mixSet('pos',b.dataset.v));

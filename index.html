@@ -8,7 +8,7 @@
 <!-- Politique de sécurité du contenu (GitHub Pages ne permet pas d'en-têtes HTTP : balise meta).
      Aucun script ni style en ligne ; réseau limité aux services cartographiques (tous soumis à l'accord préalable)
      et aux CDN de secours de MapLibre (chargés avec SRI). À tenir à jour avec NOMINATIM, OFM_URL et ML_CDNS (js/config.js). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org https://nominatim.openstreetmap.org; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org https://nominatim.openstreetmap.org https://fr.wikipedia.org; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <title>City Map Studio — Atelier d'affiches cartographiques</title>
 <meta name="description" content="Créez une affiche cartographique souvenir : rues et cours d'eau d'une ville, repère sur le lieu d'une rencontre, textes et thèmes, export PNG A4 à 300 DPI. Gratuit, open source, sans compte.">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -188,6 +188,12 @@
           <button class="btn wide mt8" type="button" id="bScanPistes"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Trouver des pistes dans la carte</span></button>
           <div class="chips mt8" id="pisteSugg" role="group" aria-label="Pistes trouvées dans la carte" hidden></div>
           <p class="hint">Monuments, cours d'eau, sommets et paysages autour du lieu, lus dans la carte (avec le moteur Fichier : dans les données importées). Touchez une piste pour l'ajouter.</p>
+          <label class="tog mt8">Chercher aussi dans Wikipédia<input type="checkbox" id="wikiOn"></label>
+          <div id="wikiBox" hidden>
+            <button class="btn wide mt6" type="button" id="bWikiPistes"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><span>Lieux remarquables (Wikipédia)</span></button>
+            <p class="hint" id="wikiHint" aria-live="polite"></p>
+          </div>
+          <p class="hint" id="wikiPriv">Option désactivée par défaut. Activée, elle envoie à Wikipédia (fr.wikipedia.org) les seules coordonnées du lieu, avec votre adresse IP ; les lieux les plus connus alentour sont proposés comme pistes.</p>
           <form class="row mt8" id="pisteForm" autocomplete="off"><input class="grow" type="text" id="pisteIn" maxlength="80" enterkeyhint="done" aria-label="Ajouter une piste" placeholder="Château, port, vignobles…"><button class="btn" type="submit">Ajouter</button></form>
           <h3>Moment de la journée</h3>
           <div class="seg wrap" id="momentSeg" role="group" aria-label="Moment de la journée"></div>
@@ -357,6 +363,27 @@
         <label class="tog">Relier les lieux par un trait<input type="checkbox" data-k="linkMarkers"></label>
         <h3 id="hRoute">Itinéraire</h3>
         <label class="btn wide">Importer un tracé GPX<input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden></label>
+        <div class="row mt8"><button class="btn grow" type="button" id="bGpxPaste" hidden><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="11.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 3V2h4v1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Coller le GPX</button></div>
+        <textarea id="gpxText" class="prompt gpxtext mt8" rows="3" spellcheck="false" aria-label="GPX à coller (texte)" placeholder="… ou collez ici le GPX, ou toute la réponse de l'IA"></textarea>
+        <button class="btn wide mt6" type="button" id="bGpxImport">Importer le GPX collé</button>
+        <p class="hint" id="routeWarn" role="status" hidden></p>
+        <details class="adv" id="routeAi">
+          <summary><span>Préparer l'itinéraire avec une IA</span><small>pas de GPX ? décrivez les étapes</small></summary>
+          <p class="hint">L'application rédige le prompt ; collez-le dans ChatGPT ou Gemini, validez les étapes, puis rapportez le GPX (Coller le GPX).</p>
+          <h3>Type de parcours</h3>
+          <div class="seg wrap" id="rpKind" role="group" aria-label="Type de parcours"></div>
+          <h3>Étapes</h3>
+          <div id="rpPlaces" class="plist" role="group" aria-label="Lieux de l'affiche à reprendre comme étapes"></div>
+          <textarea id="rpExtra" class="prompt gpxtext plain mt8" rows="2" maxlength="400" aria-label="Autres étapes souhaitées" placeholder="Pont des Arts, puis le Marais, dîner rue…"></textarea>
+          <h3>Parcours</h3>
+          <div class="seg" id="rpLoop" role="group" aria-label="Boucle ou aller simple"><button data-v="0" type="button">Aller simple</button><button data-v="1" type="button">Boucle</button></div>
+          <h3>Langue du prompt</h3>
+          <div class="seg" id="rpLang" role="group" aria-label="Langue du prompt d'itinéraire"><button data-v="fr" type="button">Français</button><button data-v="en" type="button">English</button></div>
+          <h3><label for="routePromptOut">Prompt</label></h3>
+          <textarea id="routePromptOut" class="prompt" readonly rows="8"></textarea>
+          <button class="btn pri wide mt8" id="bCopyRoute" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Copier le prompt</button>
+          <p class="hint">Les tracés des IA restent approximatifs. Pour un tracé exact, préférez un calculateur d'itinéraire qui exporte un GPX (par exemple Komoot, Visorando, OpenRouteService, BRouter ou uMap), puis « Importer un tracé GPX ».</p>
+        </details>
         <div id="routeBox" hidden>
           <p class="hint" id="routeInfo"></p>
           <label class="tog">Afficher l'itinéraire<input type="checkbox" id="routeShow"></label>
@@ -531,7 +558,7 @@
 <dialog class="modal sheet" id="consent" aria-labelledby="consentTitle"><div class="box">
   <h2 id="consentTitle">Afficher la carte ?</h2>
   <p>Le fond de carte vient d'<b>OpenFreeMap</b> : l'afficher lui transmet votre adresse IP. Rien d'autre n'est envoyé, ni cookie ni mesure d'audience.</p>
-  <details><summary>En savoir plus</summary><p>La recherche d'adresse (<b>Nominatim</b>), utilisée seulement à votre demande, reçoit aussi votre adresse IP. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p></details>
+  <details><summary>En savoir plus</summary><p>La recherche d'adresse (<b>Nominatim</b>), utilisée seulement à votre demande, reçoit aussi votre adresse IP. Les pistes Wikipédia de l'onglet Illustration, désactivées par défaut, ne sont demandées qu'à votre demande, avec ce même accord. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p></details>
   <div class="row"><button class="btn pri" id="bConsentYes" type="button" autofocus>Afficher la carte</button><button class="btn" id="bConsentFile" type="button">Travailler hors ligne</button></div>
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -550,12 +577,14 @@
 <script src="js/config.js"></script>
 <script src="js/maplibre-loader.js"></script>
 <script src="js/geocoder.js"></script>
+<script src="js/wiki.js"></script>
 <script src="js/state.js"></script>
 <script src="js/geo.js"></script>
 <script src="js/render.js"></script>
 <script src="js/engines.js"></script>
 <script src="js/preview.js"></script>
 <script src="js/features.js"></script>
+<script src="js/route.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/illus.js"></script>
 <script src="js/export.js"></script>

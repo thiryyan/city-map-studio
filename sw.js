@@ -15,12 +15,12 @@
  * doit figurer dans APP (tests/pwa.py).
  */
 'use strict';
-const VERSION = 'cms-2026-11-27b';
+const VERSION = 'cms-2026-11-27c';
 const APP = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png',
   'css/app.css',
-  'js/core.js', 'js/config.js', 'js/maplibre-loader.js', 'js/geocoder.js', 'js/state.js', 'js/geo.js', 'js/render.js', 'js/engines.js', 'js/preview.js',
-  'js/features.js', 'js/ui.js', 'js/illus.js', 'js/export.js', 'js/main.js',
+  'js/core.js', 'js/config.js', 'js/maplibre-loader.js', 'js/geocoder.js', 'js/wiki.js', 'js/state.js', 'js/geo.js', 'js/render.js', 'js/engines.js', 'js/preview.js',
+  'js/features.js', 'js/route.js', 'js/ui.js', 'js/illus.js', 'js/export.js', 'js/main.js',
   'lib/maplibre-gl.js', 'lib/maplibre-gl.css', 'lib/fonts/fonts.css'
 ];
 
