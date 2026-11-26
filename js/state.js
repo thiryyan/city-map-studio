@@ -89,17 +89,20 @@ function normState(src){
     const pt=p=>{ const q=V.obj(p); return Number.isFinite(q.x) && Number.isFinite(q.y) ? {x:V.num(q.x,0.5,0,1), y:V.num(q.y,0.5,0,1)} : null; };   // position libre
     const m=V.obj(o.map), dm=d.map;
     // présentation des blocs (#86) ; un état antérieur n'en a pas : texte seul
-    const deco=x=>{ const q=V.obj(x); return {title:V.oneOf(q.title,C.DECOS,'libre'), foot:V.oneOf(q.foot,C.FOOT_DECOS,'libre')}; };
+    // le ruban (avant #90) devient la capsule
+    const deco=x=>{ const q=V.obj(x), t=q.title==='ruban' ? 'capsule' : q.title; return {title:V.oneOf(t,C.DECOS,'libre'), foot:V.oneOf(q.foot,C.FOOT_DECOS,'libre')}; };
+    const ftpl=v=>V.oneOf(v,C.FOOT_TPLS,'classique');
     const T={v:2, style:V.oneOf(o.style,C.TSTYLES,d.style), color:orAuto(o.color,()=>V.hex(o.color,d.color)), shadow:orAuto(o.shadow,()=>hexOrNone(o.shadow,d.shadow)),
       outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,C.POS,d.pos),
       free:pt(o.free), fpos:V.oneOf(o.fpos,['auto',...C.POS],d.fpos), ffree:pt(o.ffree), deco:deco(o.deco),
-      plate:(q=>({line:V.oneOf(q.line,C.PLATE_LINES,d.plate.line), w:V.num(q.w,d.plate.w,0.5,3), color:orAuto(q.color,()=>V.hex(q.color,'#2C2A29'))}))(V.obj(o.plate)),
-      map:{pos:V.oneOf(m.pos,['auto',...C.POS],dm.pos), free:pt(m.free), fpos:V.oneOf(m.fpos,['auto',...C.POS],dm.fpos), ffree:pt(m.ffree), deco:deco(m.deco)}};
+      plate:(q=>({line:V.oneOf(q.line,C.PLATE_LINES,d.plate.line), w:V.num(q.w,d.plate.w,0.5,3), color:orAuto(q.color,()=>V.hex(q.color,'#2C2A29')), gap:V.num(q.gap,d.plate.gap,0.5,2.5),
+        fill:orAuto(q.fill,()=>V.hex(q.fill,'#F3EAD8')), alpha:V.num(q.alpha,d.plate.alpha,0,1)}))(V.obj(o.plate)), ftpl:ftpl(o.ftpl),
+      map:{pos:V.oneOf(m.pos,['auto',...C.POS],dm.pos), free:pt(m.free), fpos:V.oneOf(m.fpos,['auto',...C.POS],dm.fpos), ffree:pt(m.ffree), deco:deco(m.deco), ftpl:ftpl(m.ftpl)}};
     // Carte + illustration : positions propres (#77). Un état antérieur, où elles étaient partagées avec l'Illustration, les reprend.
     const x=o.mix ? V.obj(o.mix) : {pos:T.pos,free:T.free,fpos:T.fpos,ffree:T.ffree};
     const z=V.obj(x.zone);
     T.mix={pos:V.oneOf(x.pos,C.POS,d.mix.pos), free:pt(x.free), fpos:V.oneOf(x.fpos,['auto',...C.POS],d.mix.fpos), ffree:pt(x.ffree),
-      deco:deco(o.mix && x.deco), zone:{title:V.oneOf(z.title,C.ZONES,'illus'), foot:V.oneOf(z.foot,C.ZONES,'illus')}};
+      deco:deco(o.mix && x.deco), zone:{title:V.oneOf(z.title,C.ZONES,'illus'), foot:V.oneOf(z.foot,C.ZONES,'illus')}, ftpl:ftpl(o.mix && x.ftpl)};
     if(o.v!==2 && Object.keys(o).length){
       if(T.style==='vintage') T.style='auto';
       if(V.oneOf(s.mode,C.MODES,'map')==='map') Object.assign(T,{color:'auto',shadow:'auto',outline:''});

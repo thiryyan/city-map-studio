@@ -3,7 +3,7 @@
 Vérifie : rendu par défaut inchangé (texte seul, sur l'illustration) ; zone de chaque bloc en Carte + illustration (sur
 l'illustration, sur la carte, sur toute l'affiche) : titre posé dans la moitié carte, aperçu = export, zone de prise et
 glisser relatifs à la zone, halo couleur papier sur la carte, prompt sans zone réservée au titre ; présentations : cartouche
-(encre lisible à 4,5:1 sur sa plaque), bandeau, ruban, cachet, vertical, arc autour du médaillon (lettres courbées, ni
+(encre lisible à 4,5:1 sur sa plaque), bandeau, étiquette, capsule, filets art déco, cachet, vertical, arc autour du médaillon (lettres courbées, ni
 glissé ni alerte de débordement) ; présentations proposées selon le contexte (arc : médaillon ; bloc du bas : trois) ;
 vignette : une présentation pose le bloc sur la carte ; mode Carte : une présentation sort le bloc du gabarit, arc avec les
 gabarits Médaillon et Arche, rien pour le titre du gabarit Lettres ; mises en page prêtes ; validation de l'état ; aucune
@@ -108,8 +108,8 @@ async def main():
 
         # ---------- Présentations proposées ----------
         vis = lambda seg: ev(f"[...document.querySelectorAll('#{seg} button')].filter(b=>!b.hidden).map(b=>b.dataset.v)")
-        check(await vis('tDecoSeg') == ['libre', 'cartouche', 'bandeau', 'ruban', 'cachet', 'vertical'], 'Haut/bas : toutes les présentations du titre, sauf l\'arc')
-        check(await vis('fDecoSeg') == ['libre', 'cartouche', 'bandeau'], 'lignes du bas : texte seul, cartouche, bandeau')
+        check(await vis('tDecoSeg') == ['libre', 'cartouche', 'bandeau', 'etiquette', 'capsule', 'filets', 'cachet', 'vertical'], 'Haut/bas : toutes les présentations du titre, sauf l\'arc')
+        check(await vis('fDecoSeg') == ['libre', 'cartouche', 'bandeau', 'etiquette', 'filets'], 'lignes du bas : texte seul, cartouche, bandeau, étiquette, filets')
 
         # ---------- Cartouche : plaque et encre lisible ----------
         await page.click('#tZoneSeg [data-v=map]'); await page.click('#tDecoSeg [data-v=cartouche]'); await page.click('#swText [data-v="#F3EAD8"]'); await page.wait_for_timeout(300)
@@ -123,8 +123,8 @@ async def main():
         check(all(abs(px[i] - pp[i]) < 30 for i in range(3)), f'cartouche : plaque couleur papier sous le titre {px[:3]} ~ {pp}')
         await page.click('#swText [data-v=auto]')
 
-        # ---------- Bandeau, ruban, cachet, vertical ----------
-        for d in ('bandeau', 'ruban', 'cachet', 'vertical'):
+        # ---------- Bandeau, étiquette, capsule, filets, cachet, vertical ----------
+        for d in ('bandeau', 'etiquette', 'capsule', 'filets', 'cachet', 'vertical'):
             await page.click(f'#tDecoSeg [data-v={d}]'); await page.wait_for_timeout(250)
             g = await ev(GLYPHS, 620)
             ok = word(g, 'BLOIS') is not None and await page.is_visible('#hitTitle')
@@ -195,14 +195,14 @@ async def main():
 
         # ---------- Illustration ----------
         await ev("CMS.illus.setMode('illus')"); await page.wait_for_timeout(300)
-        await page.click('#tDecoSeg [data-v=ruban]'); await page.wait_for_timeout(300)
+        await page.click('#tDecoSeg [data-v=capsule]'); await page.wait_for_timeout(300)
         gi = await ev(GLYPHS, 620); ti = word(gi, 'BLOIS')
-        check(ti and ti[2].lower() == paper, f'Illustration, ruban : lettres couleur papier sur la banderole {ti and ti[2]}')
-        check(await ev("__cms.st.illusText.deco.title") == 'ruban' and await page.is_hidden('#textPresets'), 'Illustration : présentation propre, pas de mise en page prête')
+        check(ti and ti[2].lower() == paper, f'Illustration, capsule : lettres couleur papier sur la plaque pleine {ti and ti[2]}')
+        check(await ev("__cms.st.illusText.deco.title") == 'capsule' and await page.is_hidden('#textPresets'), 'Illustration : présentation propre, pas de mise en page prête')
 
         # Enregistrement : l'état normalisé garde présentations et zones
         rt = await ev("normState(JSON.parse(JSON.stringify(__cms.st))).illusText")
-        check(rt['deco']['title'] == 'ruban' and rt['map']['deco']['title'] == 'arc' and rt['mix']['zone']['title'] == 'poster', 'enregistrement : présentations et zones conservées')
+        check(rt['deco']['title'] == 'capsule' and rt['map']['deco']['title'] == 'arc' and rt['mix']['zone']['title'] == 'poster', 'enregistrement : présentations et zones conservées')
 
         # ---------- Trait des plaques (Plus de réglages) ----------
         STROKES = """async ()=>{ const s=[], f=CanvasRenderingContext2D.prototype.strokeRect;
@@ -210,14 +210,13 @@ async def main():
           try{ const r=await __cms.composePoster(620,877); r.canvas.width=0; } finally{ CanvasRenderingContext2D.prototype.strokeRect=f; } return s; }"""
         await page.click('#fDecoSeg [data-v=cartouche]'); await page.wait_for_timeout(300)
         sr = await ev(STROKES)
-        check(len(sr) == 2 and all(x[2] == 0 for x in sr), f'par défaut : ruban et cartouche encadrés d\'un seul trait plein {sr}')
-        check(sr and sr[0][0].lower() == paper, 'ruban : trait couleur papier')
+        check(len(sr) == 1 and all(x[2] == 0 for x in sr), f'par défaut : cartouche encadré d\'un seul trait plein {sr}')
         await page.click('#textMore summary'); await page.wait_for_timeout(200)
         await page.click('#plateLineSeg [data-v=double]'); await page.click('#swPlate [data-v="#B5654B"]')
         await page.fill('#sPlateW', '2'); await page.dispatch_event('#sPlateW', 'input'); await page.wait_for_timeout(300)
-        check(await ev("JSON.stringify(__cms.st.illusText.plate)") == '{"line":"double","w":2,"color":"#B5654B"}', 'trait : double, × 2, terracotta enregistrés')
+        check(await ev("JSON.stringify(__cms.st.illusText.plate)") == '{"line":"double","w":2,"color":"#B5654B","gap":1,"fill":"auto","alpha":0.92}', 'trait : double, × 2, terracotta enregistrés')
         sr2 = await ev(STROKES)
-        check(len(sr2) == 4 and all(x[0].lower() == '#b5654b' for x in sr2) and sr2[0][1] > sr[0][1] * 1.5, f'trait double, épais, à la couleur choisie {sr2}')
+        check(len(sr2) == 2 and all(x[0].lower() == '#b5654b' for x in sr2) and sr2[0][1] > sr[0][1] * 1.5, f'trait double, épais, à la couleur choisie {sr2}')
         await page.click('#plateLineSeg [data-v=dashed]'); await page.wait_for_timeout(200)
         check(all(x[2] > 0 for x in await ev(STROKES)), 'tirets : trait discontinu')
         await page.click('#plateLineSeg [data-v=none]'); await page.wait_for_timeout(200)

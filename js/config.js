@@ -188,14 +188,18 @@ const DEFAULT_STATE = {
   // 'auto' (côté opposé au titre) ou une des 9 positions. map : mêmes champs pour le mode Carte, où 'auto' = dans le gabarit (#75) ;
   // mix : mêmes champs pour le mode Carte + illustration (#77). Chaque type d'affiche garde ainsi ses propres positions.
   // deco : présentation de chaque bloc (#86), propre à chaque type d'affiche : 'libre' (texte seul), 'cartouche', 'bandeau',
-  // et pour le titre seulement 'ruban', 'arc' (autour de la carte en forme), 'cachet', 'vertical' (DECOS, FOOT_DECOS).
+  // 'etiquette', 'filets', et pour le titre seulement 'capsule', 'arc' (autour de la carte en forme), 'cachet', 'vertical' (DECOS,
+  // FOOT_DECOS ; le 'ruban' d'avant #90 devient 'capsule'). ftpl : mise en forme du bloc du bas (FOOT_TPLS, #90).
   // mix.zone : zone de chaque bloc en Carte + illustration (#86) : 'illus' (l'illustration ; la bande de la vignette), 'map', 'poster'.
   illusText:{v:2,style:'auto',color:'auto',shadow:'auto',outline:'',off:4,pos:'hc',free:null,fpos:'auto',ffree:null,
     deco:{title:'libre',foot:'libre'},
-    // trait des plaques (cartouche, bandeau, ruban) : style (PLATE_LINES), épaisseur (× 0,5 à 3), couleur ('auto' = encre de la plaque)
-    plate:{line:'solid',w:1,color:'auto'},
-    map:{pos:'auto',free:null,fpos:'auto',ffree:null,deco:{title:'libre',foot:'libre'}},
-    mix:{pos:'hc',free:null,fpos:'auto',ffree:null,deco:{title:'libre',foot:'libre'},zone:{title:'illus',foot:'illus'}}}   // Carte + illustration : positions propres (#77)
+    // trait des plaques (cartouche, bandeau, étiquette, capsule, filets) : style (PLATE_LINES), épaisseur (× 0,5 à 3), couleur ('auto' =
+    // encre de la plaque), éloignement entre le trait et le texte (gap, × 0,5 à 2,5 ; #90)
+    // fond des plaques à fond papier (cartouche, bandeau, étiquette) : couleur ('auto' = papier) et opacité (0 à 1)
+    plate:{line:'solid',w:1,color:'auto',gap:1,fill:'auto',alpha:0.92},
+    ftpl:'classique',
+    map:{pos:'auto',free:null,fpos:'auto',ffree:null,deco:{title:'libre',foot:'libre'},ftpl:'classique'},
+    mix:{pos:'hc',free:null,fpos:'auto',ffree:null,deco:{title:'libre',foot:'libre'},zone:{title:'illus',foot:'illus'},ftpl:'classique'}}   // Carte + illustration : positions propres (#77)
 };
 // Modes illustrés : listes de valeurs (aussi utilisées par normState pour valider un état venu de l'extérieur)
 CMS.define('illusConf', () => ({
@@ -205,7 +209,8 @@ CMS.define('illusConf', () => ({
   // positions du bloc de titre : h/m/b (haut, milieu, bas) × g/c/d (gauche, centre, droite)
   POS:['hg','hc','hd','mg','mc','md','bg','bc','bd'],
   // présentations des blocs de texte (#86) : toutes pour le titre, les trois premières pour le bloc du bas ; zones (Carte + illustration)
-  DECOS:['libre','cartouche','bandeau','ruban','arc','cachet','vertical'], PLATE_LINES:['solid','double','dashed','dotted','none'], FOOT_DECOS:['libre','cartouche','bandeau'], ZONES:['illus','map','poster'],
+  DECOS:['libre','cartouche','bandeau','etiquette','capsule','filets','arc','cachet','vertical'], PLATE_LINES:['solid','double','dashed','dotted','none'],
+  FOOT_DECOS:['libre','cartouche','bandeau','etiquette','filets'], FOOT_TPLS:['classique','ligne','souvenir','carnet','colonnes'], ZONES:['illus','map','poster'],
   MOMENTS:[['any','Au choix','any time'],['aube','Aube','dawn'],['matin','Matin','morning'],['midi','Midi','midday'],['couchant','Couchant','sunset'],['nuit','Nuit','night']],
   SAISONS:[['any','Au choix','any season'],['printemps','Printemps','spring'],['ete','Été','summer'],['automne','Automne','autumn'],['hiver','Hiver','winter']],
   PALETTES:['ia','theme','photo'], LANGS:['fr','en'], VINTAGE:['none','light','strong'], FITS:['cover','contain'], TSTYLES:['auto','vintage','font'],

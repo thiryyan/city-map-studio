@@ -578,6 +578,52 @@ CMS.define('illus', () => {
     if(leg){ const sz=S.legend*U; G.legend=[{t:leg,o:{spacing:0.06,key:'legend',size:sz},lead:lead(sz)}]; }
     return CMS.order.sort(['dedication','names',ik,'legend']).flatMap(k=>G[k]||[]);
   }
+  /** Gabarits du bloc du bas (#90) : Ligne unique, Souvenir, Carnet, Colonnes. Lignes [{t, o, at, x?, al?}] : x depuis le bord
+   *  gauche du contenu, al : alignement propre ; rules : filets [{x1, y1, x2, y2}]. La légende des lieux numérotés suit, alignée
+   *  sur le bloc. Renvoie {lines, w, h, rules} (null : aucune ligne). sk : contour des lettres (null sur une plaque). */
+  function footTpl(ctx, U, mw, tpl, sk){
+    const tx=k=>textLine(k), sz=(k,b)=>b*U*tScale(k), lines=[], rules=[], W_=(t,o)=>measureLine(ctx,t,{...o,maxW:undefined});
+    const od=b=>({italic:true,key:'dedication',size:sz('dedication',b),stroke:sk}), on=b=>({italic:true,key:'names',size:sz('names',b),stroke:sk});
+    const oi=(k,b)=>({key:k,spacing:0.2,size:sz(k,b),stroke:sk});
+    const ded=tx('dedication'), names=tx('names'), date=tx('date'), coords=tx('coords');
+    let w=0, h=0;
+    if(tpl==='ligne'){   // tout sur une ligne, dans l'ordre des lignes choisi, réduite pour tenir
+      const P={dedication:ded && [ded,od(0.022)], names:names && [names,on(0.022)], date:date && [date,oi('date',0.015)], coords:coords && [coords,oi('coords',0.015)]};
+      const parts=CMS.order.sort(['dedication','names','date','coords']).map(k=>P[k]).filter(Boolean);
+      if(parts.length){ const t=[], sep=oi('date',0.015);
+        parts.forEach((p,i)=>{ if(i) t.push(['   ·   ',{...sep,key:''}]); t.push(p); });
+        const big=Math.max(...parts.map(p=>p[1].size)); h=big*1.15;
+        lines.push({t,at:big*0.85,o:{size:big,maxW:mw,key:parts[0][1].key,stroke:sk}}); w=Math.min(mw,W_(t,{})); }
+    } else if(tpl==='souvenir'){   // dédicace | noms à gauche ; date sur coordonnées à droite
+      const L=CMS.order.sort(['dedication','names']).map(k=>k==='dedication' ? ded && [ded,od(0.03)] : names && [names,on(0.022)]).filter(Boolean);
+      const R=CMS.order.sort(['date','coords']).map(k=>k==='date' ? date && [date,oi('date',0.015)] : coords && [coords,oi('coords',0.015)]).filter(Boolean);
+      const g=0.028*U, G=0.05*U, wl=L.map(([t,o])=>W_(t,o)), wr=Math.max(0,...R.map(([t,o])=>W_(t,o)));
+      const need=wl.reduce((a,b)=>a+b,0)+(L.length>1 ? 2*g : 0)+(R.length && L.length ? G+wr : wr);
+      const f=Math.min(1,mw/Math.max(need,1)); if(f<1) for(const [,o] of [...L,...R]){ o.size*=f; noteFit(o.key,f); }
+      const rs=R.length ? R[0][1].size : 0, capL=Math.max(0,...L.map(([,o])=>o.size*0.8));
+      const yb=Math.max(capL,R.length ? rs*0.8+(R.length-1)*rs*1.55 : 0);
+      let x=0; L.forEach(([t,o],i)=>{ if(i){ rules.push({x1:x+g,x2:x+g,y1:yb-capL,y2:yb+o.size*0.2}); x+=2*g; } lines.push({t,at:yb,x,al:'left',o}); x+=wl[i]*f; });
+      R.forEach(([t,o],i)=>lines.push({t,at:rs*0.8+i*rs*1.55+(yb-(rs*0.8+(R.length-1)*rs*1.55)),x:mw,al:'right',o}));
+      w=R.length ? mw : Math.min(mw,x); h=yb+Math.max(rs,...L.map(([,o])=>o.size))*0.3;
+    } else if(tpl==='carnet'){   // aligné à gauche : noms en grand, filet court, dédicace, date · coordonnées
+      let y=0;
+      if(names){ const o={...on(0.042),maxW:mw}; y+=o.size*0.85; lines.push({t:names,at:y,x:0,al:'left',o}); w=Math.max(w,W_(names,o)); y+=0.022*U; rules.push({x1:0,x2:0.08*U,y1:y,y2:y}); y+=0.02*U; w=Math.max(w,0.08*U); }
+      if(ded){ const o={...od(0.024),maxW:mw}; y+=o.size*0.85; lines.push({t:ded,at:y,x:0,al:'left',o}); w=Math.max(w,W_(ded,o)); y+=o.size*0.6; }
+      const info=infoLine(U,0.015,{spacing:0.2}); if(info){ const o={...info.o,maxW:mw,stroke:sk}; y+=o.size*1.1; lines.push({t:info.t,at:y,x:0,al:'left',o}); w=Math.max(w,W_(info.t,o)); }
+      w=Math.min(w,mw); h=y+0.006*U;
+    } else if(tpl==='colonnes'){   // date | dédicace et noms | coordonnées
+      const C=[ded && [ded,{...od(0.026),maxW:mw*0.5}], names && [names,{...on(0.02),maxW:mw*0.5}]].filter(Boolean);
+      let y=0; for(const [t,o] of C){ y+=o.size*(y ? 1.4 : 0.85); lines.push({t,at:y,x:mw/2,al:'center',o}); }
+      const side=[date && [date,{...oi('date',0.015),maxW:mw*0.24},0,'left'], coords && [coords,{...oi('coords',0.015),maxW:mw*0.24},mw,'right']].filter(Boolean);
+      const yb=y || Math.max(0,...side.map(([,o])=>o.size*0.85));
+      for(const [t,o,x,al] of side) lines.push({t,at:yb,x,al,o});
+      w=mw; h=Math.max(yb,y)+0.008*U;
+    }
+    if(!lines.length) return null;
+    const leg=textLine('legend');
+    if(leg){ const o={spacing:0.06,key:'legend',size:0.014*U,maxW:mw,stroke:sk}; h+=o.size*1.6; lines.push({t:leg,at:h-o.size*0.3,o}); }
+    return {lines,w,h,rules};
+  }
   /** Rangée d'une ligne : lignes [{t, o, at}] (at : ligne de base depuis le haut du bloc) → bloc {lines, w, h} */
   function blockOf(ctx, lines, h){ return {lines, w:Math.max(0,...lines.map(l=>measureLine(ctx,l.t,l.o))), h}; }
   /** Place un bloc : position prédéfinie (row, col) avec ses marges, ou centre libre {x, y} ; renvoie {left, top, align} */
@@ -600,7 +646,7 @@ CMS.define('illus', () => {
   const titleRC=T=>T.free ? rowOf(T.free.y)+colOf(T.free.x) : T.pos;
   const footSpec=T=>T.ffree ? {free:T.ffree} : {pos:T.fpos==='auto' ? (titleRC(T)[0]==='b' ? 'hc' : 'bc') : T.fpos};
   const footRC=T=>T.ffree ? rowOf(T.ffree.y)+colOf(T.ffree.x) : footSpec(T).pos;
-  // ---------- Présentations des blocs (#86) : texte seul, cartouche, bandeau, ruban, arc, cachet, vertical ----------
+  // ---------- Présentations des blocs (#86, #90) : texte seul, cartouche, bandeau, étiquette, capsule, filets, arc, cachet, vertical ----------
   /** Zone d'un bloc : en Carte + illustration, l'illustration (la bande de la vignette), la carte ou toute l'affiche */
   const zoneOf=(k,s=st)=>s.mode==='mix' ? (s.illusText.mix.zone?.[k]||'illus') : 'illus';
   /** Forme de carte autour de laquelle le titre peut se courber (Arc) : cercle ou arche, sinon null */
@@ -621,10 +667,11 @@ CMS.define('illus', () => {
   }
   /** Présentation appliquée : celle choisie, ou le texte seul quand elle est sans objet (le choix est gardé) */
   const decoOf=(k,s=st)=>{ const d=posOf(s).deco?.[k]||'libre'; return decoWhy(k,d,s) ? 'libre' : d; };
-  const PADS={cartouche:[0.04,0.028], bandeau:[0,0.026], ruban:[0.11,0.024]};   // marges intérieures (en U) : horizontale, verticale
-  /** Encre des plaques (cartouche, bandeau, ruban, cachet) : couleur des lettres si elle se lit à 4,5:1 sur le papier, sinon Texte du thème */
-  function plateInk(col){
-    const p=st.colors.paper;
+  // marges intérieures (en U) : horizontale, verticale ; multipliées par l'éloignement du trait (st.illusText.plate.gap, #90)
+  const PADS={cartouche:[0.06,0.045], bandeau:[0,0.04], etiquette:[0.075,0.045], capsule:[0.06,0.03], filets:[0.012,0.04]};
+  /** Encre des plaques (cartouche, bandeau, étiquette, capsule, cachet) : couleur des lettres si elle se lit à 4,5:1 sur le papier, sinon Texte du thème */
+  function plateInk(col, bg){
+    const p=bg||st.colors.paper;
     for(const x of [col,st.colors.text]) if(/^#[0-9A-Fa-f]{6}$/.test(x||'') && contrast(x,p)>=4.5) return x;
     return contrast('#000000',p)>=contrast('#FFFFFF',p) ? '#000000' : '#FFFFFF';
   }
@@ -652,28 +699,37 @@ CMS.define('illus', () => {
   function drawArc(ctx, A, col){
     if(A) for(const [c,x,y,rot] of A.glyphs){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); drawText(ctx,c,0,0,{...A.o,color:col}); ctx.restore(); }
   }
-  /** Trait des plaques (cartouche, bandeau, ruban ; Textes, Plus de réglages) : style, épaisseur et couleur ('auto' : couleur
-   *  propre à la plaque). draw(d) trace le chemin du trait, rentré de d vers l'intérieur (second trait du style double). */
-  function plateLine(ctx, U, auto, draw){
+  /** Trait des plaques (cartouche, bandeau, étiquette, capsule, filets ; Textes, Plus de réglages) : style, épaisseur et couleur
+   *  ('auto' : couleur propre à la plaque). draw(d) trace le chemin du trait, rentré de d vers l'intérieur (second trait du style
+   *  double) ; k : épaisseur relative (filet fin des filets art déco). */
+  function plateLine(ctx, U, auto, draw, k=1){
     const P=st.illusText.plate||{line:'solid',w:1,color:'auto'}; if(P.line==='none') return;
-    const lw=0.0018*U*P.w;
+    const lw=0.0018*U*P.w*k;
     ctx.save(); ctx.strokeStyle=paint(P.color==='auto' ? auto : P.color); ctx.lineCap=P.line==='dotted' ? 'round' : 'butt';
     if(P.line==='dashed') ctx.setLineDash([lw*5,lw*3.5]); else if(P.line==='dotted') ctx.setLineDash([0.001,lw*2.6]);
     if(P.line==='double'){ ctx.lineWidth=lw*1.2; draw(0); ctx.lineWidth=lw*0.45; draw(lw*3.2); }
     else { ctx.lineWidth=lw; draw(0); }
     ctx.restore();
   }
-  /** Ruban : banderole pleine, deux pointes découpées en V derrière ses extrémités */
-  function drawRibbon(ctx, r, U, fill){
-    const t=0.06*U, dy=r.h*0.3, th=r.h*0.85, n=t*0.45, back=shade(fill,0.3);
-    ctx.save(); ctx.fillStyle=paint(back);
-    for(const [e,i,dir] of [[r.x,r.x+t+0.02*U,1],[r.x+r.w,r.x+r.w-t-0.02*U,-1]]){
-      ctx.beginPath(); ctx.moveTo(i,r.y+dy); ctx.lineTo(e,r.y+dy); ctx.lineTo(e+dir*n,r.y+dy+th/2); ctx.lineTo(e,r.y+dy+th); ctx.lineTo(i,r.y+dy+th); ctx.closePath(); ctx.fill();
+  /** Rectangle à coins coupés (étiquette) : chemin, coins de taille c */
+  function chamfer(ctx, x, y, w, h, c){
+    ctx.beginPath(); ctx.moveTo(x+c,y); ctx.lineTo(x+w-c,y); ctx.lineTo(x+w,y+c); ctx.lineTo(x+w,y+h-c); ctx.lineTo(x+w-c,y+h);
+    ctx.lineTo(x+c,y+h); ctx.lineTo(x,y+h-c); ctx.lineTo(x,y+c); ctx.closePath();
+  }
+  /** Rectangle aux bouts arrondis (capsule) : chemin */
+  function pill(ctx, x, y, w, h){
+    const r=Math.min(h,w)/2; ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arc(x+w-r,y+r,r,-Math.PI/2,Math.PI/2);
+    ctx.lineTo(x+r,y+h); ctx.arc(x+r,y+r,r,Math.PI/2,Math.PI*1.5); ctx.closePath();
+  }
+  /** Filets art déco : un filet et un filet fin au-dessus et au-dessous du bloc, interrompus par un petit losange au centre */
+  function drawRules(ctx, r, U, ink){
+    const w=(st.illusText.plate||{}).w||1, s=0.008*U*Math.sqrt(w), cx=r.x+r.w/2, thin=0.0065*U;
+    for(const [y,dir] of [[r.y,-1],[r.y+r.h,1]]){
+      const seg=yy=>{ ctx.beginPath(); ctx.moveTo(r.x,yy); ctx.lineTo(cx-2.2*s,yy); ctx.moveTo(cx+2.2*s,yy); ctx.lineTo(r.x+r.w,yy); ctx.stroke(); };
+      plateLine(ctx,U,ink,e=>seg(y+dir*e)); plateLine(ctx,U,ink,e=>seg(y+dir*(thin+e)),0.45);
+      if(st.illusText.plate?.line!=='none'){ ctx.save(); ctx.fillStyle=paint(st.illusText.plate.color==='auto' ? ink : st.illusText.plate.color);
+        ctx.beginPath(); ctx.moveTo(cx,y-s); ctx.lineTo(cx+1.5*s,y); ctx.lineTo(cx,y+s); ctx.lineTo(cx-1.5*s,y); ctx.closePath(); ctx.fill(); ctx.restore(); }
     }
-    ctx.fillStyle=paint(fill); ctx.fillRect(r.x+t,r.y,r.w-2*t,r.h);
-    ctx.restore();
-    const o=0.008*U;   // un seul trait couleur papier, rentré dans la banderole
-    plateLine(ctx,U,st.colors.paper,d=>{ const e=o+d; ctx.strokeRect(r.x+t+e,r.y+e,r.w-2*t-2*e,r.h-2*e); });
   }
   /** Cachet : disque papier, double filet, filet intérieur, étoile au centre et deux points entre les textes */
   function drawSeal(ctx, S, ink){
@@ -700,7 +756,7 @@ CMS.define('illus', () => {
     const title=textLine('title'), sub=textLine('subtitle');
     const k=Math.min(1,W/U), ts=(vint?0.2:0.11)*U*k*tScale('title'), ss=0.024*U*tScale('subtitle'), gap=0.03*U;   // zone étroite (côte à côte) : titre réduit
     const capT=ts*(vint?0.84:0.72), capS=ss*0.75;
-    const dT=decoOf('title'), dF=decoOf('foot'), pad=d=>(PADS[d]||[0,0]).map(v=>v*U);
+    const dT=decoOf('title'), dF=decoOf('foot'), pg=st.illusText.plate?.gap||1, pad=d=>(PADS[d]||[0,0]).map(v=>v*U*pg);
     // flat : sur une plaque, ni ombre ni contour
     const titleBlock=(mw,flat)=>{
       const tl=[], sh=flat ? null : shadow, sk=w=>flat ? null : stroke(w); let y=0;
@@ -710,15 +766,19 @@ CMS.define('illus', () => {
       return blockOf(ctx,tl,y);
     };
     const footBlock=(mw,flat)=>{
+      const sk=flat ? null : stroke(0.001), tpl=T.ftpl||'classique';
+      if(tpl!=='classique'){ const b=footTpl(ctx,U,mw,tpl,sk); if(b) return b; }
       const fl=[]; let yy=0;
-      for(const r of footRows(U,mw)){ yy+=r.lead; fl.push({t:r.t,at:yy-r.o.size*0.45,o:{...r.o,maxW:mw,stroke:flat ? null : stroke(0.001)}}); }
+      for(const r of footRows(U,mw)){ yy+=r.lead; fl.push({t:r.t,at:yy-r.o.size*0.45,o:{...r.o,maxW:mw,stroke:sk}}); }
       return blockOf(ctx,fl,yy);
     };
-    /** Bloc à plat (texte seul, cartouche, bandeau, ruban) : marges intérieures, puis placement */
+    /** Bloc à plat (texte seul, cartouche, bandeau, étiquette, capsule, filets) : marges intérieures, puis placement. Les lignes
+     *  d'un gabarit du bas (x, al) et ses filets (rules) se placent depuis le bord gauche du contenu (cl). */
     const place=(b,spec,kind,d)=>{
-      const [px,py]=pad(d), bb={...b,lines:b.lines.map(l=>({...l,at:l.at+py})),w:b.w+2*px,h:b.h+2*py};
+      let [px,py]=pad(d); if(d==='capsule') px=Math.max(px,(b.h+2*py)*0.55);   // capsule : bouts arrondis
+      const bb={...b,lines:b.lines.map(l=>({...l,at:l.at+py})),rules:(b.rules||[]).map(r=>({...r,y1:r.y1+py,y2:r.y2+py})),w:b.w+2*px,h:b.h+2*py};
       const P=placeBlock(bb,W,H,m,spec,kind), ax=P.align==='left' ? P.left+px : P.align==='right' ? P.left+bb.w-px : P.ax;
-      return {...bb,...P,ax,deco:d,box:d==='bandeau' ? {x:0,y:P.top,w:W,h:bb.h} : P.rect};   // bandeau : toute la largeur de la zone
+      return {...bb,...P,ax,cl:P.left+px,deco:d,box:d==='bandeau' ? {x:0,y:P.top,w:W,h:bb.h} : P.rect};   // bandeau : toute la largeur de la zone
     };
     const tspec=T.free ? {free:T.free} : {pos:T.pos};
     const vert=()=>{   // titre pivoté le long d'un bord : de bas en haut à gauche, de haut en bas à droite
@@ -753,30 +813,42 @@ CMS.define('illus', () => {
       if(dT==='arc' && env.map) tOut=arc();
       else if(dT==='cachet') tOut=seal();
       else if(dT==='vertical') tOut=vert();
-      else { const d=dT==='arc' ? 'libre' : dT; tOut=place(titleBlock(maxW-2*pad(d)[0],d!=='libre'),tspec,'title',d); }
+      else { const d=dT==='arc' ? 'libre' : dT; tOut=place(titleBlock(maxW-2*pad(d)[0],!['libre','filets'].includes(d)),tspec,'title',d); }
     }
-    const fb=footBlock(maxW-2*pad(dF)[0],dF!=='libre');
+    const fb=footBlock(maxW-2*pad(dF)[0],!['libre','filets'].includes(dF));
     return {title:tOut, foot:fb.lines.length ? place(fb,footSpec(T),'foot',dF) : null};
   }
   /** Dessine un bloc mis en page par textLayout (coordonnées de sa zone), avec sa présentation ; col : couleur des lettres */
   function drawBlock(ctx, b, U, col){
     const c=st.colors, d=b.deco||'libre', ink=plateInk(col), r=b.box;
+    // fond des plaques à fond papier (cartouche, bandeau, étiquette) : couleur et opacité réglables ; encre lisible sur ce fond
+    const PL=st.illusText.plate||{}, bg=PL.fill && PL.fill!=='auto' ? PL.fill : c.paper, fillC=hexA(bg)(PL.alpha??0.92), pink=plateInk(col,bg);
     if(d==='cartouche'){
-      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.92); ctx.fillRect(r.x,r.y,r.w,r.h); ctx.restore();
-      const o=0.01*U; plateLine(ctx,U,ink,e=>ctx.strokeRect(r.x+o+e,r.y+o+e,r.w-2*(o+e),r.h-2*(o+e)));
+      ctx.save(); ctx.fillStyle=fillC; ctx.fillRect(r.x,r.y,r.w,r.h); ctx.restore();
+      const o=0.012*U; plateLine(ctx,U,pink,e=>ctx.strokeRect(r.x+o+e,r.y+o+e,r.w-2*(o+e),r.h-2*(o+e)));
     } else if(d==='bandeau'){
-      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.9); ctx.fillRect(r.x,r.y,r.w,r.h); ctx.restore();
-      const o=0.005*U; plateLine(ctx,U,ink,e=>{ ctx.beginPath(); for(const y of [r.y+o+e,r.y+r.h-o-e]){ ctx.moveTo(r.x,y); ctx.lineTo(r.x+r.w,y); } ctx.stroke(); });
-    } else if(d==='ruban') drawRibbon(ctx,r,U,ink);
+      ctx.save(); ctx.fillStyle=fillC; ctx.fillRect(r.x,r.y,r.w,r.h); ctx.restore();
+      const o=0.006*U; plateLine(ctx,U,pink,e=>{ ctx.beginPath(); for(const y of [r.y+o+e,r.y+r.h-o-e]){ ctx.moveTo(r.x,y); ctx.lineTo(r.x+r.w,y); } ctx.stroke(); });
+    } else if(d==='etiquette'){   // coins coupés ; le trait suit la forme
+      const cc=Math.min(0.035*U,r.h*0.28), o=0.011*U;
+      ctx.save(); ctx.fillStyle=fillC; chamfer(ctx,r.x,r.y,r.w,r.h,cc); ctx.fill(); ctx.restore();
+      plateLine(ctx,U,pink,e=>{ const q=o+e; chamfer(ctx,r.x+q,r.y+q,r.w-2*q,r.h-2*q,Math.max(0,cc-q*0.6)); ctx.stroke(); });
+    } else if(d==='capsule'){   // plaque pleine aux bouts arrondis, lettres couleur papier
+      ctx.save(); ctx.fillStyle=paint(ink); pill(ctx,r.x,r.y,r.w,r.h); ctx.fill(); ctx.restore();
+      const o=0.008*U; plateLine(ctx,U,c.paper,e=>{ const q=o+e; pill(ctx,r.x+q,r.y+q,r.w-2*q,r.h-2*q); ctx.stroke(); });
+    } else if(d==='filets') drawRules(ctx,r,U,col);
     else if(d==='cachet') drawSeal(ctx,b.seal,ink);
-    const tc=d==='ruban' ? c.paper : ['cartouche','bandeau','cachet'].includes(d) ? ink : col;
+    const tc=d==='capsule' ? c.paper : ['cartouche','bandeau','etiquette'].includes(d) ? pink : d==='cachet' ? ink : col;
+    // filets d'un gabarit du bas (Souvenir, Carnet)
+    if(b.rules?.length){ ctx.save(); ctx.strokeStyle=paint(tc); ctx.lineWidth=0.0016*U; ctx.beginPath();
+      for(const q of b.rules){ ctx.moveTo(b.cl+q.x1,b.top+q.y1); ctx.lineTo(b.cl+q.x2,b.top+q.y2); } ctx.stroke(); ctx.restore(); }
     if(b.arcs){ for(const a of b.arcs) drawArc(ctx,a,tc); return; }
     if(d==='vertical'){
       ctx.save(); ctx.translate(b.cx,b.cy); ctx.rotate(b.rot);
       try{ for(const l of b.lines) drawLine(ctx,l.t,0,-b.h/2+l.at,{...l.o,align:'center',color:tc}); } finally{ ctx.restore(); }
       return;
     }
-    for(const l of b.lines) drawLine(ctx,l.t,b.ax,b.top+l.at,{...l.o,align:b.align,color:tc});
+    for(const l of b.lines) drawLine(ctx,l.t,l.x!=null ? b.cl+l.x : b.ax,b.top+l.at,{...l.o,align:l.al||b.align,color:tc});
   }
   /** Dessine les blocs, chacun dans sa zone (specs : {title, foot} → {A : zone dans l'affiche, env}) ; renvoie leurs rectangles
    *  dans l'affiche, pour les zones de prise */
@@ -960,15 +1032,17 @@ CMS.define('illus', () => {
   const POS_NAMES={h:'en haut',m:'au milieu',b:'en bas'}, COL_NAMES={g:'à gauche',c:'au centre',d:'à droite'};
   const POS_ARROWS=['↖','↑','↗','←','•','→','↙','↓','↘'];
   // Présentations des blocs (#86) : nom et description (bulle)
-  const DECO_NAMES={libre:'Texte seul',cartouche:'Cartouche',bandeau:'Bandeau',ruban:'Ruban',arc:'Arc',cachet:'Cachet',vertical:'Vertical'};
-  const DECO_TIPS={libre:'Lettres seules, avec leur ombre et leur contour',cartouche:'Plaque couleur papier à double filet, façon carte ancienne',
-    bandeau:'Bande couleur papier sur toute la largeur de la zone',ruban:'Banderole à pointes, lettres couleur papier',
+  const DECO_NAMES={libre:'Texte seul',cartouche:'Cartouche',bandeau:'Bandeau',etiquette:'Étiquette',capsule:'Capsule',filets:'Filets art déco',arc:'Arc',cachet:'Cachet',vertical:'Vertical'};
+  const DECO_TIPS={libre:'Lettres seules, avec leur ombre et leur contour',cartouche:'Plaque couleur papier encadrée d\u2019un trait, façon carte ancienne',
+    bandeau:'Bande couleur papier sur toute la largeur de la zone',etiquette:'Plaque couleur papier à coins coupés, façon étiquette de bagage',
+    capsule:'Plaque pleine aux bouts arrondis, lettres couleur papier',filets:'Sans fond : filets au-dessus et au-dessous, losange au centre',
     arc:'Titre courbé autour de la carte ronde ou en arche',cachet:'Tampon rond : titre en couronne, étoile au centre',vertical:'Titre pivoté le long d\u2019un bord'};
   const DECO_HINTS={arc:'Le titre suit la forme de la carte : une position en haut de la grille le place au-dessus, en bas au-dessous.',
     cachet:'Le cachet se glisse sur l\u2019aperçu, comme un tampon ; le sous-titre court en bas de la couronne.',
     vertical:'Le titre longe le bord le plus proche : à gauche il se lit de bas en haut, à droite de haut en bas.'};
   // Trait des plaques et ordre des lignes (Textes, Plus de réglages)
-  const SW_PLATE=[['auto','Auto : encre de la plaque (couleur papier sur le ruban)'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#C5A059','Or'],['#F3EAD8','Crème'],['#FFFFFF','Blanc']];
+  const SW_FILL=[['auto','Auto : couleur du papier'],['#F3EAD8','Crème'],['#D9CDB5','Sable'],['#FFFFFF','Blanc'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#C5A059','Or']];
+  const SW_PLATE=[['auto','Auto : encre de la plaque (couleur papier sur la capsule, couleur des lettres pour les filets)'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#C5A059','Or'],['#F3EAD8','Crème'],['#FFFFFF','Blanc']];
   const LINE_NAMES={title:'Titre',subtitle:'Sous-titre',coords:'Coordonnées',dedication:'Dédicace',names:'Noms',date:'Date'};
   const MORE_KEY='cityMapStudio.textMoreOpen';
   let moreAuto=false;
@@ -1002,6 +1076,11 @@ CMS.define('illus', () => {
   function syncPlate(){
     const P=st.illusText.plate;
     setSeg('plateLineSeg',P.line); $('oPlateW').textContent='× '+String(P.w).replace('.',','); $('sPlateW').value=P.w;
+    $('oPlateGap').textContent='× '+String(P.gap).replace('.',','); $('sPlateGap').value=P.gap;
+    $('oPlateAlpha').textContent=Math.round(P.alpha*100)+' %'; $('sPlateAlpha').value=P.alpha;
+    $('swPlateFill').querySelectorAll('button').forEach(b=>pressed(b,b.dataset.v===P.fill));
+    { const cu=$('swPlateFill').querySelector('input'), own=P.fill!=='auto' && !SW_FILL.some(([x])=>x===P.fill); cu.parentElement.classList.toggle('on',own); if(own) cu.value=P.fill; }
+    const ai=$('swPlateFill').querySelector('.sw.auto i'); if(ai) ai.style.background=st.colors.paper;
     $('swPlate').querySelectorAll('button').forEach(b=>pressed(b,b.dataset.v===P.color));
     const cu=$('swPlate').querySelector('input'); if(cu){ const own=P.color!=='auto' && !SW_PLATE.some(([x])=>x===P.color); cu.parentElement.classList.toggle('on',own); if(own) cu.value=P.color; }
     $('sPlateW').closest('.slider').hidden=P.line==='none'; $('swPlate').closest('.swrow').hidden=P.line==='none';
@@ -1009,6 +1088,18 @@ CMS.define('illus', () => {
   }
   /** « Plus de réglages » : ouverte d'office (sans mémoriser) quand un de ses réglages est actif ; aucun réglage appliqué n'est caché */
   function syncMoreOpen(){ const d=$('textMore'); if(moreActive() && !d.open){ moreAuto=true; d.open=true; } }
+  // Gabarits du bloc du bas (#90)
+  const TPL_NAMES={classique:'Classique',ligne:'Ligne unique',souvenir:'Souvenir',carnet:'Carnet',colonnes:'Colonnes'};
+  const TPL_TIPS={classique:'Lignes empilées : dédicace, noms, date · coordonnées',ligne:'Tout sur une ligne : dédicace · noms · date · coordonnées',
+    souvenir:'Dédicace | noms à gauche, date et coordonnées à droite',carnet:'Aligné à gauche : noms en grand, filet, dédicace, date · coordonnées',
+    colonnes:'Date à gauche, dédicace et noms au centre, coordonnées à droite'};
+  /** Mise en forme du bloc du bas. Comme une présentation, elle sort le bloc du gabarit (Carte) ou de la bande (Vignette). */
+  function setTpl(v){
+    const P=posOf(); P.ftpl=v;
+    if(v!=='classique' && st.mode==='map' && !mapMoved().foot){ Object.assign(P,{fpos:'bc',ffree:null}); toast('Lignes du bas posées sur l\u2019affiche, hors du gabarit'); }
+    if(v!=='classique' && st.mode==='mix' && st.mix.compo==='vig' && zoneOf('foot')==='illus'){ P.zone={...P.zone,foot:'map'}; P.ffree=null; toast('Lignes du bas posées sur la carte'); }
+    syncText(); scheduleOver(); saveState();
+  }
   /** Mises en page prêtes (#86) : elles ne font que remplir zone, position et présentation */
   const PRESETS=[
     ['Titre en cartouche sur la carte', s=>s.mode==='mix' || (s.mode==='map' && s.layout!=='typo'),
@@ -1051,6 +1142,11 @@ CMS.define('illus', () => {
       const n=$(note); if(n.textContent!==t) n.textContent=t; n.hidden=!t;
       if(mix){ const zs=$(k==='title' ? 'tZoneSeg' : 'fZoneSeg'); setSeg(zs.id,zoneOf(k)); zs.querySelector('[data-v=illus]').textContent=st.mix.compo==='vig' ? 'Dans la bande' : 'Sur l\'illustration'; }
     }
+    const tpl=P.ftpl||'classique'; setSeg('fTplSeg',tpl);
+    $('bPlateOpts').hidden=!['title','foot'].some(k=>['cartouche','bandeau','etiquette','capsule','filets'].includes(decoOf(k)));
+    const tn=st.mode==='map' && !mapMoved().foot ? 'Choisir une mise en forme pose ce bloc sur l\u2019affiche, hors du gabarit.'
+      : mix && st.mix.compo==='vig' && zoneOf('foot')==='illus' ? 'Dans la bande de la vignette, la mise en forme reste classique ; une autre pose le bloc sur la carte.' : '';
+    { const n=$('fTplNote'); if(n.textContent!==tn) n.textContent=tn; n.hidden=!tn; }
     const box=$('textPresets'), list=PRESETS.filter(([,on])=>on(st));
     if(box.childElementCount!==list.length || [...box.children].some((b,i)=>b.textContent!==list[i][0]))
       box.replaceChildren(...list.map(([name,,apply])=>{ const b=h('button',{type:'button',className:'chip'},name);
@@ -1406,11 +1502,17 @@ CMS.define('illus', () => {
     for(const [hex,name] of SW_PLATE){ const auto=hex==='auto', b=h('button',{type:'button',className:'sw'+(auto?' auto':''),dataset:{v:hex},title:name,'aria-label':name},...(auto ? [h('span',{},'Auto')] : []));
       if(!auto) b.style.background=hex; b.onclick=()=>setPlate('color',hex); $('swPlate').append(b); }
     { const i=h('input',{type:'color','aria-label':'Autre couleur du trait'}); i.oninput=()=>setPlate('color',i.value.toUpperCase()); $('swPlate').append(h('label',{className:'sw custom',title:'Autre couleur'},i)); }
+    for(const [hex,name] of SW_FILL){ const auto=hex==='auto', b=h('button',{type:'button',className:'sw'+(auto?' auto':''),dataset:{v:hex},title:name,'aria-label':'Fond : '+name},...(auto ? [h('span',{},'Auto'),h('i',{'aria-hidden':'true'})] : []));
+      if(!auto) b.style.background=hex; b.onclick=()=>setPlate('fill',hex); $('swPlateFill').append(b); }
+    { const i=h('input',{type:'color','aria-label':'Autre couleur du fond'}); i.oninput=()=>setPlate('fill',i.value.toUpperCase()); $('swPlateFill').append(h('label',{className:'sw custom',title:'Autre couleur'},i)); }
+    // depuis la carte d'un bloc : ouvrir les réglages du fond et du trait
+    $('bPlateOpts').onclick=()=>{ $('textMore').open=true; CMS.panelScroll.to($('hPlate'),'start',true); };
     $('bOrderReset').onclick=()=>{ st.lineOrder=null; syncOrder(); changed(); toast('Lignes dans l\u2019ordre du gabarit · « Annuler » pour revenir'); };
     try{ if(localStorage.getItem(MORE_KEY)==='1') $('textMore').open=true; }catch(e){}
     $('textMore').addEventListener('input',syncMoreOpen); $('textMore').addEventListener('click',e=>{ if(!e.target.closest('summary')) setTimeout(syncMoreOpen); });
     $('textMore').addEventListener('toggle',()=>{ if(moreAuto){ moreAuto=false; return; } try{ $('textMore').open ? localStorage.setItem(MORE_KEY,'1') : localStorage.removeItem(MORE_KEY); }catch(e){} });
     // Présentation et zone des blocs (#86)
+    for(const v of C.FOOT_TPLS){ const b=h('button',{type:'button',className:'chip',dataset:{v},title:TPL_TIPS[v]},TPL_NAMES[v]); b.onclick=()=>setTpl(v); $('fTplSeg').append(b); }
     for(const [k,seg,list] of [['title','tDecoSeg',C.DECOS],['foot','fDecoSeg',C.FOOT_DECOS]])
       for(const d of list){ const b=h('button',{type:'button',className:'chip',dataset:{v:d},title:DECO_TIPS[d]},DECO_NAMES[d]); b.onclick=()=>setDeco(k,d); $(seg).append(b); }
     for(const [k,seg] of [['title','tZoneSeg'],['foot','fZoneSeg']]) $(seg).querySelectorAll('button').forEach(b=>b.onclick=()=>setZone(k,b.dataset.v));
