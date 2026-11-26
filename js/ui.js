@@ -156,6 +156,37 @@ function undo(){ compareBefore(false); if(!hist.past.length) return; clearTimeou
 function redo(){ compareBefore(false); if(!hist.future.length) return; hist.past.push(hist.cur); applySnap(hist.future.pop()); toast('Modification rétablie'); }
 
 function buildUI(){
+// ---------- Sliders du panneau : pas de réglage accidentel en faisant défiler (#92) ----------
+  // Au toucher, un slider du panneau n'obéit que si le doigt se pose sur sa poignée ; ailleurs (piste), le geste
+  // sert au défilement et toute valeur qu'il aurait provoquée est annulée. Souris et clavier : inchangés.
+  // Un réglage abouti propose « Annuler » (historique existant).
+  const SLIDER_GRAB=26;   // px autour du centre de la poignée
+  const sliderGuard=()=>{
+  const inPanel=el=>el?.matches?.('input[type=range]') && el.closest('#panel');
+  let guard=null;   // {el,v}
+  document.addEventListener('touchstart',e=>{
+    const el=e.target; guard=null; if(!inPanel(el)) return;
+    const r=el.getBoundingClientRect(), mn=+el.min||0, mx=+el.max||100, f=mx>mn?(+el.value-mn)/(mx-mn):0, th=20;
+    const x=r.left+th/2+f*(r.width-th), t=e.touches[0];
+    if(Math.abs(t.clientX-x)>SLIDER_GRAB) guard={el,v:el.value};
+  },{capture:true,passive:true});
+  const end=()=>{ if(guard){ guard.el.value=guard.v; guard=null; } };
+  document.addEventListener('touchend',e=>{ if(guard){ e.preventDefault(); end(); } },{capture:true,passive:false});   // pas de saut au toucher de la piste
+  document.addEventListener('touchcancel',end,{capture:true});
+  document.addEventListener('input',e=>{ if(guard && e.target===guard.el){ e.stopImmediatePropagation(); guard.el.value=guard.v; } },true);
+  document.addEventListener('change',e=>{ if(guard && e.target===guard.el) e.stopImmediatePropagation(); },true);
+  // « Annuler » après un réglage
+  let v0=new WeakMap();
+  const note=e=>{ if(inPanel(e.target) && !guard) v0.set(e.target,e.target.value); };
+  document.addEventListener('pointerdown',note,true); document.addEventListener('keydown',note,true);
+  document.addEventListener('change',e=>{
+    const el=e.target; if(!inPanel(el) || !v0.has(el) || v0.get(el)===el.value) return;
+    v0.delete(el);
+    const lab=document.querySelector(`label[for="${el.id}"]`)?.textContent || el.getAttribute('aria-label') || 'Réglage';
+    toast(`${lab} modifié`,false,{label:'Annuler',fn:undo});
+  });
+  };
+  sliderGuard();
   // onglets
   document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
     if(isSheet()){
