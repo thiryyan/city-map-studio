@@ -652,8 +652,10 @@ CMS.define('changes', () => {
       reset:o=>{ copy(o,['font','fontTitle']); copy(o.illusText,['style','color','shadow','outline','off'],D.illusText); }},
     {id:'textPos', tab:'textes', at:'hTextPos', name:'Positions des textes', items:s=>{ const p=tpos(s), d=dpos(s); return [
       (p.free || p.pos!==d.pos) && (p.free ? 'titre placé à la main' : 'titre déplacé'),
-      (p.ffree || p.fpos!==d.fpos) && (p.ffree ? 'lignes du bas placées à la main' : 'lignes du bas déplacées')]; },
-      reset:o=>{ const p=tpos(o), d=dpos(o); copy(p,['pos','free','fpos','ffree'],d); }},
+      (p.ffree || p.fpos!==d.fpos) && (p.ffree ? 'lignes du bas placées à la main' : 'lignes du bas déplacées'),
+      !!p.zone && !same(p.zone,d.zone) && 'textes posés sur la carte ou sur toute l\'affiche',   // Carte + illustration (#86)
+      !same(p.deco,d.deco) && 'présentation des textes'];  },
+      reset:o=>{ const p=tpos(o), d=dpos(o); copy(p,['pos','free','fpos','ffree','deco',...(p.zone?['zone']:[])],d); }},
     {id:'textSize', tab:'textes', at:'hTextSize', name:'Tailles des textes', items:s=>{
       const n=Object.keys(D.textScale).filter(k=>s.textScale[k]!==D.textScale[k]).length;
       return [s.textScaleAll!==D.textScaleAll && 'tous les textes à '+pct(s.textScaleAll), n>0 && (n>1 ? n+' lignes redimensionnées' : '1 ligne redimensionnée')]; },

@@ -403,6 +403,36 @@ en-tête et pied de Souvenir, Voyage… La mention des sources n'est pas concern
   pour revenir à la grille (affiche Carte : dans le gabarit), Échap pour sortir.
 * Les positions sont propres à chaque type d'affiche : un titre déplacé sur une illustration ne bouge pas sur la
   carte.
+* **Carte + illustration** : au-dessus de chaque grille, choisissez où poser le bloc : **Sur l'illustration** (par
+  défaut ; en Vignette, **Dans la bande** sous la carte), **Sur la carte** ou **Toute l'affiche**. La grille et le
+  glisser s'appliquent dans cette zone. Sur la carte, « Auto » remplace l'ombre par un contour couleur papier, plus
+  lisible sur les rues. Un titre posé sur la carte n'a plus besoin d'une zone calme dans l'illustration : le prompt
+  ne la demande plus.
+
+### 6.8. Présentation des textes
+
+Chaque bloc a sa présentation, propre à chaque type d'affiche :
+
+| Présentation | Rendu | Pour |
+| :--- | :--- | :--- |
+| **Texte seul** (par défaut) | Les lettres, avec leur ombre et leur contour. | Titre et lignes du bas. |
+| **Cartouche** | Plaque couleur papier à double filet, façon carte ancienne. | Titre et lignes du bas. |
+| **Bandeau** | Bande couleur papier sur toute la largeur de la zone, filets en haut et en bas. | Titre et lignes du bas. |
+| **Ruban** | Banderole à pointes, lettres couleur papier. | Titre. |
+| **Arc** | Titre courbé autour de la carte : au-dessus (grille en haut), ou au-dessous d'un cercle (grille en bas). | Titre ; médaillon rond ou en arche, gabarits Médaillon et Arche. |
+| **Cachet** | Tampon rond : titre en couronne, sous-titre en bas, étoile au centre. | Titre. |
+| **Vertical** | Titre pivoté le long d'un bord : de bas en haut à gauche, de haut en bas à droite. | Titre. |
+
+* Sur une plaque (cartouche, bandeau, ruban, cachet), les lettres gardent leur couleur si elle se lit sur le papier ;
+  sinon elles prennent la couleur Texte du thème. Ombre et contour n'y sont pas utiles.
+* L'arc suit la carte : il ne se glisse pas. Les autres présentations se glissent comme le texte seul.
+* Sur une affiche Carte, choisir une présentation sort le bloc du gabarit et le pose sur l'affiche. En Vignette, elle
+  pose le bloc sur la carte (la bande garde le texte seul).
+* Une présentation sans objet ici (un arc sans médaillon, par exemple) est signalée : le choix est gardé, le bloc
+  s'affiche en texte seul.
+* **Mises en page prêtes** (Carte et Carte + illustration) : Titre en cartouche sur la carte, Bandeau à la jonction
+  (Haut / bas et Fondu), Titre en arc sur le médaillon, Cachet en coin. Elles règlent zone, position et présentation
+  d'un coup ; « Annuler » revient en arrière.
 
 ---
 
@@ -653,7 +683,7 @@ L'onglet Illustration commence par une étape **Composition** :
 | Composition | Disposition | Options |
 | :--- | :--- | :--- |
 | **Médaillon** | Illustration en pleine page, carte dans une forme. | Forme : rond, cœur, arche ; position : haut, centre, bas. |
-| **Vignette** | Carte encadrée, illustration dans une arche en haut à droite, textes dans une bande sous la carte. | — |
+| **Vignette** | Carte encadrée, illustration dans une arche en haut à droite, textes dans une bande sous la carte (ou posés sur la carte, § 6.7). | — |
 | **Haut / bas** | Illustration en haut, carte en bas. | Moitié · moitié, ou deux tiers · un tiers. |
 | **Côte à côte** | Illustration à gauche, carte à droite. | L'affiche passe en paysage ; une autre composition rend l'orientation d'avant. |
 | **Fondu** | La carte émerge du bas de l'illustration. | — |

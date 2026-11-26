@@ -375,6 +375,12 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 .texthit{position:absolute;z-index:5;cursor:move;touch-action:none;border-radius:6px}
 .texthit:hover,.texthit:focus-visible{outline:1.5px dashed var(--acc2);outline-offset:0;background:#c5a0590f}
 .texthit.dragging{cursor:grabbing;outline:1.5px solid var(--acc)}
+.texthit.fixed{cursor:default}
+/* Présentation des textes (#86) */
+.zseg button{font-size:.8125rem}
+.sublbl{margin:10px 0 6px;font-size:.8125rem;color:var(--txt);font-weight:600}
+.decos .chip{padding:8px 12px}
+.mb8{margin-bottom:8px}
 /* Voir l'affiche seule (#56) : rien sur l'aperçu, et sur mobile plus de panneau ; un toucher n'importe où ramène les réglages */
 #app.clean .fab,#app.clean #shield,#app.clean #placeSwitch,#app.clean .mapcredit,#app.clean .cmpbadge,#app.clean .stagebar,#app.clean .illushit,#app.clean .texthit,#app.clean .safeguide{display:none!important}
 #app.clean #panel{display:none}

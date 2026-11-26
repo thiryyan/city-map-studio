@@ -173,7 +173,7 @@ async def main():
         # sans v:2, affiche Carte : état d'avant les valeurs Auto, migré (lettres, ombre et contour à Auto : rendu de la carte inchangé)
         check(t['style'] == 'auto' and t['color'] == 'auto' and t['shadow'] == 'auto' and t['outline'] == '' and t['off'] == 12 and t['pos'] == 'hc' and t['v'] == 2, f'état forgé : style du titre corrigé {t}')
         t = await page.evaluate("normState({illusText:{v:2,style:'neon',color:'red',shadow:'',outline:'#12345G',pos:'zz',map:{pos:'zz',free:{x:9,y:0.5},fpos:'bd',ffree:'x'}}}).illusText")
-        check(t['style'] == 'auto' and t['color'] == 'auto' and t['shadow'] == '' and t['map'] == {'pos': 'auto', 'free': {'x': 1, 'y': 0.5}, 'fpos': 'bd', 'ffree': None},
+        check(t['style'] == 'auto' and t['color'] == 'auto' and t['shadow'] == '' and t['map'] == {'pos': 'auto', 'free': {'x': 1, 'y': 0.5}, 'fpos': 'bd', 'ffree': None, 'deco': {'title': 'libre', 'foot': 'libre'}},
               f'état forgé (v2) : « aucune ombre » gardée, positions du mode Carte vérifiées {t}')
         t = await page.evaluate("normState({mode:'illus',illusText:{style:'vintage',color:'#24365A',shadow:'#F3EAD8',outline:''}}).illusText")
         check([t['style'], t['color'], t['shadow']] == ['auto', '#24365A', '#F3EAD8'], f'état d\'avant les valeurs Auto, affiche illustrée : couleurs conservées {t}')

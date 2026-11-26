@@ -380,15 +380,26 @@
         <div class="slider"><label for="sShadowOff">Décalage de l'ombre</label><output id="oShadowOff"></output><input type="range" id="sShadowOff" data-k="illusText.off" min="1" max="12" step="1"></div>
         <p class="hint">« Auto » suit le thème (onglet Style). Ombre et contour gardent les lettres lisibles sur une illustration ou sur la carte.</p>
         <h3 id="hTextPos">Position du titre</h3>
+        <div class="seg mixonly zseg" id="tZoneSeg" role="group" aria-label="Zone du titre"><button type="button" data-v="illus">Sur l'illustration</button><button type="button" data-v="map">Sur la carte</button><button type="button" data-v="poster">Toute l'affiche</button></div>
         <div class="row layoutonly"><button class="chip" type="button" id="tLayBtn" aria-pressed="true">Dans le gabarit</button></div>
         <div class="posgrid mt8" id="tPosSeg" role="group" aria-label="Position du titre"></div>
         <p class="hint" id="tFreeNote"><span></span>Le titre se glisse aussi directement sur l'aperçu (aimanté sur ces positions et sur les axes du centre), ou au clavier (Tab puis flèches).<span class="illusonly"> La position est reprise dans le prompt : l'IA laisse cette zone calme.</span><span class="layoutonly"> Hors du gabarit, le titre et le sous-titre sont posés sur l'affiche, au-dessus de la carte ; leur place dans le gabarit reste vide. Gabarit Lettres : le titre forme la carte et reste en place.</span></p>
         <h3>Position des lignes du bas</h3>
         <p class="hint">Dédicace, noms, date et coordonnées, en un bloc.</p>
+        <div class="seg mixonly zseg mb8" id="fZoneSeg" role="group" aria-label="Zone des lignes du bas"><button type="button" data-v="illus">Sur l'illustration</button><button type="button" data-v="map">Sur la carte</button><button type="button" data-v="poster">Toute l'affiche</button></div>
         <div class="row"><button class="chip" type="button" id="fAutoBtn" aria-pressed="true">Auto : à l'opposé du titre</button></div>
         <div class="posgrid mt8" id="fPosSeg" role="group" aria-label="Position des lignes du bas"></div>
         <p class="hint" id="fFreeNote"><span></span>Ce bloc se glisse aussi sur l'aperçu.<span class="mixonly"> Vignette : titre et lignes se placent à gauche, au centre ou à droite de la bande.</span></p>
         <p class="fitnote" id="textWarn" aria-live="polite"></p>
+        <h3 id="hTextDeco">Présentation des textes</h3>
+        <p class="hint">Sur la carte ou sur une illustration chargée, une plaque (cartouche, bandeau, ruban, cachet) garde les lettres lisibles.</p>
+        <div class="chips mb8" id="textPresets" role="group" aria-label="Mises en page prêtes"></div>
+        <p class="sublbl" id="tDecoLbl">Titre</p>
+        <div class="chips decos" id="tDecoSeg" role="group" aria-labelledby="tDecoLbl"></div>
+        <p class="hint" id="tDecoNote" aria-live="polite"></p>
+        <p class="sublbl" id="fDecoLbl">Lignes du bas</p>
+        <div class="chips decos" id="fDecoSeg" role="group" aria-labelledby="fDecoLbl"></div>
+        <p class="hint" id="fDecoNote" aria-live="polite"></p>
         <h3>Modèles de texte</h3>
         <div class="chips" id="occasions"></div>
         <h3 id="hTextSize">Taille des textes</h3>

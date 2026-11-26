@@ -117,6 +117,7 @@ CMS.define('illus', () => {
       city:'la ville choisie', pistes:'PISTES À PRIVILÉGIER (choisies par moi) : ',
       style:"STYLE : affiche de voyage vintage, illustration vectorielle en aplats, dégradés doux, palette limitée (6 à 10 teintes) ; plans successifs : premier plan détaillé, sujet principal au plan médian, arrière-plan estompé, ciel avec un grand soleil pâle, nuages stylisés, quelques oiseaux ; lumière douce, aucune texture photographique.",
       comp:'COMPOSITION : garder une zone de ciel ou de fond calme et peu détaillée ', compEnd:' pour le titre.',
+      noTitle:'COMPOSITION : le titre sera posé sur la carte, pas sur l\u2019illustration : inutile de lui réserver une zone.',
       zone:{h:'EN HAUT (environ 25 % de la hauteur)', m:'AU MILIEU (bande horizontale d’environ 20 % de la hauteur)', b:'EN BAS (environ 25 % de la hauteur)'},
       side:{g:', plutôt à gauche', c:'', d:', plutôt à droite'},
       footAt:{h:' Garder aussi le haut de l\u2019image assez simple pour quelques lignes de texte discrètes.', m:' Garder aussi le milieu de l\u2019image assez simple pour quelques lignes de texte discrètes.', b:' Garder aussi le bas de l\u2019image assez simple pour quelques lignes de texte discrètes.'},
@@ -147,6 +148,7 @@ CMS.define('illus', () => {
       city:'the chosen city', pistes:'IDEAS TO FAVOUR (my choice): ',
       style:'STYLE: vintage travel poster, flat vector illustration, soft gradients, limited palette (6 to 10 hues); layered planes: detailed foreground, main subject in the middle ground, faded background, sky with a large pale sun, stylised clouds, a few birds; soft light, no photographic texture.',
       comp:'COMPOSITION: keep a calm, low-detail sky or background area ', compEnd:' for the title.',
+      noTitle:'COMPOSITION: the title will be placed on the map, not on the illustration: no area needs to be reserved for it.',
       zone:{h:'at the TOP (about 25% of the height)', m:'in the MIDDLE (a horizontal band of about 20% of the height)', b:'at the BOTTOM (about 25% of the height)'},
       side:{g:', towards the left', c:'', d:', towards the right'},
       footAt:{h:' Also keep the top of the image simple enough for a few discreet lines of text.', m:' Also keep the middle of the image simple enough for a few discreet lines of text.', b:' Also keep the bottom of the image simple enough for a few discreet lines of text.'},
@@ -203,8 +205,18 @@ CMS.define('illus', () => {
     if(cp==='hb') out.push(L.hb(s.mix.split)); else if(cp==='cote') out.push(L.cote);
     if(vig) out.push(L.vig);
     const rc=titleRC(T), auto=T.fpos==='auto' && !T.ffree;   // positions réelles (glissées) des deux blocs
-    if(!vig) out.push(L.comp+L.zone[rc[0]]+L.side[rc[1]]+L.compEnd+(footLines(s)?(auto ? L.foot[rc[0]] : L.footAt[footRC(T)[0]]):'')
-      +(cp==='med'?' '+L.med(s.mix.pos,s.mix.shape):'')+(cp==='fondu'?' '+L.fondu:''));
+    // Bloc posé sur l'illustration ? Carte + illustration (#86) : un bloc posé sur la carte n'y réserve aucune zone ; sur toute
+    // l'affiche, il tombe sur l'illustration ou sur la carte selon sa position
+    const onIllus=k=>{
+      if(s.mode!=='mix') return true;
+      const z=zoneOf(k,s); if(z==='illus') return true; if(z==='map') return false;
+      const p=k==='title' ? rc : footRC(T);
+      return cp==='hb' ? p[0]==='h' || (p[0]==='m' && s.mix.split==='two') : cp==='cote' ? p[1]==='g' : cp==='fondu' ? p[0]!=='b' : true;
+    };
+    const tI=onIllus('title'), fI=footLines(s) && onIllus('foot');
+    const tail=(cp==='med'?' '+L.med(s.mix.pos,s.mix.shape):'')+(cp==='fondu'?' '+L.fondu:'');
+    if(!vig && tI) out.push(L.comp+L.zone[rc[0]]+L.side[rc[1]]+L.compEnd+(fI?(auto && zoneOf('foot',s)===zoneOf('title',s) ? L.foot[rc[0]] : L.footAt[footRC(T)[0]]):'')+tail);
+    else if(!vig) out.push(L.noTitle+(fI ? L.footAt[footRC(T)[0]] : '')+tail);
     const r57=s.format==='50x70', land=s.orient==='landscape';
     let fmt=vig ? L.vratio : L.ratio[(land?'l':'p')+(r57?'57':s.format==='10x15'?'23':'')];
     if(cp==='hb' || cp==='cote'){ const d=posterDims(s), R=region(s); fmt=ratioText(d.W*R.fw/(d.H*R.fh),L,P.lang==='en'); }
@@ -473,13 +485,16 @@ CMS.define('illus', () => {
       ctx.save(); clipMap(ctx,p.rect); drawMarkers(ctx,p.rect,p.view,U,W,true); ctx.restore();
     }
     const ink=contrast(T.color,c.paper)>=2.5 ? T.color : c.text;   // sur le papier : couleur du titre si elle s'y lit
+    // Zone de chaque bloc (#86) : l'illustration (la bande pour la vignette), la carte ou toute l'affiche
+    const Z={title:zoneOf('title'), foot:zoneOf('foot')}, specs={}, band=[];
+    for(const k of ['title','foot']){
+      if(g.mix==='vig' && Z[k]==='illus'){ band.push(k); continue; }
+      const A=zoneArea(Z[k],g,W,H); specs[k]={A,env:{halo:Z[k]==='map',map:mapIn(r,A)},onMap:Z[k]==='map'};
+    }
     if(med){   // contour de la forme : même réglage que les gabarits de la Carte (#77) ; le filet papier détache toujours la carte
       ctx.save(); ctx.strokeStyle=c.paper; ctx.lineWidth=0.02*U; strokeShape(ctx,r,0.01*U);
       if(st.ring){ ctx.strokeStyle=paint(ink); ctx.lineWidth=0.0022*U; strokeShape(ctx,r,0.021*U); } ctx.restore();
-      drawTexts(ctx,W,H,U,null,r);
-    } else if(g.mix!=='vig'){
-      drawTexts(ctx,W,H,U,g.textArea);
-    } else {
+    } else if(g.mix==='vig'){
       ctx.strokeStyle=paint(c.frame);
       ctx.lineWidth=0.0025*U; const o1=0.014*U; ctx.strokeRect(r.x-o1,r.y-o1,r.w+2*o1,r.h+2*o1);
       ctx.lineWidth=0.0009*U; const o2=0.006*U; ctx.strokeRect(r.x-o2,r.y-o2,r.w+2*o2,r.h+2*o2);
@@ -487,8 +502,10 @@ CMS.define('illus', () => {
       ctx.save(); ctx.shadowColor='rgba(0,0,0,0.22)'; ctx.shadowBlur=0.02*U; ctx.shadowOffsetY=0.006*U; clipMap(ctx,{...edge,x:edge.x-0.04*U,y:edge.y-0.04*U,w:edge.w+0.08*U,h:edge.h+0.08*U,shape:null});
       ctx.fillStyle=c.paper; const pth=new Path2D(); pth.addPath(new Path2D(shapeD('arch',edge.w,edge.h)),new DOMMatrix().translate(edge.x,edge.y)); ctx.fill(pth); ctx.restore();
       if(ready()) drawImageIn(ctx,v,W,H); else placeholderIn(ctx,v,U);
-      drawBand(ctx,W,H,U,g,ink);
     }
+    const B=drawBlocks(ctx,U,specs,T.color);
+    if(g.mix==='vig') Object.assign(B,drawBand(ctx,W,H,U,g,ink,band));
+    noteLayout(ctx,W,H,B,med ? r : null);
     ctx.globalAlpha=0.55;
     drawText(ctx,attributionText(false),W-g.m,H-g.m*0.38,{size:0.0085*U,align:'right',color:g.mix==='vig' ? c.text : T.color,ink:'attribution'});
     ctx.globalAlpha=1;
@@ -583,61 +600,234 @@ CMS.define('illus', () => {
   const titleRC=T=>T.free ? rowOf(T.free.y)+colOf(T.free.x) : T.pos;
   const footSpec=T=>T.ffree ? {free:T.ffree} : {pos:T.fpos==='auto' ? (titleRC(T)[0]==='b' ? 'hc' : 'bc') : T.fpos};
   const footRC=T=>T.ffree ? rowOf(T.ffree.y)+colOf(T.ffree.x) : footSpec(T).pos;
-  /** Mise en page des deux blocs dans une zone W × H (coordonnées de la zone) */
-  function textLayout(ctx, W, H, U, over){
-    const T={...textStyle(),...posOf(),...(over||{})}, m=0.06*U, vint=T.vint, maxW=W-2*m;
+  // ---------- Présentations des blocs (#86) : texte seul, cartouche, bandeau, ruban, arc, cachet, vertical ----------
+  /** Zone d'un bloc : en Carte + illustration, l'illustration (la bande de la vignette), la carte ou toute l'affiche */
+  const zoneOf=(k,s=st)=>s.mode==='mix' ? (s.illusText.mix.zone?.[k]||'illus') : 'illus';
+  /** Forme de carte autour de laquelle le titre peut se courber (Arc) : cercle ou arche, sinon null */
+  function arcShape(s=st){
+    if(s.mode==='mix') return s.mix.compo==='med' && ['circle','arch'].includes(s.mix.shape) ? s.mix.shape : null;
+    if(s.mode==='map') return ({medallion:'circle',arch:'arch'})[s.layout]||null;
+    return null;
+  }
+  /** Pourquoi une présentation est sans objet ici ('' : elle s'applique) */
+  function decoWhy(k, d, s=st){
+    if(!d || d==='libre') return '';
+    if(k==='foot' && !C.FOOT_DECOS.includes(d)) return 'réservée au titre';
+    if(s.mode==='map' && !mapMoved(s)[k]) return s.layout==='typo' && k==='title' ? 'le titre forme la carte du gabarit Lettres'
+      : k==='title' ? 'le titre est dans le gabarit' : 'les lignes du bas sont dans le gabarit';
+    if(s.mode==='mix' && s.mix.compo==='vig' && zoneOf(k,s)==='illus') return 'la bande de la vignette garde le texte seul';
+    if(d==='arc' && !arcShape(s)) return s.mode==='map' ? 'seulement avec les gabarits Médaillon et Arche' : 'seulement autour d’un médaillon rond ou en arche';
+    return '';
+  }
+  /** Présentation appliquée : celle choisie, ou le texte seul quand elle est sans objet (le choix est gardé) */
+  const decoOf=(k,s=st)=>{ const d=posOf(s).deco?.[k]||'libre'; return decoWhy(k,d,s) ? 'libre' : d; };
+  const PADS={cartouche:[0.04,0.028], bandeau:[0,0.026], ruban:[0.11,0.024]};   // marges intérieures (en U) : horizontale, verticale
+  /** Encre des plaques (cartouche, bandeau, ruban, cachet) : couleur des lettres si elle se lit à 4,5:1 sur le papier, sinon Texte du thème */
+  function plateInk(col){
+    const p=st.colors.paper;
+    for(const x of [col,st.colors.text]) if(/^#[0-9A-Fa-f]{6}$/.test(x||'') && contrast(x,p)>=4.5) return x;
+    return contrast('#000000',p)>=contrast('#FFFFFF',p) ? '#000000' : '#FFFFFF';
+  }
+  /** Lettres d'un texte le long d'un cercle (centre cx, cy ; r : rayon de la ligne de base). En haut, les lettres montent vers
+   *  l'extérieur ; en bas, elles restent debout, tournées vers le centre. Réduit pour tenir dans l'angle maxA. */
+  function arcLayout(ctx, t, cx, cy, r, top, o, maxA){
+    if(!t || r<=0) return null;
+    const F=o.fk ? FONTS[o.fk] : fontOf(o.role,o.key); if(o.upper && !F.script) t=t.toUpperCase();
+    const chars=[...t], sp=F.script ? 0 : (o.spacing||0);
+    const widths=size=>{ ctx.save(); ctx.font=fontStr(size,o); const w=chars.map(c=>ctx.measureText(c).width+sp*size); ctx.restore(); return w; };
+    let size=o.size, ws=widths(size), tot=ws.reduce((a,b)=>a+b,0)-sp*size;
+    if(tot>maxA*r){ const k=maxA*r/tot; noteFit(o.key,k); size*=k; ws=widths(size); tot=ws.reduce((a,b)=>a+b,0)-sp*size; }
+    const glyphs=[], cap=size*0.75; let s=0, x1=Infinity, y1=Infinity, x2=-Infinity, y2=-Infinity;
+    chars.forEach((c,i)=>{
+      const a=(s+(ws[i]-sp*size)/2-tot/2)/r, th=top ? -Math.PI/2+a : Math.PI/2-a, x=cx+r*Math.cos(th), y=cy+r*Math.sin(th), r2=top ? r+cap : r-cap;
+      glyphs.push([c,x,y,top ? th+Math.PI/2 : th-Math.PI/2]);
+      for(const [qx,qy] of [[x,y],[cx+r2*Math.cos(th),cy+r2*Math.sin(th)]]){ x1=Math.min(x1,qx); y1=Math.min(y1,qy); x2=Math.max(x2,qx); y2=Math.max(y2,qy); }
+      s+=ws[i];
+    });
+    const pad=size*0.35;
+    return {glyphs, o:{...o,size,spacing:0,upper:false,maxW:undefined,align:'center'}, box:{x:x1-pad,y:y1-pad,w:x2-x1+2*pad,h:y2-y1+2*pad}};
+  }
+  const union=boxes=>{ const B=boxes.filter(Boolean); if(!B.length) return null;
+    const x=Math.min(...B.map(b=>b.x)), y=Math.min(...B.map(b=>b.y)); return {x, y, w:Math.max(...B.map(b=>b.x+b.w))-x, h:Math.max(...B.map(b=>b.y+b.h))-y}; };
+  function drawArc(ctx, A, col){
+    if(A) for(const [c,x,y,rot] of A.glyphs){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); drawText(ctx,c,0,0,{...A.o,color:col}); ctx.restore(); }
+  }
+  /** Ruban : banderole pleine, deux pointes découpées en V derrière ses extrémités */
+  function drawRibbon(ctx, r, U, fill){
+    const t=0.06*U, dy=r.h*0.3, th=r.h*0.85, n=t*0.45, back=shade(fill,0.3);
+    ctx.save(); ctx.fillStyle=paint(back);
+    for(const [e,i,dir] of [[r.x,r.x+t+0.02*U,1],[r.x+r.w,r.x+r.w-t-0.02*U,-1]]){
+      ctx.beginPath(); ctx.moveTo(i,r.y+dy); ctx.lineTo(e,r.y+dy); ctx.lineTo(e+dir*n,r.y+dy+th/2); ctx.lineTo(e,r.y+dy+th); ctx.lineTo(i,r.y+dy+th); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle=paint(fill); ctx.fillRect(r.x+t,r.y,r.w-2*t,r.h);
+    ctx.strokeStyle=hexA(st.colors.paper)(0.55); ctx.lineWidth=0.0008*U; const o=0.007*U;
+    ctx.beginPath(); ctx.moveTo(r.x+t,r.y+o); ctx.lineTo(r.x+r.w-t,r.y+o); ctx.moveTo(r.x+t,r.y+r.h-o); ctx.lineTo(r.x+r.w-t,r.y+r.h-o); ctx.stroke();
+    ctx.restore();
+  }
+  /** Cachet : disque papier, double filet, filet intérieur, étoile au centre et deux points entre les textes */
+  function drawSeal(ctx, S, ink){
+    const {cx,cy,R,d,ri}=S;
+    ctx.save(); ctx.fillStyle=hexA(st.colors.paper)(0.9); ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI); ctx.fill();
+    ctx.strokeStyle=paint(ink); ctx.fillStyle=paint(ink);
+    const ring=(r,w)=>{ ctx.lineWidth=w; ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI); ctx.stroke(); };
+    ring(R-0.012*d,0.016*d); ring(R-0.045*d,0.005*d); ring(ri,0.005*d);
+    const s=ri*0.42, q=s*0.28; ctx.beginPath();
+    for(let i=0;i<8;i++){ const a=-Math.PI/2+i*Math.PI/4, rr=i%2 ? q : s; ctx[i ? 'lineTo' : 'moveTo'](cx+rr*Math.cos(a),cy+rr*Math.sin(a)); }
+    ctx.closePath(); ctx.fill();
+    const rm=(ri+R-0.045*d)/2; for(const a of [0,Math.PI]){ ctx.beginPath(); ctx.arc(cx+rm*Math.cos(a),cy+rm*Math.sin(a),0.012*d,0,2*Math.PI); ctx.fill(); }
+    ctx.restore();
+  }
+  /** Mise en page des deux blocs dans une zone W × H (coordonnées de la zone). env : map (cadre de la carte dans la zone, pour
+   *  l'arc), halo (zone sur la carte : « Auto » remplace l'ombre par un contour couleur papier). Chaque bloc porte sa
+   *  présentation (deco), son rectangle de prise (rect) et le rectangle de sa plaque (box). */
+  function textLayout(ctx, W, H, U, over, env={}){
+    const T={...textStyle(),...posOf(),...(over||{})}, m=Math.min(0.06*U,0.1*Math.min(W,H)), vint=T.vint, maxW=W-2*m;
+    let haloK=1;
+    if(env.halo && st.illusText.shadow==='auto'){ T.shadow=''; if(!T.outline){ T.outline=st.colors.paper; haloK=2.5; } }
     const shadow=T.shadow ? {color:T.shadow, dx:T.off*0.0016*U, dy:T.off*0.0016*U} : null;
-    const stroke=w=>T.outline ? {color:T.outline, w:Math.max(1,w*U)} : null;
+    const stroke=w=>T.outline ? {color:T.outline, w:Math.max(1,w*U*haloK)} : null;
     const title=textLine('title'), sub=textLine('subtitle');
     const k=Math.min(1,W/U), ts=(vint?0.2:0.11)*U*k*tScale('title'), ss=0.024*U*tScale('subtitle'), gap=0.03*U;   // zone étroite (côte à côte) : titre réduit
-    const capT=ts*(vint?0.84:0.72), capS=ss*0.75, tl=[];
-    let y=0;
-    if(title){ y+=capT; tl.push({t:title,at:y,o:{size:ts,spacing:vint?0.03:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,maxW,shadow,stroke:stroke(0.004)}}); y+=gap; }
-    if(sub){ y+=capS; tl.push({t:sub,at:y,o:{size:ss,spacing:0.3,upper:true,key:'subtitle',maxW,stroke:stroke(0.0012),shadow:shadow && {color:shadow.color,dx:shadow.dx*0.3,dy:shadow.dy*0.3}}}); }
-    const tb=blockOf(ctx,tl,(title?capT:0)+(title&&sub?gap:0)+(sub?capS:0));
-    const fl=[]; let yy=0;
-    for(const r of footRows(U,maxW)){ yy+=r.lead; fl.push({t:r.t,at:yy-r.o.size*0.45,o:{...r.o,maxW,stroke:stroke(0.001)}}); }
-    const fb=blockOf(ctx,fl,yy);
-    return {title:tl.length ? {...tb,...placeBlock(tb,W,H,m,T.free?{free:T.free}:{pos:T.pos},'title')} : null,
-            foot:fl.length ? {...fb,...placeBlock(fb,W,H,m,footSpec(T),'foot')} : null};
+    const capT=ts*(vint?0.84:0.72), capS=ss*0.75;
+    const dT=decoOf('title'), dF=decoOf('foot'), pad=d=>(PADS[d]||[0,0]).map(v=>v*U);
+    // flat : sur une plaque, ni ombre ni contour
+    const titleBlock=(mw,flat)=>{
+      const tl=[], sh=flat ? null : shadow, sk=w=>flat ? null : stroke(w); let y=0;
+      if(title){ y+=capT; tl.push({t:title,at:y,o:{size:ts,spacing:vint?0.03:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,maxW:mw,shadow:sh,stroke:sk(0.004)}}); y+=gap; }
+      if(sub){ y+=capS; tl.push({t:sub,at:y,o:{size:ss,spacing:0.3,upper:true,key:'subtitle',maxW:mw,stroke:sk(0.0012),shadow:sh && {color:sh.color,dx:sh.dx*0.3,dy:sh.dy*0.3}}}); }
+      return blockOf(ctx,tl,(title?capT:0)+(title&&sub?gap:0)+(sub?capS:0));
+    };
+    const footBlock=(mw,flat)=>{
+      const fl=[]; let yy=0;
+      for(const r of footRows(U,mw)){ yy+=r.lead; fl.push({t:r.t,at:yy-r.o.size*0.45,o:{...r.o,maxW:mw,stroke:flat ? null : stroke(0.001)}}); }
+      return blockOf(ctx,fl,yy);
+    };
+    /** Bloc à plat (texte seul, cartouche, bandeau, ruban) : marges intérieures, puis placement */
+    const place=(b,spec,kind,d)=>{
+      const [px,py]=pad(d), bb={...b,lines:b.lines.map(l=>({...l,at:l.at+py})),w:b.w+2*px,h:b.h+2*py};
+      const P=placeBlock(bb,W,H,m,spec,kind), ax=P.align==='left' ? P.left+px : P.align==='right' ? P.left+bb.w-px : P.ax;
+      return {...bb,...P,ax,deco:d,box:d==='bandeau' ? {x:0,y:P.top,w:W,h:bb.h} : P.rect};   // bandeau : toute la largeur de la zone
+    };
+    const tspec=T.free ? {free:T.free} : {pos:T.pos};
+    const vert=()=>{   // titre pivoté le long d'un bord : de bas en haut à gauche, de haut en bas à droite
+      const b=titleBlock(H-2*m,false), P=placeBlock({w:b.h,h:b.w},W,H,m,tspec,'title'), cx=P.left+b.h/2, cy=P.top+b.w/2;
+      return {...b,...P,deco:'vertical',box:P.rect,cx,cy,rot:cx>W/2 ? Math.PI/2 : -Math.PI/2};
+    };
+    const seal=()=>{   // cachet : titre en couronne en haut, sous-titre en bas
+      const d=clamp(0.3*U*Math.sqrt(tScale('title')),0.16*U,Math.max(0.16*U,Math.min(W,H)-m)), P=placeBlock({w:d,h:d},W,H,m,tspec,'title');
+      const cx=P.left+d/2, cy=P.top+d/2, R=d/2, tsz=0.13*d, rt=R-0.065*d-0.75*tsz, ri=rt-0.03*d;
+      const ot={size:tsz,spacing:vint?0.06:0.16,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined};
+      const arcs=[arcLayout(ctx,title,cx,cy,rt,true,ot,Math.PI*0.8),
+        arcLayout(ctx,sub,cx,cy,R-0.065*d,false,{size:0.075*d*tScale('subtitle'),spacing:0.25,upper:true,key:'subtitle'},Math.PI*0.6)];
+      return {lines:[],w:d,h:d,...P,deco:'cachet',box:P.rect,arcs,seal:{cx,cy,R,d,ri}};
+    };
+    const arc=()=>{   // titre courbé autour de la carte (médaillon) : au-dessus, ou au-dessous d'un cercle
+      const M=env.map, sh=arcShape();
+      const cx=M.x+M.w/2, cy=sh==='arch' ? M.y+M.w/2 : M.y+M.h/2, R0=M.w/2+0.04*U, row=titleRC(T)[0];
+      const top=sh==='arch' || row==='h' || (row==='m' && (env.below || M.y>H-M.y-M.h));   // below : dessous occupé (gabarit)
+      let ats=(vint?0.11:0.075)*U*tScale('title'); const ass=0.022*U*tScale('subtitle');
+      if(top){ const room=cy-R0-(sub ? ass*0.75+0.02*U : 0)-0.025*U; if(ats*0.84>room) ats=Math.max(ats*0.5,room/0.84); }   // au-dessus : tenir dans l'affiche
+      const ot={size:ats,spacing:vint?0.05:0.14,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow,stroke:stroke(0.004)};
+      const os={size:ass,spacing:0.3,upper:true,key:'subtitle',stroke:stroke(0.0012),shadow:shadow && {color:shadow.color,dx:shadow.dx*0.3,dy:shadow.dy*0.3}};
+      let a1, a2;
+      if(top){ a2=arcLayout(ctx,sub,cx,cy,R0,true,os,Math.PI*0.8); a1=arcLayout(ctx,title,cx,cy,R0+(sub ? ass*0.75+0.02*U : 0),true,ot,Math.PI*0.85); }
+      else { const r1=R0+ats*0.75;   // en bas, lettres resserrées vers le centre : plus d'interlettrage
+        a1=arcLayout(ctx,title,cx,cy,r1,false,{...ot,spacing:ot.spacing+0.06},Math.PI*0.7); a2=arcLayout(ctx,sub,cx,cy,r1+(title ? 0.02*U : 0)+ass*0.75,false,os,Math.PI*0.6); }
+      const rect=union([a1?.box,a2?.box]);
+      return {lines:[],w:rect.w,h:rect.h,left:rect.x,top:rect.y,align:'center',ax:rect.x+rect.w/2,rect,box:rect,deco:'arc',arcs:[a1,a2],fixed:true};
+    };
+    let tOut=null;
+    if(title || sub){
+      if(dT==='arc' && env.map) tOut=arc();
+      else if(dT==='cachet') tOut=seal();
+      else if(dT==='vertical') tOut=vert();
+      else { const d=dT==='arc' ? 'libre' : dT; tOut=place(titleBlock(maxW-2*pad(d)[0],d!=='libre'),tspec,'title',d); }
+    }
+    const fb=footBlock(maxW-2*pad(dF)[0],dF!=='libre');
+    return {title:tOut, foot:fb.lines.length ? place(fb,footSpec(T),'foot',dF) : null};
   }
-  /** Textes dans une zone (l'affiche, ou l'illustration en mode Carte + illustration) ; avoid : cadre de la carte à signaler */
+  /** Dessine un bloc mis en page par textLayout (coordonnées de sa zone), avec sa présentation ; col : couleur des lettres */
+  function drawBlock(ctx, b, U, col){
+    const c=st.colors, d=b.deco||'libre', ink=plateInk(col), r=b.box;
+    if(d==='cartouche'){
+      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.92); ctx.fillRect(r.x,r.y,r.w,r.h); ctx.strokeStyle=paint(ink);
+      ctx.lineWidth=0.0022*U; const o=0.008*U; ctx.strokeRect(r.x+o,r.y+o,r.w-2*o,r.h-2*o);
+      ctx.lineWidth=0.0008*U; const o2=0.0145*U; ctx.strokeRect(r.x+o2,r.y+o2,r.w-2*o2,r.h-2*o2); ctx.restore();
+    } else if(d==='bandeau'){
+      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.9); ctx.fillRect(r.x,r.y,r.w,r.h); ctx.fillStyle=paint(ink);
+      const t=0.0022*U, t2=0.0008*U, o=0.006*U;
+      for(const y of [r.y,r.y+r.h-t]) ctx.fillRect(r.x,y,r.w,t);
+      for(const y of [r.y+o,r.y+r.h-o-t2]) ctx.fillRect(r.x,y,r.w,t2); ctx.restore();
+    } else if(d==='ruban') drawRibbon(ctx,r,U,ink);
+    else if(d==='cachet') drawSeal(ctx,b.seal,ink);
+    const tc=d==='ruban' ? c.paper : ['cartouche','bandeau','cachet'].includes(d) ? ink : col;
+    if(b.arcs){ for(const a of b.arcs) drawArc(ctx,a,tc); return; }
+    if(d==='vertical'){
+      ctx.save(); ctx.translate(b.cx,b.cy); ctx.rotate(b.rot);
+      try{ for(const l of b.lines) drawLine(ctx,l.t,0,-b.h/2+l.at,{...l.o,align:'center',color:tc}); } finally{ ctx.restore(); }
+      return;
+    }
+    for(const l of b.lines) drawLine(ctx,l.t,b.ax,b.top+l.at,{...l.o,align:b.align,color:tc});
+  }
+  /** Dessine les blocs, chacun dans sa zone (specs : {title, foot} → {A : zone dans l'affiche, env}) ; renvoie leurs rectangles
+   *  dans l'affiche, pour les zones de prise */
+  function drawBlocks(ctx, U, specs, col){
+    const out={};
+    for(const k of ['title','foot']){
+      const S=specs[k]; if(!S) continue; const A=S.A;
+      ctx.save(); ctx.translate(A.x,A.y);
+      try{
+        const b=textLayout(ctx,A.w,A.h,U,null,S.env)[k];
+        if(b){ drawBlock(ctx,b,U,col); out[k]={rect:{...b.rect,x:b.rect.x+A.x,y:b.rect.y+A.y},area:A,kind:'area',fixed:!!b.fixed,env:S.env,onMap:!!S.onMap}; }
+      } finally{ ctx.restore(); }
+    }
+    return out;
+  }
+  /** Cadre de la carte vu depuis une zone (coordonnées de la zone) */
+  const mapIn=(M,A)=>M && {...M,x:M.x-A.x,y:M.y-A.y};
+  /** Textes de l'Illustration : toute l'affiche (ou une zone) ; avoid : cadre de la carte à signaler */
   function drawTexts(ctx, PW, PH, U, area, avoid){
-    const A=area||{x:0,y:0,w:PW,h:PH}, col=textStyle().color;
-    ctx.save(); ctx.translate(A.x,A.y);
-    let L;
-    try{
-      L=textLayout(ctx,A.w,A.h,U);
-      for(const b of [L.title,L.foot]) if(b) for(const l of b.lines) drawLine(ctx,l.t,b.ax,b.top+l.at,{...l.o,align:b.align,color:col});
-    } finally{ ctx.restore(); }
-    noteLayout(ctx,PW,PH,'area',A,L,avoid);
+    const A=area||{x:0,y:0,w:PW,h:PH};
+    noteLayout(ctx,PW,PH,drawBlocks(ctx,U,{title:{A,env:{}},foot:{A,env:{}}},textStyle().color),avoid);
+  }
+  /** Carte + illustration : zone d'un bloc. Carte : rectangle inscrit dans la forme du médaillon, partie opaque du fondu. */
+  function zoneArea(z, g, W, H){
+    if(z==='poster') return {x:0,y:0,w:W,h:H};
+    if(z==='map'){
+      const r=g.map;
+      if(g.mix==='med'){ const [l,t,rr,b]=r.shape==='heart' ? [0.2,0.2,0.2,0.32] : r.shape==='arch' ? [0.06,0.3,0.06,0.04] : [0.146,0.146,0.146,0.146];
+        return {x:r.x+r.w*l,y:r.y+r.h*t,w:r.w*(1-l-rr),h:r.h*(1-t-b)}; }
+      if(g.mix==='fondu'){ const y=r.y+r.h*FADE_STOP*0.6; return {x:r.x,y,w:r.w,h:r.y+r.h-y}; }
+      return {x:r.x,y:r.y,w:r.w,h:r.h};
+    }
+    return g.mix==='med' ? {x:0,y:0,w:W,h:H} : g.textArea;
   }
   /** Mode Carte (#75) : blocs sortis du gabarit (une des 9 positions, ou glissés). Gabarit Lettres : le titre forme la carte. */
   function mapMoved(s=st){
     const P=s.illusText.map;
     return {title:s.layout!=='typo' && (!!P.free || P.pos!=='auto'), foot:!!P.ffree || P.fpos!=='auto'};
   }
-  /** Mode Carte : blocs sortis du gabarit, dessinés sur toute l'affiche (au-dessus de la carte) avec la mise en page des modes illustrés */
-  function drawMapTexts(ctx, W, H, U, mv){
-    let L=null;
+  /** Mode Carte : blocs sortis du gabarit, dessinés sur toute l'affiche (au-dessus de la carte) avec la mise en page des modes
+   *  illustrés et leur présentation (#86) ; g : géométrie de l'affiche (cadre de la carte, pour l'arc) */
+  function drawMapTexts(ctx, W, H, U, mv, g){
+    const B={};
     if(mv.title || mv.foot){
-      const P=posOf(), col=textStyle().color;
-      L=textLayout(ctx,W,H,U,{pos:P.pos==='auto' ? 'hc' : P.pos});
-      if(!mv.title) L.title=null;
-      if(!mv.foot) L.foot=null;
-      for(const b of [L.title,L.foot]) if(b) for(const l of b.lines) drawLine(ctx,l.t,b.ax,b.top+l.at,{...l.o,align:b.align,color:col});
+      const P=posOf(), col=textStyle().color, A={x:0,y:0,w:W,h:H}, env={map:g?.map,below:!mv.foot};   // arc : sous la carte, le gabarit garde les lignes du bas
+      const L=textLayout(ctx,W,H,U,{pos:P.pos==='auto' ? 'hc' : P.pos},env);
+      for(const k of ['title','foot']) if(mv[k] && L[k]){ drawBlock(ctx,L[k],U,col); B[k]={rect:L[k].rect,area:A,kind:'area',fixed:!!L[k].fixed,env}; }
     }
-    noteLayout(ctx,W,H,'area',{x:0,y:0,w:W,h:H},L);
+    noteLayout(ctx,W,H,B);
   }
-  /** Vignette : titre et bloc du bas empilés dans la bande sous la carte ; chacun se place à gauche, au centre ou à droite */
-  function drawBand(ctx, W, H, U, g, ink){
+  /** Vignette : titre et bloc du bas empilés dans la bande sous la carte ; chacun se place à gauche, au centre ou à droite.
+   *  only : blocs à y mettre (les autres sont posés sur la carte ou sur l'affiche, #86). Renvoie leurs rectangles. */
+  function drawBand(ctx, W, H, U, g, ink, only=['title','foot']){
     const T={...textStyle(),...posOf()}, vint=T.vint, b=g.band, m=g.m+0.02*U, maxW=W-2*m;
     const shadow=T.shadow && contrast(T.shadow,st.colors.paper)>=1.3 ? {color:T.shadow, dx:T.off*0.001*U, dy:T.off*0.001*U} : null;
     // Bloc du bas : mêmes lignes que les autres mises en page (dédicace sur deux lignes, noms, date · coordonnées, légende ; #77)
     const rows=[['title',textLine('title'),(vint?0.13:0.075)*U*tScale('title'),{spacing:vint?0.04:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow},vint?0.84:0.72],
       ['title',textLine('subtitle'),0.021*U*tScale('subtitle'),{spacing:0.3,upper:true,key:'subtitle'},0.75],
-      ...footRows(U,maxW,{dedication:0.03,names:0.022,info:0.015,legend:0.013}).map(r=>['foot',r.t,r.o.size,r.o,0.75])].filter(x=>x[1]);
-    if(!rows.length){ noteLayout(ctx,W,H,'band',b,{}); return; }
+      ...footRows(U,maxW,{dedication:0.03,names:0.022,info:0.015,legend:0.013}).map(r=>['foot',r.t,r.o.size,r.o,0.75])].filter(x=>x[1] && only.includes(x[0]));
+    if(!rows.length) return {};
     const gap=0.022*U; let total=rows.reduce((a,x)=>a+x[2]*x[4],0)+gap*(rows.length-1);
     const f=Math.min(1,b.h*0.82/total); total*=f;
     const colX=x=>x!=null ? x : 0.5;   // centre horizontal en fraction de la bande
@@ -652,21 +842,25 @@ CMS.define('illus', () => {
       r.rect.x=Math.min(r.rect.x,left); r.rect.y=Math.min(r.rect.y,top); r.x2=Math.max(r.x2,left+w); r.y2=Math.max(r.y2,y);
       y+=gap*f;
     }
-    for(const r of Object.values(L)){ r.rect.w=r.x2-r.rect.x; r.rect.h=r.y2-r.rect.y; }
-    noteLayout(ctx,W,H,'band',{x:m,y:b.y,w:W-2*m,h:b.h},L);
+    const area={x:m,y:b.y,w:W-2*m,h:b.h}, out={};
+    for(const [k,r] of Object.entries(L)){ r.rect.w=r.x2-r.rect.x; r.rect.h=r.y2-r.rect.y; out[k]={rect:r.rect,area,kind:'band'}; }
+    return out;
   }
   // ---------- Zones de prise des textes (aperçu) : glisser, clavier ; chevauchements signalés ----------
-  let hitInfo=null;   // dernière mise en page de l'aperçu : {kind, area, title, foot} en fractions de l'affiche
-  function noteLayout(ctx, PW, PH, kind, A, L, avoid){
+  // dernière mise en page de l'aperçu, en fractions de l'affiche : {title, foot}, chacun {x, y, w, h, area, kind ('area' | 'band'),
+  // fixed (arc : il suit la carte, il ne se glisse pas), env (contexte de textLayout)} ou null
+  let hitInfo=null;
+  function noteLayout(ctx, PW, PH, B, avoid){
     if(ctx.canvas!==$('cvOver')) return;   // seulement l'aperçu (ni l'export, ni les vignettes)
-    const fr=r=>r && {x:(r.x)/PW, y:(r.y)/PH, w:r.w/PW, h:r.h/PH}, off=r=>r && (kind==='area' ? {...r,x:r.x+A.x,y:r.y+A.y} : r);
-    hitInfo={kind, area:fr(A), title:fr(off(L?.title?.rect)), foot:fr(off(L?.foot?.rect))};
-    // Chevauchements : bloc du bas sur le titre ; texte sur la carte (médaillon, fondu)
+    const fr=r=>r && {x:r.x/PW, y:r.y/PH, w:r.w/PW, h:r.h/PH};
+    hitInfo={};
+    for(const k of ['title','foot']){ const b=B?.[k]; hitInfo[k]=b ? {...fr(b.rect),area:fr(b.area),kind:b.kind,fixed:!!b.fixed,env:b.env,onMap:!!b.onMap} : null; }
+    // Chevauchements : bloc du bas sur le titre ; texte sur la carte (médaillon, fondu) quand il n'y est pas posé exprès
     const inter=(a,b)=>a && b && a.x<b.x+b.w && b.x<a.x+a.w && a.y<b.y+b.h && b.y<a.y+a.h;
     const map=avoid && fr(avoid), msgs=[];
     if(inter(hitInfo.title,hitInfo.foot)) msgs.push('les lignes du bas chevauchent le titre');
-    if(inter(hitInfo.title,map)) msgs.push('le titre déborde sur la carte');
-    if(inter(hitInfo.foot,map)) msgs.push('les lignes du bas débordent sur la carte');
+    if(!hitInfo.title?.onMap && !hitInfo.title?.fixed && inter(hitInfo.title,map)) msgs.push('le titre déborde sur la carte');
+    if(!hitInfo.foot?.onMap && inter(hitInfo.foot,map)) msgs.push('les lignes du bas débordent sur la carte');
     const w=$('textWarn'); if(w){ const t=msgs.length ? '⚠ '+msgs.join(' ; ')+'.' : ''; if(w.textContent!==t) w.textContent=t; }
     placeHits();
   }
@@ -679,24 +873,25 @@ CMS.define('illus', () => {
       el.hidden=!r; if(!r) continue;
       const pad=6, w=r.w*P.w+2*pad, h=Math.max(44,r.h*P.h+2*pad), cy=(r.y+r.h/2)*P.h;
       Object.assign(el.style,{left:(r.x*P.w-pad)+'px',top:(cy-h/2)+'px',width:w+'px',height:h+'px'});
+      el.classList.toggle('fixed',r.fixed);
     }
     CMS.emit('hits:placed');   // le choix « Textes » du mode Cadrer n'existe que s'il y a un bloc à déplacer
   }
   const setFree=(k,p)=>{ if(k==='title') posOf().free=p; else posOf().ffree=p; scheduleOver(); };
-  /** Centre actuel d'un bloc, en fraction de la zone des textes */
-  function centerOf(k){ const r=hitInfo[k], A=hitInfo.area; return {x:(r.x+r.w/2-A.x)/A.w, y:(r.y+r.h/2-A.y)/A.h}; }
+  /** Centre actuel d'un bloc, en fraction de sa zone */
+  function centerOf(k){ const r=hitInfo[k], A=r.area; return {x:(r.x+r.w/2-A.x)/A.w, y:(r.y+r.h/2-A.y)/A.h}; }
   /** Fin d'un déplacement : aimantation sur les positions prédéfinies (et « Auto » pour le bloc du bas) */
   function snapToPreset(k){
-    const T=posOf(), c=k==='title' ? T.free : T.ffree; if(!c) return;
-    if(hitInfo.kind==='band'){   // bande de la vignette : gauche, centre, droite
+    const T=posOf(), c=k==='title' ? T.free : T.ffree, I=hitInfo?.[k]; if(!c || !I) return;
+    if(I.kind==='band'){   // bande de la vignette : gauche, centre, droite
       const i=[0,0.5,1].findIndex(v=>Math.abs(c.x-v)<0.04); if(i<0) return;
       if(k==='title'){ T.pos=T.pos[0]+'gcd'[i]; T.free=null; } else { T.fpos=(T.fpos==='auto'?'b':T.fpos[0])+'gcd'[i]; T.ffree=null; }
       return;
     }
-    const cv=$('cvOver'), ctx=cv.getContext('2d'), A=hitInfo.area, W=A.w*cv.width, H=A.h*cv.height, U=Math.min(cv.width,cv.height);
+    const cv=$('cvOver'), ctx=cv.getContext('2d'), A=I.area, W=A.w*cv.width, H=A.h*cv.height, U=Math.min(cv.width,cv.height);
     const cands=k==='title' ? C.POS.map(p=>[p,{free:null,pos:p}]) : [...(st.mode==='map' ? [] : [['auto',{ffree:null,fpos:'auto'}]]),...C.POS.map(p=>[p,{ffree:null,fpos:p}])];   // Carte : « Auto » = gabarit, pas une cible
     for(const [p,over] of cands){
-      const b=textLayout(ctx,W,H,U,over)[k]; if(!b) continue;
+      const b=textLayout(ctx,W,H,U,over,I.env)[k]; if(!b) continue;
       if(Math.hypot((b.rect.x+b.rect.w/2)/W-c.x,(b.rect.y+b.rect.h/2)/H-c.y)<0.04){ Object.assign(T,over); return; }
     }
   }
@@ -706,15 +901,17 @@ CMS.define('illus', () => {
       const el=$(k==='title'?'hitTitle':'hitFoot');
       el.addEventListener('pointerdown',e=>{
         if(e.button>0 || !hitInfo?.[k]) return;
-        e.preventDefault(); e.stopPropagation(); el.setPointerCapture(e.pointerId); el.focus({preventScroll:true});
+        e.preventDefault(); e.stopPropagation(); el.focus({preventScroll:true});
+        if(hitInfo[k].fixed){ toast('Titre en arc : il suit la forme de la carte. Placez-le au-dessus ou au-dessous avec la grille (onglet Textes).'); return; }
+        el.setPointerCapture(e.pointerId);
         tdrag={k,id:e.pointerId,x:e.clientX,y:e.clientY,c:centerOf(k),moved:false}; el.classList.add('dragging');
       });
       el.addEventListener('pointermove',e=>{
         if(!tdrag || tdrag.id!==e.pointerId) return;
-        const A=hitInfo.area, P=ui.posterCss;
+        const I=hitInfo[k], A=I.area, P=ui.posterCss;
         let x=tdrag.c.x+(e.clientX-tdrag.x)/(A.w*P.w), y=tdrag.c.y+(e.clientY-tdrag.y)/(A.h*P.h);
         if(Math.abs(x-0.5)<0.02) x=0.5; if(Math.abs(y-0.5)<0.02) y=0.5;   // aimantation sur les axes centraux
-        if(hitInfo.kind==='band') y=0.5;   // vignette : déplacement horizontal dans la bande
+        if(I.kind==='band') y=0.5;   // vignette : déplacement horizontal dans la bande
         if(Math.hypot(e.clientX-tdrag.x,e.clientY-tdrag.y)>3) tdrag.moved=true;
         if(tdrag.moved) setFree(k,{x:clamp(x,0,1),y:clamp(y,0,1)});
       });
@@ -725,8 +922,9 @@ CMS.define('illus', () => {
       el.addEventListener('keydown',e=>{
         if(!hitInfo?.[k]) return;
         const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+        if(d && hitInfo[k].fixed) return;
         if(d){ const s=e.shiftKey?0.05:0.01, c=centerOf(k), T=posOf(), cur=(k==='title'?T.free:T.ffree)||c;
-          setFree(k,{x:clamp(cur.x+d[0]*s,0,1),y:hitInfo.kind==='band'?0.5:clamp(cur.y+d[1]*s,0,1)}); syncText(); saveState(); }
+          setFree(k,{x:clamp(cur.x+d[0]*s,0,1),y:hitInfo[k].kind==='band'?0.5:clamp(cur.y+d[1]*s,0,1)}); syncText(); saveState(); }
         else if(e.key==='Home'){ if(k==='title') Object.assign(posOf(),{free:null},st.mode==='map'?{pos:'auto'}:{}); else Object.assign(posOf(),{ffree:null,fpos:'auto'}); syncText(); scheduleOver(); saveState(); }
         else if(e.key==='Escape') el.blur();
         else return;
@@ -751,6 +949,62 @@ CMS.define('illus', () => {
   const SW_OUTLINE=[['','Sans contour'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#F3EAD8','Crème'],['#FFFFFF','Blanc'],['#C5A059','Or']];
   const POS_NAMES={h:'en haut',m:'au milieu',b:'en bas'}, COL_NAMES={g:'à gauche',c:'au centre',d:'à droite'};
   const POS_ARROWS=['↖','↑','↗','←','•','→','↙','↓','↘'];
+  // Présentations des blocs (#86) : nom et description (bulle)
+  const DECO_NAMES={libre:'Texte seul',cartouche:'Cartouche',bandeau:'Bandeau',ruban:'Ruban',arc:'Arc',cachet:'Cachet',vertical:'Vertical'};
+  const DECO_TIPS={libre:'Lettres seules, avec leur ombre et leur contour',cartouche:'Plaque couleur papier à double filet, façon carte ancienne',
+    bandeau:'Bande couleur papier sur toute la largeur de la zone',ruban:'Banderole à pointes, lettres couleur papier',
+    arc:'Titre courbé autour de la carte ronde ou en arche',cachet:'Tampon rond : titre en couronne, étoile au centre',vertical:'Titre pivoté le long d\u2019un bord'};
+  const DECO_HINTS={arc:'Le titre suit la forme de la carte : une position en haut de la grille le place au-dessus, en bas au-dessous.',
+    cachet:'Le cachet se glisse sur l\u2019aperçu, comme un tampon ; le sous-titre court en bas de la couronne.',
+    vertical:'Le titre longe le bord le plus proche : à gauche il se lit de bas en haut, à droite de haut en bas.'};
+  /** Mises en page prêtes (#86) : elles ne font que remplir zone, position et présentation */
+  const PRESETS=[
+    ['Titre en cartouche sur la carte', s=>s.mode==='mix' || (s.mode==='map' && s.layout!=='typo'),
+      P=>Object.assign(P,{pos:'hc',free:null},{deco:{...P.deco,title:'cartouche'}},P.zone ? {zone:{...P.zone,title:'map'}} : {})],
+    ['Bandeau à la jonction', s=>s.mode==='mix' && ['hb','fondu'].includes(s.mix.compo),
+      P=>Object.assign(P,{pos:'mc',free:{x:0.5,y:st.mix.compo==='fondu' ? 0.62 : st.mix.split==='two' ? 2/3 : 0.5},deco:{...P.deco,title:'bandeau'},zone:{...P.zone,title:'poster'}})],
+    ['Titre en arc sur le médaillon', s=>!!arcShape(s),
+      P=>Object.assign(P,{pos:st.mode==='map' ? 'mc' : st.mix.pos==='haut' ? 'bc' : 'hc',free:null,deco:{...P.deco,title:'arc'}},P.zone ? {zone:{...P.zone,title:'illus'}} : {})],
+    ['Cachet en coin', s=>s.mode==='mix' || (s.mode==='map' && s.layout!=='typo'),
+      P=>Object.assign(P,{pos:'hd',free:null,deco:{...P.deco,title:'cachet'}},P.zone ? {zone:{...P.zone,title:'map'}} : {})]];
+  /** Présentation d'un bloc. Un bloc encore dans le gabarit (Carte) ou dans la bande de la vignette en sort pour la recevoir. */
+  function setDeco(k,d){
+    const P=posOf(); P.deco={...P.deco,[k]:d};
+    if(d!=='libre' && st.mode==='map' && !mapMoved()[k]){
+      if(k==='title') Object.assign(P,{pos:d==='arc' ? 'mc' : d==='cachet' ? 'hd' : 'hc',free:null}); else Object.assign(P,{fpos:'bc',ffree:null});
+      toast(k==='title' ? 'Titre posé sur l\u2019affiche, hors du gabarit' : 'Lignes du bas posées sur l\u2019affiche, hors du gabarit');
+    }
+    if(d!=='libre' && st.mode==='mix' && st.mix.compo==='vig' && zoneOf(k)==='illus'){
+      P.zone={...P.zone,[k]:'map'}; if(k==='title') P.free=null; else P.ffree=null;
+      toast(k==='title' ? 'Titre posé sur la carte' : 'Lignes du bas posées sur la carte');
+    }
+    syncText(); scheduleOver(); saveState();
+  }
+  /** Zone d'un bloc (Carte + illustration) : la position libre, relative à l'ancienne zone, est oubliée */
+  function setZone(k,z){
+    const P=st.illusText.mix; P.zone={...P.zone,[k]:z}; if(k==='title') P.free=null; else P.ffree=null;
+    syncText(); scheduleOver(); saveState();
+  }
+  function syncDecos(){
+    const P=posOf(), mix=st.mode==='mix';
+    for(const [k,seg,note] of [['title','tDecoSeg','tDecoNote'],['foot','fDecoSeg','fDecoNote']]){
+      const cur=P.deco?.[k]||'libre', why=decoWhy(k,cur);
+      $(seg).querySelectorAll('button').forEach(b=>{ const d=b.dataset.v;
+        b.hidden=d!=='libre' && ((d==='arc' && !arcShape()) || (k==='title' && st.mode==='map' && st.layout==='typo'));
+        pressed(b,d===cur); });
+      const inLay=st.mode==='map' && !mapMoved()[k] && !(k==='title' && st.layout==='typo');
+      const t=why ? `« ${DECO_NAMES[cur]} » sans effet : ${why}.` : inLay && cur==='libre' ? 'Choisir une présentation pose ce bloc sur l\u2019affiche, hors du gabarit.'
+        : mix && st.mix.compo==='vig' && zoneOf(k)==='illus' ? 'Dans la bande de la vignette, le texte reste seul ; une présentation pose le bloc sur la carte.'
+        : k==='title' ? DECO_HINTS[cur]||'' : '';
+      const n=$(note); if(n.textContent!==t) n.textContent=t; n.hidden=!t;
+      if(mix){ const zs=$(k==='title' ? 'tZoneSeg' : 'fZoneSeg'); setSeg(zs.id,zoneOf(k)); zs.querySelector('[data-v=illus]').textContent=st.mix.compo==='vig' ? 'Dans la bande' : 'Sur l\'illustration'; }
+    }
+    const box=$('textPresets'), list=PRESETS.filter(([,on])=>on(st));
+    if(box.childElementCount!==list.length || [...box.children].some((b,i)=>b.textContent!==list[i][0]))
+      box.replaceChildren(...list.map(([name,,apply])=>{ const b=h('button',{type:'button',className:'chip'},name);
+        b.onclick=()=>{ apply(posOf()); syncText(); scheduleOver(); saveState(); toast(`Mise en page « ${name} » appliquée · « Annuler » pour revenir`); }; return b; }));
+    box.hidden=!list.length;
+  }
   const ready=()=>!!img && img.ref===refOf(st);
   /** Rafraîchit l'affiche après un changement de l'image ou de son cadrage */
   let rafU=0;
@@ -911,6 +1165,7 @@ CMS.define('illus', () => {
     $('tFreeNote').firstChild.textContent=P.free ? `Titre placé librement (glissé sur l\u2019aperçu) : touchez ${back} pour revenir à la grille. ` : '';
     $('fFreeNote').firstChild.textContent=P.ffree ? `Lignes du bas placées librement : touchez ${map?back:'« Auto » ou une position'} pour revenir à la grille. ` : '';
     $('oShadowOff').textContent=T.off;
+    syncDecos();
   }
   function syncPrompt(){
     const P=st.illus.prompt;
@@ -1020,6 +1275,7 @@ CMS.define('illus', () => {
     });
     CMS.on('state:synced',sync);
     CMS.on('colors:changed',syncText);   // thème : couleur que donne « Auto »
+    CMS.on('layout:changed',syncDecos);   // gabarit, composition : présentations possibles (arc), zones (#86)
     CMS.on('state:saved',()=>{ if(st.mode!=='map' && ui.tab==='illus' && step==='prompt') updatePrompt(); });
     // Modification, choix « Illustration » : un doigt déplace l'image, deux doigts l'agrandissent ou la réduisent autour
     // d'eux, double toucher la remet ajustée ; molette (ordinateur) autour du pointeur. En Lecture, rien ne bouge.
@@ -1091,12 +1347,16 @@ CMS.define('illus', () => {
       const f=h('button',{type:'button',dataset:{v:p},'aria-label':`Lignes du bas ${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`,title:`${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`},POS_ARROWS[i]);
       f.onclick=()=>setPos('foot',p); $('fPosSeg').append(f); });
     $('fAutoBtn').onclick=()=>setPos('foot','auto'); $('tLayBtn').onclick=()=>setPos('title','auto');
+    // Présentation et zone des blocs (#86)
+    for(const [k,seg,list] of [['title','tDecoSeg',C.DECOS],['foot','fDecoSeg',C.FOOT_DECOS]])
+      for(const d of list){ const b=h('button',{type:'button',className:'chip',dataset:{v:d},title:DECO_TIPS[d]},DECO_NAMES[d]); b.onclick=()=>setDeco(k,d); $(seg).append(b); }
+    for(const [k,seg] of [['title','tZoneSeg'],['foot','fZoneSeg']]) $(seg).querySelectorAll('button').forEach(b=>b.onclick=()=>setZone(k,b.dataset.v));
     initHits();
     sync();
     if(st.mode==='illus' && ui.tab==='lieu') showTab('illus');   // reprise d'une affiche illustrée : son étape principale
     setTimeout(()=>gc().catch(()=>{}),2000);   // images orphelines (affiches supprimées, autre image importée)
   }
-  return {init, draw, drawMix, textLayout, textStyle, posOf, mapMoved, drawMapTexts, get hitInfo(){ return hitInfo; }, previewImage, compoLine, region, ratioText, osmPiste, omtPiste, rankPistes, scanPistes, get found(){ return found; }, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
+  return {init, draw, drawMix, textLayout, textStyle, posOf, mapMoved, drawMapTexts, decoOf, decoWhy, zoneOf, arcShape, plateInk, get hitInfo(){ return hitInfo; }, previewImage, compoLine, region, ratioText, osmPiste, omtPiste, rankPistes, scanPistes, get found(){ return found; }, ready, importFile, removeImage, setMode, ensureImage, gc, exportImages, importImages, attachImages, FILE, refOf,
     get missing(){ return missing; }, get loading(){ return !!loading; }, buildPrompt, quality, cropPct, placement, adjust, processPixels,
     layer, setLayer, zoomBy, recenter,
     get step(){ return step; }, get image(){ return img && {w:img.w, h:img.h, name:img.name}; }};
