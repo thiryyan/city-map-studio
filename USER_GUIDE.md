@@ -427,12 +427,13 @@ en-tête et pied de Souvenir, Voyage… La mention des sources n'est pas concern
 | Mise en forme | Rendu |
 | :--- | :--- |
 | **Classique** (par défaut) | Dédicace, noms, puis date · coordonnées, empilés. |
+| **Empilé** | Une information par ligne, les unes sous les autres : dédicace, noms, date, puis coordonnées. |
 | **Ligne unique** | Dédicace · noms · date · coordonnées sur une seule ligne, réduite pour tenir. |
 | **Souvenir** | À gauche, dédicace et noms séparés par un filet ; à droite, la date au-dessus des coordonnées. |
 | **Carnet** | Aligné à gauche : noms en grand, filet court, dédicace en italique, date · coordonnées. |
 | **Colonnes** | Date à gauche, dédicace et noms au centre, coordonnées à droite. |
 
-* L'ordre des lignes (§ 6.9) s'applique à Classique et à Ligne unique ; les autres ont un ordre fixe. La légende des
+* L'ordre des lignes (§ 6.9) s'applique à Classique, Empilé et Ligne unique ; les autres ont un ordre fixe. La légende des
   lieux numérotés suit sous le bloc. Les présentations (cartouche, bandeau, étiquette, filets) habillent aussi ces
   mises en forme.
 * Sur une affiche Carte, choisir une mise en forme autre que Classique pose le bloc sur l'affiche, hors du gabarit.
@@ -522,7 +523,8 @@ message indique ce qui a changé. Tout reste modifiable ensuite, et « Annuler �
 
 ### 7.2. Thème
 
-Seize thèmes, filtrables par catégorie (**Clairs**, **Sombres**, **Couleurs**) : Souvenir, Galerie Or & Noir,
+La section **Thème** de l'onglet Style est repliée par défaut (elle rappelle le thème en cours) : touchez-la pour la
+déplier ; son état est mémorisé. Seize thèmes, filtrables par catégorie (**Clairs**, **Sombres**, **Couleurs**) : Souvenir, Galerie Or & Noir,
 Prestige Onyx & Or, Blanc minimaliste, Crème & Encre, Nuit boréale, Sépia vintage, Sauge, Terracotta, Rose poudré,
 Automne, Marine, Encre de Chine, Plan d'architecte, Néon, Risographie.
 

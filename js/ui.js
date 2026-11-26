@@ -259,6 +259,10 @@ function buildUI(){
   // deux lieux
   document.querySelectorAll('#placeSeg button').forEach(b=>b.onclick=()=>setActivePlace(+b.dataset.v));
   $('placeSwitch').onclick=()=>setActivePlace(1-(st.active||0));
+  // Thème : section repliée par défaut (gagne de la place), état mémorisé ; locaux : pas de nouveaux noms globaux
+  const THEME_KEY='cityMapStudio.themeOpen';
+  try{ if(localStorage.getItem(THEME_KEY)==='1') $('themeBox').open=true; }catch(e){}
+  $('themeBox').addEventListener('toggle',()=>{ try{ $('themeBox').open ? localStorage.setItem(THEME_KEY,'1') : localStorage.removeItem(THEME_KEY); }catch(e){} });
   // filtres des thèmes
   THEME_CATS.forEach(([k,n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'+(i?'':' on'); b.textContent=n; b.dataset.v=k;
     b.onclick=()=>{ document.querySelectorAll('#themeCats .chip').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll('#themes .theme').forEach(t=>t.hidden=!!k && t.dataset.cat!==k); }; $('themeCats').appendChild(b); });
@@ -458,7 +462,7 @@ function refreshCards(){
   document.querySelectorAll('#ambiances button').forEach(d=>{ const p=AMBIANCES.find(a=>a[0]===d.dataset.v)[2];
     d.classList.toggle('land',st.orient==='landscape');
     pressed(d,st.theme===p.theme && st.layout===p.layout && st.font===p.font && (st.fontTitle||'')===p.fontTitle && st.markerStyle===p.markerStyle); });
-  document.querySelectorAll('#themes .theme').forEach(d=>pressed(d,d.dataset.v===st.theme));
+  document.querySelectorAll('#themes .theme').forEach(d=>pressed(d,d.dataset.v===st.theme)); $('themeCur').textContent=THEMES[st.theme]?.name||'';
   updateCompare();
   document.querySelectorAll('#marks .card').forEach(d=>pressed(d,d.dataset.v===st.markerStyle));
   cardsDirty.add('style'); cardsDirty.add('repere');

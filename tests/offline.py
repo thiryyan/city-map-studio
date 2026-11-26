@@ -11,7 +11,7 @@ from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None   # Chrome/Chromium ; vide = Chromium de Playwright
-INIT = "try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}"   # accord préalable donné (cf. tests/consent.py)
+INIT = "try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.themeOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}"   # accord préalable donné (cf. tests/consent.py)
 
 
 async def main():

@@ -210,7 +210,7 @@ CMS.define('illusConf', () => ({
   POS:['hg','hc','hd','mg','mc','md','bg','bc','bd'],
   // présentations des blocs de texte (#86) : toutes pour le titre, les trois premières pour le bloc du bas ; zones (Carte + illustration)
   DECOS:['libre','cartouche','bandeau','etiquette','capsule','filets','arc','cachet','vertical'], PLATE_LINES:['solid','double','dashed','dotted','none'],
-  FOOT_DECOS:['libre','cartouche','bandeau','etiquette','filets'], FOOT_TPLS:['classique','ligne','souvenir','carnet','colonnes'], ZONES:['illus','map','poster'],
+  FOOT_DECOS:['libre','cartouche','bandeau','etiquette','filets'], FOOT_TPLS:['classique','pile','ligne','souvenir','carnet','colonnes'], ZONES:['illus','map','poster'],
   MOMENTS:[['any','Au choix','any time'],['aube','Aube','dawn'],['matin','Matin','morning'],['midi','Midi','midday'],['couchant','Couchant','sunset'],['nuit','Nuit','night']],
   SAISONS:[['any','Au choix','any season'],['printemps','Printemps','spring'],['ete','Été','summer'],['automne','Automne','autumn'],['hiver','Hiver','winter']],
   PALETTES:['ia','theme','photo'], LANGS:['fr','en'], VINTAGE:['none','light','strong'], FITS:['cover','contain'], TSTYLES:['auto','vintage','font'],

@@ -46,10 +46,14 @@ async def main():
 
         # ---------- Gabarits du bloc du bas ----------
         chips = await ev("[...document.querySelectorAll('#fTplSeg button')].map(b=>b.dataset.v)")
-        check(chips == ['classique', 'ligne', 'souvenir', 'carnet', 'colonnes'] and await page.get_attribute('#fTplSeg [data-v=classique]', 'aria-pressed') == 'true',
+        check(chips == ['classique', 'pile', 'ligne', 'souvenir', 'carnet', 'colonnes'] and await page.get_attribute('#fTplSeg [data-v=classique]', 'aria-pressed') == 'true',
               f'mises en forme proposées, Classique par défaut {chips}')
         g0 = await ev(GLYPHS, 620); d0, n0, t0 = word(g0, 'Là où'), word(g0, 'Alice'), word(g0, 'Le 23')
         check(d0 and n0 and t0 and d0[4] < n0[4] < t0[4] and abs(d0[3] - n0[3]) < 0.1, 'Classique : lignes empilées et centrées (rendu inchangé)')
+        await page.click('#fTplSeg [data-v=pile]'); await page.wait_for_timeout(300)
+        gp = await ev(GLYPHS, 620); dp, np_, tp, cp = word(gp, 'Là où'), word(gp, 'Alice'), word(gp, 'Le 23'), word(gp, '47.')
+        check(dp and np_ and tp and cp and dp[4] < np_[4] < tp[4] < cp[4] and abs(dp[3] - np_[3]) < 0.1 and abs(tp[3] - cp[3]) < 0.1,
+              'Empilé : dédicace, noms, date, puis coordonnées, chacune sur sa ligne')
         await page.click('#fTplSeg [data-v=ligne]'); await page.wait_for_timeout(300)
         g1 = await ev(GLYPHS, 620); d1, n1, t1 = word(g1, 'Là où'), word(g1, 'Alice'), word(g1, 'Le 23')
         check(d1 and n1 and t1 and abs(d1[4] - n1[4]) < 0.003 and abs(n1[4] - t1[4]) < 0.003 and d1[3] < n1[3] < t1[3], 'Ligne unique : dédicace, noms et date sur la même ligne')

@@ -594,6 +594,11 @@ CMS.define('illus', () => {
         parts.forEach((p,i)=>{ if(i) t.push(['   ·   ',{...sep,key:''}]); t.push(p); });
         const big=Math.max(...parts.map(p=>p[1].size)); h=big*1.15;
         lines.push({t,at:big*0.85,o:{size:big,maxW:mw,key:parts[0][1].key,stroke:sk}}); w=Math.min(mw,W_(t,{})); }
+    } else if(tpl==='pile'){   // chaque information sur sa propre ligne, dans l'ordre choisi (la date et les coordonnées ne sont pas réunies)
+      const P={dedication:ded && [ded,od(0.024)], names:names && [names,on(0.02)], date:date && [date,oi('date',0.015)], coords:coords && [coords,oi('coords',0.015)]};
+      let y=0; for(const [t,o] of CMS.order.sort(['dedication','names','date','coords']).map(k=>P[k]).filter(Boolean)){
+        const q={...o,maxW:mw}; y+=q.size*(y ? 1.4 : 0.85); lines.push({t,at:y,o:q}); w=Math.max(w,W_(t,q)); }
+      w=Math.min(w,mw); h=y+0.008*U;
     } else if(tpl==='souvenir'){   // dédicace | noms à gauche ; date sur coordonnées à droite
       const L=CMS.order.sort(['dedication','names']).map(k=>k==='dedication' ? ded && [ded,od(0.03)] : names && [names,on(0.022)]).filter(Boolean);
       const R=CMS.order.sort(['date','coords']).map(k=>k==='date' ? date && [date,oi('date',0.015)] : coords && [coords,oi('coords',0.015)]).filter(Boolean);
@@ -1089,8 +1094,8 @@ CMS.define('illus', () => {
   /** « Plus de réglages » : ouverte d'office (sans mémoriser) quand un de ses réglages est actif ; aucun réglage appliqué n'est caché */
   function syncMoreOpen(){ const d=$('textMore'); if(moreActive() && !d.open){ moreAuto=true; d.open=true; } }
   // Gabarits du bloc du bas (#90)
-  const TPL_NAMES={classique:'Classique',ligne:'Ligne unique',souvenir:'Souvenir',carnet:'Carnet',colonnes:'Colonnes'};
-  const TPL_TIPS={classique:'Lignes empilées : dédicace, noms, date · coordonnées',ligne:'Tout sur une ligne : dédicace · noms · date · coordonnées',
+  const TPL_NAMES={classique:'Classique',pile:'Empilé',ligne:'Ligne unique',souvenir:'Souvenir',carnet:'Carnet',colonnes:'Colonnes'};
+  const TPL_TIPS={classique:'Lignes empilées : dédicace, noms, date · coordonnées',pile:'Une ligne par information, les unes sous les autres : dédicace, noms, date, coordonnées',ligne:'Tout sur une ligne : dédicace · noms · date · coordonnées',
     souvenir:'Dédicace | noms à gauche, date et coordonnées à droite',carnet:'Aligné à gauche : noms en grand, filet, dédicace, date · coordonnées',
     colonnes:'Date à gauche, dédicace et noms au centre, coordonnées à droite'};
   /** Mise en forme du bloc du bas. Comme une présentation, elle sort le bloc du gabarit (Carte) ou de la bande (Vignette). */

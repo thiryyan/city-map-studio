@@ -245,10 +245,12 @@
         <h3>Ambiances</h3>
         <p class="hint">Un toucher pour un ensemble assorti (thème, polices, gabarit, repère, papier) ; tout reste modifiable ensuite.</p>
         <div class="fonts ambs" id="ambiances" role="group" aria-label="Ambiances"></div>
-        <h3>Thème</h3>
-        <div class="chips fcats" id="themeCats" role="group" aria-label="Catégories de thèmes"></div>
-        <div class="themes" id="themes" role="group" aria-label="Thèmes"></div>
-        <p class="hint illusonly">Le thème donne le papier et la couleur « Auto » des textes (onglet Textes).</p>
+        <details class="adv" id="themeBox">
+          <summary><span>Thème</span><small id="themeCur"></small></summary>
+          <div class="chips fcats" id="themeCats" role="group" aria-label="Catégories de thèmes"></div>
+          <div class="themes" id="themes" role="group" aria-label="Thèmes"></div>
+          <p class="hint illusonly">Le thème donne le papier et la couleur « Auto » des textes (onglet Textes).</p>
+        </details>
         <p class="fitnote" id="contrastWarn" aria-live="polite"></p>
         <!-- Couleurs d'après une image (#77) : une seule entrée pour les trois types d'affiche, depuis l'illustration importée ou une photo -->
         <h3>Couleurs d'après une image</h3>
