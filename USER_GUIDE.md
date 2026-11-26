@@ -430,9 +430,23 @@ Chaque bloc a sa présentation, propre à chaque type d'affiche :
   pose le bloc sur la carte (la bande garde le texte seul).
 * Une présentation sans objet ici (un arc sans médaillon, par exemple) est signalée : le choix est gardé, le bloc
   s'affiche en texte seul.
+* Cartouche, bandeau et ruban sont encadrés d'un seul trait. Son style se règle dans **Plus de réglages** (§ 6.9).
 * **Mises en page prêtes** (Carte et Carte + illustration) : Titre en cartouche sur la carte, Bandeau à la jonction
   (Haut / bas et Fondu), Titre en arc sur le médaillon, Cachet en coin. Elles règlent zone, position et présentation
   d'un coup ; « Annuler » revient en arrière.
+
+### 6.9. Plus de réglages
+
+Section repliable en bas de l'onglet, ouverte d'office quand l'un de ses réglages est modifié.
+
+* **Trait des plaques** : style **Plein** (par défaut), **Double**, **Tirets**, **Pointillés** ou **Aucun** ; épaisseur
+  × 0,5 à × 3 ; couleur **Auto** (encre de la plaque, couleur papier sur le ruban) ou une teinte. S'applique à
+  l'encadrement du cartouche, aux filets du bandeau et au trait du ruban ; le cachet garde ses filets.
+* **Ordre des lignes** : ↑ et ↓ déplacent une ligne ; **Ordre du gabarit** revient à l'ordre prévu. Les gabarits à
+  cartouche suivent cet ordre. Sur une affiche illustrée (et pour les blocs posés sur l'affiche), il s'applique dans
+  chaque bloc : titre et sous-titre d'un côté, dédicace, noms, date et coordonnées de l'autre (la date et les
+  coordonnées partagent une ligne, dans l'ordre choisi). Les gabarits Souvenir, Voyage et Deux lieux gardent leur
+  disposition : l'ordre y est signalé sans effet.
 
 ---
 

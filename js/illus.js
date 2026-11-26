@@ -559,24 +559,24 @@ CMS.define('illus', () => {
   function infoLine(U, base, o){
     const d=textLine('date'), c=textLine('coords');
     const od={...o,key:'date',size:base*U*tScale('date')}, oc={...o,key:'coords',size:base*U*tScale('coords')};
-    if(d && c) return {t:[[d,od],['  ·  ',od],[c,oc]], o:{...od,size:Math.max(od.size,oc.size)}};
+    if(d && c) return {t:CMS.order.sort(['date','coords'])[0]==='coords' ? [[c,oc],['  ·  ',od],[d,od]] : [[d,od],['  ·  ',od],[c,oc]], o:{...od,size:Math.max(od.size,oc.size)}};
     return d ? {t:d,o:od} : c ? {t:c,o:oc} : null;
   }
   /** Lignes du bloc du bas, communes à toutes les mises en page des modes illustrés (et aux blocs sortis du gabarit en mode Carte) :
    *  dédicace (une ou deux lignes, réglage dedWrap, comme les gabarits), noms, date · coordonnées, légende des lieux numérotés.
    *  Tailles de base en U ; renvoie [{t, o, lead}] (lead : hauteur de ligne). */
   function footRows(U, maxW, sizes){
-    const S={dedication:0.034,names:0.026,info:0.017,legend:0.014,...sizes}, rows=[], lead=sz=>sz*1.55;
+    const S={dedication:0.034,names:0.026,info:0.017,legend:0.014,...sizes}, G={}, lead=sz=>sz*1.55;
     const ded=textLine('dedication');
     if(ded){ const sz=S.dedication*U*tScale('dedication'), L=dedLines(ded,sz/U,maxW/U,{italic:true});
-      L.lines.forEach((t,i)=>rows.push({t,o:{italic:true,key:'dedication',size:sz},lead:i ? dedLeading(sz/U)*U : lead(sz)})); }
+      G.dedication=L.lines.map((t,i)=>({t,o:{italic:true,key:'dedication',size:sz},lead:i ? dedLeading(sz/U)*U : lead(sz)})); }
     const names=textLine('names');
-    if(names){ const sz=S.names*U*tScale('names'); rows.push({t:names,o:{italic:true,key:'names',size:sz},lead:lead(sz)}); }
-    const info=infoLine(U,S.info,{spacing:0.2});
-    if(info) rows.push({...info,lead:lead(info.o.size)});
+    if(names){ const sz=S.names*U*tScale('names'); G.names=[{t:names,o:{italic:true,key:'names',size:sz},lead:lead(sz)}]; }
+    const info=infoLine(U,S.info,{spacing:0.2}), ik=CMS.order.sort(['date','coords'])[0];   // ligne date · coordonnées : rang de la première des deux
+    if(info) G[ik]=[{...info,lead:lead(info.o.size)}];
     const leg=textLine('legend');
-    if(leg){ const sz=S.legend*U; rows.push({t:leg,o:{spacing:0.06,key:'legend',size:sz},lead:lead(sz)}); }
-    return rows;
+    if(leg){ const sz=S.legend*U; G.legend=[{t:leg,o:{spacing:0.06,key:'legend',size:sz},lead:lead(sz)}]; }
+    return CMS.order.sort(['dedication','names',ik,'legend']).flatMap(k=>G[k]||[]);
   }
   /** Rangée d'une ligne : lignes [{t, o, at}] (at : ligne de base depuis le haut du bloc) → bloc {lines, w, h} */
   function blockOf(ctx, lines, h){ return {lines, w:Math.max(0,...lines.map(l=>measureLine(ctx,l.t,l.o))), h}; }
@@ -652,6 +652,17 @@ CMS.define('illus', () => {
   function drawArc(ctx, A, col){
     if(A) for(const [c,x,y,rot] of A.glyphs){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); drawText(ctx,c,0,0,{...A.o,color:col}); ctx.restore(); }
   }
+  /** Trait des plaques (cartouche, bandeau, ruban ; Textes, Plus de réglages) : style, épaisseur et couleur ('auto' : couleur
+   *  propre à la plaque). draw(d) trace le chemin du trait, rentré de d vers l'intérieur (second trait du style double). */
+  function plateLine(ctx, U, auto, draw){
+    const P=st.illusText.plate||{line:'solid',w:1,color:'auto'}; if(P.line==='none') return;
+    const lw=0.0018*U*P.w;
+    ctx.save(); ctx.strokeStyle=paint(P.color==='auto' ? auto : P.color); ctx.lineCap=P.line==='dotted' ? 'round' : 'butt';
+    if(P.line==='dashed') ctx.setLineDash([lw*5,lw*3.5]); else if(P.line==='dotted') ctx.setLineDash([0.001,lw*2.6]);
+    if(P.line==='double'){ ctx.lineWidth=lw*1.2; draw(0); ctx.lineWidth=lw*0.45; draw(lw*3.2); }
+    else { ctx.lineWidth=lw; draw(0); }
+    ctx.restore();
+  }
   /** Ruban : banderole pleine, deux pointes découpées en V derrière ses extrémités */
   function drawRibbon(ctx, r, U, fill){
     const t=0.06*U, dy=r.h*0.3, th=r.h*0.85, n=t*0.45, back=shade(fill,0.3);
@@ -660,9 +671,9 @@ CMS.define('illus', () => {
       ctx.beginPath(); ctx.moveTo(i,r.y+dy); ctx.lineTo(e,r.y+dy); ctx.lineTo(e+dir*n,r.y+dy+th/2); ctx.lineTo(e,r.y+dy+th); ctx.lineTo(i,r.y+dy+th); ctx.closePath(); ctx.fill();
     }
     ctx.fillStyle=paint(fill); ctx.fillRect(r.x+t,r.y,r.w-2*t,r.h);
-    ctx.strokeStyle=hexA(st.colors.paper)(0.55); ctx.lineWidth=0.0008*U; const o=0.007*U;
-    ctx.beginPath(); ctx.moveTo(r.x+t,r.y+o); ctx.lineTo(r.x+r.w-t,r.y+o); ctx.moveTo(r.x+t,r.y+r.h-o); ctx.lineTo(r.x+r.w-t,r.y+r.h-o); ctx.stroke();
     ctx.restore();
+    const o=0.008*U;   // un seul trait couleur papier, rentré dans la banderole
+    plateLine(ctx,U,st.colors.paper,d=>{ const e=o+d; ctx.strokeRect(r.x+t+e,r.y+e,r.w-2*t-2*e,r.h-2*e); });
   }
   /** Cachet : disque papier, double filet, filet intérieur, étoile au centre et deux points entre les textes */
   function drawSeal(ctx, S, ink){
@@ -693,9 +704,10 @@ CMS.define('illus', () => {
     // flat : sur une plaque, ni ombre ni contour
     const titleBlock=(mw,flat)=>{
       const tl=[], sh=flat ? null : shadow, sk=w=>flat ? null : stroke(w); let y=0;
-      if(title){ y+=capT; tl.push({t:title,at:y,o:{size:ts,spacing:vint?0.03:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,maxW:mw,shadow:sh,stroke:sk(0.004)}}); y+=gap; }
-      if(sub){ y+=capS; tl.push({t:sub,at:y,o:{size:ss,spacing:0.3,upper:true,key:'subtitle',maxW:mw,stroke:sk(0.0012),shadow:sh && {color:sh.color,dx:sh.dx*0.3,dy:sh.dy*0.3}}}); }
-      return blockOf(ctx,tl,(title?capT:0)+(title&&sub?gap:0)+(sub?capS:0));
+      const it={title:title && {t:title,cap:capT,o:{size:ts,spacing:vint?0.03:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,maxW:mw,shadow:sh,stroke:sk(0.004)}},
+        subtitle:sub && {t:sub,cap:capS,o:{size:ss,spacing:0.3,upper:true,key:'subtitle',maxW:mw,stroke:sk(0.0012),shadow:sh && {color:sh.color,dx:sh.dx*0.3,dy:sh.dy*0.3}}}};
+      CMS.order.sort(['title','subtitle']).filter(k=>it[k]).forEach((k,i)=>{ if(i) y+=gap; y+=it[k].cap; tl.push({t:it[k].t,at:y,o:it[k].o}); });   // ordre des lignes choisi
+      return blockOf(ctx,tl,y);
     };
     const footBlock=(mw,flat)=>{
       const fl=[]; let yy=0;
@@ -750,14 +762,11 @@ CMS.define('illus', () => {
   function drawBlock(ctx, b, U, col){
     const c=st.colors, d=b.deco||'libre', ink=plateInk(col), r=b.box;
     if(d==='cartouche'){
-      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.92); ctx.fillRect(r.x,r.y,r.w,r.h); ctx.strokeStyle=paint(ink);
-      ctx.lineWidth=0.0022*U; const o=0.008*U; ctx.strokeRect(r.x+o,r.y+o,r.w-2*o,r.h-2*o);
-      ctx.lineWidth=0.0008*U; const o2=0.0145*U; ctx.strokeRect(r.x+o2,r.y+o2,r.w-2*o2,r.h-2*o2); ctx.restore();
+      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.92); ctx.fillRect(r.x,r.y,r.w,r.h); ctx.restore();
+      const o=0.01*U; plateLine(ctx,U,ink,e=>ctx.strokeRect(r.x+o+e,r.y+o+e,r.w-2*(o+e),r.h-2*(o+e)));
     } else if(d==='bandeau'){
-      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.9); ctx.fillRect(r.x,r.y,r.w,r.h); ctx.fillStyle=paint(ink);
-      const t=0.0022*U, t2=0.0008*U, o=0.006*U;
-      for(const y of [r.y,r.y+r.h-t]) ctx.fillRect(r.x,y,r.w,t);
-      for(const y of [r.y+o,r.y+r.h-o-t2]) ctx.fillRect(r.x,y,r.w,t2); ctx.restore();
+      ctx.save(); ctx.fillStyle=hexA(c.paper)(0.9); ctx.fillRect(r.x,r.y,r.w,r.h); ctx.restore();
+      const o=0.005*U; plateLine(ctx,U,ink,e=>{ ctx.beginPath(); for(const y of [r.y+o+e,r.y+r.h-o-e]){ ctx.moveTo(r.x,y); ctx.lineTo(r.x+r.w,y); } ctx.stroke(); });
     } else if(d==='ruban') drawRibbon(ctx,r,U,ink);
     else if(d==='cachet') drawSeal(ctx,b.seal,ink);
     const tc=d==='ruban' ? c.paper : ['cartouche','bandeau','cachet'].includes(d) ? ink : col;
@@ -824,8 +833,9 @@ CMS.define('illus', () => {
     const T={...textStyle(),...posOf()}, vint=T.vint, b=g.band, m=g.m+0.02*U, maxW=W-2*m;
     const shadow=T.shadow && contrast(T.shadow,st.colors.paper)>=1.3 ? {color:T.shadow, dx:T.off*0.001*U, dy:T.off*0.001*U} : null;
     // Bloc du bas : mêmes lignes que les autres mises en page (dédicace sur deux lignes, noms, date · coordonnées, légende ; #77)
-    const rows=[['title',textLine('title'),(vint?0.13:0.075)*U*tScale('title'),{spacing:vint?0.04:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow},vint?0.84:0.72],
-      ['title',textLine('subtitle'),0.021*U*tScale('subtitle'),{spacing:0.3,upper:true,key:'subtitle'},0.75],
+    const head={title:['title',textLine('title'),(vint?0.13:0.075)*U*tScale('title'),{spacing:vint?0.04:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow},vint?0.84:0.72],
+      subtitle:['title',textLine('subtitle'),0.021*U*tScale('subtitle'),{spacing:0.3,upper:true,key:'subtitle'},0.75]};
+    const rows=[...CMS.order.sort(['title','subtitle']).map(k=>head[k]),
       ...footRows(U,maxW,{dedication:0.03,names:0.022,info:0.015,legend:0.013}).map(r=>['foot',r.t,r.o.size,r.o,0.75])].filter(x=>x[1] && only.includes(x[0]));
     if(!rows.length) return {};
     const gap=0.022*U; let total=rows.reduce((a,x)=>a+x[2]*x[4],0)+gap*(rows.length-1);
@@ -957,6 +967,38 @@ CMS.define('illus', () => {
   const DECO_HINTS={arc:'Le titre suit la forme de la carte : une position en haut de la grille le place au-dessus, en bas au-dessous.',
     cachet:'Le cachet se glisse sur l\u2019aperçu, comme un tampon ; le sous-titre court en bas de la couronne.',
     vertical:'Le titre longe le bord le plus proche : à gauche il se lit de bas en haut, à droite de haut en bas.'};
+  // Trait des plaques et ordre des lignes (Textes, Plus de réglages)
+  const SW_PLATE=[['auto','Auto : encre de la plaque (couleur papier sur le ruban)'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#C5A059','Or'],['#F3EAD8','Crème'],['#FFFFFF','Blanc']];
+  const LINE_NAMES={title:'Titre',subtitle:'Sous-titre',coords:'Coordonnées',dedication:'Dédicace',names:'Noms',date:'Date'};
+  const MORE_KEY='cityMapStudio.textMoreOpen';
+  let moreAuto=false;
+  const moreActive=()=>JSON.stringify(st.illusText.plate)!==JSON.stringify(DEFAULT_STATE.illusText.plate) || !!st.lineOrder;
+  /** Ordre des lignes : liste numérotée, boutons Monter et Descendre (le focus suit la ligne déplacée) */
+  function syncOrder(focus){
+    const O=CMS.order.current(), box=$('lineOrderList'), sig=JSON.stringify([O,O.map(k=>st.show[k]===false)]);
+    $('bOrderReset').hidden=!st.lineOrder;
+    if(!focus && box.dataset.sig===sig) return;   // inchangée : rien n'est reconstruit (le focus reste en place)
+    box.dataset.sig=sig;
+    box.replaceChildren(...O.map((k,i)=>{
+      const off=st.show[k]===false, name=LINE_NAMES[k];
+      const mk=(d,sym,lab)=>{ const b=h('button',{type:'button',dataset:{k,d},'aria-label':`${lab} : ${name}`,title:lab},sym);
+        b.disabled=d<0 ? i===0 : i===O.length-1; b.onclick=()=>moveLine(k,d); return b; };
+      return h('li',{className:off?'off':''},h('span',{},name+(off?' (masquée)':'')),mk(-1,'↑','Monter'),mk(1,'↓','Descendre'));
+    }));
+    if(focus){ const b=box.querySelector(`button[data-k="${focus.k}"][data-d="${focus.d}"]`); (b && !b.disabled ? b : box.querySelector(`button[data-k="${focus.k}"]:not(:disabled)`))?.focus(); }
+  }
+  function moveLine(k,d){
+    const O=CMS.order.current(), i=O.indexOf(k), j=i+d; if(j<0 || j>=O.length) return;
+    [O[i],O[j]]=[O[j],O[i]]; st.lineOrder=O; syncOrder({k,d}); changed();
+  }
+  function syncPlate(){
+    const P=st.illusText.plate;
+    setSeg('plateLineSeg',P.line); $('oPlateW').textContent='× '+String(P.w).replace('.',','); $('sPlateW').value=P.w;
+    $('swPlate').querySelectorAll('button').forEach(b=>pressed(b,b.dataset.v===P.color));
+    const cu=$('swPlate').querySelector('input'); if(cu){ const own=P.color!=='auto' && !SW_PLATE.some(([x])=>x===P.color); cu.parentElement.classList.toggle('on',own); if(own) cu.value=P.color; }
+    $('sPlateW').closest('.slider').hidden=P.line==='none'; $('swPlate').closest('.swrow').hidden=P.line==='none';
+    const d=$('textMore'); if(moreActive() && !d.open){ moreAuto=true; d.open=true; }   // un réglage actif n'est jamais caché
+  }
   /** Mises en page prêtes (#86) : elles ne font que remplir zone, position et présentation */
   const PRESETS=[
     ['Titre en cartouche sur la carte', s=>s.mode==='mix' || (s.mode==='map' && s.layout!=='typo'),
@@ -1165,7 +1207,7 @@ CMS.define('illus', () => {
     $('tFreeNote').firstChild.textContent=P.free ? `Titre placé librement (glissé sur l\u2019aperçu) : touchez ${back} pour revenir à la grille. ` : '';
     $('fFreeNote').firstChild.textContent=P.ffree ? `Lignes du bas placées librement : touchez ${map?back:'« Auto » ou une position'} pour revenir à la grille. ` : '';
     $('oShadowOff').textContent=T.off;
-    syncDecos();
+    syncDecos(); syncPlate(); syncOrder();
   }
   function syncPrompt(){
     const P=st.illus.prompt;
@@ -1270,12 +1312,13 @@ CMS.define('illus', () => {
     $('bIllusCenter').onclick=()=>{ Object.assign(st.illus,{zoom:100,ox:0,oy:0}); syncInputs(); redraw(); saveState(); };
     // Champs liés (data-k) : curseurs et cases (ui.js émet illus:input)
     CMS.on('illus:input',k=>{
-      if(k.startsWith('illusText.')){ syncText(); scheduleOver(); saveState(); return; }
+      if(k.startsWith('illusText.')){ syncText(); scheduleOver(); saveState(); return; }   // dont l'épaisseur du trait des plaques
       syncImage(); redraw(); saveState();
     });
     CMS.on('state:synced',sync);
     CMS.on('colors:changed',syncText);   // thème : couleur que donne « Auto »
-    CMS.on('layout:changed',syncDecos);   // gabarit, composition : présentations possibles (arc), zones (#86)
+    CMS.on('layout:changed',()=>{ syncDecos(); syncOrder(); });   // gabarit, composition : présentations possibles (arc), zones (#86), ordre du gabarit
+    CMS.on('state:saved',()=>syncOrder());   // lignes masquées ou affichées
     CMS.on('state:saved',()=>{ if(st.mode!=='map' && ui.tab==='illus' && step==='prompt') updatePrompt(); });
     // Modification, choix « Illustration » : un doigt déplace l'image, deux doigts l'agrandissent ou la réduisent autour
     // d'eux, double toucher la remet ajustée ; molette (ordinateur) autour du pointeur. En Lecture, rien ne bouge.
@@ -1347,6 +1390,15 @@ CMS.define('illus', () => {
       const f=h('button',{type:'button',dataset:{v:p},'aria-label':`Lignes du bas ${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`,title:`${POS_NAMES[p[0]]}, ${COL_NAMES[p[1]]}`},POS_ARROWS[i]);
       f.onclick=()=>setPos('foot',p); $('fPosSeg').append(f); });
     $('fAutoBtn').onclick=()=>setPos('foot','auto'); $('tLayBtn').onclick=()=>setPos('title','auto');
+    // Trait des plaques, ordre des lignes (Plus de réglages : mémorisé, ouvert d'office si un de ses réglages est actif)
+    const setPlate=(f,v)=>{ st.illusText.plate={...st.illusText.plate,[f]:v}; syncPlate(); scheduleOver(); saveState(); };
+    $('plateLineSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>setPlate('line',b.dataset.v));
+    for(const [hex,name] of SW_PLATE){ const auto=hex==='auto', b=h('button',{type:'button',className:'sw'+(auto?' auto':''),dataset:{v:hex},title:name,'aria-label':name},...(auto ? [h('span',{},'Auto')] : []));
+      if(!auto) b.style.background=hex; b.onclick=()=>setPlate('color',hex); $('swPlate').append(b); }
+    { const i=h('input',{type:'color','aria-label':'Autre couleur du trait'}); i.oninput=()=>setPlate('color',i.value.toUpperCase()); $('swPlate').append(h('label',{className:'sw custom',title:'Autre couleur'},i)); }
+    $('bOrderReset').onclick=()=>{ st.lineOrder=null; syncOrder(); changed(); toast('Lignes dans l\u2019ordre du gabarit · « Annuler » pour revenir'); };
+    try{ if(localStorage.getItem(MORE_KEY)==='1') $('textMore').open=true; }catch(e){}
+    $('textMore').addEventListener('toggle',()=>{ if(moreAuto){ moreAuto=false; return; } try{ $('textMore').open ? localStorage.setItem(MORE_KEY,'1') : localStorage.removeItem(MORE_KEY); }catch(e){} });
     // Présentation et zone des blocs (#86)
     for(const [k,seg,list] of [['title','tDecoSeg',C.DECOS],['foot','fDecoSeg',C.FOOT_DECOS]])
       for(const d of list){ const b=h('button',{type:'button',className:'chip',dataset:{v:d},title:DECO_TIPS[d]},DECO_NAMES[d]); b.onclick=()=>setDeco(k,d); $(seg).append(b); }

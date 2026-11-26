@@ -381,6 +381,14 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 .sublbl{margin:10px 0 6px;font-size:.8125rem;color:var(--txt);font-weight:600}
 .decos .chip{padding:8px 12px}
 .mb8{margin-bottom:8px}
+/* Ordre des lignes : une ligne par texte, boutons Monter / Descendre */
+.lorder{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;counter-reset:lo}
+.lorder li{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:2px 4px 2px 12px;counter-increment:lo}
+.lorder li::before{content:counter(lo);color:var(--mut);font-size:.8125rem;min-width:1.2em}
+.lorder li span{flex:1;min-width:0}
+.lorder li.off span{color:var(--mut)}
+.lorder button{min-width:44px;min-height:44px;border:0;background:none;color:var(--txt);font-size:1.05rem;border-radius:8px;cursor:pointer}
+.lorder button:disabled{opacity:var(--off);cursor:default}
 /* Voir l'affiche seule (#56) : rien sur l'aperçu, et sur mobile plus de panneau ; un toucher n'importe où ramène les réglages */
 #app.clean .fab,#app.clean #shield,#app.clean #placeSwitch,#app.clean .mapcredit,#app.clean .cmpbadge,#app.clean .stagebar,#app.clean .illushit,#app.clean .texthit,#app.clean .safeguide{display:none!important}
 #app.clean #panel{display:none}

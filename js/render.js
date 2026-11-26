@@ -180,6 +180,8 @@ function drawCartouche(ctx, U, box){
   const rows=(box.rows||CART_ROWS).filter(([k])=>!(box.only && !box.only.includes(k)))
     .map(([k,d,o])=>[textLine(k),d,{...o,size:o.size*U,maxW:maxW*(o.narrow||1),key:k},k]).filter(([txt])=>txt);
   if(!rows.length) return;
+  // Ordre des lignes choisi (Textes, Plus de réglages) : chaque ligne garde son style et son écart
+  const ord=CMS.order.sort(rows.map(r=>r[3])); rows.sort((a,b)=>ord.indexOf(a[3])-ord.indexOf(b[3]));
   // Taille choisie : la ligne grandit (ou rétrécit) et les interlignes suivent (≈ 0,8 × l'écart de corps de la ligne, 0,25 × celui de la précédente)
   let prevGrow=0;
   for(const r of rows){ const base=r[2].size, grow=base*(tScale(r[3])-1); r[2].size=base+grow; r[1]=Math.max(0.2*r[2].size/U, r[1]+(0.8*grow+0.25*prevGrow)/U); prevGrow=grow; }

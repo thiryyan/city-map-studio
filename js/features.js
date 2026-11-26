@@ -329,6 +329,9 @@ CMS.define('deps', () => {
     ['route', ()=>$('routeShow').closest('label'), ()=>st.layout==='diptych' && !!st.route?.pts?.length && st.route.show!==false,
       ()=>'Le gabarit « Deux lieux » n\'affiche pas l\'itinéraire.', 'Passer au gabarit Souvenir', ()=>setLayout('souvenir')],
     // Lettres : le titre est dessiné à la plus grande taille possible (§ 4.11) ; sa taille propre est sans effet
+    // ordre des lignes choisi : sans effet là où les lignes ont une place fixe
+    ['order', ()=>$('lineOrderList'), ()=>!!st.lineOrder && st.mode==='map' && ['souvenir','travel','diptych'].includes(st.layout),
+      ()=>`Sans effet avec le gabarit « ${layName(st.layout)} » : chaque ligne y a sa place.`, 'Passer au gabarit Cadre', ()=>setLayout('classic')],
     ['titleTypo', ()=>row('textScale.title'), ()=>st.mode==='map' && st.layout==='typo' && st.show.title!==false,
       ()=>'Sans effet avec le gabarit « Lettres » : le titre y prend toute la largeur.', 'Passer au gabarit Cadre', ()=>setLayout('classic')],
     // ligne décochée dont la taille a été changée (ou coordonnées saisies) : rien ne s'affiche
@@ -656,6 +659,9 @@ CMS.define('changes', () => {
       !!p.zone && !same(p.zone,d.zone) && 'textes posés sur la carte ou sur toute l\'affiche',   // Carte + illustration (#86)
       !same(p.deco,d.deco) && 'présentation des textes'];  },
       reset:o=>{ const p=tpos(o), d=dpos(o); copy(p,['pos','free','fpos','ffree','deco',...(p.zone?['zone']:[])],d); }},
+    {id:'textMore', tab:'textes', at:'hPlate', sec:['textMore'], name:'Trait des plaques et ordre des lignes', items:s=>[
+      !same(s.illusText.plate,D.illusText.plate) && 'trait des plaques', !!s.lineOrder && 'ordre des lignes'],
+      reset:o=>{ o.illusText.plate=structuredClone(D.illusText.plate); o.lineOrder=null; }},
     {id:'textSize', tab:'textes', at:'hTextSize', name:'Tailles des textes', items:s=>{
       const n=Object.keys(D.textScale).filter(k=>s.textScale[k]!==D.textScale[k]).length;
       return [s.textScaleAll!==D.textScaleAll && 'tous les textes à '+pct(s.textScaleAll), n>0 && (n>1 ? n+' lignes redimensionnées' : '1 ligne redimensionnée')]; },
