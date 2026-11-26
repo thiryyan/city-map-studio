@@ -87,13 +87,17 @@ function normState(src){
     const o=V.obj(src), C=CMS.illusConf, hexOrNone=(v,dv)=>v==='' ? '' : V.hex(v,dv), orAuto=(v,f)=>v==='auto' ? 'auto' : f();
     const pt=p=>{ const q=V.obj(p); return Number.isFinite(q.x) && Number.isFinite(q.y) ? {x:V.num(q.x,0.5,0,1), y:V.num(q.y,0.5,0,1)} : null; };   // position libre
     const m=V.obj(o.map), dm=d.map;
+    // présentation des blocs (#86) ; un état antérieur n'en a pas : texte seul
+    const deco=x=>{ const q=V.obj(x); return {title:V.oneOf(q.title,C.DECOS,'libre'), foot:V.oneOf(q.foot,C.FOOT_DECOS,'libre')}; };
     const T={v:2, style:V.oneOf(o.style,C.TSTYLES,d.style), color:orAuto(o.color,()=>V.hex(o.color,d.color)), shadow:orAuto(o.shadow,()=>hexOrNone(o.shadow,d.shadow)),
       outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,C.POS,d.pos),
-      free:pt(o.free), fpos:V.oneOf(o.fpos,['auto',...C.POS],d.fpos), ffree:pt(o.ffree),
-      map:{pos:V.oneOf(m.pos,['auto',...C.POS],dm.pos), free:pt(m.free), fpos:V.oneOf(m.fpos,['auto',...C.POS],dm.fpos), ffree:pt(m.ffree)}};
+      free:pt(o.free), fpos:V.oneOf(o.fpos,['auto',...C.POS],d.fpos), ffree:pt(o.ffree), deco:deco(o.deco),
+      map:{pos:V.oneOf(m.pos,['auto',...C.POS],dm.pos), free:pt(m.free), fpos:V.oneOf(m.fpos,['auto',...C.POS],dm.fpos), ffree:pt(m.ffree), deco:deco(m.deco)}};
     // Carte + illustration : positions propres (#77). Un état antérieur, où elles étaient partagées avec l'Illustration, les reprend.
     const x=o.mix ? V.obj(o.mix) : {pos:T.pos,free:T.free,fpos:T.fpos,ffree:T.ffree};
-    T.mix={pos:V.oneOf(x.pos,C.POS,d.mix.pos), free:pt(x.free), fpos:V.oneOf(x.fpos,['auto',...C.POS],d.mix.fpos), ffree:pt(x.ffree)};
+    const z=V.obj(x.zone);
+    T.mix={pos:V.oneOf(x.pos,C.POS,d.mix.pos), free:pt(x.free), fpos:V.oneOf(x.fpos,['auto',...C.POS],d.mix.fpos), ffree:pt(x.ffree),
+      deco:deco(o.mix && x.deco), zone:{title:V.oneOf(z.title,C.ZONES,'illus'), foot:V.oneOf(z.foot,C.ZONES,'illus')}};
     if(o.v!==2 && Object.keys(o).length){
       if(T.style==='vintage') T.style='auto';
       if(V.oneOf(s.mode,C.MODES,'map')==='map') Object.assign(T,{color:'auto',shadow:'auto',outline:''});

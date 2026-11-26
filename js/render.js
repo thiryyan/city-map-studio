@@ -668,7 +668,7 @@ function drawPosterAt(ctx, W, H, pass, mapFn){
     drawCartouche(ctx,U,{...g.text,rows:lay==='polaroid'?POLA_ROWS:CART_ROWS,only:lay==='typo'?TYPO_ROWS:null});
   }
   ui.textFx=null; ui.textHide=null;
-  CMS.illus.drawMapTexts(ctx,W,H,U,mv);
+  CMS.illus.drawMapTexts(ctx,W,H,U,mv,g);
   // Attributions (ODbL, CC-BY 4.0) : la mention minimale est toujours inscrite ; la case « Mention complète » l'étend
   ctx.globalAlpha=0.55;
   drawText(ctx,attributionText(!!g.sky),W-m,H-m*0.38,{size:0.0085*U,align:'right',color:c.text,ink:'attribution'});
