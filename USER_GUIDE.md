@@ -312,6 +312,16 @@ carte dessus.
 
 ## 6. Onglet Textes
 
+L'onglet suit l'ordre « quoi, où, comment » :
+
+1. **Vos textes** : les six lignes, à cocher et à remplir, puis les modèles de texte (§ 6.1 à 6.3).
+2. **Mise en page** : mises en page prêtes, puis une carte par bloc, **Titre et sous-titre** et **Lignes du bas**,
+   avec sa zone, sa position et sa présentation (§ 6.7 et 6.8).
+3. **Typographie** : duos de polices (dont Vintage), taille de tous les textes, couleur des lettres (§ 6.5 et 6.6).
+4. **Plus de réglages** : section repliable, ouverte d'office quand l'un de ses réglages est modifié ; son en-tête
+   compte les réglages modifiés. Elle contient les polices détaillées, l'ombre et le contour, la taille de chaque
+   ligne, la coupure de la dédicace, le format des coordonnées, le trait des plaques et l'ordre des lignes (§ 6.9).
+
 ### 6.1. Les six lignes
 
 | Ligne | Exemple par défaut |
@@ -325,19 +335,20 @@ carte dessus.
 
 * **Afficher ou masquer** : la case devant chaque ligne la retire de l'affiche sans effacer le texte. Les lignes
   suivantes remontent.
-* **Taille** : chaque ligne a son curseur (60 à 150 %), et **Tous les textes** agit sur l'ensemble (70 à 140 %).
+* **Taille** : **Taille de tous les textes** (Typographie) agit sur l'ensemble (70 à 140 %), et chaque ligne a son
+  curseur (60 à 150 %, Plus de réglages).
   Les deux se combinent. **Tailles par défaut** remet tout à 100 %. Dans le gabarit Lettres, le titre prend toujours
   la plus grande taille possible : son curseur n'y a pas d'effet.
 * **Réduction automatique** : un texte trop long est réduit pour tenir. Au-delà de 10 %, l'onglet le signale
   (« ↘ Réduit pour tenir dans l'affiche : dédicace (67 %) ») et le curseur de la ligne passe en orange.
 * **Date** : le bouton calendrier remplit le champ au format de l'affiche (« Le 1er juillet 2023 ») ; le texte
   reste modifiable librement.
-* **Coordonnées** : format **Décimal** (`47.5861000, 1.3359000`) ou **Degrés ° ′ ″** (`47° 35′ 10.0″ N`). Un texte
+* **Coordonnées** : format (Plus de réglages) **Décimal** (`47.5861000, 1.3359000`) ou **Degrés ° ′ ″** (`47° 35′ 10.0″ N`). Un texte
   saisi remplace le calcul automatique ; laissez le champ vide pour revenir aux coordonnées du repère.
 
 ### 6.2. Dédicace sur une ou deux lignes
 
-Sous la dédicace, trois choix : **Auto** (par défaut), **Une ligne**, **Deux lignes**. En Auto, la dédicace passe
+Dans **Plus de réglages**, trois choix : **Auto** (par défaut), **Une ligne**, **Deux lignes**. En Auto, la dédicace passe
 sur deux lignes dès que, sur une seule, elle serait réduite de plus de 20 %. La coupure se fait entre deux mots,
 pour équilibrer les deux lignes. La carte cède alors un peu de hauteur au texte.
 
@@ -346,7 +357,8 @@ pour équilibrer les deux lignes. La carte cède alors un peu de hauteur au text
 
 ### 6.3. Modèles de texte
 
-**Rencontre**, **Mariage**, **Naissance**, **Maison**, **Voyage**, **Anniversaire** : chaque modèle propose une
+En fin de « Vos textes », **Partir d'un modèle** : **Rencontre**, **Mariage**, **Naissance**, **Maison**, **Voyage**,
+**Anniversaire**. Chaque modèle propose une
 dédicace. Il remplace aussi les noms, mais seulement s'ils sont encore ceux d'un exemple : vos noms saisis ne sont
 jamais écrasés. Un modèle s'annule comme tout autre changement.
 
@@ -355,15 +367,16 @@ jamais écrasés. Un modèle s'annule comme tout autre changement.
 Tous les gabarits n'affichent pas toutes les lignes. Souvenir et Polaroid, par exemple, n'affichent pas le
 sous-titre : une note sous la ligne l'indique, avec un bouton « Passer au gabarit Cadre ».
 
-L'onglet Textes est le même pour les trois types d'affiche (Carte, Illustration, Carte + illus.). Les sections
-6.5 à 6.7 sont en tête de l'onglet.
+L'onglet Textes est le même pour les trois types d'affiche (Carte, Illustration, Carte + illus.).
 
 ### 6.5. Typographie
 
 
 * **Duos** préassortis : Origine (Playfair), Mariage (Italiana + Calligraphie), Voyage (Bebas + Jost), Classique
-  (Bodoni + Garamond), Moderne (Jost), Chaleureux (Fraunces + Montserrat), Cartographe (Cinzel + Fell).
-* **Police du titre** et **police du texte**, choisies séparément. La police du titre propose d'abord **Vintage** :
+  (Bodoni + Garamond), Moderne (Jost), Chaleureux (Fraunces + Montserrat), Cartographe (Cinzel + Fell), puis
+  **Vintage** : le titre en grandes capitales condensées, la police du texte inchangée. Vintage est coché quand le
+  titre est en Vintage (par défaut sur une affiche illustrée).
+* **Police du titre** et **police du texte**, choisies séparément dans **Plus de réglages**. La police du titre propose d'abord **Vintage** :
   grandes capitales condensées, à la manière des affiches de voyage. Viennent ensuite « Comme le texte » et quatorze
   familles : Playfair, Garamond, Bodoni, Italiana, Fraunces (classiques), Montserrat, Jost, Mono (modernes), Art
   déco, Bebas (affiche), Calligraphie (manuscrite), Cinzel, Fell et Marcellus (gravées : lettres des inscriptions
@@ -381,9 +394,9 @@ police choisie sur une affiche Carte, Vintage sur une affiche illustrée.
 ### 6.6. Couleurs des textes
 
 * **Lettres** : **Auto** (couleur Texte du thème, par défaut), une teinte du nuancier ou une couleur libre.
-* **Ombre** : **Auto** (aucune sur une affiche Carte, couleur du papier sur une affiche illustrée), aucune ou
+* **Ombre** (Plus de réglages) : **Auto** (aucune sur une affiche Carte, couleur du papier sur une affiche illustrée), aucune ou
   une teinte ; **décalage de l'ombre** de 1 à 12.
-* **Contour** : aucun (par défaut) ou une teinte.
+* **Contour** (Plus de réglages) : aucun (par défaut) ou une teinte.
 
 La pastille Auto montre, en bas, la couleur que donne le thème actuel. Le style du titre et ces couleurs sont
 communs aux trois types d'affiche. Sur une affiche Carte, ils s'appliquent aux lignes du gabarit : cartouche,
@@ -430,9 +443,25 @@ Chaque bloc a sa présentation, propre à chaque type d'affiche :
   pose le bloc sur la carte (la bande garde le texte seul).
 * Une présentation sans objet ici (un arc sans médaillon, par exemple) est signalée : le choix est gardé, le bloc
   s'affiche en texte seul.
+* Cartouche, bandeau et ruban sont encadrés d'un seul trait. Son style se règle dans **Plus de réglages** (§ 6.9).
 * **Mises en page prêtes** (Carte et Carte + illustration) : Titre en cartouche sur la carte, Bandeau à la jonction
   (Haut / bas et Fondu), Titre en arc sur le médaillon, Cachet en coin. Elles règlent zone, position et présentation
   d'un coup ; « Annuler » revient en arrière.
+
+### 6.9. Plus de réglages
+
+Section repliable en bas de l'onglet, ouverte d'office quand l'un de ses réglages est modifié (un duo ne
+l'ouvre pas). Elle reprend les polices détaillées (§ 6.5), l'ombre et le contour (§ 6.6), la taille de chaque ligne
+(§ 6.1), la coupure de la dédicace (§ 6.2) et le format des coordonnées, puis :
+
+* **Trait des plaques** : style **Plein** (par défaut), **Double**, **Tirets**, **Pointillés** ou **Aucun** ; épaisseur
+  × 0,5 à × 3 ; couleur **Auto** (encre de la plaque, couleur papier sur le ruban) ou une teinte. S'applique à
+  l'encadrement du cartouche, aux filets du bandeau et au trait du ruban ; le cachet garde ses filets.
+* **Ordre des lignes** : ↑ et ↓ déplacent une ligne ; **Ordre du gabarit** revient à l'ordre prévu. Les gabarits à
+  cartouche suivent cet ordre. Sur une affiche illustrée (et pour les blocs posés sur l'affiche), il s'applique dans
+  chaque bloc : titre et sous-titre d'un côté, dédicace, noms, date et coordonnées de l'autre (la date et les
+  coordonnées partagent une ligne, dans l'ordre choisi). Les gabarits Souvenir, Voyage et Deux lieux gardent leur
+  disposition : l'ordre y est signalé sans effet.
 
 ---
 

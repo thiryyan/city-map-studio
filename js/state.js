@@ -47,6 +47,7 @@ function normState(src){
     orient:V.oneOf(s.orient,['portrait','landscape'],D.orient),
     format:V.oneOf(s.format,keys(FORMATS),D.format), fileType:V.oneOf(s.fileType,['png','pdf'],D.fileType),
     dedWrap:V.oneOf(s.dedWrap,['auto','one','two'],D.dedWrap),
+    lineOrder:CMS.order.norm(s.lineOrder),
     texture:V.oneOf(s.texture,keys(TEXTURES),D.texture),
     markers2:(Array.isArray(s.markers2)?s.markers2:[]).map(p=>{ const q=V.ll(p); return q && {...q,label:V.str(p.label,'')}; }).filter(Boolean).slice(0,2),
     markerLabel:V.str(s.markerLabel,''), numbered:V.bool(s.numbered,D.numbered), linkMarkers:V.bool(s.linkMarkers,D.linkMarkers),
@@ -92,6 +93,7 @@ function normState(src){
     const T={v:2, style:V.oneOf(o.style,C.TSTYLES,d.style), color:orAuto(o.color,()=>V.hex(o.color,d.color)), shadow:orAuto(o.shadow,()=>hexOrNone(o.shadow,d.shadow)),
       outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,C.POS,d.pos),
       free:pt(o.free), fpos:V.oneOf(o.fpos,['auto',...C.POS],d.fpos), ffree:pt(o.ffree), deco:deco(o.deco),
+      plate:(q=>({line:V.oneOf(q.line,C.PLATE_LINES,d.plate.line), w:V.num(q.w,d.plate.w,0.5,3), color:orAuto(q.color,()=>V.hex(q.color,'#2C2A29'))}))(V.obj(o.plate)),
       map:{pos:V.oneOf(m.pos,['auto',...C.POS],dm.pos), free:pt(m.free), fpos:V.oneOf(m.fpos,['auto',...C.POS],dm.fpos), ffree:pt(m.ffree), deco:deco(m.deco)}};
     // Carte + illustration : positions propres (#77). Un état antérieur, où elles étaient partagées avec l'Illustration, les reprend.
     const x=o.mix ? V.obj(o.mix) : {pos:T.pos,free:T.free,fpos:T.fpos,ffree:T.ffree};

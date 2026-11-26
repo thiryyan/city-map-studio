@@ -118,7 +118,7 @@ async def main():
         ratio = await ev("c=>contrast(c,__cms.st.colors.paper)", t3[2])
         check(t3[2].lower() != '#f3ead8' and ratio >= 4.5, f'cartouche : lettres crème trop pâles remplacées par une encre lisible ({t3[2]}, {ratio:.1f}:1)')
         px = await ev("""async ()=>{ const r=await __cms.composePoster(620,877), c=r.canvas.getContext('2d'), h=CMS.illus.hitInfo.title;
-          const p=[...c.getImageData(Math.round((h.x+0.01)*620),Math.round((h.y+h.h/2)*877),1,1).data]; r.canvas.width=0; return p; }""")
+          const p=[...c.getImageData(Math.round((h.x+0.03)*620),Math.round((h.y+h.h/2)*877),1,1).data]; r.canvas.width=0; return p; }""")
         pp = await ev("(h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)))(__cms.st.colors.paper)")
         check(all(abs(px[i] - pp[i]) < 30 for i in range(3)), f'cartouche : plaque couleur papier sous le titre {px[:3]} ~ {pp}')
         await page.click('#swText [data-v=auto]')
@@ -203,6 +203,51 @@ async def main():
         # Enregistrement : l'état normalisé garde présentations et zones
         rt = await ev("normState(JSON.parse(JSON.stringify(__cms.st))).illusText")
         check(rt['deco']['title'] == 'ruban' and rt['map']['deco']['title'] == 'arc' and rt['mix']['zone']['title'] == 'poster', 'enregistrement : présentations et zones conservées')
+
+        # ---------- Trait des plaques (Plus de réglages) ----------
+        STROKES = """async ()=>{ const s=[], f=CanvasRenderingContext2D.prototype.strokeRect;
+          CanvasRenderingContext2D.prototype.strokeRect=function(...a){ s.push([String(this.strokeStyle),this.lineWidth,this.getLineDash().length]); return f.apply(this,a); };
+          try{ const r=await __cms.composePoster(620,877); r.canvas.width=0; } finally{ CanvasRenderingContext2D.prototype.strokeRect=f; } return s; }"""
+        await page.click('#fDecoSeg [data-v=cartouche]'); await page.wait_for_timeout(300)
+        sr = await ev(STROKES)
+        check(len(sr) == 2 and all(x[2] == 0 for x in sr), f'par défaut : ruban et cartouche encadrés d\'un seul trait plein {sr}')
+        check(sr and sr[0][0].lower() == paper, 'ruban : trait couleur papier')
+        await page.click('#textMore summary'); await page.wait_for_timeout(200)
+        await page.click('#plateLineSeg [data-v=double]'); await page.click('#swPlate [data-v="#B5654B"]')
+        await page.fill('#sPlateW', '2'); await page.dispatch_event('#sPlateW', 'input'); await page.wait_for_timeout(300)
+        check(await ev("JSON.stringify(__cms.st.illusText.plate)") == '{"line":"double","w":2,"color":"#B5654B"}', 'trait : double, × 2, terracotta enregistrés')
+        sr2 = await ev(STROKES)
+        check(len(sr2) == 4 and all(x[0].lower() == '#b5654b' for x in sr2) and sr2[0][1] > sr[0][1] * 1.5, f'trait double, épais, à la couleur choisie {sr2}')
+        await page.click('#plateLineSeg [data-v=dashed]'); await page.wait_for_timeout(200)
+        check(all(x[2] > 0 for x in await ev(STROKES)), 'tirets : trait discontinu')
+        await page.click('#plateLineSeg [data-v=none]'); await page.wait_for_timeout(200)
+        check(await ev(STROKES) == [] and await page.is_hidden('#sPlateW'), 'aucun trait : épaisseur et couleur masquées')
+        check(await page.text_content('#chg-textMore') == '1 modifié', 'section repliée : réglage modifié compté')
+
+        # ---------- Ordre des lignes ----------
+        names = lambda: ev("[...document.querySelectorAll('#lineOrderList li span')].map(s=>s.textContent)")
+        check(await names() == ['Titre', 'Sous-titre', 'Dédicace', 'Noms', 'Date', 'Coordonnées'] and await page.is_hidden('#bOrderReset'), 'Illustration : ordre affiché, titre puis bloc du bas')
+        await page.click('#lineOrderList button[aria-label="Monter : Sous-titre"]'); await page.wait_for_timeout(300)
+        check(await ev("__cms.st.lineOrder") == ['subtitle', 'title', 'dedication', 'names', 'date', 'coords'], 'Monter : sous-titre avant le titre')
+        check(await ev("document.activeElement.getAttribute('aria-label')") == 'Descendre : Sous-titre', 'focus : reste sur la ligne déplacée')
+        go = await ev(GLYPHS, 620); sub, tit = word(go, 'VAL'), word(go, 'BLOIS')
+        check(sub and tit and sub[4] < tit[4], 'Illustration : sous-titre au-dessus du titre')
+        await page.click('#lineOrderList button[aria-label="Monter : Coordonnées"]'); await page.wait_for_timeout(300)
+        go = await ev(GLYPHS, 620)
+        d, c = word(go, 'Le 23'), word(go, '47.')
+        check(d and c and c[3] < d[3] and abs(c[4] - d[4]) < 0.002, 'coordonnées avant la date, sur la même ligne')
+        await ev("CMS.illus.setMode('map'); __cms.setLayout('classic',true)"); await ev("__cms.st.illusText.map.pos='auto'; __cms.st.illusText.map.fpos='auto'; drawOver()"); await page.wait_for_timeout(400)
+        await page.click('#lineOrderList button[aria-label="Descendre : Titre"]'); await page.click('#lineOrderList button[aria-label="Monter : Dédicace"]'); await page.wait_for_timeout(300)
+        go = await ev(GLYPHS, 620); t, s2, de = word(go, 'BLOIS'), word(go, 'VAL'), word(go, 'Là où')
+        check(t and s2 and de and de[4] < s2[4] < t[4], f'gabarit Cadre : lignes du cartouche dans l\'ordre choisi {[x and round(x[4], 3) for x in (de, s2, t)]}')
+        await ev("__cms.setLayout('souvenir',true)"); await page.wait_for_timeout(800)
+        check(await page.is_visible('#dep-order'), 'gabarit Souvenir : ordre signalé sans effet')
+        await page.click('#bOrderReset'); await page.wait_for_timeout(300)
+        check(await ev("__cms.st.lineOrder") is None and await page.is_hidden('#dep-order'), 'Ordre du gabarit : ordre retiré')
+        await page.click('#bUndo'); await page.wait_for_timeout(300)
+        check(await ev("__cms.st.lineOrder") is not None, 'Annuler : ordre retrouvé')
+        n = await ev("normState({lineOrder:['title','title','names','date','coords','dedication']}).lineOrder")
+        check(n is None, 'état forgé : ordre invalide ignoré')
 
         check(not errs, f'aucune erreur de page {errs}')
         await b.close()

@@ -324,11 +324,14 @@ CMS.define('deps', () => {
     ['glow', ()=>row('fx.glow'), ()=>st.fx.glow && lum(st.colors.paper)>=0.3,
       ()=>'Peu visible sur ce fond clair : la lueur est pensée pour les thèmes sombres.', 'Voir les thèmes sombres',
       ()=>{ const c=document.querySelector('#themeCats [data-v=sombre]'); c.click(); CMS.panelScroll.to($('themeCats'),'start',true); }],
-    ['subtitle', ()=>row('textScale.subtitle'), ()=>st.mode==='map' && st.show.subtitle && ['souvenir','polaroid'].includes(st.layout),
+    ['subtitle', ()=>tog('texts.subtitle'), ()=>st.mode==='map' && st.show.subtitle && ['souvenir','polaroid'].includes(st.layout),
       ()=>`Le gabarit « ${layName(st.layout)} » n'affiche pas le sous-titre.`, 'Passer au gabarit Cadre', ()=>setLayout('classic')],
     ['route', ()=>$('routeShow').closest('label'), ()=>st.layout==='diptych' && !!st.route?.pts?.length && st.route.show!==false,
       ()=>'Le gabarit « Deux lieux » n\'affiche pas l\'itinéraire.', 'Passer au gabarit Souvenir', ()=>setLayout('souvenir')],
     // Lettres : le titre est dessiné à la plus grande taille possible (§ 4.11) ; sa taille propre est sans effet
+    // ordre des lignes choisi : sans effet là où les lignes ont une place fixe
+    ['order', ()=>$('lineOrderList'), ()=>!!st.lineOrder && st.mode==='map' && ['souvenir','travel','diptych'].includes(st.layout),
+      ()=>`Sans effet avec le gabarit « ${layName(st.layout)} » : chaque ligne y a sa place.`, 'Passer au gabarit Cadre', ()=>setLayout('classic')],
     ['titleTypo', ()=>row('textScale.title'), ()=>st.mode==='map' && st.layout==='typo' && st.show.title!==false,
       ()=>'Sans effet avec le gabarit « Lettres » : le titre y prend toute la largeur.', 'Passer au gabarit Cadre', ()=>setLayout('classic')],
     // ligne décochée dont la taille a été changée (ou coordonnées saisies) : rien ne s'affiche
@@ -616,7 +619,8 @@ CMS.define('changes', () => {
   const pct=v=>Math.round(v)+' %', signed=v=>(v>0?'+':'')+v;
   const LINES={title:'titre',subtitle:'sous-titre',coords:'coordonnées',dedication:'dédicace',names:'noms',date:'date'};
   const TABS={lieu:'Lieu',repere:'Repère',illus:'Illustration',textes:'Textes',style:'Style',export:'Export'};
-  const tpos=s=>CMS.illus.posOf(s);   // CMS.illus : chargé après ce fichier, lu à l'usage
+  const tpos=s=>CMS.illus.posOf(s);
+  const duoOf=s=>DUOS.find(([,,ft,fx])=>fx===s.font && (s.fontTitle||s.font)===ft);   // duo de polices choisi, s'il y en a un   // CMS.illus : chargé après ce fichier, lu à l'usage
   const dpos=s=>s.mode==='map' ? D.illusText.map : s.mode==='mix' ? D.illusText.mix : D.illusText;
   const onMap=s=>s.mode!=='illus';
   const copy=(o,keys,src=D)=>{ for(const k of keys) o[k]=structuredClone(src[k]); };
@@ -646,25 +650,38 @@ CMS.define('changes', () => {
       s.illus.vintage!==D.illus.vintage && 'filtre vintage '+(s.illus.vintage==='light'?'léger':'marqué'),
       s.illus.grain && lab('illus.grain'), s.illus.flat && lab('illus.flat'), s.illus.upscale && lab('illus.upscale')],
       reset:o=>copy(o.illus,['bright','contrast','satur','vintage','grain','flat','upscale'],D.illus)},
-    {id:'typo', tab:'textes', at:'hTypo', name:'Typographie', items:s=>[
-      s.fontTitle!==D.fontTitle && 'police du titre', s.font!==D.font && 'police du texte',
-      ['style','color','shadow','outline','off'].some(k=>s.illusText[k]!==D.illusText[k]) && 'style des textes (couleur, ombre, contour)'],
-      reset:o=>{ copy(o,['font','fontTitle']); copy(o.illusText,['style','color','shadow','outline','off'],D.illusText); }},
+    // Onglet Textes (#88) : duos, Vintage et couleur des lettres en vue ; polices détaillées, ombre, tailles par ligne… dans Plus de réglages
+    {id:'typo', tab:'textes', at:'hTypo', name:'Typographie', items:s=>{ const d=duoOf(s); return [
+      d && d[0]!==duoOf(D)?.[0] && `duo « ${d[1]} »`, s.illusText.style!==D.illusText.style && (s.illusText.style==='vintage' ? 'titre Vintage' : 'police du titre fixée'),
+      s.illusText.color!==D.illusText.color && 'couleur des lettres']; },
+      reset:o=>{ copy(o,['font','fontTitle']); copy(o.illusText,['style','color'],D.illusText); }},
+    {id:'fonts', tab:'textes', at:'hFonts', sec:['textMore'], name:'Polices', items:s=>duoOf(s) ? [] : [
+      s.fontTitle!==D.fontTitle && 'police du titre', s.font!==D.font && 'police du texte'],
+      reset:o=>copy(o,['font','fontTitle'])},
+    {id:'textFx', tab:'textes', at:'hTextFx', sec:['textMore'], name:'Ombre et contour', items:s=>[
+      s.illusText.shadow!==D.illusText.shadow && 'ombre', s.illusText.outline!==D.illusText.outline && 'contour', s.illusText.off!==D.illusText.off && 'décalage de l\'ombre'],
+      reset:o=>copy(o.illusText,['shadow','outline','off'],D.illusText)},
     {id:'textPos', tab:'textes', at:'hTextPos', name:'Positions des textes', items:s=>{ const p=tpos(s), d=dpos(s); return [
       (p.free || p.pos!==d.pos) && (p.free ? 'titre placé à la main' : 'titre déplacé'),
       (p.ffree || p.fpos!==d.fpos) && (p.ffree ? 'lignes du bas placées à la main' : 'lignes du bas déplacées'),
       !!p.zone && !same(p.zone,d.zone) && 'textes posés sur la carte ou sur toute l\'affiche',   // Carte + illustration (#86)
       !same(p.deco,d.deco) && 'présentation des textes'];  },
       reset:o=>{ const p=tpos(o), d=dpos(o); copy(p,['pos','free','fpos','ffree','deco',...(p.zone?['zone']:[])],d); }},
-    {id:'textSize', tab:'textes', at:'hTextSize', name:'Tailles des textes', items:s=>{
+    {id:'textMore', tab:'textes', at:'hPlate', sec:['textMore'], name:'Trait des plaques et ordre des lignes', items:s=>[
+      !same(s.illusText.plate,D.illusText.plate) && 'trait des plaques', !!s.lineOrder && 'ordre des lignes'],
+      reset:o=>{ o.illusText.plate=structuredClone(D.illusText.plate); o.lineOrder=null; }},
+    {id:'textSize', tab:'textes', at:'hTextSize', name:'Taille de tous les textes', items:s=>[s.textScaleAll!==D.textScaleAll && 'tous les textes à '+pct(s.textScaleAll)],
+      reset:o=>copy(o,['textScaleAll'])},
+    {id:'lineSizes', tab:'textes', at:'hLineSizes', sec:['textMore'], name:'Taille de chaque ligne', items:s=>{
       const n=Object.keys(D.textScale).filter(k=>s.textScale[k]!==D.textScale[k]).length;
-      return [s.textScaleAll!==D.textScaleAll && 'tous les textes à '+pct(s.textScaleAll), n>0 && (n>1 ? n+' lignes redimensionnées' : '1 ligne redimensionnée')]; },
-      reset:o=>copy(o,['textScale','textScaleAll'])},
+      return [n>0 && (n>1 ? n+' lignes redimensionnées' : '1 ligne redimensionnée')]; },
+      reset:o=>copy(o,['textScale'])},
     {id:'lines', tab:'textes', at:'hLines', name:'Lignes', items:s=>{ const off=Object.keys(D.show).filter(k=>s.show[k]!==D.show[k]); return [
-      off.length>0 && (off.length>1?'masquées : ':'masquée : ')+off.map(k=>LINES[k]||k).join(', '),
-      s.coordFormat!==D.coordFormat && 'coordonnées en degrés, minutes, secondes', !!s.coordsManual && 'coordonnées saisies à la main',
-      s.dedWrap!==D.dedWrap && 'coupure de la dédicace imposée']; },
-      reset:o=>copy(o,['show','coordFormat','coordsManual','dedWrap'])},
+      off.length>0 && (off.length>1?'masquées : ':'masquée : ')+off.map(k=>LINES[k]||k).join(', '), !!s.coordsManual && 'coordonnées saisies à la main']; },
+      reset:o=>copy(o,['show','coordsManual'])},
+    {id:'lineOpts', tab:'textes', at:'hLineOpts', sec:['textMore'], name:'Dédicace et coordonnées', items:s=>[
+      s.dedWrap!==D.dedWrap && 'coupure de la dédicace imposée', s.coordFormat!==D.coordFormat && 'coordonnées en degrés, minutes, secondes'],
+      reset:o=>copy(o,['coordFormat','dedWrap'])},
     {id:'paper', tab:'style', at:'hPaper', name:'Papier et dorure', items:s=>[
       s.texture!==D.texture && `papier « ${nm(TEXTURES,s.texture)} »`, s.folds && lab('folds'),
       s.mode!=='map' && s.illus.paper && lab('illus.paper'), s.fx.foil && lab('fx.foil')],

@@ -160,6 +160,7 @@ const DEFAULT_STATE = {
   format:'a4',                  // format d'impression (FORMATS)
   fileType:'png',               // fichier exporté : 'png' | 'pdf'
   dedWrap:'auto',               // dédicace : 'auto' (deux lignes si elle serait trop réduite) | 'one' | 'two'
+  lineOrder:null,               // ordre des lignes : null = celui du gabarit, sinon permutation de LINE_KEYS (CMS.order)
   texture:'none',               // papier (TEXTURES)
   markers2:[], markerLabel:'', numbered:false, linkMarkers:false,   // lieux supplémentaires (2 au plus)
   route:null,                   // itinéraire importé : {name, pts:[[lat,lon],…], show}
@@ -191,6 +192,8 @@ const DEFAULT_STATE = {
   // mix.zone : zone de chaque bloc en Carte + illustration (#86) : 'illus' (l'illustration ; la bande de la vignette), 'map', 'poster'.
   illusText:{v:2,style:'auto',color:'auto',shadow:'auto',outline:'',off:4,pos:'hc',free:null,fpos:'auto',ffree:null,
     deco:{title:'libre',foot:'libre'},
+    // trait des plaques (cartouche, bandeau, ruban) : style (PLATE_LINES), épaisseur (× 0,5 à 3), couleur ('auto' = encre de la plaque)
+    plate:{line:'solid',w:1,color:'auto'},
     map:{pos:'auto',free:null,fpos:'auto',ffree:null,deco:{title:'libre',foot:'libre'}},
     mix:{pos:'hc',free:null,fpos:'auto',ffree:null,deco:{title:'libre',foot:'libre'},zone:{title:'illus',foot:'illus'}}}   // Carte + illustration : positions propres (#77)
 };
@@ -202,9 +205,31 @@ CMS.define('illusConf', () => ({
   // positions du bloc de titre : h/m/b (haut, milieu, bas) × g/c/d (gauche, centre, droite)
   POS:['hg','hc','hd','mg','mc','md','bg','bc','bd'],
   // présentations des blocs de texte (#86) : toutes pour le titre, les trois premières pour le bloc du bas ; zones (Carte + illustration)
-  DECOS:['libre','cartouche','bandeau','ruban','arc','cachet','vertical'], FOOT_DECOS:['libre','cartouche','bandeau'], ZONES:['illus','map','poster'],
+  DECOS:['libre','cartouche','bandeau','ruban','arc','cachet','vertical'], PLATE_LINES:['solid','double','dashed','dotted','none'], FOOT_DECOS:['libre','cartouche','bandeau'], ZONES:['illus','map','poster'],
   MOMENTS:[['any','Au choix','any time'],['aube','Aube','dawn'],['matin','Matin','morning'],['midi','Midi','midday'],['couchant','Couchant','sunset'],['nuit','Nuit','night']],
   SAISONS:[['any','Au choix','any season'],['printemps','Printemps','spring'],['ete','Été','summer'],['automne','Automne','autumn'],['hiver','Hiver','winter']],
   PALETTES:['ia','theme','photo'], LANGS:['fr','en'], VINTAGE:['none','light','strong'], FITS:['cover','contain'], TSTYLES:['auto','vintage','font'],
   PISTES_MAX:8
 }));
+// ---------- Ordre des lignes de texte (Textes, Plus de réglages) ----------
+// st.lineOrder : null (ordre du gabarit) ou permutation de KEYS. Appliqué au cartouche des gabarits centrés et, dans
+// chaque bloc, aux mises en page des modes illustrés (titre et sous-titre ; dédicace, noms, date · coordonnées).
+CMS.define('order', () => {
+  const KEYS=['title','subtitle','coords','dedication','names','date'];
+  /** Ordre valide (permutation complète de KEYS) ou null */
+  const norm=v=>Array.isArray(v) && v.length===KEYS.length && KEYS.every(k=>v.includes(k)) ? [...v] : null;
+  /** Clés triées selon l'ordre choisi (tri stable ; une clé hors de KEYS, comme la légende, reste en fin) ; sans ordre : inchangées */
+  function sort(keys, s=st){
+    const O=s.lineOrder; if(!O) return keys;
+    const r=k=>{ const i=O.indexOf(k); return i<0 ? 99 : i; };
+    return keys.map((k,i)=>[k,i]).sort((a,b)=>r(a[0])-r(b[0]) || a[1]-b[1]).map(x=>x[0]);
+  }
+  /** Ordre affiché : celui choisi, sinon celui du gabarit (Polaroid : dédicace en tête ; modes illustrés : titre, puis bloc du bas) */
+  function current(s=st){
+    if(s.lineOrder) return [...s.lineOrder];
+    if(s.mode==='map' && s.layout==='polaroid') return ['dedication','names','title','date','coords','subtitle'];
+    if(s.mode!=='map') return ['title','subtitle','dedication','names','date','coords'];
+    return [...KEYS];
+  }
+  return {KEYS, norm, sort, current};
+});

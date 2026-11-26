@@ -53,7 +53,7 @@ async def main():
         # « Tout réinitialiser » : en bas de la relecture, onglet Export ; la liste montre les parties modifiées
         await page.click('#tabs [data-tab=export]'); await page.wait_for_timeout(300)
         parts = await page.evaluate("[...document.querySelectorAll('#changesList [data-reset]')].map(b=>b.dataset.reset)")
-        check('typo' in parts and 'lines' in parts and 'trace' in parts, f'relecture : typographie, lignes, tracé et calques modifiés {parts}')
+        check('fonts' in parts and 'lines' in parts and 'trace' in parts, f'relecture : polices (hors duo), lignes, tracé et calques modifiés {parts}')
         await page.click('#bReset'); await page.wait_for_timeout(300)
         check(await page.inner_text('#bReset') == 'Confirmer ?', 'premier appui : confirmation demandée')
         check(json.loads(await page.evaluate(STATE)) == changed, 'premier appui : rien n\'est réinitialisé')
