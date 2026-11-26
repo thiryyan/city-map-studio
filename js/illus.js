@@ -972,7 +972,15 @@ CMS.define('illus', () => {
   const LINE_NAMES={title:'Titre',subtitle:'Sous-titre',coords:'Coordonnées',dedication:'Dédicace',names:'Noms',date:'Date'};
   const MORE_KEY='cityMapStudio.textMoreOpen';
   let moreAuto=false;
-  const moreActive=()=>JSON.stringify(st.illusText.plate)!==JSON.stringify(DEFAULT_STATE.illusText.plate) || !!st.lineOrder;
+  /** Un réglage de « Plus de réglages » diffère du défaut : polices hors duo, ombre, contour, tailles par ligne, coupure de la
+   *  dédicace, format des coordonnées, trait des plaques, ordre des lignes (#88). La section s'ouvre alors d'office. */
+  function moreActive(){
+    const D=DEFAULT_STATE, T=st.illusText, J=JSON.stringify;
+    const duo=DUOS.some(([,,ft,fx])=>fx===st.font && (st.fontTitle||st.font)===ft);
+    return (!duo && (st.font!==D.font || st.fontTitle!==D.fontTitle)) || ['shadow','outline','off'].some(k=>T[k]!==D.illusText[k])
+      || Object.keys(D.textScale).some(k=>st.textScale[k]!==D.textScale[k]) || st.dedWrap!==D.dedWrap || st.coordFormat!==D.coordFormat
+      || J(T.plate)!==J(D.illusText.plate) || !!st.lineOrder;
+  }
   /** Ordre des lignes : liste numérotée, boutons Monter et Descendre (le focus suit la ligne déplacée) */
   function syncOrder(focus){
     const O=CMS.order.current(), box=$('lineOrderList'), sig=JSON.stringify([O,O.map(k=>st.show[k]===false)]);
@@ -997,8 +1005,10 @@ CMS.define('illus', () => {
     $('swPlate').querySelectorAll('button').forEach(b=>pressed(b,b.dataset.v===P.color));
     const cu=$('swPlate').querySelector('input'); if(cu){ const own=P.color!=='auto' && !SW_PLATE.some(([x])=>x===P.color); cu.parentElement.classList.toggle('on',own); if(own) cu.value=P.color; }
     $('sPlateW').closest('.slider').hidden=P.line==='none'; $('swPlate').closest('.swrow').hidden=P.line==='none';
-    const d=$('textMore'); if(moreActive() && !d.open){ moreAuto=true; d.open=true; }   // un réglage actif n'est jamais caché
+    syncMoreOpen();
   }
+  /** « Plus de réglages » : ouverte d'office (sans mémoriser) quand un de ses réglages est actif ; aucun réglage appliqué n'est caché */
+  function syncMoreOpen(){ const d=$('textMore'); if(moreActive() && !d.open){ moreAuto=true; d.open=true; } }
   /** Mises en page prêtes (#86) : elles ne font que remplir zone, position et présentation */
   const PRESETS=[
     ['Titre en cartouche sur la carte', s=>s.mode==='mix' || (s.mode==='map' && s.layout!=='typo'),
@@ -1398,6 +1408,7 @@ CMS.define('illus', () => {
     { const i=h('input',{type:'color','aria-label':'Autre couleur du trait'}); i.oninput=()=>setPlate('color',i.value.toUpperCase()); $('swPlate').append(h('label',{className:'sw custom',title:'Autre couleur'},i)); }
     $('bOrderReset').onclick=()=>{ st.lineOrder=null; syncOrder(); changed(); toast('Lignes dans l\u2019ordre du gabarit · « Annuler » pour revenir'); };
     try{ if(localStorage.getItem(MORE_KEY)==='1') $('textMore').open=true; }catch(e){}
+    $('textMore').addEventListener('input',syncMoreOpen); $('textMore').addEventListener('click',e=>{ if(!e.target.closest('summary')) setTimeout(syncMoreOpen); });
     $('textMore').addEventListener('toggle',()=>{ if(moreAuto){ moreAuto=false; return; } try{ $('textMore').open ? localStorage.setItem(MORE_KEY,'1') : localStorage.removeItem(MORE_KEY); }catch(e){} });
     // Présentation et zone des blocs (#86)
     for(const [k,seg,list] of [['title','tDecoSeg',C.DECOS],['foot','fDecoSeg',C.FOOT_DECOS]])

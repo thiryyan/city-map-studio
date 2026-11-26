@@ -363,75 +363,86 @@
       </div>
       <!-- TEXTES -->
       <div class="tab" id="tab-textes" role="tabpanel" aria-labelledby="tb-textes">
-        <h3 id="hTypo">Typographie</h3>
-        <p class="hint">Les duos accordent la police du titre et celle du texte.</p>
-        <div class="fonts duos" id="duos" role="radiogroup" aria-label="Duo de polices"></div>
-        <div class="chips fcats" id="fontCats" role="group" aria-label="Catégories de polices"></div>
-        <h3>Police du titre</h3>
-        <div class="fonts" id="fontTitleSeg" role="radiogroup" aria-label="Police du titre"></div>
-        <p class="hint" id="titleAuto" aria-live="polite" hidden></p>
-        <h3>Police du texte</h3>
-        <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police du texte"></div>
-        <p class="hint">Une police manuscrite n'est jamais mise en capitales : réservez-la à la dédicace et aux noms.</p>
-        <h3>Couleurs des textes</h3>
-        <div class="swrow"><span id="swTextLbl">Lettres</span><div class="swatches" id="swText" role="group" aria-labelledby="swTextLbl"></div></div>
-        <div class="swrow"><span id="swShadowLbl">Ombre</span><div class="swatches" id="swShadow" role="group" aria-labelledby="swShadowLbl"></div></div>
-        <div class="swrow"><span id="swOutlineLbl">Contour</span><div class="swatches" id="swOutline" role="group" aria-labelledby="swOutlineLbl"></div></div>
-        <div class="slider"><label for="sShadowOff">Décalage de l'ombre</label><output id="oShadowOff"></output><input type="range" id="sShadowOff" data-k="illusText.off" min="1" max="12" step="1"></div>
-        <p class="hint">« Auto » suit le thème (onglet Style). Ombre et contour gardent les lettres lisibles sur une illustration ou sur la carte.</p>
-        <h3 id="hTextPos">Position du titre</h3>
-        <div class="seg mixonly zseg" id="tZoneSeg" role="group" aria-label="Zone du titre"><button type="button" data-v="illus">Sur l'illustration</button><button type="button" data-v="map">Sur la carte</button><button type="button" data-v="poster">Toute l'affiche</button></div>
-        <div class="row layoutonly"><button class="chip" type="button" id="tLayBtn" aria-pressed="true">Dans le gabarit</button></div>
-        <div class="posgrid mt8" id="tPosSeg" role="group" aria-label="Position du titre"></div>
-        <p class="hint" id="tFreeNote"><span></span>Le titre se glisse aussi directement sur l'aperçu (aimanté sur ces positions et sur les axes du centre), ou au clavier (Tab puis flèches).<span class="illusonly"> La position est reprise dans le prompt : l'IA laisse cette zone calme.</span><span class="layoutonly"> Hors du gabarit, le titre et le sous-titre sont posés sur l'affiche, au-dessus de la carte ; leur place dans le gabarit reste vide. Gabarit Lettres : le titre forme la carte et reste en place.</span></p>
-        <h3>Position des lignes du bas</h3>
-        <p class="hint">Dédicace, noms, date et coordonnées, en un bloc.</p>
-        <div class="seg mixonly zseg mb8" id="fZoneSeg" role="group" aria-label="Zone des lignes du bas"><button type="button" data-v="illus">Sur l'illustration</button><button type="button" data-v="map">Sur la carte</button><button type="button" data-v="poster">Toute l'affiche</button></div>
-        <div class="row"><button class="chip" type="button" id="fAutoBtn" aria-pressed="true">Auto : à l'opposé du titre</button></div>
-        <div class="posgrid mt8" id="fPosSeg" role="group" aria-label="Position des lignes du bas"></div>
-        <p class="hint" id="fFreeNote"><span></span>Ce bloc se glisse aussi sur l'aperçu.<span class="mixonly"> Vignette : titre et lignes se placent à gauche, au centre ou à droite de la bande.</span></p>
-        <p class="fitnote" id="textWarn" aria-live="polite"></p>
-        <h3 id="hTextDeco">Présentation des textes</h3>
-        <p class="hint">Sur la carte ou sur une illustration chargée, une plaque (cartouche, bandeau, ruban, cachet) garde les lettres lisibles.</p>
-        <div class="chips mb8" id="textPresets" role="group" aria-label="Mises en page prêtes"></div>
-        <p class="sublbl" id="tDecoLbl">Titre</p>
-        <div class="chips decos" id="tDecoSeg" role="group" aria-labelledby="tDecoLbl"></div>
-        <p class="hint" id="tDecoNote" aria-live="polite"></p>
-        <p class="sublbl" id="fDecoLbl">Lignes du bas</p>
-        <div class="chips decos" id="fDecoSeg" role="group" aria-labelledby="fDecoLbl"></div>
-        <p class="hint" id="fDecoNote" aria-live="polite"></p>
-        <h3>Modèles de texte</h3>
-        <div class="chips" id="occasions"></div>
-        <h3 id="hTextSize">Taille des textes</h3>
-        <div class="slider"><label for="sTsAll">Tous les textes</label><output id="oTsAll"></output><input type="range" id="sTsAll" data-k="textScaleAll" min="70" max="140" step="5"></div>
-        <div class="row end"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>
-        <p class="fitnote" id="fitNote" aria-live="polite"></p>
-        <h3 id="hLines">Lignes</h3>
-        <p class="hint">Cochez les lignes à afficher sur l'affiche ; un texte décoché est conservé. Chaque ligne a sa propre taille ; un texte trop long est réduit pour tenir dans la largeur.</p>
+        <!-- Onglet Textes (#88) : vos textes, mise en page, typographie, puis Plus de réglages -->
+        <h3 id="hLines">Vos textes</h3>
+        <p class="hint">Cochez les lignes à afficher : un texte décoché est conservé.</p>
+        <p class="sublbl">En-tête</p>
         <label class="f show"><input type="checkbox" data-k="show.title" aria-label="Afficher le titre">Titre (ville)</label><input type="text" data-k="texts.title" aria-label="Titre">
-        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.title" min="60" max="150" step="5" aria-label="Taille du titre"><output id="oTs-title"></output></div>
         <label class="f show"><input type="checkbox" data-k="show.subtitle" aria-label="Afficher le sous-titre">Sous-titre / région</label><input type="text" data-k="texts.subtitle" aria-label="Sous-titre">
-        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.subtitle" min="60" max="150" step="5" aria-label="Taille du sous-titre"><output id="oTs-subtitle"></output></div>
+        <p class="sublbl">Bas de l'affiche</p>
         <label class="f show"><input type="checkbox" data-k="show.dedication" aria-label="Afficher la dédicace">Dédicace</label><input type="text" data-k="texts.dedication" aria-label="Dédicace">
-        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.dedication" min="60" max="150" step="5" aria-label="Taille de la dédicace"><output id="oTs-dedication"></output></div>
-        <div class="seg mt6" id="dedWrapSeg" role="group" aria-label="Retour à la ligne de la dédicace"><button data-v="auto" type="button" title="Deux lignes si, sur une seule, la dédicace devait être trop réduite">Auto</button><button data-v="one" type="button">Une ligne</button><button data-v="two" type="button">Deux lignes</button></div>
         <label class="f show"><input type="checkbox" data-k="show.names" aria-label="Afficher les noms">Noms</label><input type="text" data-k="texts.names" aria-label="Noms">
-        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.names" min="60" max="150" step="5" aria-label="Taille des noms"><output id="oTs-names"></output></div>
         <label class="f show"><input type="checkbox" data-k="show.date" aria-label="Afficher la date">Date</label>
         <div class="row"><input class="grow" type="text" data-k="texts.date" aria-label="Date"><label class="btn datebtn" title="Choisir dans le calendrier"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 8.5h14M7 2.5v4M13 2.5v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span class="xl2">Calendrier</span><input type="date" id="dateIn" aria-label="Choisir la date dans le calendrier"></label></div>
-        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.date" min="60" max="150" step="5" aria-label="Taille de la date"><output id="oTs-date"></output></div>
+        <label class="f show"><input type="checkbox" data-k="show.coords" aria-label="Afficher les coordonnées">Coordonnées (vide : celles du repère)</label>
+        <input type="text" data-k="coordsManual" id="coordsManual" aria-label="Coordonnées affichées">
         <div id="labelsBox" hidden>
-          <h3>Deux lieux</h3>
+          <p class="sublbl">Deux lieux</p>
           <label class="f" for="label1In">Légende du lieu 1</label><input type="text" id="label1In" data-k="texts.label1">
           <label class="f" for="label2In">Légende du lieu 2</label><input type="text" id="label2In" data-k="texts.label2">
         </div>
-        <h3>Coordonnées</h3>
-        <div class="seg" id="coordSeg"><button data-v="dec">Décimal</button><button data-v="dms">Degrés ° ′ ″</button></div>
-        <label class="f show"><input type="checkbox" data-k="show.coords" aria-label="Afficher les coordonnées">Texte affiché (vide = automatique depuis le repère)</label>
-        <input type="text" data-k="coordsManual" id="coordsManual" aria-label="Coordonnées affichées">
-        <div class="tsz"><span>Taille</span><input type="range" data-k="textScale.coords" min="60" max="150" step="5" aria-label="Taille des coordonnées"><output id="oTs-coords"></output></div>
+        <p class="fitnote" id="fitNote" aria-live="polite"></p>
+        <p class="sublbl" id="occLbl">Partir d'un modèle</p>
+        <div class="chips" id="occasions" role="group" aria-labelledby="occLbl"></div>
+        <h3 id="hTextLayout">Mise en page</h3>
+        <p class="hint">Sur la carte ou sur une illustration chargée, une plaque (cartouche, bandeau, ruban, cachet) garde les lettres lisibles.</p>
+        <div class="chips mb8" id="textPresets" role="group" aria-label="Mises en page prêtes"></div>
+        <section class="tcard" aria-labelledby="hTextPos">
+          <h4 id="hTextPos">Titre et sous-titre</h4>
+          <div class="seg mixonly zseg" id="tZoneSeg" role="group" aria-label="Zone du titre"><button type="button" data-v="illus">Sur l'illustration</button><button type="button" data-v="map">Sur la carte</button><button type="button" data-v="poster">Toute l'affiche</button></div>
+          <div class="row layoutonly"><button class="chip" type="button" id="tLayBtn" aria-pressed="true">Dans le gabarit</button></div>
+          <div class="posgrid mt8" id="tPosSeg" role="group" aria-label="Position du titre"></div>
+          <p class="hint" id="tFreeNote"><span></span>Le titre se glisse aussi directement sur l'aperçu (aimanté sur ces positions et sur les axes du centre), ou au clavier (Tab puis flèches).<span class="illusonly"> La position est reprise dans le prompt : l'IA laisse cette zone calme.</span><span class="layoutonly"> Hors du gabarit, le titre et le sous-titre sont posés sur l'affiche, au-dessus de la carte ; leur place dans le gabarit reste vide. Gabarit Lettres : le titre forme la carte et reste en place.</span></p>
+          <p class="sublbl" id="tDecoLbl">Présentation</p>
+          <div class="chips decos" id="tDecoSeg" role="group" aria-labelledby="tDecoLbl"></div>
+          <p class="hint" id="tDecoNote" aria-live="polite"></p>
+        </section>
+        <section class="tcard" aria-labelledby="hFootPos">
+          <h4 id="hFootPos">Lignes du bas</h4>
+          <p class="hint">Dédicace, noms, date et coordonnées, en un bloc.</p>
+          <div class="seg mixonly zseg mb8" id="fZoneSeg" role="group" aria-label="Zone des lignes du bas"><button type="button" data-v="illus">Sur l'illustration</button><button type="button" data-v="map">Sur la carte</button><button type="button" data-v="poster">Toute l'affiche</button></div>
+          <div class="row"><button class="chip" type="button" id="fAutoBtn" aria-pressed="true">Auto : à l'opposé du titre</button></div>
+          <div class="posgrid mt8" id="fPosSeg" role="group" aria-label="Position des lignes du bas"></div>
+          <p class="hint" id="fFreeNote"><span></span>Ce bloc se glisse aussi sur l'aperçu.<span class="mixonly"> Vignette : titre et lignes se placent à gauche, au centre ou à droite de la bande.</span></p>
+          <p class="sublbl" id="fDecoLbl">Présentation</p>
+          <div class="chips decos" id="fDecoSeg" role="group" aria-labelledby="fDecoLbl"></div>
+          <p class="hint" id="fDecoNote" aria-live="polite"></p>
+        </section>
+        <p class="fitnote" id="textWarn" aria-live="polite"></p>
+        <h3 id="hTypo">Typographie</h3>
+        <p class="hint">Les duos accordent la police du titre et celle du texte ; Vintage met le titre en capitales condensées.</p>
+        <div class="fonts duos" id="duos" role="radiogroup" aria-label="Duo de polices"></div>
+        <p class="hint" id="titleAuto" aria-live="polite" hidden></p>
+        <div class="slider" id="hTextSize"><label for="sTsAll">Taille de tous les textes</label><output id="oTsAll"></output><input type="range" id="sTsAll" data-k="textScaleAll" min="70" max="140" step="5"></div>
+        <div class="row end"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>
+        <div class="swrow"><span id="swTextLbl">Lettres</span><div class="swatches" id="swText" role="group" aria-labelledby="swTextLbl"></div></div>
         <details class="adv" id="textMore">
-          <summary><span>Plus de réglages</span><small>trait des plaques, ordre des lignes</small><b class="chg" id="chg-textMore" hidden></b></summary>
+          <summary><span>Plus de réglages</span><small>polices, ombre, tailles, trait, ordre</small><b class="chg" id="chg-textMore" hidden></b></summary>
+          <h3 id="hFonts">Polices</h3>
+          <div class="chips fcats" id="fontCats" role="group" aria-label="Catégories de polices"></div>
+          <p class="sublbl">Police du titre</p>
+          <div class="fonts" id="fontTitleSeg" role="radiogroup" aria-label="Police du titre"></div>
+          <p class="sublbl">Police du texte</p>
+          <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police du texte"></div>
+          <p class="hint">Une police manuscrite n'est jamais mise en capitales : réservez-la à la dédicace et aux noms.</p>
+          <h3 id="hTextFx">Ombre et contour</h3>
+          <div class="swrow"><span id="swShadowLbl">Ombre</span><div class="swatches" id="swShadow" role="group" aria-labelledby="swShadowLbl"></div></div>
+          <div class="swrow"><span id="swOutlineLbl">Contour</span><div class="swatches" id="swOutline" role="group" aria-labelledby="swOutlineLbl"></div></div>
+          <div class="slider"><label for="sShadowOff">Décalage de l'ombre</label><output id="oShadowOff"></output><input type="range" id="sShadowOff" data-k="illusText.off" min="1" max="12" step="1"></div>
+          <p class="hint">« Auto » suit le thème (onglet Style). Ombre et contour gardent les lettres lisibles sur une illustration ou sur la carte.</p>
+          <h3 id="hLineSizes">Taille de chaque ligne</h3>
+          <p class="hint">Un texte trop long est réduit pour tenir dans la largeur (↘).</p>
+          <div class="tsz"><span>Titre</span><input type="range" data-k="textScale.title" min="60" max="150" step="5" aria-label="Taille du titre"><output id="oTs-title"></output></div>
+          <div class="tsz"><span>Sous-titre</span><input type="range" data-k="textScale.subtitle" min="60" max="150" step="5" aria-label="Taille du sous-titre"><output id="oTs-subtitle"></output></div>
+          <div class="tsz"><span>Dédicace</span><input type="range" data-k="textScale.dedication" min="60" max="150" step="5" aria-label="Taille de la dédicace"><output id="oTs-dedication"></output></div>
+          <div class="tsz"><span>Noms</span><input type="range" data-k="textScale.names" min="60" max="150" step="5" aria-label="Taille des noms"><output id="oTs-names"></output></div>
+          <div class="tsz"><span>Date</span><input type="range" data-k="textScale.date" min="60" max="150" step="5" aria-label="Taille de la date"><output id="oTs-date"></output></div>
+          <div class="tsz"><span>Coordonnées</span><input type="range" data-k="textScale.coords" min="60" max="150" step="5" aria-label="Taille des coordonnées"><output id="oTs-coords"></output></div>
+          <h3 id="hLineOpts">Dédicace et coordonnées</h3>
+          <p class="sublbl" id="dedWrapLbl">Coupure de la dédicace</p>
+          <div class="seg mt6" id="dedWrapSeg" role="group" aria-label="Retour à la ligne de la dédicace"><button data-v="auto" type="button" title="Deux lignes si, sur une seule, la dédicace devait être trop réduite">Auto</button><button data-v="one" type="button">Une ligne</button><button data-v="two" type="button">Deux lignes</button></div>
+          <p class="sublbl">Format des coordonnées</p>
+          <div class="seg" id="coordSeg" role="group" aria-label="Format des coordonnées"><button data-v="dec" type="button">Décimal</button><button data-v="dms" type="button">Degrés ° ′ ″</button></div>
           <h3 id="hPlate">Trait des plaques</h3>
           <p class="hint">Encadrement du cartouche, filets du bandeau et trait du ruban. Le cachet garde ses filets.</p>
           <div class="seg wrap" id="plateLineSeg" role="group" aria-label="Style du trait"><button data-v="solid" type="button">Plein</button><button data-v="double" type="button">Double</button><button data-v="dashed" type="button">Tirets</button><button data-v="dotted" type="button">Pointillés</button><button data-v="none" type="button">Aucun</button></div>

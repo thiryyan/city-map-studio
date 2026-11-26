@@ -381,6 +381,9 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 .sublbl{margin:10px 0 6px;font-size:.8125rem;color:var(--txt);font-weight:600}
 .decos .chip{padding:8px 12px}
 .mb8{margin-bottom:8px}
+/* Onglet Textes (#88) : une carte par bloc de texte dans « Mise en page » */
+.tcard{border:1px solid var(--line);border-radius:12px;background:#1a1a1f;padding:10px 12px 6px;margin:8px 0}
+.tcard h4{margin:2px 0 8px;font-size:.875rem;font-weight:600;color:var(--txt)}
 /* Ordre des lignes : une ligne par texte, boutons Monter / Descendre */
 .lorder{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;counter-reset:lo}
 .lorder li{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:2px 4px 2px 12px;counter-increment:lo}

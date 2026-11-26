@@ -240,6 +240,9 @@ function buildUI(){
   DUOS.forEach(([k,n,ft,fx])=>{ const b=h('button',{type:'button',dataset:{v:k},role:'radio'},
       h('span',{className:'t',style:{fontFamily:fam(ft)}}),h('span',{className:'d',style:{fontFamily:fam(fx)}}),h('small',{},n));
     b.onclick=async()=>{ st.fontTitle=ft===fx?'':ft; st.font=fx; st.illusText.style='font'; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('duos').appendChild(b); });
+  // Vintage parmi les duos (#88) : titre en capitales condensées, police du texte inchangée
+  { const b=h('button',{type:'button',dataset:{v:'*vintage'},role:'radio'},h('span',{className:'t',style:{fontFamily:fam('bebas')}}),h('span',{className:'d'}),h('small',{},'Vintage'));
+    b.onclick=async()=>{ st.illusText.style='vintage'; syncFonts(); CMS.emit('state:synced'); saveState(); await loadFonts(); scheduleOver(); }; $('duos').appendChild(b); }
   FONT_CATS.forEach(([k,n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'+(i?'':' on'); b.textContent=n;
     b.onclick=()=>{ document.querySelectorAll('#fontCats .chip').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll('#fontSeg button,#fontTitleSeg button').forEach(f=>f.hidden=!!k && f.dataset.cat && f.dataset.cat!==k); }; $('fontCats').appendChild(b); });
   const fbtn=(k,n,cat)=>h('button',{type:'button',dataset:cat?{v:k,cat}:{v:k},role:'radio'},
@@ -373,7 +376,9 @@ function syncFonts(){
   const ta=$('titleAuto'), auto=st.illusText.style==='auto'; ta.hidden=!auto;
   if(auto) ta.textContent=`Titre automatique : ${st.mode==='map' ? 'police choisie sur une carte (Vintage sur une affiche illustrée)' : 'Vintage sur une affiche illustrée (police choisie sur une carte)'}. Touchez une police ou Vintage pour le fixer dans les trois types d\u2019affiche.`;
   const duo=DUOS.find(([,,ft,fx])=>fx===st.font && (st.fontTitle||st.font)===ft);
-  setSeg('duos',duo?duo[0]:'—'); updateFontSamples();
+  setSeg('duos',CMS.illus.textStyle().vint ? '*vintage' : duo?duo[0]:'—');   // Vintage : coché quand le titre est en Vintage (#88)
+  const vd=document.querySelector('#duos [data-v="*vintage"] .d'); if(vd) vd.style.fontFamily=FONTS[st.font].fam;
+  updateFontSamples();
 }
 function syncOutputs(){
   $('oMargin').textContent=st.margin+' %'; $('oStroke').textContent='× '+st.stroke.toFixed(2); $('oWater').textContent='× '+st.waterMult.toFixed(1);
