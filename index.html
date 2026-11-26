@@ -57,7 +57,12 @@
       <button id="bZoomOut" title="Zoom arrière" aria-label="Zoom arrière"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button id="bToMarker" title="Centrer sur le repère" aria-label="Centrer sur le repère"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="1.8" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg></button>
     </div>
-    <button class="cleanexit" id="cleanExit" type="button" aria-label="Revenir aux réglages" hidden><span>Toucher pour revenir aux réglages</span></button>
+    <button class="cleanexit" id="cleanExit" type="button" aria-label="Revenir aux réglages ; pincer, double toucher, molette ou touches + et − pour zoomer" hidden><span>Toucher pour revenir aux réglages · pincer ou double toucher pour zoomer</span></button>
+    <div class="cleanzoom" id="cleanZoom" hidden>
+      <span class="zsharp" id="zoomSharpBadge" role="status" aria-live="polite" hidden>Mise au net…</span>
+      <button class="btn sm" type="button" id="bZoomFit">Ajuster à l'écran</button>
+      <button class="btn sm" type="button" id="bZoomExit">Revenir aux réglages</button>
+    </div>
     <div class="stagebar">
       <div class="placehint" id="placeHint">Touchez la carte pour placer le repère</div>
       <div class="framebar" id="frameBar" role="status"><span id="frameTxt">Glissez · pincez pour zoomer</span></div>
@@ -385,7 +390,7 @@
         <p class="sublbl" id="occLbl">Partir d'un modèle</p>
         <div class="chips" id="occasions" role="group" aria-labelledby="occLbl"></div>
         <h3 id="hTextLayout">Mise en page</h3>
-        <p class="hint">Sur la carte ou sur une illustration chargée, une plaque (cartouche, bandeau, ruban, cachet) garde les lettres lisibles.</p>
+        <p class="hint">Sur la carte ou sur une illustration chargée, une plaque (cartouche, bandeau, étiquette, capsule, cachet) garde les lettres lisibles.</p>
         <div class="chips mb8" id="textPresets" role="group" aria-label="Mises en page prêtes"></div>
         <section class="tcard" aria-labelledby="hTextPos">
           <h4 id="hTextPos">Titre et sous-titre</h4>
@@ -404,6 +409,9 @@
           <div class="row"><button class="chip" type="button" id="fAutoBtn" aria-pressed="true">Auto : à l'opposé du titre</button></div>
           <div class="posgrid mt8" id="fPosSeg" role="group" aria-label="Position des lignes du bas"></div>
           <p class="hint" id="fFreeNote"><span></span>Ce bloc se glisse aussi sur l'aperçu.<span class="mixonly"> Vignette : titre et lignes se placent à gauche, au centre ou à droite de la bande.</span></p>
+          <p class="sublbl" id="fTplLbl">Mise en forme</p>
+          <div class="chips decos" id="fTplSeg" role="group" aria-labelledby="fTplLbl"></div>
+          <p class="hint" id="fTplNote" aria-live="polite"></p>
           <p class="sublbl" id="fDecoLbl">Présentation</p>
           <div class="chips decos" id="fDecoSeg" role="group" aria-labelledby="fDecoLbl"></div>
           <p class="hint" id="fDecoNote" aria-live="polite"></p>
@@ -444,9 +452,10 @@
           <p class="sublbl">Format des coordonnées</p>
           <div class="seg" id="coordSeg" role="group" aria-label="Format des coordonnées"><button data-v="dec" type="button">Décimal</button><button data-v="dms" type="button">Degrés ° ′ ″</button></div>
           <h3 id="hPlate">Trait des plaques</h3>
-          <p class="hint">Encadrement du cartouche, filets du bandeau et trait du ruban. Le cachet garde ses filets.</p>
+          <p class="hint">Cartouche, bandeau, étiquette, capsule et filets art déco. Le cachet garde ses filets.</p>
           <div class="seg wrap" id="plateLineSeg" role="group" aria-label="Style du trait"><button data-v="solid" type="button">Plein</button><button data-v="double" type="button">Double</button><button data-v="dashed" type="button">Tirets</button><button data-v="dotted" type="button">Pointillés</button><button data-v="none" type="button">Aucun</button></div>
           <div class="slider"><label for="sPlateW">Épaisseur du trait</label><output id="oPlateW"></output><input type="range" id="sPlateW" data-k="illusText.plate.w" min="0.5" max="3" step="0.25"></div>
+          <div class="slider"><label for="sPlateGap">Éloignement du trait et du texte</label><output id="oPlateGap"></output><input type="range" id="sPlateGap" data-k="illusText.plate.gap" min="0.5" max="2.5" step="0.25"></div>
           <div class="swrow"><span id="swPlateLbl">Couleur</span><div class="swatches" id="swPlate" role="group" aria-labelledby="swPlateLbl"></div></div>
           <h3 id="hOrder">Ordre des lignes</h3>
           <p class="hint">Gabarits à cartouche (Cadre, Fondu, Médaillon, Cœur, Arche, Polaroid, Ciel, Lettres) : les lignes suivent cet ordre. Affiches illustrées et blocs posés sur l'affiche : l'ordre s'applique dans chaque bloc (titre et sous-titre ; dédicace, noms, date et coordonnées, ces deux dernières sur une même ligne).</p>

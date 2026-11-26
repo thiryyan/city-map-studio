@@ -400,6 +400,14 @@ h2.sec{font-size:.9375rem;font-weight:600;letter-spacing:.02em;margin:26px 0 4px
 .cleanexit{position:absolute;inset:0;z-index:20;border:0;padding:0;margin:0;background:none;cursor:zoom-out;display:flex;align-items:flex-end;justify-content:center;touch-action:none}
 .cleanexit:focus-visible{outline:2px solid var(--acc);outline-offset:-4px}
 .cleanexit span{margin-bottom:calc(12px + var(--sab));background:#1e1e23e6;color:var(--txt);border:1px solid #ffffff22;border-radius:999px;padding:6px 12px;font-size:.8125rem;pointer-events:none;backdrop-filter:blur(6px)}
+/* Loupe du mode Aperçu (#90) : affiche agrandie (transform), rendu net par-dessus, commandes en haut */
+.zoomsharp{position:absolute;inset:0;width:100%;height:100%;z-index:6;pointer-events:none}
+.cleanzoom{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:10px;left:10px;z-index:21;display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;pointer-events:none}
+.cleanzoom>*{pointer-events:auto}
+.cleanzoom .btn{background:#1e1e23e6;backdrop-filter:blur(6px)}
+.zsharp{background:#1e1e23e6;color:var(--txt);border:1px solid #ffffff22;border-radius:999px;padding:6px 12px;font-size:.8125rem;margin-right:auto}
+#app.clean.zoomed .cleanexit span{display:none}
+#app.clean.zoomed .cleanexit{cursor:grab}
 .cleanexit.hinted span{animation:cleanHint 3.2s ease forwards}
 @keyframes cleanHint{0%,75%{opacity:1}100%{opacity:0}}
 /* Réglage activé mais empêché par un autre choix (#58) : une ligne d'explication et le bouton qui fait la bascule */

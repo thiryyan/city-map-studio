@@ -173,7 +173,7 @@ async def main():
         check(await page.evaluate("document.activeElement.id") == 'cleanExit', 'affiche seule : focus sur la couche de sortie')
         await page.screenshot(path=str(T / 'mobile-clean.png'))
         # toucher au milieu de la carte : sortie, sans cadrage ni repère
-        await page.touchscreen.tap(p1['x'] + p1['w'] / 2, p1['y'] + p1['h'] / 2); await page.wait_for_timeout(350)
+        await page.touchscreen.tap(p1['x'] + p1['w'] / 2, p1['y'] + p1['h'] / 2); await page.wait_for_timeout(600)   # après le délai du double toucher (loupe, #90)
         check(not await page.evaluate("document.getElementById('app').classList.contains('clean')"), 'toucher : retour aux réglages')
         check(await sheet(page) == 'half' and not await page.evaluate('__cms.ui.framing') and not await page.evaluate('__cms.ui.placing'),
               'toucher : cran d\'origine rétabli, ni Cadrer ni placement ouvert')

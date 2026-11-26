@@ -162,7 +162,7 @@ Toujours visible en bas du panneau, même réduit, elle regroupe :
 | Bouton | Action |
 | :--- | :--- |
 | Crayon, **Modifier** / **Terminer** | Ouvre ou ferme la modification de l'affiche (§ 3.3). Pendant la modification, Comparer et Suivant laissent la place au sélecteur. |
-| Œil, **Aperçu** | Affiche seule : masque tout ce qui recouvre l'affiche et le panneau des réglages, et passe en plein écran quand le navigateur le permet. Un toucher, Échap ou le bouton retour du téléphone ramène aux réglages, sans déplacer la carte ni poser de repère. |
+| Œil, **Aperçu** | Affiche seule : masque tout ce qui recouvre l'affiche et le panneau des réglages, et passe en plein écran quand le navigateur le permet. Un toucher, Échap ou le bouton retour du téléphone ramène aux réglages, sans déplacer la carte ni poser de repère. **Loupe** : pincer, double toucher (ou double clic) et molette agrandissent l'affiche jusqu'à × 4 ; un doigt la parcourt ; au clavier, + et − zooment, 0 ajuste à l'écran et les flèches déplacent. Agrandie, l'affiche est recalculée nette (« Mise au net… ») ; un toucher ne quitte plus l'aperçu : **Ajuster à l'écran** ou **Revenir aux réglages**. |
 | **Annuler / Rétablir** | Historique des modifications (§ 11.1). |
 | **Comparer** | Apparaît après un changement de thème, d'ambiance, d'effet… : maintenez-le pour revoir l'affiche d'avant (§ 11.2). |
 | **Suivant : …** / **Exporter** | Passe à l'onglet suivant ; sur l'onglet Export, lance l'export. |
@@ -422,6 +422,22 @@ en-tête et pied de Souvenir, Voyage… La mention des sources n'est pas concern
   lisible sur les rues. Un titre posé sur la carte n'a plus besoin d'une zone calme dans l'illustration : le prompt
   ne la demande plus.
 
+**Mise en forme des lignes du bas** (carte « Lignes du bas », propre à chaque type d'affiche) :
+
+| Mise en forme | Rendu |
+| :--- | :--- |
+| **Classique** (par défaut) | Dédicace, noms, puis date · coordonnées, empilés. |
+| **Ligne unique** | Dédicace · noms · date · coordonnées sur une seule ligne, réduite pour tenir. |
+| **Souvenir** | À gauche, dédicace et noms séparés par un filet ; à droite, la date au-dessus des coordonnées. |
+| **Carnet** | Aligné à gauche : noms en grand, filet court, dédicace en italique, date · coordonnées. |
+| **Colonnes** | Date à gauche, dédicace et noms au centre, coordonnées à droite. |
+
+* L'ordre des lignes (§ 6.9) s'applique à Classique et à Ligne unique ; les autres ont un ordre fixe. La légende des
+  lieux numérotés suit sous le bloc. Les présentations (cartouche, bandeau, étiquette, filets) habillent aussi ces
+  mises en forme.
+* Sur une affiche Carte, choisir une mise en forme autre que Classique pose le bloc sur l'affiche, hors du gabarit.
+  En Vignette, la bande sous la carte reste en Classique : une autre mise en forme pose le bloc sur la carte.
+
 ### 6.8. Présentation des textes
 
 Chaque bloc a sa présentation, propre à chaque type d'affiche :
@@ -431,19 +447,22 @@ Chaque bloc a sa présentation, propre à chaque type d'affiche :
 | **Texte seul** (par défaut) | Les lettres, avec leur ombre et leur contour. | Titre et lignes du bas. |
 | **Cartouche** | Plaque couleur papier à double filet, façon carte ancienne. | Titre et lignes du bas. |
 | **Bandeau** | Bande couleur papier sur toute la largeur de la zone, filets en haut et en bas. | Titre et lignes du bas. |
-| **Ruban** | Banderole à pointes, lettres couleur papier. | Titre. |
+| **Étiquette** | Plaque couleur papier à coins coupés ; le trait suit la forme. | Titre et lignes du bas. |
+| **Capsule** | Plaque pleine aux bouts arrondis, lettres couleur papier. | Titre. |
+| **Filets art déco** | Sans fond : filet et filet fin au-dessus et au-dessous, petit losange au centre. | Titre et lignes du bas. |
 | **Arc** | Titre courbé autour de la carte : au-dessus (grille en haut), ou au-dessous d'un cercle (grille en bas). | Titre ; médaillon rond ou en arche, gabarits Médaillon et Arche. |
 | **Cachet** | Tampon rond : titre en couronne, sous-titre en bas, étoile au centre. | Titre. |
 | **Vertical** | Titre pivoté le long d'un bord : de bas en haut à gauche, de haut en bas à droite. | Titre. |
 
-* Sur une plaque (cartouche, bandeau, ruban, cachet), les lettres gardent leur couleur si elle se lit sur le papier ;
+* Sur une plaque (cartouche, bandeau, étiquette, capsule, cachet), les lettres gardent leur couleur si elle se lit sur le papier ;
   sinon elles prennent la couleur Texte du thème. Ombre et contour n'y sont pas utiles.
 * L'arc suit la carte : il ne se glisse pas. Les autres présentations se glissent comme le texte seul.
 * Sur une affiche Carte, choisir une présentation sort le bloc du gabarit et le pose sur l'affiche. En Vignette, elle
   pose le bloc sur la carte (la bande garde le texte seul).
 * Une présentation sans objet ici (un arc sans médaillon, par exemple) est signalée : le choix est gardé, le bloc
   s'affiche en texte seul.
-* Cartouche, bandeau et ruban sont encadrés d'un seul trait. Son style se règle dans **Plus de réglages** (§ 6.9).
+* Une affiche enregistrée avec l'ancien **Ruban** s'ouvre en **Capsule**.
+* Cartouche, bandeau, étiquette et capsule sont encadrés d'un seul trait, à bonne distance du texte. Son style se règle dans **Plus de réglages** (§ 6.9).
 * **Mises en page prêtes** (Carte et Carte + illustration) : Titre en cartouche sur la carte, Bandeau à la jonction
   (Haut / bas et Fondu), Titre en arc sur le médaillon, Cachet en coin. Elles règlent zone, position et présentation
   d'un coup ; « Annuler » revient en arrière.
@@ -455,8 +474,9 @@ l'ouvre pas). Elle reprend les polices détaillées (§ 6.5), l'ombre et le cont
 (§ 6.1), la coupure de la dédicace (§ 6.2) et le format des coordonnées, puis :
 
 * **Trait des plaques** : style **Plein** (par défaut), **Double**, **Tirets**, **Pointillés** ou **Aucun** ; épaisseur
-  × 0,5 à × 3 ; couleur **Auto** (encre de la plaque, couleur papier sur le ruban) ou une teinte. S'applique à
-  l'encadrement du cartouche, aux filets du bandeau et au trait du ruban ; le cachet garde ses filets.
+  × 0,5 à × 3 ; couleur **Auto** (encre de la plaque, couleur papier sur la capsule, couleur des lettres pour les
+  filets art déco) ou une teinte ; **Éloignement du trait et du texte** × 0,5 à × 2,5 (marges intérieures de la
+  plaque). S'applique au cartouche, au bandeau, à l'étiquette, à la capsule et aux filets ; le cachet garde ses filets.
 * **Ordre des lignes** : ↑ et ↓ déplacent une ligne ; **Ordre du gabarit** revient à l'ordre prévu. Les gabarits à
   cartouche suivent cet ordre. Sur une affiche illustrée (et pour les blocs posés sur l'affiche), il s'applique dans
   chaque bloc : titre et sous-titre d'un côté, dédicace, noms, date et coordonnées de l'autre (la date et les
