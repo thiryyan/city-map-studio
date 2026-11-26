@@ -25,7 +25,9 @@ function normState(src){
     return c && m ? {center:c, zoom:V.num(o.zoom,dv.zoom,1,22), marker:m} : null; };
   const route=(r)=>{ const o=V.obj(r); if(!Array.isArray(o.pts)) return null;
     const pts=o.pts.slice(0,ROUTE_MAX_PTS).filter(p=>Array.isArray(p) && V.ll({lat:p[0],lon:p[1]})).map(p=>[p[0],p[1]]);
-    return pts.length>=2 ? {name:V.str(o.name,''), pts, show:V.bool(o.show,true)} : null; };
+    if(pts.length<2) return null;
+    const wpts=(Array.isArray(o.wpts)?o.wpts:[]).map(p=>{ const q=V.ll(p); return q && {...q,name:V.str(p.name,'',80)}; }).filter(Boolean).slice(0,20);
+    return {name:V.str(o.name,''), pts, show:V.bool(o.show,true), ...(wpts.length?{wpts}:{})}; };
   return {
     engine:V.oneOf(s.engine,['maplibre','file'],D.engine),
     layout:V.oneOf(s.layout,keys(LAYOUTS),D.layout),
@@ -54,6 +56,9 @@ function normState(src){
     route:route(s.route),
     routeStyle:{color:V.oneOf(V.obj(s.routeStyle).color,['marker','roadMajor','frame'],D.routeStyle.color),
       width:V.num(V.obj(s.routeStyle).width,D.routeStyle.width,0.5,3), dash:V.bool(V.obj(s.routeStyle).dash,D.routeStyle.dash)},
+    routePrompt:(()=>{ const o=V.obj(s.routePrompt), d=D.routePrompt;
+      return {kind:V.oneOf(o.kind,['walk','bike','car','trip'],d.kind), loop:V.bool(o.loop,d.loop),
+        off:[...new Set((Array.isArray(o.off)?o.off:[]).filter(i=>[0,1,2].includes(i)))].sort(), extra:V.str(o.extra,'',400), lang:V.oneOf(o.lang,['fr','en'],d.lang)}; })(),
     active:V.oneOf(s.active,[0,1],0), place2:view(s.place2,D),
     sky:{when:typeof V.obj(s.sky).when==='string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(s.sky.when) ? s.sky.when : '',
       tz:V.obj(s.sky).tz==='auto' ? 'auto' : V.num(V.obj(s.sky).tz,'auto',-720,840),

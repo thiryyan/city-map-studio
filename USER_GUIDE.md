@@ -36,7 +36,7 @@ justification sont dans le [dossier technique](docs/dossier-technique.md).
 | :--- | :--- |
 | **Trois types d'affiche** | **Carte** (affiche cartographique), **Illustration** (affiche de voyage façon vintage, à partir d'une image produite par votre IA) et **Carte + illustration** (les deux associées). |
 | **Carte du monde entier** | Tracé minimaliste des rues, de l'eau, des parcs, des bâtiments et des voies ferrées, sans aucun nom sur la carte. |
-| **Repère** | 10 styles (cœur, épingle, alliances, petits pieds…), jusqu'à 3 lieux numérotés et reliés, itinéraire GPX. |
+| **Repère** | 10 styles (cœur, épingle, alliances, petits pieds…), jusqu'à 3 lieux numérotés et reliés, itinéraire GPX (fichier, GPX collé, ou préparé avec une IA). |
 | **11 gabarits** | Souvenir, Cadre, Fondu, Médaillon, Cœur, Arche, Voyage, Polaroid, Deux lieux, Ciel, Lettres ; en portrait ou en paysage. |
 | **Style** | 13 ambiances prêtes à l'emploi, 16 thèmes de couleurs, palette tirée d'une photo, 6 papiers et des plis. Les 14 polices et 7 duos sont dans l'onglet Textes. |
 | **Effets** | Eau hachurée, bâtiments en contour ou pointillés, trait crayon, lueur, lignes d'eau gravées, parcs hachurés, surimpression riso, halo et quartier en relief, dorure, échelle, rose des vents, graduations. |
@@ -307,6 +307,20 @@ carte dessus.
 | Épaisseur | × 0,5 à × 3. |
 | Pointillés | Trait continu ou pointillé. |
 | Cadrer sur l'itinéraire / Retirer | Recadre la carte, ou retire le tracé (« Annuler » le retrouve). |
+
+**Coller le GPX** lit le presse-papiers ; à défaut, collez le texte dans la zone prévue puis touchez **Importer le
+GPX collé**. Vous pouvez coller toute la réponse d'une IA, phrases comprises : l'application n'en garde que le GPX.
+Un texte sans GPX est signalé et ne change rien à l'affiche.
+
+**Pas de fichier GPX ? Préparer l'itinéraire avec une IA.** Ouvrez cette section, choisissez le type de parcours
+(balade à pied, vélo, voiture / road trip, plusieurs villes), cochez les lieux de l'affiche à reprendre comme étapes,
+décrivez les autres (« Pont des Arts, puis le Marais, dîner rue… »), puis aller simple ou boucle, et la langue.
+**Copiez le prompt**, collez-le dans ChatGPT ou Gemini : l'IA propose les étapes, vous les validez, puis elle livre
+le GPX. Copiez sa réponse et touchez **Coller le GPX**.
+
+Les tracés des IA restent approximatifs. Après l'import, l'application signale un tracé loin du lieu de l'affiche
+(vérifiez les étapes) ou fait de longues lignes droites (l'IA n'a pas suivi les rues : **Pointillés** les assume).
+Pour un tracé exact, préférez un calculateur d'itinéraire qui exporte un GPX, puis « Importer un tracé GPX ».
 
 ---
 
@@ -665,7 +679,7 @@ pose le titre avec de vraies polices. Aucune clé, aucun service tiers : le mode
 
 | Option | Valeurs |
 | :--- | :--- |
-| Pistes à proposer à l'IA | Facultatives, 8 au plus : saisies (« Château, port, vignobles… ») ou trouvées dans la carte. |
+| Pistes à proposer à l'IA | Facultatives, 8 au plus : saisies (« Château, port, vignobles… »), trouvées dans la carte ou dans Wikipédia. |
 | Moment de la journée | Au choix, aube, matin, midi, couchant, nuit. |
 | Saison | Au choix, printemps, été, automne, hiver. |
 | Palette | Proposée par l'IA, thème de l'affiche, ou couleurs d'une photo. |
@@ -674,6 +688,11 @@ pose le titre avec de vraies polices. Aucune clé, aucun service tiers : le mode
 **Trouver des pistes dans la carte** relève les monuments, cours d'eau, plans d'eau, sommets, parcs et paysages
 autour du lieu, et en propose six. Touchez une piste pour l'ajouter. Avec le moteur Fichier, les pistes viennent
 des données importées ; avec le moteur GPU, des tuiles de la carte (avec votre accord réseau).
+
+**Chercher aussi dans Wikipédia** (désactivé par défaut) ajoute le bouton **Lieux remarquables (Wikipédia)** : les
+articles de Wikipédia situés autour du lieu, les plus connus en tête (à Blois : le château, puis la cathédrale).
+Seules les coordonnées du lieu sont envoyées à Wikipédia, avec votre adresse IP, et seulement quand vous touchez le
+bouton. Hors ligne, le bouton est grisé ; les pistes de la carte restent disponibles.
 
 Le prompt reprend le titre et le sous-titre de l'affiche, les proportions du format choisi et la position du
 titre, où l'IA doit laisser une zone calme. Il interdit tout texte et toute marge, et demande à l'IA de vérifier
