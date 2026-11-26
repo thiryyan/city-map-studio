@@ -23,7 +23,7 @@ async def main():
         async def open_page(vp, mobile=True):
             ctx = await b.new_context(viewport=vp, is_mobile=mobile, has_touch=mobile)
             page = await ctx.new_page(); errs = []
-            await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
+            await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.themeOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
             page.on('pageerror', lambda e: errs.append(str(e)))
             async def route(r):
                 u = r.request.url

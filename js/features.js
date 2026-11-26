@@ -235,7 +235,13 @@ function setStatus(t,kind,detail){
   if(!kind && !ready) setStatus.t=setTimeout(()=>$('stPill').classList.add('quiet'),4000);
 }
 let toastT=0;
-function toast(msg,err){ const t=$('toast'); t.textContent=msg; t.className='show'+(err?' err':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='',err?6000:3200); }
+/** Message bref ; `action` {label,fn} ajoute un bouton (ex. « Annuler » après un réglage) et prolonge l'affichage. */
+function toast(msg,err,action){
+  const t=$('toast'); t.textContent=msg;
+  if(action){ const b=document.createElement('button'); b.type='button'; b.textContent=action.label;
+    b.onclick=()=>{ t.className=''; action.fn(); }; t.append(b); }
+  t.className='show'+(err?' err':'')+(action?' act':''); clearTimeout(toastT);
+  toastT=setTimeout(()=>t.className='',err?6000:action?5000:3200); }
 function showBanner(show,txt,label,action){
   $('banner').classList.toggle('show',!!show); if(txt) $('bannerTxt').textContent=txt;
   if(ui.sheet==='peek') applySheet();

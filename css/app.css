@@ -192,6 +192,10 @@ dialog.sheet .row .btn{flex:1 1 140px}
 body:has(#app.clean) #toast{left:50%}
 #toast.show{opacity:1;transform:translateX(-50%)}
 #toast.err{border-color:var(--danger)}
+#toast.act{pointer-events:auto}
+#toast button{margin-left:12px;padding:4px 10px;border:1px solid var(--acc);border-radius:6px;background:none;color:var(--acc);font:inherit;font-weight:600;cursor:pointer}
+/* Sliders du panneau : le défilement vertical reste au panneau (cf. sliderGuard, js/ui.js) */
+#panel input[type=range]{touch-action:pan-y}
 #busy{position:fixed;inset:0;background:#000b;z-index:90;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px}
 #busy.show{display:flex}
 .spin{width:38px;height:38px;border:3px solid #fff3;border-top-color:var(--acc);border-radius:50%;animation:sp 1s linear infinite}
