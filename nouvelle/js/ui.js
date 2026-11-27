@@ -3,7 +3,7 @@
 'use strict';
 // ---------- Taille du texte de l'interface (A− / A+) ----------
 // Préférence d'affichage propre à l'appareil : hors de l'état de l'affiche, non concernée par « Réinitialiser ».
-const UI_SCALE_KEY='cityMapStudio.uiScale', UI_SCALES=[0.875,1,1.125,1.25,1.375];
+const UI_SCALE_KEY='cms3.uiScale', UI_SCALES=[0.875,1,1.125,1.25,1.375];
 let uiScale=(()=>{ try{ const v=parseFloat(localStorage.getItem(UI_SCALE_KEY)); return UI_SCALES.includes(v)?v:1; }catch(e){ return 1; } })();
 function applyUiScale(){
   const r=document.documentElement.style;
@@ -71,7 +71,7 @@ function updateMarkerTxt(){
   $('coordsManual').placeholder=coordText();
 }
 /** Villes choisies par la recherche (nom, « région • pays », point choisi), gardées dans ce navigateur : 30 au plus, les plus récentes d'abord */
-updateMarkerTxt.KEY='cityMapStudio.places';
+updateMarkerTxt.KEY='cms3.places';
 updateMarkerTxt.places=()=>{
   if(!updateMarkerTxt.list){
     let a=[]; try{ a=JSON.parse(localStorage.getItem(updateMarkerTxt.KEY)||'[]'); }catch(e){}
@@ -104,7 +104,7 @@ function showTab(name, focus){
   CMS.emit('tab:shown',name);   // barre d'actions : étape suivante ou export
 }
 /** Section « Avancé » de l'onglet Lieu : ouverte à la demande, mémorisée ; ouverte d'office quand elle devient utile */
-const ADV_KEY='cityMapStudio.advOpen';
+const ADV_KEY='cms3.advOpen';
 function openAdvanced(scroll){ const d=$('adv'); if(!d.open) d.open=true; if(scroll){ showTab('lieu'); setTimeout(()=>CMS.panelScroll.to(d,'start',true),60); } }
 /** Aperçu des polices : chaque carte montre le titre saisi */
 function updateFontSamples(){
@@ -209,7 +209,7 @@ function buildUI(){
   try{ if(localStorage.getItem(ADV_KEY)==='1') $('adv').open=true; }catch(e){}
   $('adv').addEventListener('toggle',()=>{ try{ $('adv').open ? localStorage.setItem(ADV_KEY,'1') : localStorage.removeItem(ADV_KEY); }catch(e){} });
   // Onglet Style, « Plus de réglages » : mémorisée, et ouverte d'office si un réglage avancé diffère du défaut (aucun effet appliqué n'est caché)
-  const MORE_KEY='cityMapStudio.styleMoreOpen'; let moreAuto=false;   // locaux : pas de nouveaux noms globaux
+  const MORE_KEY='cms3.styleMoreOpen'; let moreAuto=false;   // locaux : pas de nouveaux noms globaux
   function moreActive(){
     const D=DEFAULT_STATE, diff=(a,b)=>Object.keys(b).some(k=>a?.[k]!==b[k]);
     return diff(st.fx,D.fx)||diff(st.orn,D.orn)||diff(st.layers,D.layers)||st.stroke!==D.stroke||st.waterMult!==D.waterMult||st.attribution!==D.attribution;
@@ -260,7 +260,7 @@ function buildUI(){
   document.querySelectorAll('#placeSeg button').forEach(b=>b.onclick=()=>setActivePlace(+b.dataset.v));
   $('placeSwitch').onclick=()=>setActivePlace(1-(st.active||0));
   // Thème : section repliée par défaut (gagne de la place), état mémorisé ; locaux : pas de nouveaux noms globaux
-  const THEME_KEY='cityMapStudio.themeOpen';
+  const THEME_KEY='cms3.themeOpen';
   try{ if(localStorage.getItem(THEME_KEY)==='1') $('themeBox').open=true; }catch(e){}
   $('themeBox').addEventListener('toggle',()=>{ try{ $('themeBox').open ? localStorage.setItem(THEME_KEY,'1') : localStorage.removeItem(THEME_KEY); }catch(e){} });
   // filtres des thèmes

@@ -17,7 +17,7 @@
  * doit figurer dans APP (tests/pwa.py).
  */
 'use strict';
-const VERSION = 'cms-2026-11-27d';
+const VERSION = 'cms-2026-11-27e';
 // Cache propre à ce dossier : une autre copie de l'application sur la même origine ne touche pas à ses fichiers
 const SCOPE = new URL(self.registration.scope).pathname, CACHE = `${VERSION}@${SCOPE}`;
 const APP = [

@@ -30,7 +30,10 @@ const ML_VERSION = '4.7.1';
 const ML_SRI = {js:'sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj', css:'sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V'};
 const ML_CDNS = ['lib/',`https://unpkg.com/maplibre-gl@${ML_VERSION}/dist/`,`https://cdn.jsdelivr.net/npm/maplibre-gl@${ML_VERSION}/dist/`,`https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/${ML_VERSION}/`];
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
-const STORE_KEY = 'cityMapStudio.v2';
+// Stockage local : toutes les clés de cette version commencent par « cms3. » et sa base IndexedDB s'appelle « cms3 »
+// (#100). La version classique (racine du site, même origine) garde « cityMapStudio.* » : aucune des deux ne lit
+// ni n'écrit les données de l'autre.
+const STORE_KEY = 'cms3.affiche';
 
 const FONTS = {
   serif:{fam:'"Playfair Display", Georgia, "Times New Roman", serif', load:['400 20px "Playfair Display"','italic 400 20px "Playfair Display"']},

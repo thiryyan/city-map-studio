@@ -131,7 +131,7 @@ function replaceState(next,extra){ for(const k of Object.keys(st)) delete st[k];
 
 // ---------- Ambiance au premier lancement ----------
 // Proposée une seule fois : première visite sans affiche enregistrée, ni lien partagé ; après la demande d'accord.
-const WELCOME_KEY='cityMapStudio.welcomed';
+const WELCOME_KEY='cms3.welcomed';
 const firstVisit=(()=>{ try{ return !localStorage.getItem(WELCOME_KEY) && !localStorage.getItem(STORE_KEY); }catch(e){ return false; } })();
 let welcomeDone=!firstVisit || /^#a=/.test(location.hash);
 /** Premier lancement (#59) : une proposition d'ambiance non bloquante en tête des réglages, après l'éventuelle demande d'accord.
@@ -379,7 +379,7 @@ CMS.define('deps', () => {
 // Les textes et repères relevés pendant le rendu de l'aperçu (CMS.ink) qui entrent dans cette bande sont signalés.
 // Réglage de l'appareil, hors de l'état de l'affiche (comme A− / A+).
 CMS.define('safe', () => {
-  const KEY='cityMapStudio.safeZone', MM=5;
+  const KEY='cms3.safeZone', MM=5;
   const LABELS={title:'le titre',subtitle:'le sous-titre',coords:'les coordonnées',dedication:'la dédicace',names:'les noms',date:'la date',
     legend:'la légende',marker:'un repère',attribution:'la mention des sources',text:'un texte'};
   let on=(()=>{ try{ return localStorage.getItem(KEY)==='1'; }catch(e){ return false; } })(), prev='';
@@ -594,7 +594,7 @@ CMS.define('intent', () => {
   const NAMES={map:'Carte',mark:'Repère',illus:'Illustration',text:'Textes'};
   const HINT_TOUCH={map:'Glissez · pincez pour zoomer', illus:'Glissez ou pincez l’illustration', text:'Glissez un texte pour le déplacer'};
   const HINT_MOUSE={map:'Glissez · molette pour zoomer', illus:'Glissez l’illustration · molette : taille', text:'Glissez un texte pour le déplacer'};
-  const USES_KEY='cityMapStudio.editUses', HINT_USES=2;
+  const USES_KEY='cms3.editUses', HINT_USES=2;
   let sig='', shown=false, pending=null, prev='map';
   const uses=()=>{ try{ return parseInt(localStorage.getItem(USES_KEY),10)||0; }catch(e){ return HINT_USES; } };
   const illusReady=()=>!!CMS.illus?.ready?.();
@@ -991,7 +991,7 @@ CMS.define('palette', () => {
 // partagé : champs connus seulement, normState, tailles bornées ; une restauration est une étape annulable.
 // Ne sont pas inclus : le moteur cartographique (choix de l'appareil) et les données importées (fichier OSM).
 // Fichiers avec illustrations intégrées : version 2 et limites propres (CMS.illus.FILE) ; la version 1 reste lue.
-const SAVES_KEY='cityMapStudio.saves', SAVES_MAX=40, CFG_FORMAT='city-map-studio/configuration', BAK_FORMAT='city-map-studio/sauvegardes', CFG_VERSION=1;
+const SAVES_KEY='cms3.saves', SAVES_MAX=40, CFG_FORMAT='city-map-studio/configuration', BAK_FORMAT='city-map-studio/sauvegardes', CFG_VERSION=1;
 const CFG_MAX_BYTES=1024*1024, BAK_MAX_BYTES=16*1024*1024, THUMB_MAX=120*1024;
 const THUMB_RE=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);

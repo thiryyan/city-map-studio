@@ -154,7 +154,7 @@ function setBusy(on,txt){
 
 // ---------- Accord préalable aux services tiers (RGPD) ----------
 // Aucune requête vers un service tiers (tuiles, Nominatim, CDN) avant l'accord explicite de l'utilisateur.
-const CONSENT_KEY = 'cityMapStudio.consent';
+const CONSENT_KEY = 'cms3.consent';
 let consent = (()=>{ try{ return localStorage.getItem(CONSENT_KEY)==='1'; }catch(e){ return false; } })();
 let consentNext = null;
 /** true si l'accord est donné ; sinon affiche la demande et exécute `next` après acceptation */
@@ -193,9 +193,6 @@ function updateConsentInfo(){
   b.onclick = consent ? withdrawConsent : ()=>needConsent();
   el.append(b);
 }
-
-// Clé d'un ancien moteur réseau retiré (suspensions de serveurs) : effacée pour ne pas laisser de donnée orpheline.
-try{ localStorage.removeItem('cityMapStudio.opBlocked'); }catch(e){}
 
 function loadState(){
   try{ const s=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(s && typeof s==='object') return normState(s); }catch(e){}
