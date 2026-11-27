@@ -651,6 +651,19 @@ Pendant la refonte, la version actuelle reste l'application de référence à l'
 * Bascule (lot 6, #104), seulement avec l'accord du propriétaire : `main` passe à la racine, la version classique sous `/classique/`.
 * Essai local : `REMOTE=<dépôt> PUSH=0 bash .github/scripts/pages.sh` (variables `PR`, `PR_DIR`, `PR_CLOSE` décrites en tête du script).
 
+### 7.7. Mesures de performance (#101)
+
+L'application relève ses propres temps (`CMS.perf`, `js/core.js`), en mémoire seulement : rien n'est enregistré ni envoyé. Lieu › Avancé › « Mesures de performance » affiche la dernière mesure de chaque type, son budget et ✓ / ✗ ; « Copier les mesures » copie la version, l'appareil (navigateur, écran, densité) et les mesures, à coller dans une issue.
+
+| Mesure | Début → fin | Budget (Galaxy A35) |
+| :--- | :--- | :--- |
+| Ouverture jusqu'à l'aperçu | Début du chargement de la page → premier `idle` de la carte GPU (ou premier aperçu, sans carte GPU) | 3 s |
+| Réglage visible | `changed()` → aperçu redessiné (`drawOver`), ou carte GPU au repos pour un réglage qui la restyle | 0,2 s |
+| Export A4, Export 10 × 15 (et A3, 50 × 70 sans budget) | Clic sur Exporter, après l'accord → fichier PNG ou PDF prêt | 6 s, 3 s |
+| Geste sur la carte | Doigt ou souris enfoncé sur la carte → relâché : 95e centile de l'intervalle entre deux images (10 images au moins) | 20 ms (60 images/s, gigue tolérée) |
+
+Une mesure en attente qui n'aboutit pas en 10 s est abandonnée. Les mesures de référence se font sur `/nouvelle/` (même comportement que la version classique tant que l'horizon 1 n'a pas commencé), sur le Galaxy A35 et le Galaxy S26 Ultra.
+
 ---
 
 ## 8. Organisation du code
@@ -793,6 +806,7 @@ Tests de bout en bout Playwright (Python), un fichier par domaine, avec un **ré
 | `gestures.py` | Lecture et Modification | Lecture par défaut (mobile et ordinateur : ni glisser, ni molette), verrou sur toute l'affiche, invitation aux deux premières utilisations, Modifier / Terminer ; choix par type d'affiche, de départ par l'onglet ou la zone touchée, « Textes » jamais d'office et interrupteur, « Repère » ; illustration : glisser, pincer (30 à 300 %), molette, double toucher, décalage borné, contour de la zone de la composition (Haut / bas). |
 | `changes.py` | Relecture et barre d'actions | État par défaut : aucune pastille, liste vide ; réglages modifiés : pastilles sur les bons onglets (description accessible), compte des sections repliables, liste par partie ; « Réinitialiser » ne rétablit que sa partie, « Annuler » la défait ; « Voir » ouvre l'onglet et la section ; parties hors du type d'affiche ignorées ; bouton principal « Suivant : … » puis « Exporter » ; voyant d'état ; version affichée en `file://`. |
 | `security.py`, `csp.py` | Sécurité | Lien forgé (types faux, valeurs hors bornes, champs inconnus) : valeurs remplacées, rien d'invalide enregistré ; lien piégé (> 512 Ko décompressé) refusé ; `window.__cms` seulement avec `?test` ; aucune violation de la CSP en `file://` et en HTTP, aucun style ni script en ligne. |
+| `mesures.py` | Mesures de performance | Ouverture, réglage, geste sur la carte et export 10 × 15 mesurés ; affichés avec leur budget dans Lieu › Avancé ; texte à copier (version, appareil, écran, mesures) ; rien envoyé sur le réseau (#101). |
 | `storage.py` | Stockage séparé | Données de la version classique (`cityMapStudio.*`, base `cityMapStudio`) ni lues, ni modifiées, ni supprimées, même après enregistrement d'une affiche, import d'une illustration et réinitialisation ; données de cette version sous `cms3.*` et dans la base `cms3` (#100). |
 | `pwa.py`, `swversion.py` | Déploiement | Servi sous `/city-map-studio/` sans ressource manquante ; manifeste et icônes ; service worker sans ressource tierce, liste `APP` complète ; cache propre à son dossier, celui d'une autre copie conservé ; cache HTTP contourné ; mise à jour proposée par un bandeau, un seul rechargement, état conservé ; démarrage hors ligne ; `VERSION` changée quand `sw.js` ou un fichier de `APP` change (CI). |
 | `unit.py` | Fonctions pures (Node) | Socle `CMS`, Mercator, `zoomFactor`, `dms`, `exportSpec`, `normState`, `CMS.geocoder.sanitize` ; `CMS.illus` : qualité, placement, retouches, prompt, pistes, proportions ; `CMS.route` : prompt d'itinéraire (FR / EN, réglages), `extractGpx`, contrôle de vraisemblance, `routePrompt` et `wpts` dans `normState` ; `CMS.wiki` : classement sur une réponse réelle autour de Blois (`tests/wiki_blois.json`), validation, requête limitée aux coordonnées. |
