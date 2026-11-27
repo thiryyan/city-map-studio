@@ -2,11 +2,14 @@ name: Tests
 
 # Suite de bout en bout (Playwright, réseau simulé) : à chaque pull request, à chaque push sur main
 # (un push sur une autre branche est testé par sa pull request : pas de double exécution).
-# Le site lui-même reste publié tel quel par GitHub Pages (aucune étape de build).
+# Puis publication à deux voies sur la branche gh-pages (#97, #99), seulement si les tests passent :
+# racine = branche classique, /nouvelle/ = main, /pr-N/ = préversion de chaque pull request (retirée à sa fermeture).
+# Après un correctif sur la branche classique : relancer ce workflow à la main (Actions → Tests → Run workflow).
 on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
 
 permissions:
@@ -19,6 +22,8 @@ concurrency:
 
 jobs:
   e2e:
+    # Pull request fermée : rien à tester, seule sa préversion est retirée (job publish)
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -48,3 +53,49 @@ jobs:
           name: captures
           path: tests/*.png
           if-no-files-found: ignore
+
+  publish:
+    needs: e2e
+    # Tests réussis, ou pull request fermée ; jamais pour une pull request venue d'un fork (pas de droit d'écriture)
+    if: >-
+      always() &&
+      (needs.e2e.result == 'success' || (github.event.action == 'closed' && needs.e2e.result == 'skipped')) &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write        # écrire la branche gh-pages
+      pull-requests: write   # lien de la préversion dans la pull request
+    # Une seule écriture de gh-pages à la fois, sans en annuler aucune
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Publication sur gh-pages
+        env:
+          REMOTE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          PR: ${{ github.event.pull_request.number }}
+          PR_DIR: ${{ github.workspace }}
+          PR_CLOSE: ${{ github.event.action == 'closed' && '1' || '0' }}
+        run: bash .github/scripts/pages.sh
+      - name: Lien de la préversion
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo, n = context.issue.number;
+            const base = `https://${owner}.github.io/${repo}/`;
+            const marker = '<!-- preversion-pages -->';
+            const body = [marker,
+              `**Préversion** de cette pull request : ${base}pr-${n}/`,
+              '',
+              `Version classique : ${base} · version en cours de refonte : ${base}nouvelle/`,
+              '',
+              '_Disponible une à deux minutes après la publication ; retirée à la fermeture de la pull request._'].join('\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {owner, repo, issue_number: n});
+            const mine = comments.find(c => c.user.type === 'Bot' && c.body.includes(marker));
+            if (mine) await github.rest.issues.updateComment({owner, repo, comment_id: mine.id, body});
+            else await github.rest.issues.createComment({owner, repo, issue_number: n, body});

@@ -135,6 +135,8 @@ async def main():
         # 3 quater. Déploiement simulé : bandeau, « Mettre à jour », un seul rechargement, état conservé
         await page.evaluate("""()=>{ const i=document.querySelector('input[data-k="texts.title"]'); i.value='Mise à jour 65'; i.dispatchEvent(new Event('input',{bubbles:true})); }""")
         await wait_js(page, "(localStorage.getItem('cityMapStudio.v2')||'').includes('Mise à jour 65') || false", timeout=5000)
+        # Cache d'une autre copie de l'application sur la même origine (/nouvelle/, /pr-N/ ; #97) : jamais purgé par celle-ci
+        await page.evaluate("caches.open('cms-autre@/autre-copie/').then(c=>c.put('autre-copie.txt', new Response('x')))")
         Q.deploy = True
         await page.evaluate("__cms.pwa.check(Date.now()+7200e3)")
         await wait_js(page, "document.getElementById('updBanner').classList.contains('show') || false", timeout=15000)
@@ -148,8 +150,10 @@ async def main():
         check(await page.text_content('#appVersion') == f'Version : {label(VERSION + "-deploy")}', f"nouvelle version active : {await page.text_content('#appVersion')}")
         check(await page.evaluate("__cms.st.texts.title") == 'Mise à jour 65', 'état de l\'affiche conservé après la mise à jour')
         check(not await page.evaluate("document.getElementById('updBanner').classList.contains('show')"), 'après la mise à jour : plus de bandeau')
-        old = await page.evaluate("caches.keys()")
-        check(old == [VERSION + '-deploy'], f'ancien cache purgé : {old}')
+        old = sorted(await page.evaluate("caches.keys()"))
+        scope = await page.evaluate("new URL(__cms.pwa.reg.scope).pathname")
+        check(old == sorted([f'{VERSION}-deploy@{scope}', 'cms-autre@/autre-copie/']),
+              f'ancien cache de ce dossier purgé, cache d\'une autre copie conservé : {old}')
 
         # 4. Hors ligne
         await ctx.set_offline(True); errs.clear()

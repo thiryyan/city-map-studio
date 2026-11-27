@@ -30,7 +30,8 @@ async def main():
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
         ctx = await b.new_context(viewport={'width': 1400, 'height': 900}, accept_downloads=True)
         page = await ctx.new_page(); errs = []
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.themeOpen','1');localStorage.setItem('cityMapStudio.textMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
+        INIT = "try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.themeOpen','1');localStorage.setItem('cityMapStudio.textMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}"
+        await page.add_init_script(INIT)
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):
             u = r.request.url
@@ -161,7 +162,8 @@ async def main():
         await ev("__cms.st.texts.title='Chambord'")
         url = await ev("__cms.encodeShare().then(r=>r.url)")
         check('#a=z' in url and len(url) < 3000, f'lien de partage compressé ({len(url)} caractères)')
-        p2 = await ctx.new_page(); await p2.route('**/*', route)
+        # Accord donné aussi à cette page : en file://, un Chrome récent ne partage pas toujours le localStorage entre pages
+        p2 = await ctx.new_page(); await p2.add_init_script(INIT); await p2.route('**/*', route)
         await p2.goto(url); await p2.wait_for_timeout(1600)
         got = await p2.evaluate("[__cms.st.texts.title, __cms.st.texture, __cms.st.markers2.length, location.hash]")
         check(got == ['Chambord', 'toile', 2, ''], f'lien ouvert : affiche reconstituée, ancre effacée {got}')
