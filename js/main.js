@@ -3,8 +3,8 @@
 'use strict';
 // ---------- Démarrage ----------
 // Fonctions internes exposées (window.__cms) seulement pour les tests et le débogage : adresse avec ?test,
-// ou localStorage['cityMapStudio.debug']='1'. En usage normal, rien n'est exposé.
-const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ return localStorage.getItem('cityMapStudio.debug')==='1'; }catch(e){ return false; } })();
+// ou localStorage['cms3.debug']='1'. En usage normal, rien n'est exposé.
+const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ return localStorage.getItem('cms3.debug')==='1'; }catch(e){ return false; } })();
 async function boot(){
   buildUI(); CMS.illus.init(); CMS.route.init(); initSaves(); initSheet(); CMS.deps.init(); CMS.safe.init(); CMS.actbar.init(); CMS.changes.init(); applyUiScale();
   $('bConsentYes').onclick=giveConsent; $('bConsentFile').onclick=declineConsent; updateConsentInfo();

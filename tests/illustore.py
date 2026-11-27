@@ -20,10 +20,10 @@ MAKE = """async ([w,h,c1,c2])=>{ const c=document.createElement('canvas'); c.wid
   const g=x.createLinearGradient(0,0,0,h); g.addColorStop(0,c1); g.addColorStop(1,c2); x.fillStyle=g; x.fillRect(0,0,w,h);
   x.fillStyle='#fff'; x.fillRect(w*0.3,h*0.4,w*0.2,h*0.1);
   const b=await new Promise(r=>c.toBlob(r,'image/png')); const u=new Uint8Array(await b.arrayBuffer()); let s=''; for(const v of u) s+=String.fromCharCode(v); return btoa(s); }"""
-KEYS = """()=>new Promise(r=>{ const q=indexedDB.open('cityMapStudio'); q.onsuccess=()=>{ const d=q.result;
+KEYS = """()=>new Promise(r=>{ const q=indexedDB.open('cms3'); q.onsuccess=()=>{ const d=q.result;
   if(!d.objectStoreNames.contains('images')){ d.close(); return r([]); }
   const g=d.transaction('images').objectStore('images').getAllKeys(); g.onsuccess=()=>{ d.close(); r(g.result); }; }; q.onerror=()=>r(null); })"""
-CLEAR = """()=>new Promise(r=>{ const q=indexedDB.open('cityMapStudio'); q.onsuccess=()=>{ const d=q.result; const tx=d.transaction('images','readwrite');
+CLEAR = """()=>new Promise(r=>{ const q=indexedDB.open('cms3'); q.onsuccess=()=>{ const d=q.result; const tx=d.transaction('images','readwrite');
   tx.objectStore('images').clear(); tx.oncomplete=()=>{ d.close(); r(true); }; }; })"""
 
 
@@ -53,8 +53,8 @@ async def main():
 
         async def save_now(page):   # enregistrement immédiat (saveState est différé de 300 ms), relu pour s'en assurer
             await page.wait_for_timeout(400)
-            await page.evaluate("localStorage.setItem('cityMapStudio.v2',JSON.stringify(__cms.st))")
-            await wait_js(page, "localStorage.getItem('cityMapStudio.v2')===JSON.stringify(__cms.st)", 3000)
+            await page.evaluate("localStorage.setItem('cms3.affiche',JSON.stringify(__cms.st))")
+            await wait_js(page, "localStorage.getItem('cms3.affiche')===JSON.stringify(__cms.st)", 3000)
 
         ctx, page, errs = await open_ctx()
         A = await page.evaluate(MAKE, [900, 1300, '#7FB2D6', '#3F6B2A'])
@@ -69,7 +69,7 @@ async def main():
         await page.wait_for_timeout(600)
         keys = await page.evaluate(KEYS)
         check(keys == [ref], f'image rangée dans IndexedDB sous son empreinte {keys}')
-        stored = await page.evaluate("""()=>new Promise(r=>{ const q=indexedDB.open('cityMapStudio'); q.onsuccess=()=>{ const d=q.result;
+        stored = await page.evaluate("""()=>new Promise(r=>{ const q=indexedDB.open('cms3'); q.onsuccess=()=>{ const d=q.result;
           const g=d.transaction('images').objectStore('images').get(__cms.st.illus.img.ref); g.onsuccess=()=>{ d.close(); const v=g.result; r([v.blob.type,v.w,v.h,v.name]); }; }; })""")
         check(stored == ['image/webp', 900, 1300, 'blois.png'], f'image ré-encodée en WebP avec ses dimensions {stored}')
         check(not await page.evaluate("JSON.stringify(localStorage).includes('data:image')"), 'aucune donnée d\'image dans localStorage')

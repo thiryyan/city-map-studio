@@ -17,7 +17,7 @@ T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
-INIT = "try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}"
+INIT = "try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}"
 MAKE = """async ([w,h])=>{ const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d');
   x.fillStyle='#C0392B'; x.fillRect(0,0,w,h); x.fillStyle='#2E86C1'; x.fillRect(0,h/2,w,h/2);
   const b=await new Promise(r=>c.toBlob(r,'image/png')); window.__f=new File([b],'test.png',{type:'image/png'}); }"""
@@ -140,7 +140,7 @@ async def main():
         await page.evaluate(PINCH, [cx, cy, 60, 0.5]); await page.wait_for_timeout(300)
         i2 = await illus(page)
         check(i2[0] < 70 and i2[0] >= 30, f'pincer (rapprocher) : l\'image rapetisse sous 100 % {i2}')
-        check(await ev(page, "__cms.st.illus.zoom") == await ev(page, "JSON.parse(localStorage.getItem('cityMapStudio.v2')).illus.zoom") or True, 'zoom enregistré')
+        check(await ev(page, "__cms.st.illus.zoom") == await ev(page, "JSON.parse(localStorage.getItem('cms3.affiche')).illus.zoom") or True, 'zoom enregistré')
         await page.evaluate(PINCH, [cx, cy, 30, 0.2]); await page.wait_for_timeout(200)
         check((await illus(page))[0] == 30, f'pincer : 30 % au plus petit {await illus(page)}')
         await page.evaluate(PINCH, [cx, cy, 20, 12]); await page.wait_for_timeout(200)

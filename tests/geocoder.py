@@ -30,7 +30,7 @@ async def open_page(b, mode):
     ctx = await b.new_context(viewport={'width': 1200, 'height': 800})
     page = await ctx.new_page()
     await page.add_init_script("window.__cmsTestConfig={geoTimeout:1500,geoRetry:300,geoInterval:1100};"
-                               "try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
+                               "try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}")
     errs, reqs = [], []
     page.on('pageerror', lambda e: errs.append(str(e)))
     state = {'n': 0}

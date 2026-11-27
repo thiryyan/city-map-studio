@@ -96,7 +96,7 @@ async def main():
         check(bak['format'] == 'city-map-studio/sauvegardes' and len(bak['saves']) == 2, f'sauvegarde complète : {len(bak["saves"])} affiches')
         await page.set_input_files('#cfgIn', bak_path); await page.wait_for_timeout(300)
         check(len(await ev("__cms.loadSaves()")) == 2, 'réimport de la même sauvegarde : aucun doublon')
-        await ev("()=>localStorage.removeItem('cityMapStudio.saves')")
+        await ev("()=>localStorage.removeItem('cms3.saves')")
         await page.set_input_files('#cfgIn', bak_path); await page.wait_for_timeout(300)
         n = await ev("__cms.loadSaves().map(s=>s.name)")
         check(n == ['nuit à lyon', 'Carte ancienne'], f'sauvegarde complète réimportée dans un navigateur vide {n}')
@@ -127,13 +127,13 @@ async def main():
         check(len(l) == 40, f'nombre de sauvegardes borné à 40 ({len(l)})')
         check(all(x['thumb'] == '' for x in l if x['name'].startswith('A')), 'vignette piégée (javascript:) écartée')
         check(not await ev("[...document.querySelectorAll('#savesList img')].some(i=>!i.src.startsWith('data:image/'))"), 'vignettes affichées : images data: seulement')
-        await ev("()=>localStorage.setItem('cityMapStudio.saves','{pas du json')")
+        await ev("()=>localStorage.setItem('cms3.saves','{pas du json')")
         check(await ev("__cms.loadSaves().length") == 0, 'sauvegardes illisibles dans le navigateur : ignorées sans erreur')
 
         # 8. Navigateur plein : message clair, liste intacte
-        await ev("()=>localStorage.removeItem('cityMapStudio.saves')")
+        await ev("()=>localStorage.removeItem('cms3.saves')")
         await ev("()=>__cms.saveCurrent('Gardée')")
-        full = await ev("""()=>{ const orig=Storage.prototype.setItem; Storage.prototype.setItem=function(k,v){ if(k==='cityMapStudio.saves') throw new DOMException('quota','QuotaExceededError'); return orig.call(this,k,v); };
+        full = await ev("""()=>{ const orig=Storage.prototype.setItem; Storage.prototype.setItem=function(k,v){ if(k==='cms3.saves') throw new DOMException('quota','QuotaExceededError'); return orig.call(this,k,v); };
           const ok=__cms.saveCurrent('Trop'); Storage.prototype.setItem=orig; return {ok, toast:document.getElementById('toast').textContent, n:__cms.loadSaves().length}; }""")
         check(full['ok'] is False and 'plein' in full['toast'] and full['n'] == 1, f'navigateur plein : refus expliqué, aucune perte ({full["toast"][:60]})')
 

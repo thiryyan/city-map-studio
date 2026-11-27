@@ -42,7 +42,7 @@ async def main():
         ctx = await b.new_context(viewport={'width': 1280, 'height': 900})
         page = await ctx.new_page(); errs = []
         page.on('pageerror', lambda e: errs.append(str(e)))
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.welcomed','1');localStorage.setItem('cityMapStudio.themeOpen','1')}catch(e){}")
+        await page.add_init_script("try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.welcomed','1');localStorage.setItem('cms3.themeOpen','1')}catch(e){}")
         async def route(r):
             if r.request.url.startswith(('file:', 'blob:', 'data:')): return await r.continue_()
             await r.abort()

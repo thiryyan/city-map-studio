@@ -135,7 +135,7 @@ async def main():
         for name, vp, mobile in [('mobile', {'width': 390, 'height': 844}, True), ('desktop', {'width': 1400, 'height': 900}, False)]:
             ctx = await b.new_context(viewport=vp, device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, accept_downloads=True)
             page = await ctx.new_page(); logs = []; ext = []
-            await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.themeOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
+            await page.add_init_script("try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.advOpen','1');localStorage.setItem('cms3.styleMoreOpen','1');localStorage.setItem('cms3.themeOpen','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}")  # accord préalable donné (cf. tests/consent.py)
             page.on('console', lambda mm: logs.append(f'{mm.type}: {mm.text}'))
             page.on('pageerror', lambda e: logs.append(f'PAGEERROR: {e}'))
             async def route(r):

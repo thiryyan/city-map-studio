@@ -16,7 +16,7 @@ T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
-INIT = "try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.welcomed','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.themeOpen','1')}catch(e){}"
+INIT = "try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.welcomed','1');localStorage.setItem('cms3.styleMoreOpen','1');localStorage.setItem('cms3.themeOpen','1')}catch(e){}"
 MAKE = """async ([w,h])=>{ const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d');
   x.fillStyle='#C0392B'; x.fillRect(0,0,w,h); x.fillStyle='#2E86C1'; x.fillRect(0,h/2,w,h/2);
   const b=await new Promise(r=>c.toBlob(r,'image/png')); window.__f=new File([b],'test.png',{type:'image/png'}); }"""

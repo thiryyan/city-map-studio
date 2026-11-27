@@ -42,7 +42,7 @@ async def main():
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
         page = await (await b.new_context(viewport={'width': 1280, 'height': 900})).new_page(); errs = []
         page.on('pageerror', lambda e: errs.append(str(e)))
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.textMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1');localStorage.setItem('cityMapStudio.themeOpen','1')}catch(e){}")
+        await page.add_init_script("try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.textMoreOpen','1');localStorage.setItem('cms3.welcomed','1');localStorage.setItem('cms3.themeOpen','1')}catch(e){}")
         await page.route('**/*', lambda r: r.continue_() if r.request.url.startswith(('file:', 'blob:', 'data:')) else r.abort())
         await page.goto(APP); await wait_js(page, "typeof __cms==='object'", 20000)
         await page.evaluate("f=>{__cms.setEngine('file',true); __cms.importText(f,'osm.json')}", FIX); await wait_js(page, "!!__cms.osmData", 5000)
@@ -140,8 +140,8 @@ async def main():
         check(not await ev("CMS.illus.mapMoved().title") and await page.is_hidden('#hitTitle'), 'gabarit Lettres : titre non déplacé')
         await ev("__cms.setLayout('classic',true)")
         # État enregistré : positions du mode Carte persistées
-        await wait_js(page, "JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').illusText?.map?.pos==='bd'")
-        check(await ev("normState(JSON.parse(localStorage.getItem('cityMapStudio.v2'))).illusText.map.pos") == 'bd', 'position du mode Carte enregistrée et relue (normState)')
+        await wait_js(page, "JSON.parse(localStorage.getItem('cms3.affiche')||'{}').illusText?.map?.pos==='bd'")
+        check(await ev("normState(JSON.parse(localStorage.getItem('cms3.affiche'))).illusText.map.pos") == 'bd', 'position du mode Carte enregistrée et relue (normState)')
 
         # ---------- Migration d'un état d'avant les valeurs Auto (affiche Carte) ----------
         n = await ev("normState({mode:'map',illusText:{style:'vintage',color:'#24365A',shadow:'#F3EAD8',outline:'#FFFFFF',off:4,pos:'hc'}}).illusText")

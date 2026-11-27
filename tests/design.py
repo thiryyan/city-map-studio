@@ -30,7 +30,7 @@ async def main():
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
         ctx = await b.new_context(viewport={'width': 1400, 'height': 900}, accept_downloads=True)
         page = await ctx.new_page(); errs = []
-        INIT = "try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.themeOpen','1');localStorage.setItem('cityMapStudio.textMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}"
+        INIT = "try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.advOpen','1');localStorage.setItem('cms3.styleMoreOpen','1');localStorage.setItem('cms3.themeOpen','1');localStorage.setItem('cms3.textMoreOpen','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}"
         await page.add_init_script(INIT)
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):

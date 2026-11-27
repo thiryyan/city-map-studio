@@ -50,7 +50,7 @@ async def main():
         check(st == ['sauge', 'arch', 'feet'], f'ambiance appliquée {st}')
         check(await strip(page) and await page.evaluate("document.querySelector('#welAmb [data-v=naissance]').getAttribute('aria-pressed')") == 'true',
               'la proposition reste, ambiance choisie marquée (en essayer d\'autres)')
-        check(await page.evaluate("localStorage.getItem('cityMapStudio.welcomed')") == '1', 'choix mémorisé')
+        check(await page.evaluate("localStorage.getItem('cms3.welcomed')") == '1', 'choix mémorisé')
         await page.click('#bUndo'); await page.wait_for_timeout(300)
         check(await page.evaluate("__cms.st.layout") == 'souvenir', '« Annuler » revient à l\'affiche de départ')
         await page.click('#welClose'); await page.wait_for_timeout(200)
@@ -73,14 +73,14 @@ async def main():
         await page.click('#welClose'); await page.wait_for_timeout(300)
         lay = await page.evaluate("__cms.st.layout")
         check(not await strip(page) and lay == 'souvenir', 'fermée : affiche par défaut conservée')
-        check(await page.evaluate("localStorage.getItem('cityMapStudio.welcomed')") == '1', 'fermeture mémorisée')
+        check(await page.evaluate("localStorage.getItem('cms3.welcomed')") == '1', 'fermeture mémorisée')
         check(not errs, f'aucune erreur de page {errs}')
         await ctx.close()
 
         # 3. Utilisateur existant (affiche déjà enregistrée) : pas de proposition
         ctx, page, errs = await fresh()
         await page.goto(APP); await page.wait_for_timeout(800)
-        await page.evaluate("""s=>{ localStorage.setItem('cityMapStudio.consent','1'); localStorage.setItem('cityMapStudio.v2', s); }""",
+        await page.evaluate("""s=>{ localStorage.setItem('cms3.consent','1'); localStorage.setItem('cms3.affiche', s); }""",
                             json.dumps({'layout': 'classic', 'theme': 'souvenir'}))
         await page.reload(); await page.wait_for_timeout(1500)
         check(not await strip(page) and await page.evaluate("__cms.st.layout") == 'classic', 'affiche existante : aucune proposition')
@@ -89,13 +89,13 @@ async def main():
         # 4. Ouverture d'un lien partagé : pas de proposition
         ctx, page, errs = await fresh()
         await page.goto(APP); await page.wait_for_timeout(800)
-        await page.evaluate("localStorage.setItem('cityMapStudio.consent','1'); localStorage.setItem('cityMapStudio.welcomed','1')")
+        await page.evaluate("localStorage.setItem('cms3.consent','1'); localStorage.setItem('cms3.welcomed','1')")
         await page.reload(); await page.wait_for_timeout(1000)
         url = await page.evaluate("__cms.st.texts.title='Chambord'; __cms.encodeShare().then(r=>r.url)")
         await ctx.close()
         ctx, page, errs = await fresh()
         await page.goto(APP); await page.wait_for_timeout(800)
-        await page.evaluate("localStorage.setItem('cityMapStudio.consent','1')")
+        await page.evaluate("localStorage.setItem('cms3.consent','1')")
         await page.goto(url); await page.reload(); await page.wait_for_timeout(1600)   # même page, seule l'ancre change : rechargement explicite
         check(not await strip(page) and await page.evaluate("__cms.st.texts.title") == 'Chambord', 'lien partagé : affiche ouverte, aucune proposition')
         check(not errs, f'aucune erreur de page {errs}')

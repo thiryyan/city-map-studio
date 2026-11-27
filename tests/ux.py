@@ -48,7 +48,7 @@ async def main():
         ctx = await b.new_context(viewport={'width': 390, 'height': 664}, is_mobile=True, has_touch=True,
                                   permissions=['geolocation'], geolocation={'latitude': 48.8584, 'longitude': 2.2945})
         page = await ctx.new_page(); errs = []; nomi = []
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.textMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1');localStorage.setItem('cityMapStudio.themeOpen','1')}catch(e){}")
+        await page.add_init_script("try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.textMoreOpen','1');localStorage.setItem('cms3.welcomed','1');localStorage.setItem('cms3.themeOpen','1')}catch(e){}")
         page.on('pageerror', lambda e: errs.append(str(e)))
         async def route(r):
             u = r.request.url
@@ -86,7 +86,7 @@ async def main():
         check(not await page.evaluate("document.getElementById('colorsBox').open") and not await page.is_visible('#colors input'),
               'couleurs repliées par défaut')
         # Onglet Style : « Plus de réglages » (#62) repliée par défaut, mémorisée, ouverte d'office si un réglage avancé est actif
-        MORE = "[document.getElementById('styleMore').open, localStorage.getItem('cityMapStudio.styleMoreOpen')]"
+        MORE = "[document.getElementById('styleMore').open, localStorage.getItem('cms3.styleMoreOpen')]"
         check(await page.evaluate(MORE) == [False, None] and not await page.is_visible('#colorsBox') and await page.is_visible('#themes'),
               'Style : « Plus de réglages » repliée par défaut, Essentiel visible')
         ess = await page.evaluate("['#ambiances','#themes','#textures','[data-k=\"fx.foil\"]'].map(q=>!!document.querySelector(q)?.closest('label,div').offsetParent).concat(['#duos','#fontSeg'].map(q=>!document.querySelector(q).offsetParent))")
@@ -106,12 +106,12 @@ async def main():
               'onglet Lieu : moteur et diagnostic repliés dans « Avancé »')
         check(await page.is_visible('#presets') and await page.is_visible('#bPlace2'), 'onglet Lieu : recherche, villes et repère visibles')
         await page.click('#adv summary'); await page.wait_for_timeout(200)
-        stored = await page.evaluate("[document.getElementById('adv').open, localStorage.getItem('cityMapStudio.advOpen')]")
+        stored = await page.evaluate("[document.getElementById('adv').open, localStorage.getItem('cms3.advOpen')]")
         check(stored == [True, '1'], f'« Avancé » ouvert et mémorisé {stored}')
         # Relecture au démarrage : nouvelle page avec la préférence déjà enregistrée (un rechargement immédiat
         # peut précéder l'écriture différée de localStorage par Chromium)
         p2 = await ctx.new_page(); await p2.route('**/*', route)
-        await p2.add_init_script("try{localStorage.setItem('cityMapStudio.advOpen','1');localStorage.setItem('cityMapStudio.styleMoreOpen','1');localStorage.setItem('cityMapStudio.themeOpen','1');localStorage.setItem('cityMapStudio.textMoreOpen','1');localStorage.setItem('cityMapStudio.welcomed','1');localStorage.setItem('cityMapStudio.themeOpen','1')}catch(e){}")
+        await p2.add_init_script("try{localStorage.setItem('cms3.advOpen','1');localStorage.setItem('cms3.styleMoreOpen','1');localStorage.setItem('cms3.themeOpen','1');localStorage.setItem('cms3.textMoreOpen','1');localStorage.setItem('cms3.welcomed','1');localStorage.setItem('cms3.themeOpen','1')}catch(e){}")
         await p2.goto(APP); await p2.wait_for_timeout(1000)
         check(await p2.evaluate("document.getElementById('adv').open"), '« Avancé » rouvert au démarrage suivant')
         await p2.close()

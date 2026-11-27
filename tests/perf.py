@@ -35,7 +35,7 @@ async def main():
         # Chromium sans interface n'émet pas « change » sur la requête (resolution: …) quand la densité est émulée : la requête
         # créée par watchDpr est relevée pour que le test émette l'événement lui-même après le changement de densité
         await page.add_init_script("const __mm=window.matchMedia; window.matchMedia=function(q){ const m=__mm.call(this,q); if(/resolution/.test(q)) window.__resMql=m; return m; };")
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
+        await page.add_init_script("try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}")
         errs, warns = [], []
         page.on('pageerror', lambda e: errs.append(str(e)))
         page.on('console', lambda m: warns.append(m.text) if m.type == 'warning' and 'MapLibre' in m.text and 'layers[' in m.text else None)

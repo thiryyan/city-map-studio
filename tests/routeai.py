@@ -57,7 +57,7 @@ async def main():
             if u.startswith(('file:', 'blob:', 'data:')): return await r.continue_()
             ext.append(u.split('/')[2]); await r.abort()
         await page.route('**/*', route)
-        await seed(page, APP, {'cityMapStudio.welcomed': '1'}, 300)
+        await seed(page, APP, {'cms3.welcomed': '1'}, 300)
         await wait_js(page, "typeof __cms==='object'", 20000)
         if await page.evaluate("document.getElementById('consent').open"): await page.evaluate("document.getElementById('bConsentFile').click()")
         await page.evaluate("__cms.showTab('repere')"); await page.wait_for_timeout(200)
