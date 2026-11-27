@@ -13,7 +13,8 @@ import pathlib, os, asyncio, json, struct, subprocess, sys, base64
 from playwright.async_api import async_playwright
 from seed import seed
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri() + '?test'
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+APP = (ROOT / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None
 if not (T / 'city.json').exists(): subprocess.run([sys.executable, str(T / 'make_city.py')], check=True)
 CITY = (T / 'city.json').read_text(); META = json.loads((T / 'city.meta.json').read_text())

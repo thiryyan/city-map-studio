@@ -12,7 +12,8 @@ import pathlib, os, asyncio, base64, subprocess, sys
 from playwright.async_api import async_playwright
 from seed import seed
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri() + '?test'
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+APP = (ROOT / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None
 if not (T / 'city.json').exists(): subprocess.run([sys.executable, str(T / 'make_city.py')], check=True)
 CITY = (T / 'city.json').read_text()
@@ -50,7 +51,7 @@ async def main():
         await seed(page, APP, wait=1300)
         await page.evaluate("f=>{ __cms.setEngine('file'); __cms.importText(f,'city.json'); }", CITY); await page.wait_for_timeout(500)
         url = await page.evaluate(COMPOSE, POSTERS)
-        out = T.parent / 'icons' / 'og-image.jpg'; out.write_bytes(base64.b64decode(url.split(',')[1]))
+        out = ROOT / 'icons' / 'og-image.jpg'; out.write_bytes(base64.b64decode(url.split(',')[1]))
         print('écrit', out, out.stat().st_size // 1024, 'Ko')
         await b.close()
 asyncio.run(main())

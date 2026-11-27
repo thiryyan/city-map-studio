@@ -8,7 +8,8 @@
 import pathlib, os, asyncio
 from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri() + '?test'
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+APP = (ROOT / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = (T / 'osm.json').read_text()
 

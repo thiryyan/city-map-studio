@@ -10,7 +10,7 @@ from functools import partial
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
-ROOT = T.parent
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
 FAMILIES = ['serif', 'sans', 'mono', 'garamond', 'deco', 'bodoni', 'italiana', 'fraunces', 'jost', 'bebas', 'vibes', 'cinzel', 'fell', 'marcellus']

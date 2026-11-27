@@ -4,7 +4,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 
 ## Règles non négociables
 - **100 % open source** : aucune clé API, aucun service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps).
-- **HTML, CSS et JavaScript natifs, sans étape de build**, servis tels quels par GitHub Pages (branche `gh-pages`, remplie par la CI : dossier § 7.6) : `index.html`, `css/app.css`, `js/*.js`. Chemins toujours relatifs (le site est servi sous `/city-map-studio/`). Scripts **classiques**, pas de module ES : l'application doit rester utilisable en `file://`. Dépendances embarquées dans `lib/` (MapLibre, polices), chacune avec sa licence.
+- **HTML, CSS et JavaScript natifs**, ouvrables tels quels pour développer ; le site publié est construit par `npm run build` (`dist/` : un seul script et une feuille minifiés, `sw.js` généré ; dossier § 7.8), puis publié par la CI sur la branche `gh-pages` (§ 7.6). Sources : `index.html`, `css/app.css`, `js/*.js`. Chemins toujours relatifs (le site est servi sous `/city-map-studio/`). Scripts **classiques**, pas de module ES : l'application doit rester utilisable en `file://`. Dépendances embarquées dans `lib/` (MapLibre, polices), chacune avec sa licence.
 - **Mobile en priorité**, puis ordinateur. Interface en français.
 - `drawPoster(ctx, W, H, pass, mapFn)` est la **seule** fonction de rendu de l'affiche : l'aperçu et l'export doivent rester identiques.
 - Attributions : « © OpenStreetMap » (et « © OpenMapTiles » avec le moteur GPU) toujours inscrit sur l'affiche, mention complète active par défaut (`attributionText`) ; sources rappelées en légende sous l'aperçu, hors de l'affiche (`#mapCredit`). Licences ODbL et CC-BY 4.0.
@@ -17,7 +17,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 - **Nouveau service réseau** : l'ajouter à `connect-src` dans la CSP de `index.html`, en plus de `needConsent()`.
 - **Nouveau champ d'état** : l'ajouter à `DEFAULT_STATE` **et** à `normState()` (`js/state.js`), avec sa vérification ; sinon il est ignoré au chargement (enregistrement local, lien partagé, Mes affiches et fichiers de configuration passent tous par `normState`).
 - **Nouvelle version de MapLibre** : remplacer `lib/`, mettre à jour `ML_VERSION` et les empreintes `ML_SRI` (`openssl dgst -sha384 -binary lib/maplibre-gl.js | base64`).
-- **Nouveau fichier de l'application** (`js/`, `css/`, `lib/` hors `lib/sky/`) : l'ajouter à la liste `APP` de `sw.js` (vérifié par `tests/pwa.py`). **Changer `VERSION`** dans `sw.js` à chaque modification de `sw.js`, de la liste `APP` ou d'un fichier qu'elle contient, et sa copie à l'identique dans `js/core.js` (`CMS.build`, version affichée par la page) : sinon les applications installées ne voient pas la mise à jour (vérifié en CI par `tests/swversion.py`, et l'égalité des deux par `tests/pwa.py`). Les utilisateurs se voient proposer « Mettre à jour » ; rien n'est rechargé sans leur accord (dossier, § 7.5).
+- **Nouveau script** : l'ajouter aux `<script>` de `index.html`, à sa place dans l'ordre ; le build le reprend. **`VERSION`** (`sw.js`) et `CMS.build` (`js/core.js`) valent `cms-dev` dans les sources et sont générés au build, comme la liste `APP` : rien à changer à la main. Une nouvelle dépendance de `lib/` chargée au démarrage s'ajoute à la liste `app` de `scripts/build.mjs` (vérifié par `tests/pwa.py`). Les utilisateurs se voient proposer « Mettre à jour » ; rien n'est rechargé sans leur accord (dossier, § 7.5).
 - **Stockage local** : toute clé `localStorage` commence par `cms3.` et la seule base IndexedDB est `cms3` ; ne jamais lire ni écrire `cityMapStudio.*`, réservé à la version classique publiée sur la même origine (`tests/storage.py`, #100).
 - **Fenêtre modale** : un `<dialog class="modal">` ouvert par `openDialog(id)` et fermé par `closeDialog(id)` (focus rendu) ; action de la touche Échap dans `dlgCancel`.
 - Tout bouton de sélection (vignette, carte) est un `<button type="button">` avec `aria-pressed` (`pressed(b, on)`) ; tout champ a un nom accessible (`<label for>` ou `aria-label`).
@@ -40,7 +40,8 @@ python tests/run_all.py          # toute la suite, un test par cœur (génère l
 python tests/run_all.py -j 1     # un test à la fois
 python tests/run_all.py ux saves # seulement ces tests (ou : python tests/ux.py, après génération des données)
 python tests/fixture.py && python tests/make_formats.py && python tests/make_city.py   # génère seulement les données de test
-python tests/swversion.py        # VERSION de sw.js changée si sw.js ou un fichier de APP diffère de origin/main (lancé par la CI)
+npm ci && npm run build         # site publié dans dist/ (Node 22)
+CMS_ROOT=dist python tests/run_all.py   # la suite sur dist/, comme la CI (npm test fait les deux)
 python tests/layouts.py          # captures des 11 gabarits (contrôle visuel, hors suite)
 python tests/make_og.py          # régénère icons/og-image.jpg (aperçu des liens partagés) avec le rendu actuel
 python -m http.server 8000       # aperçu local : http://localhost:8000
@@ -50,7 +51,7 @@ Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chr
 `tests/city.json` (généré par `tests/make_city.py`) est une ville fictive mais réaliste — fleuve à îles, vieille ville et château, faubourgs, grand ensemble, pavillons, port, gare, rocade, campagne, ~18 500 bâtiments — à importer aussi dans l'application (onglet Lieu, section Avancé, moteur Fichier) pour juger un rendu sans réseau ; elle est centrée sur la vue par défaut.
 
 ## Avant chaque commit
-- Lancer `python tests/run_all.py` : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports A4 de 2480 × 3508 px). La même suite tourne dans GitHub Actions à chaque pull request et à chaque push sur `main` (un nouveau push annule l'exécution en cours). Un test en échec est relancé seul une fois : s'il passe, il est signalé « INSTABLE » à corriger.
+- Lancer `npm test` (build, puis la suite sur `dist/`), ou `python tests/run_all.py` sur les sources : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports A4 de 2480 × 3508 px). La même suite tourne sur `dist/` dans GitHub Actions à chaque pull request et à chaque push sur `main` (un nouveau push annule l'exécution en cours). Un test en échec est relancé seul une fois : s'il passe, il est signalé « INSTABLE » à corriger.
 - Les tests ouvrent la page avec `?test` ; pour attendre une condition, utiliser `wait_js` (`tests/jswait.py`), jamais `page.wait_for_function` (refusé par la CSP).
 - Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
 - Mettre à jour le dossier technique quand un comportement change, et le guide de l'utilisateur quand une commande, une option ou un libellé change.

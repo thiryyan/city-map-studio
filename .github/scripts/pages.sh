@@ -2,7 +2,7 @@
 # City Map Studio — publication à deux voies sur la branche gh-pages (#97, lot 1 : #99)
 #
 #   racine      = branche `classique` (version de référence, figée par l'étiquette v1-classique)
-#   /nouvelle/  = branche `main` (version en cours de refonte)
+#   /nouvelle/  = branche `main` (version en cours de refonte), construite par scripts/build.mjs
 #   /pr-N/      = préversion de la pull request N (supprimée à sa fermeture)
 #
 # Chaque appel republie la racine et /nouvelle/ depuis leurs branches, puis ajoute ou retire la préversion demandée.
@@ -23,13 +23,20 @@ SITE=(index.html manifest.webmanifest sw.js .nojekyll css js lib icons)
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-# Copie les seuls fichiers servis de $1 vers $2
+# Copie le site de $1 vers $2 : construit (dist/, #102) si l'arbre a un build, sinon les seuls fichiers servis
+# (version classique, sans build)
 copy_site() {
   local src="$1" dst="$2" f
   mkdir -p "$dst"
-  for f in "${SITE[@]}"; do
-    [ -e "$src/$f" ] && cp -R "$src/$f" "$dst/"
-  done
+  if [ -f "$src/scripts/build.mjs" ]; then
+    (cd "$src" && npm ci --no-audit --no-fund --silent && node scripts/build.mjs "$work/build") >&2
+    cp -R "$work/build/." "$dst/"
+    rm -rf "$work/build"
+  else
+    for f in "${SITE[@]}"; do
+      [ -e "$src/$f" ] && cp -R "$src/$f" "$dst/"
+    done
+  fi
   [ -f "$dst/index.html" ] || { echo "✗ $src : index.html absent" >&2; exit 1; }
 }
 

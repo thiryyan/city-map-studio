@@ -9,7 +9,8 @@
 import pathlib, os, asyncio, json, base64, zlib
 from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
-BASE = (T.parent / 'index.html').as_uri()
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+BASE = (ROOT / 'index.html').as_uri()
 APP = BASE + '?test'
 CHROME = os.environ.get('CHROME') or None
 SEEDED = {'cms3.consent': '1', 'cms3.welcomed': '1'}

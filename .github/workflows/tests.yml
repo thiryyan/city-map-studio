@@ -28,15 +28,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # historique complet : comparaison avec la branche de base (VERSION de sw.js)
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      # sw.js ou un fichier de sa liste APP modifié : VERSION doit changer, sinon le worker ne se met pas à jour (#65)
-      - name: Version du service worker
-        if: github.event_name == 'pull_request'
-        run: python tests/swversion.py "origin/${{ github.base_ref }}"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      # Site publié : dist/ (scripts réunis et minifiés, VERSION et liste APP de sw.js générées ; #102)
+      - name: Construction
+        run: npm ci --no-audit --no-fund && npm run build
       # Pas de « playwright install --with-deps » (plusieurs minutes d'apt-get) : on pilote le Google Chrome
       # déjà présent sur l'image ubuntu-latest, via la variable CHROME lue par chaque test.
       - name: Dépendances
@@ -44,7 +45,10 @@ jobs:
           pip install playwright mapbox-vector-tile
           echo "CHROME=$(command -v google-chrome)" >> "$GITHUB_ENV"
           google-chrome --version
+      # Sur dist/, c'est-à-dire ce qui sera publié (tests unit et globals : sur les sources)
       - name: Tests de bout en bout
+        env:
+          CMS_ROOT: dist
         run: python tests/run_all.py
       - name: Captures d'écran (en cas d'échec)
         if: failure()
@@ -74,6 +78,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
       - name: Publication sur gh-pages
         env:
           REMOTE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
