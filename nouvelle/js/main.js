@@ -30,6 +30,9 @@ async function boot(){
     setStatus('MapLibre injoignable (aucun CDN accessible)','err');
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
+  // Ouverture mesurée jusqu'à la carte GPU affichée (engines.js) ; sans elle, jusqu'au premier aperçu
+  if(!(ok && st.engine==='maplibre' && consent)) requestAnimationFrame(()=>CMS.perf.ready(st.engine==='file'?'moteur Fichier':'aperçu sans carte'));
+  CMS.perf.watchFrames($('slot')); CMS.perfUI.init();
   installPwa();
   if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,setFormat,setFileType,setDedWrap,exportSpec,dedLines,renderMaplibreOffscreen,set glMaxTest(v){setGlMaxTest(v)},applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll,pwa:CMS.pwa};
 }

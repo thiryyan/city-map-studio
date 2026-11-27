@@ -53,6 +53,7 @@ async function exportPoster(){
   if(!illus && st.engine==='maplibre' && !needConsent(()=>exportPoster())) return;
   if(!illus && st.engine!=='maplibre' && !osmData){ toast('Importez d\'abord un fichier de données.',true); return; }
   if(!illus && st.engine==='maplibre' && ui.glLost){ toast('Carte GPU momentanément indisponible (mémoire graphique) : réessayez dans un instant.',true); return; }
+  const t0=performance.now();   // mesure de l'export (CMS.perf) : jusqu'au fichier prêt
   setBusy(true,'Chargement des polices…'); let show=false;
   try{
     const spec=exportSpec(), {W:EW,H:EH,dpi}=spec, pdf=st.fileType==='pdf';
@@ -61,6 +62,7 @@ async function exportPoster(){
     const blob0=await toBlobP(cv,pdf?'image/jpeg':'image/png',pdf?0.95:undefined);
     cv.width=cv.height=0;   // pixels libérés avant d'assembler le fichier final (limite mémoire des canevas sur iOS)
     const blob=pdf ? pdfFromJpeg(new Uint8Array(await blob0.arrayBuffer()),EW,EH,spec.mm,st.texts.title||'Affiche') : await withDpi(blob0,dpi);
+    CMS.perf.since('export-'+spec.key, t0, `${pdf?'PDF':'PNG'} ${EW} × ${EH} px`);
     const name=`affiche-${illus?'illustration':'carte'}-${slug(st.texts.title)}${spec.key==='a4'?'':'-'+spec.key}-${dpi}dpi.${pdf?'pdf':'png'}`;
     if(lastUrl) URL.revokeObjectURL(lastUrl);
     if(lastImgUrl){ URL.revokeObjectURL(lastImgUrl); lastImgUrl=null; }
@@ -196,3 +198,32 @@ async function importFile(f){
 return {slug, exportPoster, ENV, showEnvWarning, runDiagnostics, importText, importFile};
 });
 const {slug, exportPoster, ENV, showEnvWarning, runDiagnostics, importText, importFile} = CMS.export;
+
+// ---------- Mesures de performance : affichage et copie (#101) ----------
+CMS.define('perfUI', () => {
+  const P = CMS.perf, fmt = ms => ms >= 1000 ? `${(ms / 1000).toLocaleString('fr-FR', {maximumFractionDigits: 1})} s` : `${ms} ms`;
+  const budget = k => k === 'geste' ? `≤ ${P.BUDGET[k]} ms entre deux images` : k in P.BUDGET ? `budget ${fmt(P.BUDGET[k])}` : 'sans budget';
+  const ORDER = Object.keys(P.LABEL);
+  const rows = () => P.latest().sort((a, b) => ORDER.indexOf(a.k) - ORDER.indexOf(b.k));
+  const render = () => {
+    const box = $('perfOut'), r = rows();
+    box.replaceChildren(...(r.length ? r.map(m => h('div', {},
+      h('span', {className: P.ok(m) ? 'ok' : 'ko'}, P.ok(m) ? '✓' : '✗'),
+      h('span', {}, `${P.LABEL[m.k] || m.k} : ${fmt(m.ms)}`),
+      h('small', {}, [budget(m.k), m.info].filter(Boolean).join(' · ')))) :
+      [h('div', {}, h('small', {}, 'Aucune mesure pour l\'instant : ouvrez la page, changez un réglage, déplacez la carte, exportez.'))]));
+  };
+  /** Texte copié : appareil, version, puis une ligne par mesure */
+  const text = () => [
+    `City Map Studio ${CMS.build.label(CMS.build.version)} · ${new Date().toLocaleString('fr-FR')}`,
+    `Appareil : ${navigator.userAgent}`,
+    `Écran : ${screen.width} × ${screen.height}, densité ${devicePixelRatio}`,
+    ...rows().map(m => `${P.ok(m) ? '✓' : '✗'} ${P.LABEL[m.k] || m.k} : ${fmt(m.ms)} (${budget(m.k)}${m.info ? ' · ' + m.info : ''})`)
+  ].join('\n');
+  const init = () => {
+    render(); CMS.on('perf:mesure', render);
+    $('bPerfCopy').onclick = () => (navigator.clipboard ? navigator.clipboard.writeText(text()) : Promise.reject())
+      .then(() => toast('Mesures copiées.'), () => toast('Copie impossible sur cet appareil.', true));
+  };
+  return {init, text};
+});
