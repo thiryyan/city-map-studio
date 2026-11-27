@@ -25,7 +25,7 @@ async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
         page = await b.new_page(viewport={'width': 1280, 'height': 900})
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
+        await page.add_init_script("try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}")
         errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
         await page.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
         await page.goto(APP); await wait_js(page, "typeof __cms==='object'", 20000)
@@ -43,7 +43,7 @@ async def main():
         export0 = await page.evaluate("__cms.composePoster(400,566).then(r=>{ const d=r.canvas.toDataURL(); r.canvas.width=0; return d; })")
         await page.click('#safeTog'); await page.wait_for_timeout(300)
         check(await guide(), 'case cochée : repère affiché sur l\'aperçu')
-        check(await page.evaluate("localStorage.getItem('cityMapStudio.safeZone')") == '1' and 'safe' not in await page.evaluate("JSON.stringify(Object.keys(__cms.st))"),
+        check(await page.evaluate("localStorage.getItem('cms3.safeZone')") == '1' and 'safe' not in await page.evaluate("JSON.stringify(Object.keys(__cms.st))"),
               'réglage mémorisé dans l\'appareil, hors de l\'état de l\'affiche')
 
         # 5 mm exactement, selon le format et l'orientation (largeur imprimée en mm)
@@ -80,7 +80,7 @@ async def main():
         await page.keyboard.press('Escape'); await page.wait_for_timeout(250)
         check(await guide(), 'retour aux réglages : repère rétabli')
         await page.evaluate("__cms.showTab('export')"); await page.click('#safeTog'); await page.wait_for_timeout(300)
-        check(not await guide() and await warn() == '' and await page.evaluate("localStorage.getItem('cityMapStudio.safeZone')") is None, 'décochée : repère et message retirés')
+        check(not await guide() and await warn() == '' and await page.evaluate("localStorage.getItem('cms3.safeZone')") is None, 'décochée : repère et message retirés')
         check(not errs, f'aucune erreur de page {errs}')
         await b.close()
     print('échecs', fails); assert not fails

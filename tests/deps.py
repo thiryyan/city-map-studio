@@ -27,7 +27,7 @@ async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
         page = await b.new_page(viewport={'width': 1280, 'height': 900})
-        await page.add_init_script("try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}")
+        await page.add_init_script("try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}")
         errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
         await page.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
         await page.goto(APP); await wait_js(page, "typeof __cms==='object'", 20000)

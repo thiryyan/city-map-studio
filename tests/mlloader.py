@@ -31,8 +31,8 @@ async def scenario(b, name, lib='ok', libcss='ok', cdn=True, consent=True, delay
     """lib : 'ok' | 'block' | 'late' (servie après `delay` s) | 'wrong' (autre version)"""
     ctx = await b.new_context(viewport={'width': 1200, 'height': 800})
     page = await ctx.new_page()
-    init = "window.__cmsTestConfig={mlTimeout:1000,mlCssTimeout:1000};addEventListener('cms:maplibre-ready',()=>{window.__lateReady=true});try{localStorage.setItem('cityMapStudio.welcomed','1');"
-    init += ("localStorage.setItem('cityMapStudio.consent','1');" if consent else '') + "}catch(e){}"
+    init = "window.__cmsTestConfig={mlTimeout:1000,mlCssTimeout:1000};addEventListener('cms:maplibre-ready',()=>{window.__lateReady=true});try{localStorage.setItem('cms3.welcomed','1');"
+    init += ("localStorage.setItem('cms3.consent','1');" if consent else '') + "}catch(e){}"
     await page.add_init_script(init)
     logs, remote = [], []
     page.on('pageerror', lambda e: logs.append(f'PAGEERROR: {e}'))

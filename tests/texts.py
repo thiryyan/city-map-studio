@@ -54,7 +54,7 @@ async def main():
         for k in KEYS: await page.click(f'input[data-k="show.{k}"]')
         await page.wait_for_timeout(500)
         kept = await page.evaluate("__cms.st.texts.title")
-        await wait_js(page, "Object.values(JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').show||{}).every(v=>v===false)")   # lignes masquées enregistrées
+        await wait_js(page, "Object.values(JSON.parse(localStorage.getItem('cms3.affiche')||'{}').show||{}).every(v=>v===false)")   # lignes masquées enregistrées
         await page.reload(); await page.wait_for_timeout(1500)
         show = await page.evaluate("__cms.st.show")
         print('après rechargement :', show, '| titre conservé :', kept)
@@ -73,7 +73,7 @@ async def main():
         await page.click('#tabs [data-tab=textes]')   # les polices sont dans l'onglet Textes (#72)
         for f in FAMILIES:
             await page.click(f'#fontSeg [data-v={f}]'); await page.wait_for_timeout(300); snaps.add(await page.evaluate(SNAP))
-        await wait_js(page, "JSON.parse(localStorage.getItem('cityMapStudio.v2')||'{}').font==='vibes'")   # choix enregistré avant de recharger
+        await wait_js(page, "JSON.parse(localStorage.getItem('cms3.affiche')||'{}').font==='vibes'")   # choix enregistré avant de recharger
         await page.reload(); await page.wait_for_timeout(1200)
         font = await page.evaluate('__cms.st.font'); print('polices : rendus distincts', len(snaps), '| après rechargement', font)
         if len(snaps) != len(FAMILIES) or font != 'vibes': fails.append('polices')

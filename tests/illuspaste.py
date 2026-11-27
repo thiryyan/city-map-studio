@@ -14,7 +14,7 @@ CHROME = os.environ.get('CHROME') or None
 fails = []
 
 # Presse-papiers simulé : window.__clip = 'png' | 'gif' | 'text' | 'deny' | 'none' (API absente) ; __clipReads compte les lectures
-MOCK = """(()=>{ try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}
+MOCK = """(()=>{ try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}
   window.__clip = sessionStorage.getItem('clip') || 'png'; window.__clipReads = 0;
   if(window.__clip==='none'){ try{ Object.defineProperty(navigator,'clipboard',{value:undefined,configurable:true}); }catch(e){} return; }
   const make = type => new Promise(r=>{ const c=document.createElement('canvas'); c.width=800; c.height=1100; const x=c.getContext('2d');

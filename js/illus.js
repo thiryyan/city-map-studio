@@ -289,7 +289,7 @@ CMS.define('illus', () => {
   // st.illus.img = {ref, name, w, h} : ref = empreinte SHA-256 du fichier importé (64 hexa). L'image ré-encodée (WebP,
   // PNG si le navigateur n'encode pas le WebP) est rangée sous cette clé. Les configurations restent dans localStorage.
   // Sans IndexedDB (navigation privée stricte, stockage bloqué) : l'image n'est gardée que pendant la visite.
-  const DB_NAME='cityMapStudio', DB_STORE='images', REF_RE=/^[0-9a-f]{64}$/, DATA_RE=/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/]+=*$/;
+  const DB_NAME='cms3', DB_STORE='images', REF_RE=/^[0-9a-f]{64}$/, DATA_RE=/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/]+=*$/;
   const memStore=new Map(); let dbP=null, dbWarned=false, persistAsked=false;
   function db(){
     if(dbP) return dbP;
@@ -1050,7 +1050,7 @@ CMS.define('illus', () => {
   const SW_FILL=[['auto','Auto : couleur du papier'],['#F3EAD8','Crème'],['#D9CDB5','Sable'],['#FFFFFF','Blanc'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#C5A059','Or']];
   const SW_PLATE=[['auto','Auto : encre de la plaque (couleur papier sur la capsule, couleur des lettres pour les filets)'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#C5A059','Or'],['#F3EAD8','Crème'],['#FFFFFF','Blanc']];
   const LINE_NAMES={title:'Titre',subtitle:'Sous-titre',coords:'Coordonnées',dedication:'Dédicace',names:'Noms',date:'Date'};
-  const MORE_KEY='cityMapStudio.textMoreOpen';
+  const MORE_KEY='cms3.textMoreOpen';
   let moreAuto=false;
   /** Un réglage de « Plus de réglages » diffère du défaut : polices hors duo, ombre, contour, tailles par ligne, coupure de la
    *  dédicace, format des coordonnées, trait des plaques, ordre des lignes (#88). La section s'ouvre alors d'office. */
@@ -1197,7 +1197,7 @@ CMS.define('illus', () => {
     finally{ btn.disabled=false; lab.textContent='Trouver des pistes dans la carte'; }
   }
   // ---------- Pistes Wikipédia (#46) : option désactivée par défaut, accord préalable, coordonnées du lieu seulement ----------
-  const WIKI_KEY='cityMapStudio.wiki';
+  const WIKI_KEY='cms3.wiki';
   let wikiOn=(()=>{ try{ return localStorage.getItem(WIKI_KEY)==='1'; }catch(e){ return false; } })(), wikiBusy=false;
   function setWiki(on){
     wikiOn=!!on; try{ on ? localStorage.setItem(WIKI_KEY,'1') : localStorage.removeItem(WIKI_KEY); }catch(e){}

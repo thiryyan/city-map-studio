@@ -10,7 +10,7 @@ T = pathlib.Path(__file__).resolve().parent
 APP = (T.parent / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
-INIT = "try{localStorage.setItem('cityMapStudio.consent','1');localStorage.setItem('cityMapStudio.welcomed','1')}catch(e){}"
+INIT = "try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}"
 TABS = "[...document.querySelectorAll('#tabs button:not([hidden])')].map(b=>b.dataset.tab)"
 RECT = "s=>{const r=document.querySelector(s).getBoundingClientRect();return {y:r.y,b:r.bottom,h:r.height,w:r.width}}"
 

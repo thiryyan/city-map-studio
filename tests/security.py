@@ -12,7 +12,7 @@ T = pathlib.Path(__file__).resolve().parent
 BASE = (T.parent / 'index.html').as_uri()
 APP = BASE + '?test'
 CHROME = os.environ.get('CHROME') or None
-SEEDED = {'cityMapStudio.consent': '1', 'cityMapStudio.welcomed': '1'}
+SEEDED = {'cms3.consent': '1', 'cms3.welcomed': '1'}
 
 
 def link(obj=None, raw=None):
@@ -51,7 +51,7 @@ async def main():
         check(s['markerSize'] == 300 and len(s['markers2']) == 1 and s['markers2'][0]['label'] == 'Ici' and s['route'] is None and s['sky']['when'] == '',
               'lien forgé : nombres bornés, lieux, itinéraire et date du ciel filtrés')
         check('inattendu' not in s and 'pollue' not in s and not await page.evaluate("({}).pollue"), 'lien forgé : champs inconnus ignorés, aucune pollution de prototype')
-        saved = json.loads(await page.evaluate("localStorage.getItem('cityMapStudio.v2')"))
+        saved = json.loads(await page.evaluate("localStorage.getItem('cms3.affiche')"))
         check(saved['marker']['lat'] == 47.5861 and await page.evaluate("location.hash") == '', 'lien forgé : état enregistré valide, ancre retirée')
         check(await page.inner_text('#markerTxt') != '' and not errs, f'lien forgé : interface utilisable, aucune erreur de page {errs}')
 
@@ -63,7 +63,7 @@ async def main():
         check(not errs, f'lien piégé : aucune erreur de page {errs}')
 
         # 3. Ancien état enregistré corrompu dans le navigateur
-        await page.evaluate("localStorage.setItem('cityMapStudio.v2', JSON.stringify({marker:{lat:'?'}, zoom:null, layers:'x', texts:{title:'Tours'}}))")
+        await page.evaluate("localStorage.setItem('cms3.affiche', JSON.stringify({marker:{lat:'?'}, zoom:null, layers:'x', texts:{title:'Tours'}}))")
         await page.goto(APP); await page.wait_for_timeout(1500)
         check(await page.evaluate("[__cms.st.texts.title, __cms.st.marker.lat, __cms.st.layers.parks]") == ['Tours', 47.5861, True] and not errs,
               'état enregistré corrompu : corrigé au chargement')
@@ -77,9 +77,9 @@ async def main():
         # 5. Crochets de test
         await page.goto(BASE); await page.wait_for_timeout(1500)
         check(await page.evaluate("typeof window.__cms") == 'undefined', 'sans ?test : window.__cms non exposé')
-        await page.evaluate("localStorage.setItem('cityMapStudio.debug','1')"); await page.reload(); await page.wait_for_timeout(1500)
+        await page.evaluate("localStorage.setItem('cms3.debug','1')"); await page.reload(); await page.wait_for_timeout(1500)
         check(await page.evaluate("typeof window.__cms") == 'object', 'clé de débogage : window.__cms exposé')
-        await page.evaluate("localStorage.removeItem('cityMapStudio.debug')")
+        await page.evaluate("localStorage.removeItem('cms3.debug')")
         check(not errs, f'aucune erreur de page {errs}')
         await b.close()
     print('ÉCHECS :', fails) if fails else print('OK')
