@@ -112,7 +112,7 @@ function setActivePlace(i){
 }
 function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; ui.inkSink=CMS.safe?.on?[]:null;
   const g=drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); describePoster();
-  CMS.safe?.check(ui.inkSink,cvO.width,cvO.height); ui.inkSink=null;
+  CMS.safe?.check(ui.inkSink,cvO.width,cvO.height); ui.inkSink=null; CMS.perf.end('reglage','aperçu');
   // Un texte peut déplacer la carte (dédicace passée sur deux lignes, ou revenue sur une) : son cadre est replacé
   // (comparaison en fraction de la hauteur : le canevas est arrondi au pixel, pas la taille CSS de l'affiche)
   const s=ui.slotCss, H=ui.posterCss.h, Hc=cvO.height;
@@ -172,6 +172,7 @@ function redrawAll(restyle){ drawUnder(); if(restyle) mlRestyle(); renderMap(fal
 /** Après une modification de l'état : redessine ce qui en dépend, puis enregistre (différé, cf. saveState).
  *  Par défaut, la couche du dessus (textes, repères) ; cards : vignettes ; all : fond, carte et style MapLibre. */
 function changed(o={}){
+  CMS.perf.start('reglage', o.all && st.engine==='maplibre' && mlMap ? 'carte' : '');   // mesuré jusqu'à l'aperçu (ou la carte GPU) redessiné
   if(o.cards) refreshCards();
   if(o.all) redrawAll(true);
   else { scheduleOver(); saveState(); }

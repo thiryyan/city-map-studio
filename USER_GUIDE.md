@@ -265,6 +265,9 @@ Les deux moteurs rendent les mêmes effets, ornements et couleurs, à l'aperçu 
 puis recommande le moteur qui fonctionne ; sa première ligne compare la version de la page à celle de la copie hors
 ligne. **L'accord aux services tiers** se donne ou se retire ici. On y règle aussi la **taille du texte de
 l'interface** (A− / A+). **La version** de l'application (date de publication) est affichée en bas.
+Tout en bas, **Mesures de performance** indique les temps relevés sur votre appareil depuis l'ouverture de la page
+(ouverture, réglage, geste sur la carte, export), chacun avec son budget et un ✓ ou un ✗. Rien n'est envoyé :
+**Copier les mesures** les place dans le presse-papiers, avec la version et le modèle d'appareil, pour les partager.
 
 ---
 
