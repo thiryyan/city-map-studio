@@ -13,7 +13,8 @@ Atelier web de création d'affiches cartographiques souvenir : tracé minimalist
 - **Sûre, accessible, hors ligne** : politique de sécurité du contenu stricte, liens partagés validés, fenêtres et commandes accessibles au clavier ; installable, et utilisable sans réseau après une première visite (moteur Fichier).
 
 ## Utilisation
-Ouvrir la version publiée sur GitHub Pages, ou servir le dépôt localement :
+Ouvrir la version publiée sur GitHub Pages, ou servir le dépôt localement. Pendant la refonte ([#97](https://github.com/thiryyan/city-map-studio/issues/97)), la version de référence reste à l'adresse habituelle ; la version en cours de refonte est publiée sous `/nouvelle/`, et chaque pull request sous `/pr-N/` (dossier technique, § 7.6).
+
 ```bash
 python3 -m http.server 8000   # puis http://localhost:8000
 ```

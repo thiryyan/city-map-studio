@@ -4,7 +4,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 
 ## Règles non négociables
 - **100 % open source** : aucune clé API, aucun service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps).
-- **HTML, CSS et JavaScript natifs, sans étape de build**, servis tels quels par GitHub Pages depuis `main` : `index.html`, `css/app.css`, `js/*.js`. Chemins toujours relatifs (le site est servi sous `/city-map-studio/`). Scripts **classiques**, pas de module ES : l'application doit rester utilisable en `file://`. Dépendances embarquées dans `lib/` (MapLibre, polices), chacune avec sa licence.
+- **HTML, CSS et JavaScript natifs, sans étape de build**, servis tels quels par GitHub Pages (branche `gh-pages`, remplie par la CI : dossier § 7.6) : `index.html`, `css/app.css`, `js/*.js`. Chemins toujours relatifs (le site est servi sous `/city-map-studio/`). Scripts **classiques**, pas de module ES : l'application doit rester utilisable en `file://`. Dépendances embarquées dans `lib/` (MapLibre, polices), chacune avec sa licence.
 - **Mobile en priorité**, puis ordinateur. Interface en français.
 - `drawPoster(ctx, W, H, pass, mapFn)` est la **seule** fonction de rendu de l'affiche : l'aperçu et l'export doivent rester identiques.
 - Attributions : « © OpenStreetMap » (et « © OpenMapTiles » avec le moteur GPU) toujours inscrit sur l'affiche, mention complète active par défaut (`attributionText`) ; sources rappelées en légende sous l'aperçu, hors de l'affiche (`#mapCredit`). Licences ODbL et CC-BY 4.0.
@@ -54,6 +54,9 @@ Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chr
 - Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
 - Mettre à jour le dossier technique quand un comportement change, et le guide de l'utilisateur quand une commande, une option ou un libellé change.
 
-## Branches
-- `main` : version publiée sur GitHub Pages.
+## Branches et publication (#97)
+- `main` : version en cours de refonte, publiée sous `/nouvelle/` après des tests réussis.
+- `classique` : version de référence (étiquette `v1-classique`), publiée à la racine ; correctifs seulement, puis relancer le workflow à la main.
+- `gh-pages` : site publié, écrit seulement par la CI (`.github/scripts/pages.sh`) ; ne jamais la modifier à la main.
+- Chaque pull request est publiée en préversion sous `/pr-N/` (lien posté dans la pull request, retirée à sa fermeture).
 - `develop` : intégration ; fusion vers `main` par pull request.
