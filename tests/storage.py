@@ -1,6 +1,6 @@
 """e2e : stockage séparé de la version classique (#97, lot 2 : #100).
 
-La version classique (racine du site) et cette version (/nouvelle/, préversions) partagent la même origine, donc le
+La version classique (/classique/ depuis la bascule, #104) et cette version (racine, préversions) partagent la même origine, donc le
 même localStorage et le même IndexedDB. Vérifie que cette version :
 - ne lit pas les données de la version classique (clés « cityMapStudio.* », base « cityMapStudio ») ;
 - n'en modifie, n'en ajoute ni n'en supprime aucune, même en enregistrant une affiche et une illustration ;
