@@ -63,8 +63,8 @@ Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chr
 - Mettre à jour le dossier technique quand un comportement change, et le guide de l'utilisateur quand une commande, une option ou un libellé change.
 
 ## Branches et publication (#97)
-- `main` : version publiée à la racine du site après des tests réussis (depuis la bascule du 28/11/2026, #104 ; `.github/bascule`).
-- `classique` : version d'origine (étiquette `v1-classique`), publiée sous `/classique/` ; correctifs seulement, puis relancer le workflow à la main.
+- `main` : version publiée à la racine du site après des tests réussis.
+- `classique` : version d'origine (étiquette `v1-classique`), publiée sous `/classique/`, figée : ni évolution, ni correctif.
 - `gh-pages` : site publié, écrit seulement par la CI (`.github/scripts/pages.sh`) ; ne jamais la modifier à la main.
 - Chaque pull request est publiée en préversion sous `/pr-N/` (lien posté dans la pull request, retirée à sa fermeture).
 - `develop` : intégration ; fusion vers `main` par pull request.

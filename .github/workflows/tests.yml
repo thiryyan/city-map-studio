@@ -2,9 +2,9 @@ name: Tests
 
 # Suite de bout en bout (Playwright, réseau simulé) : à chaque pull request, à chaque push sur main
 # (un push sur une autre branche est testé par sa pull request : pas de double exécution).
-# Puis publication à deux voies sur la branche gh-pages (#97, #99), seulement si les tests passent :
-# racine = branche classique, /nouvelle/ = main, /pr-N/ = préversion de chaque pull request (retirée à sa fermeture).
-# Après un correctif sur la branche classique : relancer ce workflow à la main (Actions → Tests → Run workflow).
+# Puis publication sur la branche gh-pages (#97, #117), seulement si les tests passent :
+# racine = main, /classique/ = version classique figée, /pr-N/ = préversion de chaque pull request (retirée à sa fermeture).
+# À la publication de main, l'étiquette vX.Y.Z (version de package.json) est posée si elle n'existe pas.
 on:
   push:
     branches: [main]
@@ -27,10 +27,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      # Références d'image (tests/references.py) : le site est comparé à celui de la branche de base, construit à part
       - uses: actions/checkout@v4
-      # Contrôle de parité (tests/jumelage.py) : la version classique est relue depuis sa branche
-      - name: Version classique
-        run: git fetch --no-tags --depth=1 origin classique:refs/remotes/origin/classique
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -92,6 +92,18 @@ jobs:
           PR_DIR: ${{ github.workspace }}
           PR_CLOSE: ${{ github.event.action == 'closed' && '1' || '0' }}
         run: bash .github/scripts/pages.sh
+      # Étiquette SemVer de la version publiée (package.json), posée une seule fois
+      - name: Étiquette de version
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          REMOTE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: |
+          tag="v$(node -p "require('./package.json').version")"
+          if git ls-remote --exit-code --tags "$REMOTE" "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "✓ $tag existe déjà"
+          else
+            git tag "$tag" "$GITHUB_SHA" && git push --quiet "$REMOTE" "refs/tags/$tag" && echo "✓ étiquette $tag posée"
+          fi
       - name: Lien de la préversion
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
         uses: actions/github-script@v7
@@ -100,13 +112,10 @@ jobs:
             const {owner, repo} = context.repo, n = context.issue.number;
             const base = `https://${owner}.github.io/${repo}/`;
             const marker = '<!-- preversion-pages -->';
-            // Après la bascule (.github/bascule, #104) : version publiée à la racine, version classique sous /classique/
-            const bascule = require('fs').existsSync('.github/bascule');
             const body = [marker,
               `**Préversion** de cette pull request : ${base}pr-${n}/`,
               '',
-              bascule ? `Version publiée : ${base} · version classique : ${base}classique/`
-                      : `Version classique : ${base} · version en cours de refonte : ${base}nouvelle/`,
+              `Version publiée : ${base} · version classique (figée) : ${base}classique/`,
               '',
               '_Disponible une à deux minutes après la publication ; retirée à la fermeture de la pull request._'].join('\n');
             const comments = await github.paginate(github.rest.issues.listComments, {owner, repo, issue_number: n});

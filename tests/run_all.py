@@ -14,11 +14,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 T = pathlib.Path(__file__).resolve().parent
 TESTS = ['run', 'offline', 'maplibre', 'coords', 'texts', 'textsize', 'dedication', 'formats', 'art', 'city', 'saves',
-         'mobile', 'ux', 'design', 'vectors', 'compare', 'welcome', 'fonts', 'consent', 'reset', 'security', 'a11y', 'contrast', 'csp', 'pwa', 'mlloader', 'geocoder', 'webgl', 'attribution', 'unit', 'globals', 'perf', 'keyboard', 'illus', 'illustore', 'illusmix', 'illustext', 'illuspaste', 'maptext', 'textdeco', 'textstab', 'textfoot', 'deps', 'changes', 'gestures', 'safezone', 'flow', 'parity', 'sliderguard', 'wiki', 'routeai', 'storage', 'mesures', 'typecheck', 'poids', 'jumelage']
+         'mobile', 'ux', 'design', 'vectors', 'compare', 'welcome', 'fonts', 'consent', 'reset', 'security', 'a11y', 'contrast', 'csp', 'pwa', 'mlloader', 'geocoder', 'webgl', 'attribution', 'unit', 'globals', 'perf', 'keyboard', 'illus', 'illustore', 'illusmix', 'illustext', 'illuspaste', 'maptext', 'textdeco', 'textstab', 'textfoot', 'deps', 'changes', 'gestures', 'safezone', 'flow', 'parity', 'sliderguard', 'wiki', 'routeai', 'storage', 'mesures', 'typecheck', 'poids', 'references']
 # « ✗ » suivi d'un texte : vérification en échec (un « ✗ » seul est une ligne du diagnostic réseau affiché, attendue hors ligne)
 BAD = re.compile(r'^✗ \S|PAGEERROR|Traceback \(most recent call last\)', re.M)
 # Les plus longs d'abord : ils ne retardent pas la fin de la suite
-SLOW = ['jumelage', 'maplibre', 'design', 'csp', 'texts', 'welcome', 'textsize', 'contrast']
+SLOW = ['references', 'maplibre', 'design', 'csp', 'texts', 'welcome', 'textsize', 'contrast']
 
 
 def run(name):

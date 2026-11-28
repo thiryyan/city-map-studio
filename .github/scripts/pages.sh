@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
-# City Map Studio — publication à deux voies sur la branche gh-pages (#97, lot 1 : #99 ; bascule : #104)
+# City Map Studio — publication sur la branche gh-pages (#97, #117)
 #
-# Après la bascule (fichier .github/bascule présent dans la branche `main`) :
 #   racine       = branche `main`, construite par scripts/build.mjs
-#   /classique/  = branche `classique` (version d'origine, figée par l'étiquette v1-classique)
-#   /nouvelle/   = renvoi vers la racine, et service worker qui se retire (anciennes installations de /nouvelle/)
-# Avant la bascule (sans ce fichier) : racine = `classique`, /nouvelle/ = `main`.
-#   /pr-N/       = préversion de la pull request N (supprimée à sa fermeture), dans les deux cas
+#   /classique/  = branche `classique` (version d'origine, figée par l'étiquette v1-classique ; ni évolution ni tests)
+#   /nouvelle/   = renvoi vers la racine, et service worker qui se retire (installations de l'Horizon 0 ; retiré à la porte 2)
+#   /pr-N/       = préversion de la pull request N (supprimée à sa fermeture)
 #
-# La disposition suit la branche `main` publiée, pas la pull request : une préversion ne bascule jamais le site.
 # Chaque appel republie la racine, /classique/ et /nouvelle/ depuis leurs branches, puis ajoute ou retire la préversion demandée.
 # Les autres préversions déjà publiées sont conservées. Seuls les fichiers servis sont copiés (ni tests, ni docs).
 #
@@ -86,7 +83,6 @@ JS
 
 clone_branch classique "$work/classique"
 clone_branch main "$work/main"
-bascule=0; [ -f "$work/main/.github/bascule" ] && bascule=1
 
 # Branche gh-pages existante, ou créée vide à la première publication
 if git ls-remote --exit-code --heads "$REMOTE" gh-pages >/dev/null 2>&1; then
@@ -100,15 +96,10 @@ pages="$work/pages"
 # Racine : tout est remplacé, sauf l'historique git, /classique/, /nouvelle/ et les préversions
 find "$pages" -mindepth 1 -maxdepth 1 ! -name .git ! -name classique ! -name nouvelle ! -name 'pr-*' -exec rm -rf {} +
 rm -rf "$pages/classique" "$pages/nouvelle"
-if [ "$bascule" = 1 ]; then
-  copy_site "$work/main" "$pages"
-  copy_site "$work/classique" "$pages/classique"
-  patch_classic_sw "$pages/classique"
-  write_redirect "$pages/nouvelle"
-else
-  copy_site "$work/classique" "$pages"
-  copy_site "$work/main" "$pages/nouvelle"
-fi
+copy_site "$work/main" "$pages"
+copy_site "$work/classique" "$pages/classique"
+patch_classic_sw "$pages/classique"
+write_redirect "$pages/nouvelle"
 
 if [ -n "${PR:-}" ]; then
   [[ "$PR" =~ ^[0-9]+$ ]] || { echo "✗ numéro de pull request invalide : $PR" >&2; exit 1; }
@@ -131,7 +122,7 @@ if git diff --cached --quiet; then
   exit 0
 fi
 git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-  commit --quiet -m "Publication$([ "$bascule" = 1 ] && echo ' (après bascule)') : classique $(git -C "$work/classique" rev-parse --short HEAD), main $(git -C "$work/main" rev-parse --short HEAD)$label"
+  commit --quiet -m "Publication : classique $(git -C "$work/classique" rev-parse --short HEAD), main $(git -C "$work/main" rev-parse --short HEAD)$label"
 echo "✓ $(git log -1 --format=%s)"
 echo "  préversions publiées : $(ls -d pr-* 2>/dev/null | tr '\n' ' ' || true)"
 if [ "$PUSH" = 1 ]; then

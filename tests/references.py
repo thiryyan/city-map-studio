@@ -1,14 +1,18 @@
-"""e2e : contrôle de parité avec la version classique (#97, lot 6 : #104).
+"""e2e : références d'image (#117, lot 1 : #118), issu du contrôle de parité de l'Horizon 0 (#104).
 
-La même série d'affiches est rendue par la version classique (branche `classique`, scripts d'origine) et par cette
-version (dist/, construite) : chaque affiche est composée à 620 × 877 px (composePoster, le chemin de l'export) avec les
+La même série d'affiches est rendue par le site de la branche de base (avant la modification) et par ce site
+(dist/, construit), sur la même machine et le même navigateur : chaque affiche est composée à 620 × 877 px (composePoster, le chemin de l'export) avec les
 données du moteur Fichier (tests/osm.json), puis comparée pixel par pixel (empreinte de l'image) et texte par texte
 (textes tracés et leur police). Couvre : onze gabarits (portrait, paysage), seize thèmes, treize ambiances, repères,
 papiers et plis, effets de tracé, ornements, calques, textes et lignes, lieux multiples, itinéraire, Ciel du jour J,
 Lettres, Deux lieux ; modes Illustration et Carte + illustration (image importée, cinq compositions) ; formats et
 dimensions d'export ; listes proposées (gabarits, thèmes, ambiances, polices, repères).
 
-Version classique : dossier CMS_CLASSIC, sinon extraite de la branche git `origin/classique` (git archive).
+Site de référence : dossier CMS_BASE (déjà construit), sinon construit depuis la base git : le point de départ de la
+branche (merge-base avec origin/main, ou GITHUB_BASE_REF en pull request). Sur main elle-même, rien à comparer : la
+comparaison a été faite dans la pull request. Un changement visuel voulu se déclare dans la pull request (REFERENCES=off).
+Les deux sites sont pilotés par la même façade de test (window.__cms, mode ?test) ; les préférences d'accord sont
+posées sous les deux préfixes de stockage (cms3. puis cms:), sans effet sur l'autre site.
 """
 import asyncio, json, os, pathlib, subprocess, sys, tempfile
 from playwright.async_api import async_playwright
@@ -20,15 +24,36 @@ CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
 
 
-def classic_root():
-    if os.environ.get('CMS_CLASSIC'):
-        return pathlib.Path(os.environ['CMS_CLASSIC']).resolve()
-    d = pathlib.Path(tempfile.mkdtemp(prefix='cms-classique-'))
-    arch = subprocess.run(['git', 'archive', 'origin/classique'], cwd=T.parent, capture_output=True)
-    if arch.returncode:
-        print('✗ branche origin/classique introuvable (git fetch origin classique) :', arch.stderr.decode()[:200]); sys.exit(1)
-    subprocess.run(['tar', '-x', '-C', str(d)], input=arch.stdout, check=True)
-    return d
+def git(*a):
+    return subprocess.run(['git', *a], cwd=T.parent, capture_output=True, text=True)
+
+
+def base_root():
+    """Site de la branche de base, construit dans un dossier temporaire ; None s'il n'y a rien à comparer."""
+    if os.environ.get('CMS_BASE'):
+        return pathlib.Path(os.environ['CMS_BASE']).resolve()
+    ref = 'origin/' + (os.environ.get('GITHUB_BASE_REF') or 'main')
+    if git('rev-parse', '--verify', '--quiet', ref).returncode:
+        git('fetch', '--no-tags', 'origin', ref.split('/', 1)[1])
+    mb = git('merge-base', 'HEAD', ref)
+    if mb.returncode:
+        print(f'✗ base introuvable ({ref}) :', mb.stderr[:200]); sys.exit(1)
+    rev = mb.stdout.strip()
+    if rev == git('rev-parse', 'HEAD').stdout.strip() and not git('status', '--porcelain', '--', 'js', 'src', 'css', 'index.html', 'lib').stdout.strip():
+        return None
+    d = pathlib.Path(tempfile.mkdtemp(prefix='cms-base-'))
+    tree = d / 'src'
+    if git('worktree', 'add', '--detach', '--force', str(tree), rev).returncode:
+        print('✗ worktree de la base impossible'); sys.exit(1)
+    try:
+        (tree / 'node_modules').symlink_to(T.parent / 'node_modules')   # esbuild du dépôt courant
+        b = subprocess.run(['node', 'scripts/build.mjs', str(d / 'site')], cwd=tree, capture_output=True, text=True)
+        if b.returncode:
+            print('✗ construction de la base :', (b.stdout + b.stderr)[-400:]); sys.exit(1)
+    finally:
+        git('worktree', 'remove', '--force', str(tree))
+    print(f'  base : {rev[:7]} ({ref})')
+    return d / 'site'
 
 
 # Rendu complet : empreinte des pixels et textes tracés [texte, police]
@@ -86,14 +111,14 @@ ILLUS = [('Illustration', {'mode': 'illus'}), ('Illustration, titre en cartouche
         [(f'Carte + illustration {c}', {'mode': 'mix', 'mix': {'compo': c, 'shape': 'circle', 'pos': 'bas', 'split': 'half'}}) for c in ['med', 'vig', 'hb', 'cote', 'fondu']]
 
 
-async def open_app(b, root, ns, png):
+async def open_app(b, root):
     ctx = await b.new_context(viewport={'width': 1400, 'height': 900})
     page = await ctx.new_page(); errs = []
     page.on('pageerror', lambda e: errs.append(str(e)))
     await page.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
     url = (root / 'index.html').as_uri() + '?test'
     await page.goto(url)
-    await page.evaluate("k=>{ for(const s of ['consent','welcomed']) localStorage.setItem(k+s,'1'); }", ns)
+    await page.evaluate("()=>{ for(const k of ['cms3.','cms:']) for(const s of ['consent','welcomed']) localStorage.setItem(k+s,'1'); }")
     await page.reload(); await page.wait_for_timeout(1200)
     await page.evaluate("f=>{__cms.setEngine('file',true); __cms.importText(f,'osm.json')}", FIX)
     await page.wait_for_timeout(500)
@@ -119,11 +144,15 @@ async def main():
     def check(cond, msg):
         print('✓' if cond else '✗', msg)
         if not cond: fails.append(msg)
-    croot = classic_root()
+    if os.environ.get('REFERENCES') == 'off':
+        print('✓ références désactivées (REFERENCES=off) : changement visuel déclaré'); return
+    croot = base_root()
+    if croot is None:
+        print('✓ aucune modification depuis la base : rien à comparer'); return
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
-        cpage, cerr, cbase = await open_app(b, croot, 'cityMapStudio.', None)
-        npage, nerr, nbase = await open_app(b, ROOT, 'cms3.', None)
+        cpage, cerr, cbase = await open_app(b, croot)
+        npage, nerr, nbase = await open_app(b, ROOT)
         cl, nl = await cpage.evaluate(LISTS), await npage.evaluate(LISTS)
         for k in cl:
             check(cl[k] == nl[k], f'listes proposées identiques : {k} ({len(nl[k])})')
@@ -160,7 +189,7 @@ async def main():
             if a['sum'] == c['sum'] and a['seen'] == c['seen']: isame += 1
             else: check(False, f'{name} : rendu différent (pixels {a["sum"]} / {c["sum"]})')
         check(isame == len(ILLUS), f'affiches illustrées identiques au pixel près : {isame}/{len(ILLUS)}')
-        check(not cerr and not nerr, f'aucune erreur de page (classique {cerr[:2]}, nouvelle {nerr[:2]})')
+        check(not cerr and not nerr, f'aucune erreur de page (base {cerr[:2]}, site {nerr[:2]})')
         await b.close()
     print('échecs', fails)
     print('OK' if not fails else 'ÉCHEC')

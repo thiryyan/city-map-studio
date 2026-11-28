@@ -635,22 +635,21 @@ L'application installée (Chrome, Android, iOS) est le site dans une fenêtre d�
 * **Plusieurs copies sur la même origine** (#97) : la racine, `/nouvelle/` et les préversions `/pr-N/` partagent le stockage des caches du navigateur. Chaque worker nomme son cache `VERSION@dossier` (ex. `cms-2026-11-27d@/city-map-studio/nouvelle/`) et, à l'activation, ne purge que les anciens caches de son propre dossier : une préversion ne vide jamais le cache hors ligne de la version classique (vérifié par `tests/pwa.py`). La version classique figée (`v1-classique`) garde l'ancien nommage, sans `@`.
 * **Hors de notre contrôle** : la mise à jour de l'icône et du nom de l'application installée par Chrome est asynchrone (WebAPK sur Android) ; elle se vérifie sur l'URL publiée, pas par test automatique.
 
-### 7.6. Publication à deux voies (#97, #99)
+### 7.6. Publication (#97, #117)
 
-Pendant la refonte, la version classique est restée l'application de référence à l'adresse habituelle, la nouvelle étant publiée à côté ; depuis la bascule du 28/11/2026 (#104), la nouvelle est à l'adresse habituelle et la classique reste accessible. Le job `publish` de `.github/workflows/tests.yml` lance `.github/scripts/pages.sh` après des tests réussis, et écrit la branche `gh-pages`, source de GitHub Pages :
+Depuis la bascule du 28/11/2026 (#104), la nouvelle version est la seule qui évolue ; la version classique est figée. Le job `publish` de `.github/workflows/tests.yml` lance `.github/scripts/pages.sh` après des tests réussis, et écrit la branche `gh-pages`, source de GitHub Pages :
 
 | Adresse | Contenu | Mise à jour |
 | :--- | :--- | :--- |
-| `/city-map-studio/` | Branche `main` (avant la bascule : branche `classique`) | À chaque push sur `main` |
-| `/city-map-studio/classique/` | Branche `classique` (étiquette `v1-classique` : version avant refonte ; avant la bascule : à la racine) | À chaque publication ; après un correctif sur `classique`, relancer le workflow (Actions → Tests → Run workflow) |
-| `/city-map-studio/nouvelle/` | Renvoi vers la racine (avant la bascule : branche `main`) | À chaque publication |
+| `/city-map-studio/` | Branche `main`, construite | À chaque push sur `main` |
+| `/city-map-studio/classique/` | Branche `classique` (étiquette `v1-classique`), figée : ni évolution, ni correctif, ni tests ; aucune compatibilité avec la nouvelle version | Recopiée telle quelle à chaque publication |
+| `/city-map-studio/nouvelle/` | Renvoi vers la racine, pour les installations de l'Horizon 0 ; retiré à la porte 2 (#117) | À chaque publication |
 | `/city-map-studio/pr-N/` | Pull request N (commit de fusion testé) | À chaque push sur la pull request ; lien posté dans la pull request ; retirée à sa fermeture |
 
-* Seuls les fichiers servis sont copiés (`index.html`, `manifest.webmanifest`, `sw.js`, `.nojekyll`, `css/`, `js/`, `lib/`, `icons/`) ; les autres préversions publiées sont conservées.
+* Seuls les fichiers servis sont copiés ; les autres préversions publiées sont conservées.
 * Une seule écriture de `gh-pages` à la fois (`concurrency: gh-pages`) ; aucune publication pour une pull request venue d'un fork.
-* Chaque copie a son propre service worker, limité à son dossier, et son propre cache (§ 7.5). Stockage local séparé (#100) : la nouvelle version (racine) et les préversions utilisent les clés `cms3.*` et la base `cms3`, la version classique `cityMapStudio.*` (§ 2.4).
-* **Bascule** (lot 6, #104), approuvée par le propriétaire le 28/11/2026 : le fichier `.github/bascule` de la branche `main` fait publier `main` à la racine et la version classique sous `/classique/`. La disposition suit la branche `main` publiée, jamais une pull request : la préversion de la pull request de bascule n'a rien changé. Le retirer rétablit la disposition d'avant.
-* Après la bascule : la version classique publiée sous `/classique/` nomme son cache `VERSION@dossier` et n'efface que les siens (adaptation faite à la publication par `pages.sh` ; sa branche reste figée), sinon son worker effacerait la copie hors ligne de la racine. `/nouvelle/` est une page de renvoi vers la racine (paramètres et lien partagé conservés) avec un worker qui efface ses caches et se retire. Les données de `/nouvelle/` (`cms3.*`) sont celles de la racine (même origine) ; celles de la version classique (`cityMapStudio.*`) restent lisibles sous `/classique/`. Sur un appareil où la version classique était installée à la racine, la nouvelle version s'affiche dès l'ouverture suivante, et le bandeau « Mettre à jour » remplace l'ancien worker.
+* Chaque copie a son propre service worker, limité à son dossier, et son propre cache (§ 7.5). La version classique publiée sous `/classique/` nomme son cache `VERSION@dossier` et n'efface que les siens (adaptation faite à la publication par `pages.sh`, sa branche restant figée). Ses données (`cityMapStudio.*`) ne sont jamais lues ni modifiées par la nouvelle version (`tests/storage.py`).
+* **Version** : SemVer, source unique `version` de `package.json` ; à la publication de `main`, la CI pose l'étiquette `vX.Y.Z` si elle n'existe pas (§ 7.8).
 * Essai local : `REMOTE=<dépôt> PUSH=0 bash .github/scripts/pages.sh` (variables `PR`, `PR_DIR`, `PR_CLOSE` décrites en tête du script).
 
 ### 7.7. Mesures de performance (#101)
@@ -838,7 +837,7 @@ Tests de bout en bout Playwright (Python), un fichier par domaine, avec un **ré
 | `routeai.py` | Itinéraire préparé avec une IA (#85) | Prompt : lieux (noms, coordonnées), type, emprise, format, mis à jour à chaque réglage, anglais ; réponse d'IA collée telle quelle importée (étapes nommées), texte sans GPX refusé sans toucher à l'affiche, « Coller le GPX » (presse-papiers simulé), Annuler ; tracé à 50 km et tracé rectiligne signalés, « Pointillés » ; aucun appel réseau, `connect-src` sans hôte pour l'itinéraire. |
 | `typecheck.py` | Types (#103) | `tsc -p .` sans erreur (mode strict) sur tout `js/` (noms non importés et imports réaffectés compris) ; aucun fichier `.js` dans `js/`. |
 | `poids.py` | Poids (#103) | Site construit : script ≤ 330 Ko (125 Ko compressé), feuille de style ≤ 38 Ko (9 Ko), page ≤ 72 Ko (18 Ko), `sw.js` ≤ 6 Ko, MapLibre ≤ 790 Ko (210 Ko) ; démarrage (page, script, feuille compressés) ≤ 150 Ko ; site entier ≤ 2,6 Mo. |
-| `jumelage.py` | Parité avec la version classique (#104) | Version classique (branche `classique`) et site construit : 82 affiches Carte et 7 affiches illustrées identiques pixel par pixel et texte par texte ; mêmes listes (gabarits, thèmes, ambiances, polices, repères, formats) et mêmes dimensions d'export ; témoins de sensibilité. |
+| `references.py` | Références d'image (#118) | Site de la branche de base (point de départ de la branche, construit à part) et site construit, sur la même machine : 82 affiches Carte et 7 affiches illustrées identiques pixel par pixel et texte par texte ; mêmes listes (gabarits, thèmes, ambiances, polices, repères, formats) et mêmes dimensions d'export ; témoins de sensibilité. Sans objet sur `main` (fait dans la pull request) ; `REFERENCES=off` pour un changement visuel déclaré. |
 | `globals.py` | Architecture | Entrées du registre `late` ≤ `tests/globals.max`. |
 
 Outils hors suite : `layouts.py` (captures des 11 gabarits, contrôle visuel) et `make_og.py` (régénère `icons/og-image.jpg` à partir du rendu actuel).
@@ -867,31 +866,7 @@ Restent à valider (⏳), faute de pouvoir les automatiser :
 | Prompt | À éprouver sur ChatGPT et Gemini avec d'autres villes. |
 | Aperçu des liens | `https://thiryyan.github.io/city-map-studio/icons/og-image.jpg` suppose la publication à cette adresse ; à adapter en cas de domaine personnalisé. |
 
-### 9.4. Contrôle de parité avant la bascule (#97, lot 6 : #104)
+### 9.4. Références d'image (#117, #118)
 
-La nouvelle version ne remplace la version classique à la racine du site qu'avec l'accord du propriétaire, une fois la liste de parité de #97 vérifiée. **Bascule approuvée le 28/11/2026**, toutes les vérifications faites sur l'Appareil S2x, la semaine d'usage restant à courir sur la version publiée. Trois sortes de preuves :
-
-1. **Jumelage** (`tests/jumelage.py`, en CI) : la version classique (branche `classique`) et le site construit rendent les mêmes affiches, comparées **pixel par pixel** et **texte par texte** (textes tracés et leurs polices) : 82 affiches Carte (onze gabarits, portrait et paysage, seize thèmes, treize ambiances, dix repères, papiers et plis, onze effets, ornements, calques, textes et tailles, lignes masquées, lieux numérotés, itinéraire, Ciel du jour J, Lettres, Deux lieux, quatre formats) et 7 affiches illustrées (même image importée ; Illustration, plaques, cinq compositions Carte + illustration) ; mêmes listes proposées et mêmes dimensions d'export. Deux témoins vérifient que le test discrimine : les scénarios donnent des affiches différentes, et une teinte changée d'une unité est détectée. Résultat au 28/11/2026 : **89 affiches sur 89 identiques**.
-2. **Suite de la version classique** : les 51 tests de la version classique passent tous sur le site construit (`dist/`), en CI, avec les tests ajoutés pendant la refonte (stockage séparé, mesures, types, poids, jumelage).
-3. **Appareil S2x** : ce que l'automate ne voit pas (vraies tuiles, gestes réels, fonctions natives, impression du fichier, installation).
-
-| Point de la liste de parité (#97) | Preuves automatiques | À vérifier sur l'Appareil S2x (`/nouvelle/` comparée à la racine) |
-| :--- | :--- | :--- |
-| Recherche d'adresse, géolocalisation, villes préréglées, coordonnées et liens de carte | `geocoder`, `coords`, `keyboard`, `consent` | Une vraie recherche, « Ma position », une ville proposée, un lien Google Maps collé |
-| Jusqu'à trois lieux, Deux lieux, itinéraire GPX importé, collé ou préparé avec une IA | `routeai`, `run`, `design`, `jumelage` (lieux numérotés, itinéraire, Deux lieux) | Deux lieux avec les vraies tuiles ; GPX collé depuis une IA |
-| Moteur Vectoriel GPU et moteur Fichier hors ligne (OSM, JSON OSM, GeoJSON) | `maplibre`, `mlloader`, `webgl`, `offline`, `run`, `city`, `vectors` | Carte GPU réelle (déplacer, zoomer) ; import d'un fichier |
-| Onze gabarits, portrait et paysage, Ciel du jour J, Lettres | `jumelage`, `texts`, `textsize`, `formats` | Parcours des gabarits à l'œil |
-| Seize thèmes, palette d'une photo, treize ambiances, papiers, plis, dorure | `jumelage`, `design`, `compare`, `parity` | Palette d'une vraie photo |
-| Effets de tracé, halo, quartier en relief, ornements, calques, couleurs détaillées | `jumelage`, `art`, `deps` | Un effet sur la carte GPU |
-| Textes : six champs, polices et duos, textes posés sur la carte, plaques | `texts`, `textsize`, `dedication`, `fonts`, `maptext`, `textdeco`, `textstab`, `textfoot`, `jumelage` | Saisie au clavier du téléphone ; glisser un texte |
-| Modes Illustration et Carte + illustration : prompt, import, cadrage, retouches, pistes OSM et Wikipédia | `illus`, `illusmix`, `illustext`, `illuspaste`, `illustore`, `wiki`, `parity`, `jumelage` | Import depuis la galerie, coller une image, pincer l'illustration |
-| Export PNG et PDF dans tous les formats, zone de sécurité, aperçu au mur | `formats`, `attribution`, `safezone`, `jumelage` (dimensions) | Export A4 et 10 × 15 enregistrés et ouverts ; aperçu au mur |
-| Mes affiches, fichiers de sauvegarde, partage par lien | `saves`, `illustore`, `security`, `storage` | Enregistrer, rouvrir ; lien partagé ouvert sur un autre appareil |
-| Annuler / Rétablir, Comparer, Aperçu, Modifier, « Que déplacer ? » | `ux`, `compare`, `changes`, `gestures`, `mobile`, `sliderguard` | Appui long sur Comparer ; Modifier au doigt |
-| Accord préalable, CSP stricte, contrastes, cibles de 44 px | `consent`, `csp`, `contrast`, `a11y`, `ux` | — |
-| Application installable, hors ligne, bandeau de mise à jour | `pwa`, `offline` | Installer `/nouvelle/`, l'ouvrir hors ligne, recevoir une mise à jour |
-| Temps mesurés au moins égaux à ceux de la version classique | `mesures`, `perf`, `poids` | Relevé « Copier les mesures » de `/nouvelle/` (après le lot 5), comparé au tableau du § 7.7 |
-| Une semaine d'usage personnel sans régression | — | Usage réel, du 28/11 au 5/12/2026 au plus tôt |
-
-La version classique n'a pas de panneau de mesures (ajouté au lot 3) : la référence est la colonne « `/nouvelle/` (sources, lot 3) » du § 7.7, relevée sur un code dont le comportement était celui de la version classique.
+Entre deux portes, aucune validation manuelle : chaque pull request rend les 89 affiches de `tests/references.py` avec le site de sa branche de base et avec le sien, et les compare au pixel près. Ce test a remplacé, le 28/11/2026, le jumelage avec la version classique qui avait permis la bascule (#104) ; la version classique, figée, n'est plus testée.
 
