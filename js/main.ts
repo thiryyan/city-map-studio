@@ -1,7 +1,7 @@
 /* City Map Studio — Démarrage.
- * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+ * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
 // Ordre d'exécution des modules : celui des anciens scripts classiques (aucun import vers un fichier postérieur :
-// registre late de js/core.js), donc chaque fichier s'exécute après ceux dont il dépend
+// registre late de js/core.ts), donc chaque fichier s'exécute après ceux dont il dépend
 import {late} from './core.js';
 import './core.js';
 import './config.js';
@@ -56,11 +56,11 @@ async function boot(){
     setStatus('MapLibre injoignable (aucun CDN accessible)','err');
     showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
   }
-  // Ouverture mesurée jusqu'à la carte GPU affichée (engines.js) ; sans elle, jusqu'au premier aperçu
+  // Ouverture mesurée jusqu'à la carte GPU affichée (engines.ts) ; sans elle, jusqu'au premier aperçu
   if(!(ok && st.engine==='maplibre' && consent)) requestAnimationFrame(()=>CMS.perf.ready(st.engine==='file'?'moteur Fichier':'aperçu sans carte'));
   CMS.perf.watchFrames($('slot')); CMS.perfUI.init();
   installPwa();
-  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,setFormat,setFileType,setDedWrap,exportSpec,dedLines,renderMaplibreOffscreen,set glMaxTest(v){setGlMaxTest(v)},applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll,pwa:CMS.pwa};
+  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,setFormat,setFileType,setDedWrap,exportSpec,dedLines,renderMaplibreOffscreen,set glMaxTest(v: number){setGlMaxTest(v)},applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll,pwa:CMS.pwa};
   // Façade de test (#102, lot 4b) : les noms que les tests utilisent directement, exposés sur window en mode ?test
   // seulement. Le site construit n'a plus aucun nom global (script enveloppé dans une fonction) : cette liste est la
   // seule dépendance des tests envers la portée de l'application, et suivra la conversion en modules ES.
@@ -80,17 +80,17 @@ async function boot(){
  *  sans accord (export ou import en cours). Vérification au démarrage et au retour au premier plan, au plus une fois par heure. */
 CMS.define('pwa', () => {
   const HOUR=3600e3;
-  let reg=null, last=0, wanted=false, refreshing=false, checks=0;
+  let reg: ServiceWorkerRegistration | null=null, last=0, wanted=false, refreshing=false, checks=0;
   const sw=()=>('serviceWorker' in navigator) ? navigator.serviceWorker : null;
-  function showUpdate(on){
+  function showUpdate(on: boolean){
     $('updBanner').classList.toggle('show',!!on);
     if(ui.sheet==='peek') applySheet();
   }
   /** Version servie par le worker actif (copie hors ligne) ; null sans worker, hors ligne sans réponse, ou en file:// */
-  function version(){
-    const c=sw() && sw().controller;
+  function version(): Promise<string | null> {
+    const c=sw() && sw()!.controller;
     if(!c) return Promise.resolve(null);
-    return new Promise(res=>{
+    return new Promise<string | null>(res=>{
       const ch=new MessageChannel(), t=setTimeout(()=>res(null),1500);
       ch.port1.onmessage=e=>{ clearTimeout(t); res(typeof e.data==='string'?e.data:null); };
       c.postMessage({type:'GET_VERSION'},[ch.port2]);
@@ -98,7 +98,7 @@ CMS.define('pwa', () => {
   }
   /** Version de la page (CMS.build), toujours connue ; celle du cache hors ligne n'est ajoutée que si elle diffère
    *  (mise à jour en attente ou pas encore appliquée : utile au diagnostic). data-version : identifiants bruts. */
-  let swV=null;
+  let swV: string | null=null;
   function versionText(){
     const B=CMS.build, el=$('appVersion');
     el.dataset.version=B.version; if(swV) el.dataset.sw=swV; else delete el.dataset.sw;
@@ -106,9 +106,9 @@ CMS.define('pwa', () => {
   }
   function showVersion(){ $('appVersion').textContent=versionText(); version().then(v=>{ swV=v; $('appVersion').textContent=versionText(); }); }
   /** Un worker installé alors qu'un autre contrôle déjà la page : une mise à jour (pas la première installation) */
-  function watch(w){
+  function watch(w: ServiceWorker | null){
     if(!w) return;
-    const done=()=>{ if(w.state==='installed' && sw().controller) showUpdate(true); };
+    const done=()=>{ if(w.state==='installed' && sw()!.controller) showUpdate(true); };
     done(); w.addEventListener('statechange',done);
   }
   function apply(){
@@ -117,7 +117,7 @@ CMS.define('pwa', () => {
     if(w) w.postMessage({type:'SKIP_WAITING'}); else location.reload();   // déjà activé ailleurs (autre onglet) : simple rechargement
   }
   /** reg.update() au plus une fois par heure (now : horloge injectable par les tests) */
-  function check(now=Date.now(),force){
+  function check(now=Date.now(),force=false){
     if(!reg || (!force && now-last<HOUR)) return false;
     last=now; checks++; reg.update().catch(()=>{});   // hors ligne : échec silencieux, nouvel essai au prochain retour
     return true;
@@ -129,25 +129,25 @@ CMS.define('pwa', () => {
     const on=!TEST_HOOKS || /[?&]sw(?:[=&]|$)/.test(location.search);
     if(!on || !sw()) return;
     $('bUpdate').onclick=apply; $('bUpdLater').onclick=()=>showUpdate(false);
-    const hadController=!!sw().controller;
-    sw().addEventListener('controllerchange',()=>{
+    const hadController=!!sw()!.controller;
+    sw()!.addEventListener('controllerchange',()=>{
       showVersion();
       if(wanted){ if(!refreshing){ refreshing=true; location.reload(); } }   // une seule fois
       else if(hadController) showUpdate(true);   // activé depuis un autre onglet : cette page garde l'ancien JS
     });
-    sw().register('sw.js',{updateViaCache:'none'}).then(r=>{
+    sw()!.register('sw.js',{updateViaCache:'none'}).then(r=>{
       reg=r; watch(r.waiting); watch(r.installing);
       r.addEventListener('updatefound',()=>watch(r.installing));
       check(Date.now(),true);
       document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') check(); });
-    }).catch(e=>console.warn('service worker',e.message));
+    }).catch((e: Error)=>console.warn('service worker',e.message));
   }
   return {install,check,version,get swVersion(){ return swV; },get checks(){ return checks; },get reg(){ return reg; }};
 });
 const {install: installPwa} = CMS.pwa;
 boot();
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
 Object.assign(late, {TEST_HOOKS});
 
 export {TEST_HOOKS};

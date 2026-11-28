@@ -1,9 +1,9 @@
-// Tests unitaires sans navigateur : node --test 'tests/unit/*.test.mjs' (aussi lancés par tests/unit.py, donc par la CI)
-import { test } from 'node:test';
+// Tests unitaires sans navigateur : npx vitest run (aussi lancés par tests/unit.py, donc par la CI)
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { load, ev } from './load.mjs';
 
-const ctx = await load(['js/config.js', 'js/maplibre-loader.js', 'js/geocoder.js', 'js/state.js', 'js/geo.js']);
+const ctx = await load(['js/config.ts', 'js/maplibre-loader.ts', 'js/geocoder.ts', 'js/state.ts', 'js/geo.ts']);
 const J = expr => JSON.parse(JSON.stringify(ev(ctx, expr)));   // valeurs copiées hors du contexte vm (autre royaume)
 
 test('CMS.define : définition unique, module figé', () => {

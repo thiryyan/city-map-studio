@@ -1,5 +1,5 @@
 /* City Map Studio — Constantes et réglages (thèmes, polices, gabarits, état par défaut).
- * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+ * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
 import {late} from './core.js';
 /* =========================================================================
    City Map Studio — 100 % open source
@@ -8,10 +8,9 @@ import {late} from './core.js';
    ========================================================================= */
 
 // ---------- Constantes ----------
-const EXPORT_W = 2480, EXPORT_H = 3508;   // A4 à 300 DPI, en portrait ; inversé en paysage (posterDims)
 // Formats d'impression : [clé, nom, petit côté, grand côté (mm)]. A4 et A3 ont le rapport √2 ; 50 × 70 cm, le rapport 7/5 ;
 // 10 × 15 cm (tirage photo chez un labo, sans fond perdu), le rapport 3/2.
-const FORMATS = [['a4','A4',210,297],['a3','A3',297,420],['50x70','50 × 70 cm',500,700],['10x15','10 × 15 cm',100,150]];
+const FORMATS: [string, string, number, number][] = [['a4','A4',210,297],['a3','A3',297,420],['50x70','50 × 70 cm',500,700],['10x15','10 × 15 cm',100,150]];
 const EXPORT_MAX_DPI = 300;
 // Surface maximale d'un canevas d'export : 16,7 Mpx sous Safari iOS (au-delà, le canevas reste vide) ; même prudence
 // sur Android (mémoire) ; 40 Mpx ailleurs. La résolution d'un grand format est abaissée (par pas de 10 DPI) pour tenir.
@@ -35,7 +34,21 @@ const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 // ni n'écrit les données de l'autre.
 const STORE_KEY = 'cms3.affiche';
 
-const FONTS = {
+// ---------- Types partagés (#103) ----------
+/** Police : familles CSS, échelle (petit œil), graisse, manuscrite (jamais en capitales), descripteurs à charger */
+export interface Font { fam: string; scale?: number; weight?: number; script?: boolean; load: string[] }
+/** Couleurs d'une affiche (une par élément de COLOR_LABELS) */
+export interface Colors { paper: string; land: string; water: string; park: string; building: string; roadMajor: string; roadMinor: string;
+  path: string; rail: string; text: string; frame: string; marker: string; [k: string]: string }
+export interface Theme { cat: string; name: string; c: Colors }
+/** Point d'une position libre, en fraction ({x, y} de 0 à 1) */
+export interface Pt { x: number; y: number }
+/** Itinéraire importé (GPX) : points [lat, lon], étapes nommées */
+export interface Route { name: string; pts: [number, number][]; show: boolean; wpts?: {lat: number; lon: number; name: string}[] }
+/** Autre vue du gabarit Deux lieux */
+export interface Place { center: {lat: number; lon: number}; zoom: number; marker: {lat: number; lon: number} }
+
+const FONTS: Record<string, Font> = {
   serif:{fam:'"Playfair Display", Georgia, "Times New Roman", serif', load:['400 20px "Playfair Display"','italic 400 20px "Playfair Display"']},
   // Garalde : élégance classique, italique calligraphique (petit œil : agrandie de 12 %, graisse 500 pour l'impression)
   garamond:{fam:'"Cormorant Garamond", Garamond, Georgia, serif', scale:1.12, weight:500, load:['500 20px "Cormorant Garamond"','italic 500 20px "Cormorant Garamond"']},
@@ -72,8 +85,8 @@ const FONT_CATS=[['','Toutes'],['classique','Classiques'],['moderne','Modernes']
 const DUOS=[['origine','Origine','serif','serif'],['mariage','Mariage','italiana','vibes'],['voyage','Voyage','bebas','jost'],['classique','Classique','bodoni','garamond'],
   ['moderne','Moderne','jost','jost'],['chaleureux','Chaleureux','fraunces','sans'],['cartographe','Cartographe','cinzel','fell']];
 
-const COLOR_LABELS = {paper:'Papier',land:'Terre',water:'Eau',park:'Parcs',building:'Bâtiments',roadMajor:'Rues principales',roadMinor:'Rues secondaires',path:'Chemins',rail:'Voies ferrées',text:'Texte',frame:'Filets',marker:'Repère'};
-const THEMES = {
+const COLOR_LABELS: Record<keyof Colors, string> = {paper:'Papier',land:'Terre',water:'Eau',park:'Parcs',building:'Bâtiments',roadMajor:'Rues principales',roadMinor:'Rues secondaires',path:'Chemins',rail:'Voies ferrées',text:'Texte',frame:'Filets',marker:'Repère'};
+const THEMES: Record<string, Theme> = {
   souvenir:{cat:'clair',name:'Souvenir',c:{paper:'#FFFFFF',land:'#F2F2F2',water:'#C9D9DE',park:'#E2E2E2',building:'#D8D8D8',roadMajor:'#111111',roadMinor:'#4A4A4A',path:'#8E8E8E',rail:'#9A9A9A',text:'#111111',frame:'#111111',marker:'#D0312D'}},
   galerie:{cat:'clair',name:'Galerie Or & Noir',c:{paper:'#FFFFFF',land:'#FFFFFF',water:'#E9DDBF',park:'#F1F1F1',building:'#ECECEC',roadMajor:'#18181B',roadMinor:'#3F3F46',path:'#8A8A93',rail:'#A1A1AA',text:'#18181B',frame:'#C5A059',marker:'#C5A059'}},
   onyx:{cat:'sombre',name:'Prestige Onyx & Or',c:{paper:'#0F1115',land:'#0F1115',water:'#2A2415',park:'#16171C',building:'#1A1B21',roadMajor:'#D4AF37',roadMinor:'#8C7A3E',path:'#5E5432',rail:'#6B5E33',text:'#F3E5AB',frame:'#D4AF37',marker:'#F3E5AB'}},
@@ -101,7 +114,7 @@ const MARKERS = [['heartGeo','Cœur géo.'],['dot','Point'],['heart','Cœur'],['
 // Papier : texture générée par le code (aucune image), appliquée à l'aperçu et à l'export
 const TEXTURES=[['none','Lisse'],['grain','Grain'],['aquarelle','Aquarelle'],['kraft','Kraft'],['toile','Toile'],['ancien','Ancien']];
 // Ambiances : thème + duo de polices + gabarit + repère (+ papier, effets fx, ornements orn, plis) ; les textes et le lieu sont conservés
-const AMBIANCES=[
+const AMBIANCES: [string, string, Record<string, any>][]=[
   ['mariage','Mariage doré',{theme:'galerie',fontTitle:'italiana',font:'vibes',layout:'heart',markerStyle:'rings',texture:'none'}],
   ['naissance','Naissance sauge',{theme:'sauge',fontTitle:'fraunces',font:'fraunces',layout:'arch',markerStyle:'feet',texture:'grain'}],
   ['voyage','Carnet de voyage',{theme:'terracotta',fontTitle:'bebas',font:'jost',layout:'travel',markerStyle:'pin',texture:'kraft',fx:{pencil:true}}],
@@ -127,7 +140,7 @@ const OCCASIONS=[
 ];
 const MARKER_COLORS = [['Or','#C5A059'],['Rouge','#D0312D'],['Noir','#111111'],['Blanc','#FFFFFF']];
 
-const PRESETS = [
+const PRESETS: [string, number, number, number, string, string][] = [
   ['Blois · Loire',47.5861,1.3359,14,'Blois','Val de Loire • France'],
   ['Paris · Seine',48.8566,2.3470,13.6,'Paris','Île-de-France • France'],
   ['Venise · Lagune',45.4380,12.3300,13.6,'Venezia','Vénétie • Italie'],
@@ -137,54 +150,56 @@ const PRESETS = [
 ];
 
 // Hiérarchie routière (largeur de base en px pour un cadre de 800 px)
-const ROADS = [
+const ROADS: [string, number, keyof Colors][] = [
   ['path',0.45,'path'],['service',0.55,'roadMinor'],['minor',0.9,'roadMinor'],['tertiary',1.3,'roadMinor'],
   ['secondary',1.8,'roadMajor'],['primary',2.4,'roadMajor'],['trunk',2.8,'roadMajor'],['motorway',3.2,'roadMajor']
 ];
-const HW_CLASS = {motorway:'motorway',motorway_link:'motorway',trunk:'trunk',trunk_link:'trunk',primary:'primary',primary_link:'primary',
+const HW_CLASS: Record<string, string> = {motorway:'motorway',motorway_link:'motorway',trunk:'trunk',trunk_link:'trunk',primary:'primary',primary_link:'primary',
   secondary:'secondary',secondary_link:'secondary',tertiary:'tertiary',tertiary_link:'tertiary',residential:'minor',living_street:'minor',
   unclassified:'minor',service:'service',footway:'path',path:'path',cycleway:'path',steps:'path',track:'path',pedestrian:'path'};
-const WATERWAY_W = {river:3,canal:2,stream:0.8};
+const WATERWAY_W: Record<string, number> = {river:3,canal:2,stream:0.8};
 
 // ---------- État ----------
+/** Sous-objet de l'état lu aussi par nom de champ calculé (st.fx[k], st.colors[k]…) : ses champs, plus un index (identité à l'exécution) */
+const dyn=<V,>()=><T extends Record<string, V>>(o: T)=>o as {[K in keyof T]: V} & Record<string, V>;
 const DEFAULT_STATE = {
-  engine:'maplibre', layout:'souvenir', theme:'souvenir', colors:{...THEMES.souvenir.c},
+  engine:'maplibre', layout:'souvenir', theme:'souvenir', colors:{...THEMES.souvenir.c} as Colors,
   center:{lat:47.5861,lon:1.3359}, zoom:14, marker:{lat:47.5861,lon:1.3359},
   markerStyle:'heart', markerFill:true, markerSize:100, markerOpacity:1,
   coordFormat:'dec', coordsManual:'',
-  texts:{title:'Blois',subtitle:'Val de Loire • France',dedication:'Là où tout a commencé',names:'Alice & Mathias',date:'Le 23 septembre 2023',label1:'Notre rencontre',label2:'Notre mariage'},
-  show:{title:true,subtitle:true,coords:true,dedication:true,names:true,date:true},   // lignes de texte affichées
-  textScale:{title:100,subtitle:100,coords:100,dedication:100,names:100,date:100},   // taille de chaque ligne (%)
+  texts:dyn<string>()({title:'Blois',subtitle:'Val de Loire • France',dedication:'Là où tout a commencé',names:'Alice & Mathias',date:'Le 23 septembre 2023',label1:'Notre rencontre',label2:'Notre mariage'}),
+  show:dyn<boolean>()({title:true,subtitle:true,coords:true,dedication:true,names:true,date:true}),   // lignes de texte affichées
+  textScale:dyn<number>()({title:100,subtitle:100,coords:100,dedication:100,names:100,date:100}),   // taille de chaque ligne (%)
   textScaleAll:100,                                                                  // taille de tous les textes (%)
   font:'serif', margin:6.5, stroke:1, waterMult:1, ring:true, attribution:true,
-  layers:{parks:true,buildings:true,rail:true},
+  layers:dyn<boolean>()({parks:true,buildings:true,rail:true}),
   fontTitle:'',                 // police du titre ('' : celle du texte)
   orient:'portrait',            // 'portrait' | 'landscape'
   format:'a4',                  // format d'impression (FORMATS)
   fileType:'png',               // fichier exporté : 'png' | 'pdf'
   dedWrap:'auto',               // dédicace : 'auto' (deux lignes si elle serait trop réduite) | 'one' | 'two'
-  lineOrder:null,               // ordre des lignes : null = celui du gabarit, sinon permutation de LINE_KEYS (CMS.order)
+  lineOrder:null as string[] | null,               // ordre des lignes : null = celui du gabarit, sinon permutation de LINE_KEYS (CMS.order)
   texture:'none',               // papier (TEXTURES)
-  markers2:[], markerLabel:'', numbered:false, linkMarkers:false,   // lieux supplémentaires (2 au plus)
-  route:null,                   // itinéraire importé : {name, pts:[[lat,lon],…], show, wpts?:[{lat,lon,name}]} (wpts : étapes nommées du GPX)
+  markers2:[] as {lat: number; lon: number; label: string}[], markerLabel:'', numbered:false, linkMarkers:false,   // lieux supplémentaires (2 au plus)
+  route:null as Route | null,                   // itinéraire importé : {name, pts:[[lat,lon],…], show, wpts?:[{lat,lon,name}]} (wpts : étapes nommées du GPX)
   routeStyle:{color:'marker',width:1,dash:false},
   // itinéraire préparé avec une IA (#85, CMS.route) : type de parcours, boucle, lieux décochés (indices), étapes libres, langue du prompt
-  routePrompt:{kind:'walk',loop:false,off:[],extra:'',lang:'fr'},
-  active:0, place2:null,        // gabarit « Deux lieux » : vue éditée (0 ou 1) et l'autre vue {center, zoom, marker}
-  sky:{when:'',tz:'auto',lines:true,grid:true,moon:true,planets:true,milky:false},  // gabarit « Ciel » : date et heure locales, fuseau (minutes ou 'auto'), Lune, planètes, Voie lactée
+  routePrompt:{kind:'walk',loop:false,off:[] as number[],extra:'',lang:'fr'},
+  active:0, place2:null as Place | null,        // gabarit « Deux lieux » : vue éditée (0 ou 1) et l'autre vue {center, zoom, marker}
+  sky:{when:'',tz:'auto' as number | 'auto',lines:true,grid:true,moon:true,planets:true,milky:false},  // gabarit « Ciel » : date et heure locales, fuseau (minutes ou 'auto'), Lune, planètes, Voie lactée
   // effets de tracé : eau hachurée, bâtiments en contour, trait crayon ; lueur, lignes d'eau, bâtiments pointillés, parcs hachurés,
   // surimpression riso ; autour du repère : halo et quartier en relief ; dorure des textes, filets et repères
-  fx:{hatch:false,outline:false,pencil:false,glow:false,waterlines:false,dots:false,parkHatch:false,riso:false,halo:false,quarter:false,foil:false},
+  fx:dyn<boolean>()({hatch:false,outline:false,pencil:false,glow:false,waterlines:false,dots:false,parkHatch:false,riso:false,halo:false,quarter:false,foil:false}),
   focusR:30,                    // rayon du halo et du quartier en relief (% de la largeur de la carte)
-  orn:{scale:false,compass:false,grid:false},     // ornements : échelle graphique, rose des vents, graduations
+  orn:dyn<boolean>()({scale:false,compass:false,grid:false}),     // ornements : échelle graphique, rose des vents, graduations
   folds:false,                  // papier : plis d'une carte dépliée
-  mode:'map',                   // type d'affiche : 'map' (carte) | 'illus' (illustration importée, cf. js/illus.js) | 'mix' (carte + illustration)
+  mode:'map',                   // type d'affiche : 'map' (carte) | 'illus' (illustration importée, cf. js/illus.ts) | 'mix' (carte + illustration)
   mix:{compo:'med',shape:'circle',pos:'bas',split:'half'},   // carte + illustration : composition (médaillon, vignette, haut/bas, côte à côte, fondu), forme et position du médaillon, partage haut/bas
   // Illustration : cadrage (zoom en %, décalage en fraction de l'affiche), retouches, filtre vintage, choix du prompt.
   // L'image elle-même n'est pas dans l'état (trop lourde) : elle est tenue par CMS.illus.
   illus:{fit:'cover',zoom:100,ox:0,oy:0,bright:0,contrast:0,satur:0,vintage:'none',grain:false,paper:false,flat:false,upscale:false,
-    img:null,   // image importée : {ref (empreinte SHA-256), name, w, h} ; l'image est dans IndexedDB (js/illus.js)
-    prompt:{pistes:[],moment:'any',saison:'any',palette:'ia',lang:'fr'}},
+    img:null as {ref: string; name: string; w: number; h: number} | null,   // image importée : {ref (empreinte SHA-256), name, w, h} ; l'image est dans IndexedDB (js/illus.ts)
+    prompt:{pistes:[] as string[],moment:'any',saison:'any',palette:'ia',lang:'fr'}},
   // Style des textes, commun aux trois types d'affiche (#71) : style du titre, couleurs (ombre et contour : '' = aucun), décalage de l'ombre.
   // 'auto' : valeur propre au type d'affiche (CMS.illus.textStyle) : titre Police en Carte, Vintage sinon ; lettres à la couleur
   // Texte du thème ; ombre aucune en Carte, couleur du papier sinon. v : version (2 : valeurs Auto ; cf. migration de normState).
@@ -196,16 +211,18 @@ const DEFAULT_STATE = {
   // 'etiquette', 'filets', et pour le titre seulement 'capsule', 'arc' (autour de la carte en forme), 'cachet', 'vertical' (DECOS,
   // FOOT_DECOS ; le 'ruban' d'avant #90 devient 'capsule'). ftpl : mise en forme du bloc du bas (FOOT_TPLS, #90).
   // mix.zone : zone de chaque bloc en Carte + illustration (#86) : 'illus' (l'illustration ; la bande de la vignette), 'map', 'poster'.
-  illusText:{v:2,style:'auto',color:'auto',shadow:'auto',outline:'',off:4,pos:'hc',free:null,fpos:'auto',ffree:null,
+  illusText:{v:2,style:'auto',color:'auto',shadow:'auto',outline:'',off:4,pos:'hc',free:null as Pt | null,fpos:'auto',ffree:null as Pt | null,
     deco:{title:'libre',foot:'libre'},
     // trait des plaques (cartouche, bandeau, étiquette, capsule, filets) : style (PLATE_LINES), épaisseur (× 0,5 à 3), couleur ('auto' =
     // encre de la plaque), éloignement entre le trait et le texte (gap, × 0,5 à 2,5 ; #90)
     // fond des plaques à fond papier (cartouche, bandeau, étiquette) : couleur ('auto' = papier) et opacité (0 à 1)
     plate:{line:'solid',w:1,color:'auto',gap:1,fill:'auto',alpha:0.92},
     ftpl:'classique',
-    map:{pos:'auto',free:null,fpos:'auto',ffree:null,deco:{title:'libre',foot:'libre'},ftpl:'classique'},
-    mix:{pos:'hc',free:null,fpos:'auto',ffree:null,deco:{title:'libre',foot:'libre'},zone:{title:'illus',foot:'illus'},ftpl:'classique'}}   // Carte + illustration : positions propres (#77)
+    map:{pos:'auto',free:null as Pt | null,fpos:'auto',ffree:null as Pt | null,deco:{title:'libre',foot:'libre'},ftpl:'classique'},
+    mix:{pos:'hc',free:null as Pt | null,fpos:'auto',ffree:null as Pt | null,deco:{title:'libre',foot:'libre'},zone:{title:'illus',foot:'illus'},ftpl:'classique'}}   // Carte + illustration : positions propres (#77)
 };
+/** État d'une affiche (enregistré, partagé, validé par normState) */
+export type PosterState = typeof DEFAULT_STATE;
 // Modes illustrés : listes de valeurs (aussi utilisées par normState pour valider un état venu de l'extérieur)
 CMS.define('illusConf', () => ({
   MODES:['map','illus','mix'],
@@ -227,12 +244,12 @@ CMS.define('illusConf', () => ({
 CMS.define('order', () => {
   const KEYS=['title','subtitle','coords','dedication','names','date'];
   /** Ordre valide (permutation complète de KEYS) ou null */
-  const norm=v=>Array.isArray(v) && v.length===KEYS.length && KEYS.every(k=>v.includes(k)) ? [...v] : null;
+  const norm=(v: unknown): string[] | null=>Array.isArray(v) && v.length===KEYS.length && KEYS.every(k=>v.includes(k)) ? [...v] : null;
   /** Clés triées selon l'ordre choisi (tri stable ; une clé hors de KEYS, comme la légende, reste en fin) ; sans ordre : inchangées */
-  function sort(keys, s=late.st){
+  function sort(keys: string[], s=late.st): string[] {
     const O=s.lineOrder; if(!O) return keys;
-    const r=k=>{ const i=O.indexOf(k); return i<0 ? 99 : i; };
-    return keys.map((k,i)=>[k,i]).sort((a,b)=>r(a[0])-r(b[0]) || a[1]-b[1]).map(x=>x[0]);
+    const r=(k: string)=>{ const i=O.indexOf(k); return i<0 ? 99 : i; };
+    return keys.map((k,i)=>[k,i] as [string, number]).sort((a,b)=>r(a[0])-r(b[0]) || a[1]-b[1]).map(x=>x[0]);
   }
   /** Ordre affiché : celui choisi, sinon celui du gabarit (Polaroid : dédicace en tête ; modes illustrés : titre, puis bloc du bas) */
   function current(s=late.st){

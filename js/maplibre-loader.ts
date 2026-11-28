@@ -1,5 +1,5 @@
 /* City Map Studio — Chargement résilient de MapLibre GL JS (lib/ → unpkg → jsDelivr → cdnjs), espace CMS.maplibre.
- * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).js.
+ * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs).
  *
  * - Une seule promesse de chargement en cours ; une source en échec définitif (réseau, CSP, SRI, version) n'est pas retentée.
  * - Un <script> dont le délai est dépassé continue de se télécharger et s'exécute quand même à son arrivée (on ne peut pas
@@ -10,23 +10,24 @@
  * - CDN tiers seulement après l'accord préalable (load({consent:true})).
  */
 import {ML_CDNS, ML_SRI, ML_VERSION} from './config.js';
-(function (g) {
+(function (g: typeof globalThis) {
   const CMS = g.CMS;   // js/core.ts
-  const S = Object.freeze({ IDLE: 'idle', LOADING: 'loading', OK: 'ok', NEED_CONSENT: 'local-fail', FAIL: 'fail' });
+  const S = Object.freeze({ IDLE: 'idle', LOADING: 'loading', OK: 'ok', NEED_CONSENT: 'local-fail', FAIL: 'fail' } as const);
+  type LoadState = typeof S[keyof typeof S];
   // Délais réglables par les tests seulement (adresse avec ?test et objet __cmsTestConfig posé avant le chargement)
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
   const JS_TIMEOUT = testCfg.mlTimeout ?? 12000, CSS_TIMEOUT = testCfg.mlCssTimeout ?? 8000;
 
-  let state = S.IDLE, source = '', lib = null, inflight = null, cssOk = false;
-  const failed = new Set();
+  let state: LoadState = S.IDLE, source = '', lib: any = null, inflight: Promise<boolean> | null = null, cssOk = false;
+  const failed = new Set<string>();
 
-  const isRemote = base => /^https?:/.test(base);
-  const hostOf = base => (isRemote(base) ? new URL(base).host : 'copie locale (lib/)');
-  const versionOf = ml => (ml && typeof ml.getVersion === 'function' ? ml.getVersion() : ml?.version) ?? '';
-  const err = (code, message) => Object.assign(new Error(message), { code });
+  const isRemote = (base: string) => /^https?:/.test(base);
+  const hostOf = (base: string) => (isRemote(base) ? new URL(base).host : 'copie locale (lib/)');
+  const versionOf = (ml: any) => (ml && typeof ml.getVersion === 'function' ? ml.getVersion() : ml?.version) ?? '';
+  const err = (code: string, message: string) => Object.assign(new Error(message), { code });
 
   /** Adopte globalThis.maplibregl s'il est présent et à la bonne version */
-  function adopt(src) {
+  function adopt(src: string) {
     const ml = g.maplibregl;
     if (!ml) return false;
     if (ml === lib) return true;
@@ -37,7 +38,7 @@ import {ML_CDNS, ML_SRI, ML_VERSION} from './config.js';
   }
 
   /** Script arrivé après son délai : ses effets sont neutralisés ou il est adopté */
-  function onLateLoad(base) {
+  function onLateLoad(base: string) {
     if (state === S.OK) { if (g.maplibregl !== lib) g.maplibregl = lib; return; }   // une autre source a gagné
     if (state === S.LOADING) return;                                                 // la boucle l'adoptera
     if (adopt(hostOf(base) + ' (arrivée tardive)')) {
@@ -45,8 +46,8 @@ import {ML_CDNS, ML_SRI, ML_VERSION} from './config.js';
     } else failed.add(base);
   }
 
-  function injectScript(base) {
-    return new Promise((resolve, reject) => {
+  function injectScript(base: string) {
+    return new Promise<void>((resolve, reject) => {
       const el = document.createElement('script');
       el.src = base + 'maplibre-gl.js'; el.async = true; el.dataset.maplibre = base;
       if (isRemote(base)) { el.integrity = ML_SRI.js; el.crossOrigin = 'anonymous'; }
@@ -66,8 +67,8 @@ import {ML_CDNS, ML_SRI, ML_VERSION} from './config.js';
     });
   }
 
-  function injectCss(base) {
-    return new Promise((resolve, reject) => {
+  function injectCss(base: string) {
+    return new Promise<void>((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet'; l.href = base + 'maplibre-gl.css'; l.dataset.maplibre = base;
       if (isRemote(base)) { l.integrity = ML_SRI.css; l.crossOrigin = 'anonymous'; }
@@ -79,18 +80,18 @@ import {ML_CDNS, ML_SRI, ML_VERSION} from './config.js';
   }
 
   /** Feuille de style : la même source que le script d'abord. Un échec n'empêche pas la carte de fonctionner. */
-  async function loadCss(winner, allowRemote) {
+  async function loadCss(winner: string, allowRemote: boolean) {
     if (cssOk) return true;
     const order = [winner, ...ML_CDNS.filter(b => b !== winner && (allowRemote || !isRemote(b)))];
     for (const base of order) {
       try { await injectCss(base); cssOk = true; return true; }
-      catch (e) { console.warn('[MapLibre CSS]', base, e.message); }
+      catch (e) { console.warn('[MapLibre CSS]', base, (e as Error).message); }
     }
     console.warn('[MapLibre] aucune feuille de style chargée : affichage dégradé');
     return false;
   }
 
-  async function attempt(allowRemote) {
+  async function attempt(allowRemote: boolean) {
     for (const base of ML_CDNS) {
       if (adopt('déjà présente')) { await loadCss('lib/', allowRemote); return true; }   // arrivée tardive entre deux essais
       if (failed.has(base)) continue;
@@ -99,7 +100,7 @@ import {ML_CDNS, ML_SRI, ML_VERSION} from './config.js';
         await injectScript(base);
         if (adopt(hostOf(base))) { await loadCss(base, allowRemote); return true; }
         failed.add(base);
-      } catch (e) { console.warn('[MapLibre]', base, e.code, e.message); }
+      } catch (e) { console.warn('[MapLibre]', base, (e as CmsError).code, (e as Error).message); }
     }
     if (adopt('déjà présente')) { await loadCss('lib/', allowRemote); return true; }
     return false;

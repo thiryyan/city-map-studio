@@ -23,7 +23,7 @@ export async function load(files, extra = {}) {
     ...extra,
   });
   ctx.globalThis = ctx; ctx.window = ctx;
-  const mods = ['js/core.js', ...files];
+  const mods = ['js/core.ts', ...files];
   const entry = mods.map((f, i) => `import * as m${i} from ${JSON.stringify(ROOT + f)};`).join('\n')
     + `\nObject.assign(globalThis, ${mods.map((_, i) => `m${i}`).join(', ')});`;
   const noExt = p => p.replace(/\.[jt]s$/, '');   // js/geo.js désigne aussi js/geo.ts (migration TypeScript, #103)

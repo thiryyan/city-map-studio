@@ -1,7 +1,7 @@
 /* City Map Studio — État de l'affiche : validation, chargement, enregistrement ; fenêtres modales ; accord préalable.
- * Module TypeScript (#103), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs). */
+ * Module TypeScript (#103), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
 import {late} from './core.js';
-import {DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, STORE_KEY, TEXTURES, THEMES} from './config.js';
+import {type PosterState, type Route, DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, STORE_KEY, TEXTURES, THEMES} from './config.js';
 // ---------- Validation de l'état (lien partagé, localStorage) ----------
 // Un état venu de l'extérieur n'est jamais repris tel quel : seuls les champs connus sont lus, chacun est vérifié
 // (type, liste de valeurs, bornes) et remplacé par sa valeur par défaut s'il est invalide. Un lien forgé ne peut donc
@@ -19,18 +19,18 @@ const V = {
   /** Point {lat, lon} valide (projection de Mercator : latitude ±85,06°), sinon null */
   ll:(p: unknown): LatLon | null=>{ const q=p as Ext; return q && typeof q==='object' && Number.isFinite(q.lat) && Number.isFinite(q.lon) && Math.abs(q.lat)<=85.06 && Math.abs(q.lon)<=180 ? {lat:q.lat,lon:q.lon} : null; },
   /** Chaque clé de `def` : valeur de `src` vérifiée par `check(valeur, défaut)` */
-  each:<T,>(src: unknown, def: Record<string, T>, check: (v: unknown, d: T)=>T): Record<string, T>=>{ const s=V.obj(src), o: Record<string, T>={}; for(const k of Object.keys(def)) o[k]=check(s[k],def[k]); return o; }
+  each:<D extends Record<string, any>>(src: unknown, def: D, check: (v: unknown, d: D[keyof D])=>D[keyof D]): D=>{ const s=V.obj(src), o: Record<string, unknown>={}; for(const k of Object.keys(def)) o[k]=check(s[k],def[k]); return o as D; }
 };
 const SHARE_MAX_CHARS = 64*1024, SHARE_MAX_BYTES = 512*1024, ROUTE_MAX_PTS = 5000;
 /** Complète un état enregistré ou partagé avec les valeurs par défaut (champs ajoutés depuis) et rejette toute valeur invalide */
-function normState(src: unknown){
+function normState(src: unknown): PosterState {
   const s=V.obj(src), D=structuredClone(DEFAULT_STATE), keys=(a: readonly (readonly unknown[])[])=>a.map(x=>x[0] as string);
   const view=(v: unknown, dv: {zoom: number})=>{ const o=V.obj(v), c=V.ll(o.center), m=V.ll(o.marker);
     return c && m ? {center:c, zoom:V.num(o.zoom,dv.zoom,1,22), marker:m} : null; };
-  const route=(r: unknown)=>{ const o=V.obj(r); if(!Array.isArray(o.pts)) return null;
-    const pts=o.pts.slice(0,ROUTE_MAX_PTS).filter(p=>Array.isArray(p) && V.ll({lat:p[0],lon:p[1]})).map(p=>[p[0],p[1]]);
+  const route=(r: unknown): Route | null=>{ const o=V.obj(r); if(!Array.isArray(o.pts)) return null;
+    const pts=o.pts.slice(0,ROUTE_MAX_PTS).filter((p: unknown)=>Array.isArray(p) && V.ll({lat:p[0],lon:p[1]})).map((p: number[]): [number, number]=>[p[0],p[1]]);
     if(pts.length<2) return null;
-    const wpts=(Array.isArray(o.wpts)?o.wpts:[]).map(p=>{ const q=V.ll(p); return q && {...q,name:V.str(p.name,'',80)}; }).filter(Boolean).slice(0,20);
+    const wpts=(Array.isArray(o.wpts)?o.wpts:[]).map((p: Ext)=>{ const q=V.ll(p); return q && {...q,name:V.str(p.name,'',80)}; }).filter((w): w is LatLon & {name: string}=>!!w).slice(0,20);
     return {name:V.str(o.name,''), pts, show:V.bool(o.show,true), ...(wpts.length?{wpts}:{})}; };
   return {
     engine:V.oneOf(s.engine,['maplibre','file'],D.engine),
@@ -119,7 +119,7 @@ function normState(src: unknown){
     return R;
   }
 }
-let st = loadState();
+let st: PosterState = loadState();
 /** État de l'interface, non enregistré (champs posés en cours de route par les autres modules : Ext) */
 const ui: Ext = {intent:'map', clean:false, inkSink:null, comparing:false, cmpKeep:null, placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
 let mlMap: any = null, osmData: any = null;   // carte MapLibre, données OSM importées (non typées)
@@ -204,7 +204,7 @@ function updateConsentInfo(){
   el.append(b);
 }
 
-function loadState(){
+function loadState(): PosterState {
   try{ const s=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(s && typeof s==='object') return normState(s); }catch(e){}
   return structuredClone(DEFAULT_STATE);
 }

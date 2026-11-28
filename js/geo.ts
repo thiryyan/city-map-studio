@@ -1,12 +1,11 @@
 /* City Map Studio — Projection de Mercator et géométrie des gabarits.
- * Module TypeScript (#103), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs). */
+ * Module TypeScript (#103), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
 import {late} from './core.js';
-import {CANVAS_MAX_PX, EXPORT_MAX_DPI, FORMATS, REF_W} from './config.js';
+import {type PosterState, CANVAS_MAX_PX, EXPORT_MAX_DPI, FORMATS, REF_W} from './config.js';
 import {st, ui} from './state.js';
 /** État de l'affiche (js/state.ts) */
-type PosterState = typeof st;
 /** Rectangle en pixels ; une carte peut avoir une forme (cercle, cœur, arche) */
-export interface Rect { x: number; y: number; w: number; h: number; shape?: string; circle?: boolean; fade?: boolean }
+export interface Rect { x: number; y: number; w: number; h: number; shape?: string | null; circle?: boolean; fade?: boolean }
 export interface LatLon { lat: number; lon: number }
 /** Vue de carte : centre et zoom de référence (cadre de REF_W px) */
 export interface View { center: LatLon; zoom: number }
@@ -15,7 +14,7 @@ export interface TextArea { cx: number; maxW: number; y0: number; avail: number;
 /** Géométrie d'un gabarit (voir geom) */
 export interface Geom {
   m: number; U: number; land: boolean; lay: string;
-  map: Rect; places: {rect: Rect, view: View, main?: boolean}[];
+  map: Rect; places: {rect: Rect, view: View & {marker: LatLon}, main?: boolean}[];
   illus?: Rect; mix?: string; textArea?: Rect; band?: {y: number, h: number};
   sky?: Rect; text?: TextArea; box?: Rect; rects?: Rect[]; title?: {y: number}; labels?: number[];
 }
@@ -23,7 +22,7 @@ export interface ExportSpec { key: string; name: string; dpi: number; W: number;
 
 // Module CMS.geo : fonctions de projection, de format et de géométrie des gabarits (testées seules : tests/unit).
 // Tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier.
-CMS.define('geo', () => {
+const GEO = CMS.define('geo', () => {
 // ---------- Mathématiques ----------
 const D2R = Math.PI/180;
 const merc = (lat: number): number => Math.log(Math.tan(Math.PI/4 + lat*D2R/2));
@@ -186,6 +185,6 @@ function strokeShape(ctx: CanvasRenderingContext2D, r: Rect, o: number): void { 
 
 return {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, geom, shapeD, clipMap, strokeShape};
 });
-const {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, geom, shapeD, clipMap, strokeShape} = CMS.geo;
+const {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, geom, shapeD, clipMap, strokeShape} = GEO;
 
 export {D2R, clamp, clipMap, coordText, dms, exportSpec, geom, imerc, merc, placeCoordText, posterDims, project, ratio, shapeD, strokeShape, textLine, unproject, viewBounds, worldSize, zoomFactor};

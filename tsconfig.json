@@ -1,6 +1,6 @@
 {
-  // TypeScript (#103) : vérification seule (noEmit), esbuild compile. Migration fichier par fichier : les fichiers
-  // .ts sont vérifiés en mode strict, les .js restants sont lus pour leurs types mais pas vérifiés (checkJs: false).
+  // TypeScript (#103) : vérification seule (noEmit), esbuild compile au build. Tous les fichiers de js/ sont en .ts,
+  // vérifiés en mode strict ; js/types.d.ts décrit les noms globaux (CMS, MapLibre, données du ciel).
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
@@ -8,13 +8,11 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     "noEmit": true,
-    "allowJs": true,
-    "checkJs": false,
     "isolatedModules": true,
     "skipLibCheck": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["js/**/*.ts", "js/**/*.js"]
+  "include": ["js/**/*.ts"]
 }

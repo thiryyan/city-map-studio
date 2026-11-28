@@ -1,5 +1,5 @@
 /* City Map Studio — Itinéraire préparé avec une IA externe (issue #85), espace CMS.route.
- * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).js.
+ * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs).
  *
  * Comme pour l'illustration : l'application rédige le prompt (buildRoutePrompt), l'utilisateur le colle dans son IA (ChatGPT,
  * Gemini…) et ramène le GPX, en fichier ou collé tel quel (extractGpx tolère les phrases et les clôtures de code autour).
@@ -8,18 +8,22 @@
  * Fonctions pures testées sans navigateur : tests/unit/route.test.mjs.
  */
 import {late} from './core.js';
+import type {PosterState, Route} from './config.js';
 import {saveState, st, ui} from './state.js';
 import {ratio, viewBounds} from './geo.js';
 import {$, changed, h} from './preview.js';
 import {fitRoute, parseGpx, renderRoute, toast} from './features.js';
+/** Emprise {s, w, n, e} (degrés) */
+type Bounds = {s: number; w: number; n: number; e: number};
+type Kind = 'walk' | 'bike' | 'car' | 'trip';
 CMS.define('route', () => {
   // ---------- Fonctions pures ----------
   const KINDS=['walk','bike','car','trip'], STEPS_MAX=10, EXTRA_MAX=400;
   /** Seuils du contrôle : distance au lieu principal (km), tronçon rectiligne (km), emprise de la carte vérifiée ou non */
-  const LIMITS={walk:{far:10,gap:1,box:true}, bike:{far:40,gap:3,box:true}, car:{far:150,gap:10,box:false}, trip:{far:3000,gap:Infinity,box:false}};
+  const LIMITS: Record<Kind, {far: number; gap: number; box: boolean}>={walk:{far:10,gap:1,box:true}, bike:{far:40,gap:3,box:true}, car:{far:150,gap:10,box:false}, trip:{far:3000,gap:Infinity,box:false}};
 
   /** Texte collé (réponse complète d'une IA, bloc ```xml, phrases autour) → XML de <gpx> à </gpx> ; le dernier bloc complet l'emporte */
-  function extractGpx(txt){
+  function extractGpx(txt: string){
     const t=String(txt??'').replace(/^﻿/,'').replace(/```[a-z]*[ \t]*\r?\n?/gi,'\n');
     const ends=[...t.matchAll(/<\/gpx\s*>/gi)], starts=[...t.matchAll(/<gpx[\s>]/gi)];
     if(!starts.length) throw new Error('aucun bloc GPX trouvé dans le texte collé');
@@ -29,26 +33,26 @@ CMS.define('route', () => {
     return '<?xml version="1.0" encoding="UTF-8"?>\n'+t.slice(st.index,e).trim();
   }
 
-  const distKm=(a,b)=>{   // haversine (km) entre [lat, lon]
+  const distKm=(a: number[],b: number[])=>{   // haversine (km) entre [lat, lon]
     const R=6371, r=Math.PI/180, dl=(b[0]-a[0])*r, dn=(b[1]-a[1])*r;
     const x=Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2;
     return 2*R*Math.asin(Math.min(1,Math.sqrt(x)));
   };
   /** Emprise de la carte de l'affiche {s, w, n, e} : cadre de la carte de l'aperçu (gabarit, format), à défaut celui de l'affiche entière */
-  function mapBounds(s){
+  function mapBounds(s: PosterState): Bounds {
     const r=typeof ui==='object' && ui?.slotCss?.w>0 ? ui.slotCss : null;
     return viewBounds({center:s.center, zoom:s.zoom}, r ? r.h/r.w : ratio(s));
   }
   /** Lieux de l'affiche proposés comme étapes : lieu principal puis lieux supplémentaires {name, lat, lon} */
-  function placesOf(s, lang='fr'){
+  function placesOf(s: PosterState, lang='fr'){
     const en=lang==='en', out=[{name:(s.markerLabel||'').trim()||(en?'Main place':'Lieu principal'), lat:s.marker.lat, lon:s.marker.lon}];
     (s.markers2||[]).forEach((p,i)=>out.push({name:(p.label||'').trim()||(en?`Place ${i+2}`:`Lieu ${i+2}`), lat:p.lat, lon:p.lon}));
     return out;
   }
-  const f6=v=>(+v).toFixed(6);
-  const L10N={
+  const f6=(v: number)=>(+v).toFixed(6);
+  const L10N: Record<'fr' | 'en', any>={
     fr:{city:'la ville choisie',
-      role:(w,date)=>`Tu prépares un tracé GPX pour une affiche souvenir de ${w}${date?` (date : ${date})`:''}. Le tracé sera dessiné sur la carte de l'affiche.`,
+      role:(w: string,date: string)=>`Tu prépares un tracé GPX pour une affiche souvenir de ${w}${date?` (date : ${date})`:''}. Le tracé sera dessiné sur la carte de l'affiche.`,
       data:'DONNÉES FIXES :',
       kind:{walk:'Type de parcours : balade à pied, qui suit les rues, chemins et passages piétons réels.',
         bike:'Type de parcours : trajet à vélo, qui suit les rues, routes et pistes cyclables réelles.',
@@ -58,8 +62,8 @@ CMS.define('route', () => {
       noPlace:'Aucun lieu imposé : propose les étapes d’après mes souhaits ci-dessous.',
       extra:'Autres étapes souhaitées (dans cet ordre si possible) : ',
       loop:{true:'Parcours en boucle : retour au point de départ.', false:'Aller simple, de la première à la dernière étape.'},
-      box:b=>`Emprise de la carte de l'affiche : latitude de ${f6(b.s)} à ${f6(b.n)}, longitude de ${f6(b.w)} à ${f6(b.e)}. Le tracé doit rester à l'intérieur.`,
-      boxFree:b=>`Emprise actuelle de la carte (indicative : la carte sera recadrée sur le tracé) : latitude de ${f6(b.s)} à ${f6(b.n)}, longitude de ${f6(b.w)} à ${f6(b.e)}.`,
+      box:(b: Bounds)=>`Emprise de la carte de l'affiche : latitude de ${f6(b.s)} à ${f6(b.n)}, longitude de ${f6(b.w)} à ${f6(b.e)}. Le tracé doit rester à l'intérieur.`,
+      boxFree:(b: Bounds)=>`Emprise actuelle de la carte (indicative : la carte sera recadrée sur le tracé) : latitude de ${f6(b.s)} à ${f6(b.n)}, longitude de ${f6(b.w)} à ${f6(b.e)}.`,
       max:`${STEPS_MAX} étapes au plus.`,
       steps:'DÉROULEMENT (une étape à la fois) :',
       s1:'1. Propose-moi la liste ordonnée des étapes : pour chacune, son nom, son adresse et ses coordonnées (6 décimales). Uniquement des lieux réels ; n’invente aucune coordonnée et signale celles dont tu n’es pas sûr. Puis attends ma validation.',
@@ -73,7 +77,7 @@ CMS.define('route', () => {
       f5:'réponds avec SEULEMENT le XML, dans un unique bloc de code, sans aucun texte avant ni après.',
       fallback:'REPLI : si tu ne peux pas suivre les rues, mets seulement les étapes dans un <rte> (un <rtept lat="…" lon="…"><name>…</name></rtept> par étape) ; je les relierai.'},
     en:{city:'the chosen city',
-      role:(w,date)=>`You are preparing a GPX track for a keepsake poster of ${w}${date?` (date: ${date})`:''}. The track will be drawn on the poster's map.`,
+      role:(w: string,date: string)=>`You are preparing a GPX track for a keepsake poster of ${w}${date?` (date: ${date})`:''}. The track will be drawn on the poster's map.`,
       data:'FIXED DATA:',
       kind:{walk:'Route type: a walk, following real streets, paths and footways.',
         bike:'Route type: a bike ride, following real streets, roads and cycle lanes.',
@@ -83,8 +87,8 @@ CMS.define('route', () => {
       noPlace:'No fixed place: suggest the stops from my wishes below.',
       extra:'Other stops I would like (in this order if possible): ',
       loop:{true:'Loop: back to the starting point.', false:'One way, from the first to the last stop.'},
-      box:b=>`Extent of the poster's map: latitude ${f6(b.s)} to ${f6(b.n)}, longitude ${f6(b.w)} to ${f6(b.e)}. The track must stay inside it.`,
-      boxFree:b=>`Current extent of the map (for reference: the map will be refitted to the track): latitude ${f6(b.s)} to ${f6(b.n)}, longitude ${f6(b.w)} to ${f6(b.e)}.`,
+      box:(b: Bounds)=>`Extent of the poster's map: latitude ${f6(b.s)} to ${f6(b.n)}, longitude ${f6(b.w)} to ${f6(b.e)}. The track must stay inside it.`,
+      boxFree:(b: Bounds)=>`Current extent of the map (for reference: the map will be refitted to the track): latitude ${f6(b.s)} to ${f6(b.n)}, longitude ${f6(b.w)} to ${f6(b.e)}.`,
       max:`${STEPS_MAX} stops at most.`,
       steps:'PROCESS (one step at a time):',
       s1:'1. Suggest the ordered list of stops: for each one, its name, address and coordinates (6 decimals). Real places only; do not invent coordinates, and flag any you are unsure of. Then wait for my approval.',
@@ -99,8 +103,8 @@ CMS.define('route', () => {
       fallback:'FALLBACK: if you cannot follow the streets, put only the stops in a <rte> (one <rtept lat="…" lon="…"><name>…</name></rtept> per stop); I will join them.'}
   };
   /** Prompt pour l'IA externe : ville, lieux cochés avec leurs coordonnées, type de parcours, emprise, déroulement et format */
-  function buildRoutePrompt(s, o=s.routePrompt){
-    const lang=o.lang==='en'?'en':'fr', L=L10N[lang], kind=KINDS.includes(o.kind)?o.kind:'walk';
+  function buildRoutePrompt(s: PosterState, o: Partial<PosterState['routePrompt']>=s.routePrompt){
+    const lang=o.lang==='en'?'en':'fr', L=L10N[lang], kind=(KINDS.includes(o.kind as string)?o.kind:'walk') as Kind;
     const title=(s.texts.title||'').trim(), area=(s.texts.subtitle||'').trim();
     const where=title ? title.toUpperCase()+(area?` (${area})`:'') : L.city;
     const places=placesOf(s,lang).filter((_,i)=>!(o.off||[]).includes(i)), extra=String(o.extra||'').replace(/\s+/g,' ').trim().slice(0,EXTRA_MAX);
@@ -108,8 +112,8 @@ CMS.define('route', () => {
     if(places.length) data.push(L.places+'\n'+places.map((p,i)=>`  ${i+1}. ${p.name} : ${f6(p.lat)}, ${f6(p.lon)}`).join('\n'));
     else if(extra) data.push(L.noPlace);
     if(extra) data.push(L.extra+`« ${extra} »`);
-    data.push(L.loop[!!o.loop], LIMITS[kind].box ? L.box(b) : L.boxFree(b), L.max);
-    const list=a=>a.map(x=>'- '+x).join('\n');
+    data.push(L.loop[String(!!o.loop)], LIMITS[kind].box ? L.box(b) : L.boxFree(b), L.max);
+    const list=(a: string[])=>a.map((x: string)=>'- '+x).join('\n');
     return [L.role(where,(s.texts.date||'').trim()), L.data+'\n'+list(data), L.steps+'\n'+L.s1+'\n'+L.s2,
       L.fmt+'\n'+list([L.f1, L.f2, kind==='trip' ? L.f3.free : L.f3.road, L.f4, L.f5]), L.fallback].join('\n\n');
   }
@@ -117,8 +121,8 @@ CMS.define('route', () => {
   /** Contrôle de vraisemblance d'un tracé [[lat, lon], …] : [{code:'far'|'straight', km}] (vide si rien à signaler).
    *  far : un point à plus de LIMITS.far km du lieu principal, ou (balade, vélo) hors de l'emprise de la carte élargie de moitié ;
    *  straight : deux points consécutifs à plus de LIMITS.gap km (étapes reliées en ligne droite). */
-  function routeChecks(pts, s, kind=s.routePrompt?.kind){
-    const Lm=LIMITS[kind]||LIMITS.walk, out=[], m=[s.marker.lat,s.marker.lon];
+  function routeChecks(pts: unknown, s: PosterState, kind: string=s.routePrompt?.kind){
+    const Lm=LIMITS[kind as Kind]||LIMITS.walk, out: {code: 'far' | 'straight'; km: number}[]=[], m=[s.marker.lat,s.marker.lon];
     if(!Array.isArray(pts) || pts.length<2) return out;
     let far=0, out_=false, gap=0;
     const b=mapBounds(s), pw=(b.e-b.w)/2, ph=(b.n-b.s)/2;
@@ -152,8 +156,8 @@ CMS.define('route', () => {
     syncPlaces(); update();
   }
   /** Messages du contrôle de vraisemblance après import ; « Pointillés » proposé pour un tracé rectiligne */
-  function warn(issues){
-    const far=issues.find(x=>x.code==='far'), str=issues.find(x=>x.code==='straight'), km=v=>String(v).replace('.',',');
+  function warn(issues: {code: string; km: number}[]){
+    const far=issues.find(x=>x.code==='far'), str=issues.find(x=>x.code==='straight'), km=(v: number)=>String(v).replace('.',',');
     const msg=[far && `Une partie du tracé est loin du lieu de l'affiche (jusqu'à ${km(far.km)} km) : vérifiez les étapes.`,
       str && `Le tracé relie des étapes en ligne droite (tronçon de ${km(str.km)} km) : l'IA n'a pas suivi les rues.`].filter(Boolean).join(' ');
     $('routeWarn').textContent=msg; $('routeWarn').hidden=false;
@@ -161,10 +165,10 @@ CMS.define('route', () => {
   }
   /** Import d'un texte GPX (fichier, ou collé : extractGpx) ; en cas d'erreur, l'affiche n'est pas modifiée.
    *  Le contrôle porte sur les points lus avant simplification, et sur le lieu et l'emprise d'avant le recadrage (fitRoute) */
-  function importGpxText(txt, pasted){
-    let route; const info={};
+  function importGpxText(txt: string, pasted: boolean){
+    let route: Route; const info: {raw?: [number, number][]}={};
     try{ route=parseGpx(pasted ? extractGpx(txt) : txt, info); }
-    catch(e){ toast((pasted ? 'Collage GPX impossible : ' : 'Import GPX impossible : ')+e.message,true); return false; }
+    catch(e){ toast((pasted ? 'Collage GPX impossible : ' : 'Import GPX impossible : ')+(e as Error).message,true); return false; }
     const issues=routeChecks(info.raw||route.pts, st, P().kind);
     st.route=route; $('routeWarn').hidden=true; renderRoute(); fitRoute(); changed();
     if(issues.length) warn(issues);
@@ -173,10 +177,10 @@ CMS.define('route', () => {
   }
   function init(){
     for(const [k,n] of KIND_NAMES){ const b=h('button',{type:'button',dataset:{v:k}},n); b.onclick=()=>{ P().kind=k; sync(); saveState(); }; $('rpKind').append(b); }
-    document.querySelectorAll('#rpLoop button').forEach(b=>b.onclick=()=>{ P().loop=b.dataset.v==='1'; sync(); saveState(); });
-    document.querySelectorAll('#rpLang button').forEach(b=>b.onclick=()=>{ P().lang=b.dataset.v; sync(); saveState(); });
-    $('rpExtra').oninput=e=>{ P().extra=e.target.value.slice(0,EXTRA_MAX); update(); saveState(); };
-    $('routeAi').addEventListener('toggle',()=>{ if($('routeAi').open) sync(); });
+    document.querySelectorAll<HTMLElement>('#rpLoop button').forEach(b=>b.onclick=()=>{ P().loop=b.dataset.v==='1'; sync(); saveState(); });
+    document.querySelectorAll<HTMLElement>('#rpLang button').forEach(b=>b.onclick=()=>{ P().lang=b.dataset.v!; sync(); saveState(); });
+    $('rpExtra').oninput=e=>{ P().extra=(e.target as HTMLInputElement).value.slice(0,EXTRA_MAX); update(); saveState(); };
+    $('routeAi').addEventListener('toggle',()=>{ if($<HTMLDetailsElement>('routeAi').open) sync(); });
     $('bCopyRoute').onclick=async()=>{
       update(); const t=$('routePromptOut').value, okMsg='Prompt copié : collez-le dans ChatGPT ou Gemini, puis rapportez le GPX';
       try{ await navigator.clipboard.writeText(t); toast(okMsg); }
@@ -195,7 +199,7 @@ CMS.define('route', () => {
     $('bGpxImport').onclick=()=>{ const t=$('gpxText').value;
       if(!t.trim()){ toast('Collez d’abord le GPX (ou toute la réponse de l’IA) dans la zone de texte',true); $('gpxText').focus(); return; }
       if(importGpxText(t,true)) $('gpxText').value=''; };
-    CMS.on('state:saved',()=>{ if($('routeAi').open) sync(); });   // lieux, textes ou cadrage modifiés : prompt à jour
+    CMS.on('state:saved',()=>{ if($<HTMLDetailsElement>('routeAi').open) sync(); });   // lieux, textes ou cadrage modifiés : prompt à jour
     sync();
   }
   return {init, sync, extractGpx, buildRoutePrompt, routeChecks, mapBounds, placesOf, importGpxText, KINDS, EXTRA_MAX};

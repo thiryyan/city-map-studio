@@ -1,11 +1,11 @@
 // Pistes Wikipédia (issue #46) : validation de la réponse et classement par notoriété, sans réseau.
 // tests/wiki_blois.json : réponse réelle de fr.wikipedia.org (generator=geosearch, 3 km autour de Blois, 100 articles).
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { load, ev } from './load.mjs';
 
-const ctx = await load(['js/config.js', 'js/maplibre-loader.js', 'js/geocoder.js', 'js/wiki.js']);
+const ctx = await load(['js/config.ts', 'js/maplibre-loader.ts', 'js/geocoder.ts', 'js/wiki.ts']);
 const BLOIS = readFileSync(new URL('../wiki_blois.json', import.meta.url), 'utf8');
 const J = expr => JSON.parse(JSON.stringify(ev(ctx, expr)));
 

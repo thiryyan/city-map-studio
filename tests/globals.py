@@ -1,23 +1,19 @@
 """Garde-fou d'architecture des modules ES de js/ (issues #35, #102).
 
-1. ESLint (eslint.config.js) : aucun nom utilisé sans import (no-undef), aucune variable importée réaffectée
-   (no-import-assign) ; un module qui oublie un import échouerait sinon seulement au moment de l'appel.
-2. Registre « late » (js/core.ts) : un fichier qui appelle une fonction d'un fichier chargé après lui la lit dans ce
+Les noms utilisés sans import et les variables importées réaffectées sont refusés par TypeScript (tests/typecheck.py,
+mode strict : tous les fichiers de js/ sont en .ts depuis #103) ; ESLint n'est plus nécessaire.
+Registre « late » (js/core.ts) : un fichier qui appelle une fonction d'un fichier chargé après lui la lit dans ce
    registre plutôt que de l'importer (l'import créerait un cycle et changerait l'ordre d'exécution). Chaque entrée est
    une dépendance à l'envers entre couches : leur nombre ne peut pas dépasser le plafond de tests/globals.max ; quand
    il baisse, abaisser le plafond.
 """
-import pathlib, re, subprocess, sys
+import pathlib, re, sys
 
 T = pathlib.Path(__file__).resolve().parent
 ROOT = T.parent
 MAX = int((T / 'globals.max').read_text().split()[0])
 
 fails = []
-lint = subprocess.run(['npx', '--no-install', 'eslint', 'js'], cwd=ROOT, capture_output=True, text=True)
-print(lint.stdout.strip() or '  ESLint : aucun problème')
-if lint.returncode != 0:
-    fails.append('ESLint signale des problèmes dans js/ (voir ci-dessus)')
 
 late = {}
 for f in sorted([*(ROOT / 'js').glob('*.js'), *(ROOT / 'js').glob('*.ts')]):
@@ -32,5 +28,5 @@ if total > MAX:
 elif total < MAX:
     print(f'  → abaisser le plafond de tests/globals.max à {total}')
 
-print('✓ modules ES : imports explicites, registre late borné' if not fails else '\n'.join('✗ ' + f for f in fails))
+print('✓ modules ES : registre late borné' if not fails else '\n'.join('✗ ' + f for f in fails))
 sys.exit(1 if fails else 0)
