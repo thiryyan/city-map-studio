@@ -662,9 +662,9 @@ L'application relève ses propres temps (`CMS.perf`, `js/core.js`), en mémoire 
 | Export A4, Export 10 × 15 (et A3, 50 × 70 sans budget) | Clic sur Exporter, après l'accord → fichier PNG ou PDF prêt | 6 s, 3 s |
 | Geste sur la carte | Doigt ou souris enfoncé sur la carte → relâché : 95e centile de l'intervalle entre deux images (10 images au moins) | 20 ms (60 images/s, gigue tolérée) |
 
-Une mesure en attente qui n'aboutit pas en 10 s est abandonnée. Un seul appareil de référence (décision du 28/11/2026) : le téléphone de mesure, écran 412 × 892 à densité 3,5, Chrome 159 sous Android.
+Une mesure en attente qui n'aboutit pas en 10 s est abandonnée. Un seul appareil de référence (décision du 28/11/2026) : l'**Appareil S2x**, téléphone à écran 412 × 892 à densité 3,5, Chrome 159 sous Android.
 
-**Relevés de référence du 28/11/2026** (même appareil ; deux relevés par adresse quand ils existent) :
+**Relevés de référence du 28/11/2026** (Appareil S2x ; deux relevés par adresse quand ils existent) :
 
 | Mesure | `/nouvelle/` (sources, lot 3) | Site construit (lot 4a, préversion #108) | Budget |
 | :--- | :--- | :--- | :--- |
