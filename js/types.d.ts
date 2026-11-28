@@ -29,3 +29,25 @@ interface CmsNamespace {
 
 // eslint-disable-next-line no-var
 declare var CMS: CmsNamespace;
+
+/** Erreur typée des services réseau (géocodeur, Wikipédia) : code et détails (retryInMs, status…) */
+interface CmsError extends Error { code: string; retryInMs?: number; status?: number }
+
+// Réglages des tests (?test seulement : délais raccourcis), lus par geocoder.ts, wiki.ts, maplibre-loader.ts
+// eslint-disable-next-line no-var
+declare var __cmsTestConfig: Record<string, any> | undefined;
+// Librairie MapLibre chargée par maplibre-loader.ts (script classique : variable globale ; API non typée)
+// eslint-disable-next-line no-var
+declare var maplibregl: any;
+
+// Plein écran préfixé (Safari ancien) : facultatif
+interface Document { webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => Promise<void> | void }
+interface HTMLElement { webkitRequestFullscreen?: (o?: FullscreenOptions) => Promise<void> | void }
+// Façade des tests (main.ts, ?test seulement)
+interface Window { __cms?: Record<string, any> }
+// Données du ciel (lib/sky/*.js, scripts chargés à la demande : variables globales)
+// eslint-disable-next-line no-var
+declare var SKY_DATA: any;
+// eslint-disable-next-line no-var
+declare var SKY_MW: number[][][] | undefined;
+interface Window { SKY_DATA?: any; SKY_MW?: number[][][] }

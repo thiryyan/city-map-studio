@@ -63,7 +63,7 @@ async def main():
         if await page.evaluate("document.getElementById('consent').open"): await page.evaluate("document.getElementById('bConsentFile').click()")
         await page.evaluate("__cms.showTab('repere')"); await page.wait_for_timeout(200)
         n0 = len(ext)
-        await page.wait_for_timeout(2600)   # fin de la période calme de l'historique au démarrage (main.js)
+        await page.wait_for_timeout(2600)   # fin de la période calme de l'historique au démarrage (main.ts)
         # Deux lieux sur l'affiche
         await page.evaluate("__cms.st.markerLabel='Rencontre'; __cms.st.markers2=[{lat:47.5856,lon:1.3311,label:'Château'}]; __cms.st.marker={lat:47.5861,lon:1.3359}")
         await page.evaluate("document.getElementById('routeAi').open=true"); await page.wait_for_timeout(300)

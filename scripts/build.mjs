@@ -1,12 +1,12 @@
 // City Map Studio — construction du site publié (#97, lot 4 : #102)
 //
-// Les sources sont des modules ES (js/main.js et ses imports) : elles se servent en http (python -m http.server),
-// pas en file://. Le build produit dist/, la version publiée :
+// Les sources sont des modules ES en TypeScript (js/main.ts et ses imports, #103) : le navigateur ne les lit pas telles
+// quelles. Le build produit dist/, la version publiée :
 //   - les modules réunis par esbuild en un seul script classique js/app.<empreinte>.js (format IIFE), minifié : aucun
-//     nom global (seuls CMS, posé sur globalThis, et en mode ?test window.__cms et la façade de test de js/main.js) ;
+//     nom global (seuls CMS, posé sur globalThis, et en mode ?test window.__cms et la façade de test de js/main.ts) ;
 //     dist/index.html s'ouvre donc aussi en file:// ;
 //   - css/app.css minifiée en css/app.<empreinte>.css ;
-//   - VERSION (sw.js) et CMS.build (js/core.js) générés : cms-AAAA-MM-JJ-<empreinte> ;
+//   - VERSION (sw.js) et CMS.build (js/core.ts) générés : cms-AAAA-MM-JJ-<empreinte> ;
 //   - liste APP de sw.js générée à partir des fichiers réellement publiés ;
 //   - lib/, icons/, manifeste et .nojekyll copiés.
 //
@@ -25,11 +25,11 @@ const fail = msg => { console.error('✗ ' + msg); process.exit(1); };
 
 let html = await read('index.html');
 
-// 1. Modules : point d'entrée js/main.js (balise <script type="module"> de index.html)
-const SCRIPT_RE = /<script type="module" src="js\/main\.js"><\/script>\n?/;
-if (!SCRIPT_RE.test(html)) fail('<script type="module" src="js/main.js"> introuvable dans index.html');
+// 1. Modules : point d'entrée js/main.ts (balise <script type="module"> de index.html)
+const SCRIPT_RE = /<script type="module" src="js\/main\.ts"><\/script>\n?/;
+if (!SCRIPT_RE.test(html)) fail('<script type="module" src="js/main.ts"> introuvable dans index.html');
 const bundle = async () => (await build({
-  entryPoints: [path.join(SRC, 'js/main.js')], bundle: true, format: 'iife', write: false, metafile: true,
+  entryPoints: [path.join(SRC, 'js/main.ts')], bundle: true, format: 'iife', write: false, metafile: true,
   minify: true, target: 'es2020', legalComments: 'none', charset: 'utf8'
 })).outputFiles[0].text;
 let js = await bundle();
@@ -39,7 +39,7 @@ const cssSrc = await read('css/app.css');
 
 // 3. Version : date du jour (UTC) + empreinte du contenu publié
 const day = new Date().toISOString().slice(0, 10);
-// CMS.build (js/core.js) vaut 'cms-dev' dans les sources : remplacé dans le script construit
+// CMS.build (js/core.ts) vaut 'cms-dev' dans les sources : remplacé dans le script construit
 if ((js.match(/"cms-dev"/g) || []).length !== 1) fail('CMS.build : version « cms-dev » introuvable (ou en double) dans le script construit');
 const contentHash = hash(js + cssSrc + html).slice(0, 7);
 const version = `cms-${day}-${contentHash}`;

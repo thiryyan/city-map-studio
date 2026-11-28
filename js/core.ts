@@ -1,5 +1,5 @@
 /* City Map Studio — Socle : espace de noms CMS et bus d'événements. Chargé en premier.
- * Module TypeScript (#103), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs, esbuild).
+ * Module TypeScript (#103), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs, esbuild).
  * Types de l'espace de noms CMS : js/types.d.ts.
  *
  * Chaque fichier de js/ est un module ES : il importe ce qu'il utilise des fichiers chargés avant lui, et lit dans le
@@ -87,4 +87,6 @@ CMS.define('perf', () => {
 // Chaque entrée est une dépendance « à l'envers » entre couches, à faire disparaître (événements, injection).
 // Registre volontairement non typé : chaque entrée est une dette à résorber, pas une interface à figer.
 const late: Record<string, any> = Object.create(null);
-export {late};
+/** Clés d'un objet, typées (Object.keys renvoie string[]) */
+const keysOf=<T extends object>(o: T)=>Object.keys(o) as (keyof T)[];
+export {keysOf, late};

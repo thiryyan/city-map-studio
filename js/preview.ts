@@ -1,30 +1,32 @@
 /* City Map Studio — Aperçu à l'écran, deux lieux, gestes, papier, composition complète, aperçu au mur.
- * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+ * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
 import {late} from './core.js';
-import {LAYOUTS, THEMES} from './config.js';
+import {type Place, LAYOUTS, THEMES} from './config.js';
 import {consent, mlLib, mlMap, needConsent, openDialog, osmData, saveState, setBusy, st, ui} from './state.js';
-import {clamp, clipMap, geom, imerc, merc, posterDims, ratio, shapeD, textLine, unproject, worldSize} from './geo.js';
+import {type Rect, clamp, clipMap, geom, imerc, merc, posterDims, ratio, shapeD, textLine, unproject, worldSize} from './geo.js';
 import {CART_ROWS, POLA_ROWS, cartDed, drawPoster, ensureSky, fitSink, lum, setFitSink, souvenirFoot} from './render.js';
 import {checkDataBanner, drawVectors, initMaplibre, mlKeepAlive, mlRestyle, mlUpdateView, renderMaplibreOffscreen} from './engines.js';
 // ---------- Aperçu ----------
-const $=id=>document.getElementById(id);
+/** Élément du document par son id, supposé présent (balisage de index.html). Type par défaut : champ de saisie, le plus
+ *  fréquent (value, checked, disabled) ; préciser sinon : $<HTMLCanvasElement>('c'). */
+const $=<T extends HTMLElement = HTMLInputElement>(id: string) => document.getElementById(id) as T;
 /** Crée un élément sans innerHTML : h('button', {type:'button', className:'card', dataset:{v:k}, style:{…}}, enfant, 'texte').
  *  Les textes sont insérés comme texte (jamais interprétés) et les styles passent par le CSSOM (compatibles avec la CSP). */
-function h(tag,props={},...kids){
+function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, any>={}, ...kids: (Node | string | null | undefined)[]): HTMLElementTagNameMap[K] {
   const e=document.createElement(tag);
   for(const [k,v] of Object.entries(props)){
     if(k==='dataset') Object.assign(e.dataset,v); else if(k==='style') Object.assign(e.style,v);
-    else if(k in e && !k.includes('-')) e[k]=v; else e.setAttribute(k,v);
+    else if(k in e && !k.includes('-')) (e as any)[k]=v; else e.setAttribute(k,v);
   }
-  e.append(...kids.filter(x=>x!=null)); return e;
+  e.append(...kids.filter((x): x is Node | string=>x!=null)); return e;
 }
-const cvU=$('cvUnder'), cvO=$('cvOver'), cvT=$('cvTex'), vecC=$('vecCanvas'), slot=$('slot'), poster=$('poster'), stage=$('stage');
+const cvU=$<HTMLCanvasElement>('cvUnder'), cvO=$<HTMLCanvasElement>('cvOver'), cvT=$<HTMLCanvasElement>('cvTex'), vecC=$<HTMLCanvasElement>('vecCanvas'), slot=$<HTMLDivElement>('slot'), poster=$<HTMLDivElement>('poster'), stage=$<HTMLDivElement>('stage');
 function layoutPreview(){
   const SW=stage.clientWidth, SH=stage.clientHeight, small=innerWidth<900;
   const pad = small ? (SH<260 ? 8 : 14) : 36, FAB=54;
-  const RATIO=ratio(), fit=(aw,ah)=>Math.min(aw,ah/RATIO);
+  const RATIO=ratio(), fit=(aw: number,ah: number)=>Math.min(aw,ah/RATIO);
   // Boutons flottants : à droite ou en bas, selon ce qui laisse l'affiche la plus grande ; masqués si l'aperçu est une vignette
-  let mode='side', w;
+  let mode='side', w: number;
   if(!small) w=fit(SW-pad*2,SH-pad*2);
   else if(SH<250){ mode='none'; w=fit(SW-pad*2,SH-pad*2); }
   else{ const side=SH>=264?fit(SW-pad*2-FAB,SH-pad*2):0, bot=fit(SW-pad*2,SH-pad*2-FAB); if(bot>side+1){ mode='bottom'; w=bot; } else w=side; }
@@ -43,7 +45,7 @@ function layoutPreview(){
   slot.classList.toggle('circle',!!g.circle);
   // Deux lieux : la vue non éditée est une image figée ; la toucher la rend éditable
   const other=G.rects ? G.rects[1-(st.active||0)] : null, ps=$('placeSwitch');
-  ps.hidden=!other; if(other){ Object.assign(ps.style,{left:other.x+'px',top:other.y+'px',width:other.w+'px',height:other.h+'px'}); ps.querySelector('span').textContent=`Modifier le lieu ${2-(st.active||0)}`; ps.classList.toggle('mini',other.w<170); }
+  ps.hidden=!other; if(other){ Object.assign(ps.style,{left:other.x+'px',top:other.y+'px',width:other.w+'px',height:other.h+'px'}); ps.querySelector('span')!.textContent=`Modifier le lieu ${2-(st.active||0)}`; ps.classList.toggle('mini',other.w<170); }
   if(G.sky) ensureSky();
   drawTexture();
   CMS.surface.fit(vecC,g.w*ui.dpr,g.h*ui.dpr);
@@ -54,9 +56,9 @@ function layoutPreview(){
 /** Amène un élément des réglages en vue en ne faisant défiler que la zone des réglages (.tabbody) : scrollIntoView
  *  fait aussi défiler les ancêtres, page comprise, et sortait l'affiche de l'écran sur mobile (accord refusé, #59). */
 CMS.define('panelScroll', () => ({
-  to(el, block='start', smooth=false){
+  to(el: Element | null | undefined, block: ScrollLogicalPosition='start', smooth=false){
     const tb=el?.closest?.('.tabbody'); if(!tb){ el?.scrollIntoView?.({block}); return; }
-    const r=el.getBoundingClientRect(), t=tb.getBoundingClientRect();
+    const r=el!.getBoundingClientRect(), t=tb.getBoundingClientRect();
     const d = block==='nearest' ? (r.top<t.top ? r.top-t.top : r.bottom>t.bottom ? Math.min(r.bottom-t.bottom, r.top-t.top) : 0) : r.top-t.top-8;
     if(d) tb.scrollTo({top:tb.scrollTop+d, behavior:smooth?'smooth':'auto'});
   }
@@ -64,14 +66,14 @@ CMS.define('panelScroll', () => ({
 /** Surfaces de l'aperçu : redimensionnement sans réallocation inutile, suivi de la densité de pixels */
 CMS.define('surface', () => ({
   /** Redimensionne un canevas seulement si sa taille change : réaffecter width / height l'efface et réalloue sa mémoire */
-  fit(cv,w,h){
+  fit(cv: HTMLCanvasElement,w: number,h: number){
     w=Math.max(1,Math.round(w)); h=Math.max(1,Math.round(h));
     if(cv.width===w && cv.height===h) return false;
     cv.width=w; cv.height=h; return true;
   },
   /** Prévient quand la densité de pixels change sans redimensionnement (fenêtre déplacée vers un autre écran, zoom du navigateur) */
-  watchDpr(onChange){
-    let mql=null;
+  watchDpr(onChange: (dpr: number)=>void){
+    let mql: MediaQueryList | null=null;
     const handler=()=>{ arm(); onChange(window.devicePixelRatio||1); };
     const arm=()=>{ mql?.removeEventListener('change',handler); mql=matchMedia(`(resolution: ${window.devicePixelRatio||1}dppx)`); mql.addEventListener('change',handler); };
     arm();
@@ -79,7 +81,7 @@ CMS.define('surface', () => ({
   }
 }));
 function drawUnder(){
-  const ctx=cvU.getContext('2d'), g=drawPoster(ctx,cvU.width,cvU.height,'under');
+  const ctx=cvU.getContext('2d')!, g=drawPoster(ctx,cvU.width,cvU.height,'under');
   if(g.rects){   // vue figée du lieu non édité
     const r=g.rects[1-(st.active||0)];
     ctx.save(); clipMap(ctx,r); ctx.fillStyle=st.colors.land; ctx.fillRect(r.x,r.y,r.w,r.h);
@@ -100,14 +102,14 @@ async function makeSnap(){
   catch(e){ console.warn('vue figée',e); } finally{ snapBusy=false; }
 }
 /** Carte d'une vue quelconque, à la taille demandée (px) : MapLibre hors écran, ou vecteurs du moteur Fichier */
-async function renderView(view,wPx,hPx){
+async function renderView(view: Place,wPx: number,hPx: number): Promise<HTMLCanvasElement | null> {
   if(st.engine==='maplibre'){ if(mlLib!=='ok' || !consent) return null; return (await renderMaplibreOffscreen(wPx,hPx,view)).canvas; }
   if(!osmData) return null;
-  const cv=document.createElement('canvas'); cv.width=wPx; cv.height=hPx; const c=cv.getContext('2d');
+  const cv=document.createElement('canvas'); cv.width=wPx; cv.height=hPx; const c=cv.getContext('2d')!;
   c.fillStyle=st.colors.land; c.fillRect(0,0,wPx,hPx); drawVectors(c,{x:0,y:0,w:wPx,h:hPx},osmData,view); return cv;
 }
 /** Change le lieu édité (gabarit Deux lieux) : la carte interactive passe sur l'autre cadre */
-function setActivePlace(i){
+function setActivePlace(i: number){
   if(st.layout!=='diptych' || i===(st.active||0)) return;
   const cur={center:st.center,zoom:st.zoom,marker:st.marker}, o=otherView();
   st.center=o.center; st.zoom=o.zoom; st.marker=o.marker; st.place2=cur; st.active=i; ui.snap=null;
@@ -115,8 +117,8 @@ function setActivePlace(i){
   layoutPreview(); if(mlMap) mlRestyle(); saveState();
   late.toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
 }
-function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); setFitSink({}); ui.inkSink=CMS.safe?.on?[]:null;
-  const g=drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; setFitSink(null); showFit(fit); describePoster();
+function drawOver(){ const ctx=cvO.getContext('2d')!; ctx.clearRect(0,0,cvO.width,cvO.height); setFitSink({}); ui.inkSink=CMS.safe?.on?[]:null;
+  const g=drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; setFitSink(null); showFit(fit!); describePoster();
   CMS.safe?.check(ui.inkSink,cvO.width,cvO.height); ui.inkSink=null; CMS.perf.end('reglage','aperçu');
   // Un texte peut déplacer la carte (dédicace passée sur deux lignes, ou revenue sur une) : son cadre est replacé
   // (comparaison en fraction de la hauteur : le canevas est arrondi au pixel, pas la taille CSS de l'affiche)
@@ -132,9 +134,9 @@ function describePoster(){
   if(cvO.getAttribute('aria-label')!==d) cvO.setAttribute('aria-label',d);
 }
 /** Signale dans l'onglet Textes les lignes réduites automatiquement pour tenir dans l'affiche */
-const FIT_NAMES={title:'titre',subtitle:'sous-titre',coords:'coordonnées',dedication:'dédicace',names:'noms',date:'date'};
+const FIT_NAMES: Record<string, string>={title:'titre',subtitle:'sous-titre',coords:'coordonnées',dedication:'dédicace',names:'noms',date:'date'};
 let fitPrev='';
-function showFit(fit){
+function showFit(fit: Record<string, number>){
   const key=JSON.stringify([fit,st.dedWrap]); if(key===fitPrev) return; fitPrev=key;
   for(const k of Object.keys(FIT_NAMES)){ const o=$('oTs-'+k); if(!o) continue; const f=fit[k];
     o.classList.toggle('shrunk',!!f); o.title = f ? `Réduit à ${Math.round(f*100)} % pour tenir dans l'affiche` : ''; }
@@ -156,7 +158,7 @@ function dedWrapsOnce(){
 }
 let rafO=0, rafM=0;
 function scheduleOver(){ if(!rafO) rafO=requestAnimationFrame(()=>{rafO=0;drawOver()}); }
-function renderMap(viewChanged){
+function renderMap(viewChanged?: boolean){
   if(st.mode==='illus'){ $('mlMap').hidden=true; vecC.hidden=true; mlKeepAlive(false); scheduleOver(); return; }   // pas de carte : aucune requête de tuiles
   const isML = st.engine==='maplibre';
   $('mlMap').hidden = !isML;
@@ -168,15 +170,15 @@ function renderMap(viewChanged){
 }
 function scheduleOp(){ if(!rafM) rafM=requestAnimationFrame(()=>{rafM=0;drawOp()}); }
 function drawOp(){
-  const ctx=vecC.getContext('2d'), r={x:0,y:0,w:vecC.width,h:vecC.height};
+  const ctx=vecC.getContext('2d')!, r={x:0,y:0,w:vecC.width,h:vecC.height};
   ctx.fillStyle=st.colors.land; ctx.fillRect(0,0,r.w,r.h);
   if(osmData) drawVectors(ctx,r,osmData);
   checkDataBanner();
 }
-function redrawAll(restyle){ drawUnder(); if(restyle) mlRestyle(); renderMap(false); saveState(); }
+function redrawAll(restyle?: boolean){ drawUnder(); if(restyle) mlRestyle(); renderMap(false); saveState(); }
 /** Après une modification de l'état : redessine ce qui en dépend, puis enregistre (différé, cf. saveState).
  *  Par défaut, la couche du dessus (textes, repères) ; cards : vignettes ; all : fond, carte et style MapLibre. */
-function changed(o={}){
+function changed(o: {all?: boolean; cards?: boolean}={}){
   CMS.perf.start('reglage', o.all && st.engine==='maplibre' && mlMap ? 'carte' : '');   // mesuré jusqu'à l'aperçu (ou la carte GPU) redessiné
   if(o.cards) late.refreshCards();
   if(o.all) redrawAll(true);
@@ -185,7 +187,7 @@ function changed(o={}){
 
 // Gestes du canvas vectoriel (glisser, pincer, molette, toucher)
 (function(){
-  const pts=new Map(); let moved=false, startD=0, startZ=0, last=null, start=null;
+  const pts=new Map<number, {x: number; y: number}>(); let moved=false, startD=0, startZ=0, last={x:0,y:0}, start={x:0,y:0};
   vecC.addEventListener('pointerdown',e=>{ vecC.setPointerCapture(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(pts.size===1){moved=false; start={x:e.clientX,y:e.clientY};} last={x:e.clientX,y:e.clientY};
     if(pts.size===2){ const [a,b]=[...pts.values()]; startD=Math.hypot(a.x-b.x,a.y-b.y); startZ=st.zoom; } });
   vecC.addEventListener('pointermove',e=>{
@@ -197,14 +199,14 @@ function changed(o={}){
     st.center={lon:st.center.lon-dx/S*360, lat:imerc(merc(st.center.lat)+dy*2*Math.PI/S)};
     renderMap();
   });
-  const up=e=>{ const wasTap=!moved && pts.size===1; pts.delete(e.pointerId); if(pts.size<2) startD=0; if(pts.size===1){ const q=[...pts.values()][0]; last={x:q.x,y:q.y}; moved=true; }
+  const up=(e: PointerEvent)=>{ const wasTap=!moved && pts.size===1; pts.delete(e.pointerId); if(pts.size<2) startD=0; if(pts.size===1){ const q=[...pts.values()][0]; last={x:q.x,y:q.y}; moved=true; }
     if(wasTap && ui.placing){ const rc=vecC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); late.placeAt(ll.lat,ll.lon); }
     if(pts.size===0) saveState(); };
   vecC.addEventListener('pointerup',up); vecC.addEventListener('pointercancel',up);
   // Clavier (la carte MapLibre a le sien) : flèches = 10 % du cadre (Maj : 50 %), + / − = zoom, Entrée = repère au centre en mode placement
   vecC.addEventListener('keydown',e=>{
     if(e.altKey||e.ctrlKey||e.metaKey) return;
-    const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+    const d=({ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]} as Record<string, number[]>)[e.key];
     if(d){ const f=e.shiftKey?0.5:0.1, S=worldSize(ui.slotCss.w,st.zoom), dx=d[0]*f*ui.slotCss.w, dy=d[1]*f*ui.slotCss.h;
       st.center={lon:st.center.lon+dx/S*360, lat:imerc(merc(st.center.lat)-dy*2*Math.PI/S)}; }
     else if(e.key==='+'||e.key==='='||e.key==='-'||e.key==='_'){ st.zoom=clamp(st.zoom+(e.key==='+'||e.key==='='?0.5:-0.5),10,18); late.syncZoomUI(); }
@@ -218,13 +220,13 @@ function changed(o={}){
 // ---------- Papier : textures générées (aucune image) ----------
 // Base de largeur fixe (1240 px) agrandie à la taille voulue : le grain est le même à l'aperçu et à l'export.
 // Papier clair : fusion « multiply » (assombrit légèrement) ; papier sombre : « screen » sur la texture inversée.
-const TEX_BASE=1240, texCache=new Map();
-function rng(seed){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
-function textureBase(kind, land, dark, folds=false){
-  const key=[kind,land,dark,folds].join(); if(texCache.has(key)) return texCache.get(key);
+const TEX_BASE=1240, texCache=new Map<string, HTMLCanvasElement>();
+function rng(seed: number){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function textureBase(kind: string, land: boolean, dark: boolean, folds=false){
+  const key=[kind,land,dark,folds].join(); if(texCache.has(key)) return texCache.get(key)!;
   const w=land?Math.round(TEX_BASE*1.4145):TEX_BASE, h=land?TEX_BASE:Math.round(TEX_BASE*1.4145);
-  const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const c=cv.getContext('2d');
-  const R=rng({grain:11,aquarelle:23,kraft:37,toile:53,ancien:71}[kind]||1);
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const c=cv.getContext('2d')!;
+  const R=rng(({grain:11,aquarelle:23,kraft:37,toile:53,ancien:71} as Record<string, number>)[kind]||1);
   c.fillStyle=kind==='kraft'?'#E3CFAE':kind==='ancien'?'#F5EAD2':'#fff'; c.fillRect(0,0,w,h);
   if(kind==='ancien'){   // papier jauni : bords roussis, rousseurs (taches brunes éparses), quelques salissures diffuses
     let gr=c.createRadialGradient(w/2,h/2,Math.min(w,h)*0.3,w/2,h/2,Math.hypot(w,h)*0.55);
@@ -237,7 +239,7 @@ function textureBase(kind, land, dark, folds=false){
   }
   if(kind==='aquarelle'){   // taches douces : bruit de valeur à basse résolution, agrandi avec lissage
     for(const [n,a] of [[9,0.10],[23,0.06],[60,0.035]]){
-      const sm=document.createElement('canvas'); sm.width=n; sm.height=Math.round(n*h/w); const sc=sm.getContext('2d'), d=sc.createImageData(sm.width,sm.height);
+      const sm=document.createElement('canvas'); sm.width=n; sm.height=Math.round(n*h/w); const sc=sm.getContext('2d')!, d=sc.createImageData(sm.width,sm.height);
       for(let i=0;i<d.data.length;i+=4){ const v=255-R()*255*a*0.55; d.data[i]=d.data[i+1]=d.data[i+2]=v; d.data[i+3]=255; }
       sc.putImageData(d,0,0); c.globalCompositeOperation='multiply'; c.imageSmoothingEnabled=true; c.imageSmoothingQuality='high'; c.drawImage(sm,0,0,w,h); }
     c.globalCompositeOperation='multiply'; const gr=c.createRadialGradient(w/2,h/2,Math.min(w,h)*0.35,w/2,h/2,Math.max(w,h)*0.75);
@@ -253,7 +255,7 @@ function textureBase(kind, land, dark, folds=false){
     for(let x=0;x<w;x+=3){ c.fillStyle=`rgba(0,0,0,${0.02+R()*0.03})`; c.fillRect(x,0,1,h); }
   }
   // grain fin, commun à toutes les textures (pas au papier lisse, qui peut ne porter que des plis)
-  if(kind!=='none'){ const d=c.getImageData(0,0,w,h), D=d.data, amp={grain:34,aquarelle:14,kraft:22,toile:12,ancien:18}[kind]||20;
+  if(kind!=='none'){ const d=c.getImageData(0,0,w,h), D=d.data, amp=({grain:34,aquarelle:14,kraft:22,toile:12,ancien:18} as Record<string, number>)[kind]||20;
     for(let i=0;i<D.length;i+=4){ const n=R()*R()*amp; D[i]-=n; D[i+1]-=n; D[i+2]-=n; }
     c.putImageData(d,0,0); }
   if(folds) drawFolds(c,w,h);
@@ -262,9 +264,9 @@ function textureBase(kind, land, dark, folds=false){
 }
 /** Plis d'une carte dépliée : trois volets dans la largeur, deux dans la hauteur (selon l'orientation),
  *  chaque pli = une ombre douce d'un côté et un fin trait de cassure ; usure plus marquée aux croisements */
-function drawFolds(c,w,h){
+function drawFolds(c: CanvasRenderingContext2D,w: number,h: number){
   const R=rng(97), port=h>w, xs=port?[w/2]:[w/3,2*w/3], ys=port?[h/3,2*h/3]:[h/2], band=Math.min(w,h)*0.035;
-  const fold=(x,y,vert)=>{ const gr=vert?c.createLinearGradient(x-band,0,x+band,0):c.createLinearGradient(0,y-band,0,y+band);
+  const fold=(x: number,y: number,vert: boolean)=>{ const gr=vert?c.createLinearGradient(x-band,0,x+band,0):c.createLinearGradient(0,y-band,0,y+band);
     gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(0.47,'rgba(60,45,30,0.10)'); gr.addColorStop(0.5,'rgba(60,45,30,0.16)'); gr.addColorStop(0.53,'rgba(60,45,30,0.03)'); gr.addColorStop(1,'rgba(0,0,0,0)');
     c.fillStyle=gr; vert?c.fillRect(x-band,0,2*band,h):c.fillRect(0,y-band,w,2*band);
     c.strokeStyle='rgba(50,35,20,0.22)'; c.lineWidth=1; c.beginPath();
@@ -276,7 +278,7 @@ function drawFolds(c,w,h){
 const hasPaper=()=>(st.texture && st.texture!=='none') || !!st.folds;
 function texMode(){ return lum(st.colors.paper)<0.3 ? 'screen' : 'multiply'; }
 /** Applique le papier à un rendu complet (export, aperçu au mur) */
-function applyTexture(ctx,W,H){
+function applyTexture(ctx: CanvasRenderingContext2D,W: number,H: number){
   if(!hasPaper()) return;
   ctx.save(); ctx.globalCompositeOperation=texMode(); ctx.drawImage(textureBase(st.texture||'none',W>H,texMode()==='screen',!!st.folds),0,0,W,H); ctx.restore();
 }
@@ -284,20 +286,20 @@ function applyTexture(ctx,W,H){
 function drawTexture(){
   const on=hasPaper(); cvT.hidden=!on; if(!on) return;
   cvT.style.mixBlendMode=texMode();
-  const c=cvT.getContext('2d'); c.clearRect(0,0,cvT.width,cvT.height); c.drawImage(textureBase(st.texture||'none',cvT.width>cvT.height,texMode()==='screen',!!st.folds),0,0,cvT.width,cvT.height);
+  const c=cvT.getContext('2d')!; c.clearRect(0,0,cvT.width,cvT.height); c.drawImage(textureBase(st.texture||'none',cvT.width>cvT.height,texMode()==='screen',!!st.folds),0,0,cvT.width,cvT.height);
 }
 
 // ---------- Composition complète (export et aperçu au mur) ----------
-async function composePoster(W,H,step=()=>{}){
+async function composePoster(W: number,H: number,step: (msg: string)=>void=()=>{}){
   step('Chargement des polices…'); await late.loadFonts(); const fontWarn=!late.fontsReady();
   const g=geom(st,W,H); if(g.sky){ step('Chargement du ciel…'); await ensureSky(); }
-  const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d');
-  let warn=false; const imgs=[];
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d')!;
+  let warn=false; const imgs: HTMLCanvasElement[]=[];
   if(st.engine==='maplibre'){
     step('Rendu vectoriel haute définition…');
     for(const [i,p] of g.places.entries()){ const r=await renderMaplibreOffscreen(Math.round(p.rect.w),Math.round(p.rect.h),p.view); imgs[i]=r.canvas; warn=warn||r.warn; }
   } else step('Re-projection des vecteurs…');
-  const mapFn=(c,rect,view,i)=> st.engine==='maplibre' ? c.drawImage(imgs[i],rect.x,rect.y,rect.w,rect.h) : drawVectors(c,rect,osmData,view);
+  const mapFn=(c: CanvasRenderingContext2D,rect: Rect,view: any,i: number)=> st.engine==='maplibre' ? c.drawImage(imgs[i],rect.x,rect.y,rect.w,rect.h) : drawVectors(c,rect,osmData,view);
   drawPoster(ctx,W,H,'all',mapFn); applyTexture(ctx,W,H);
   for(const c of imgs) if(c){ c.width=c.height=0; }   // rendus MapLibre intermédiaires : mémoire rendue tout de suite (iOS)
   return {canvas:cv,warn,fontWarn};
@@ -306,20 +308,20 @@ async function composePoster(W,H,step=()=>{}){
 // ---------- Aperçu au mur ----------
 const WALLS=[['Blanc cassé','#ECE8E1'],['Sauge','#C7D1C1'],['Terracotta','#C98B6B'],['Béton','#9C9C99'],['Nuit','#2B2F36']];
 const FRAMES=[['Chêne','oak'],['Noir','#1B1B1B'],['Blanc','#F4F4F2'],['Doré','gold']];
-const mock={wall:0,frame:0,mat:true,poster:null};
+const mock: {wall: number; frame: number; mat: boolean; poster: HTMLCanvasElement | null}={wall:0,frame:0,mat:true,poster:null};
 async function openMockup(){
   if(st.engine==='maplibre' && !needConsent(()=>openMockup())) return;
   if(st.engine!=='maplibre' && !osmData){ late.toast('Chargez d\'abord la carte (onglet Lieu, section Avancé).',true); return; }
   setBusy(true,'Préparation de l\'aperçu…'); let ok=false;
-  try{ const d=posterDims(), k=1100/Math.max(d.W,d.H); mock.poster=(await composePoster(Math.round(d.W*k),Math.round(d.H*k),t=>$('busyTxt').textContent=t)).canvas;
+  try{ const d=posterDims(), k=1100/Math.max(d.W,d.H); mock.poster=(await composePoster(Math.round(d.W*k),Math.round(d.H*k),t=>{ $('busyTxt').textContent=t; })).canvas;
     drawMockup(); ok=true; }
-  catch(e){ console.error(e); late.toast('Aperçu impossible : '+(e.message||e),true); }
+  catch(e){ console.error(e); late.toast('Aperçu impossible : '+((e as Error).message||e),true); }
   finally{ setBusy(false); }
   if(ok) openDialog('mockup');
 }
 function drawMockup(){
   const P=mock.poster; if(!P) return;
-  const land=P.width>P.height, SW=land?1800:1400, SH=land?1350:1750, cv=$('mockCv'); cv.width=SW; cv.height=SH; const c=cv.getContext('2d');
+  const land=P.width>P.height, SW=land?1800:1400, SH=land?1350:1750, cv=$<HTMLCanvasElement>('mockCv'); cv.width=SW; cv.height=SH; const c=cv.getContext('2d')!;
   const wall=WALLS[mock.wall][1];
   c.fillStyle=wall; c.fillRect(0,0,SW,SH);
   let g=c.createLinearGradient(0,0,0,SH); g.addColorStop(0,'rgba(255,255,255,0.10)'); g.addColorStop(0.7,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.12)'); c.fillStyle=g; c.fillRect(0,0,SW,SH);
@@ -338,15 +340,15 @@ function drawMockup(){
   if(mat){ c.fillStyle='#F7F5F0'; c.fillRect(ox+fw,oy+fw,ow-2*fw,oh-2*fw); c.strokeStyle='rgba(0,0,0,0.18)'; c.lineWidth=2; c.strokeRect(ox+fw+mat-1,oy+fw+mat-1,pw+2,ph+2); }
   c.drawImage(P,ox+fw+mat,oy+fw+mat,pw,ph);
   g=c.createLinearGradient(ox,oy,ox+ow,oy+oh); g.addColorStop(0,'rgba(255,255,255,0.10)'); g.addColorStop(0.45,'rgba(255,255,255,0)'); c.fillStyle=g; c.fillRect(ox+fw,oy+fw,ow-2*fw,oh-2*fw);
-  document.querySelectorAll('#mockWalls .chip').forEach((b,i)=>b.classList.toggle('on',i===mock.wall));
-  document.querySelectorAll('#mockFrames .chip').forEach((b,i)=>b.classList.toggle('on',i===mock.frame));
+  document.querySelectorAll<HTMLElement>('#mockWalls .chip').forEach((b,i)=>b.classList.toggle('on',i===mock.wall));
+  document.querySelectorAll<HTMLElement>('#mockFrames .chip').forEach((b,i)=>b.classList.toggle('on',i===mock.frame));
   $('mockMat').checked=mock.mat;
 }
 function downloadMockup(){
-  $('mockCv').toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`apercu-au-mur-${late.slug(st.texts.title)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); },'image/png');
+  $<HTMLCanvasElement>('mockCv').toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`apercu-au-mur-${late.slug(st.texts.title)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); },'image/png');
 }
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
 Object.assign(late, {$, drawUnder, renderMap, scheduleOver});
 
 export {$, FIT_NAMES, FRAMES, WALLS, applyTexture, changed, composePoster, downloadMockup, drawMockup, drawOp, drawOver, drawTexture, drawUnder, h, layoutPreview, mock, openMockup, poster, redrawAll, renderMap, scheduleOver, setActivePlace, slot, stage, textureBase};

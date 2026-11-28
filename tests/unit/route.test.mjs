@@ -1,9 +1,9 @@
-// Itinéraire préparé avec une IA (issue #85) : fonctions pures de CMS.route, sans navigateur
-import { test } from 'node:test';
+// Tests unitaires sans navigateur : npx vitest run (aussi lancés par tests/unit.py, donc par la CI)
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { load, ev } from './load.mjs';
 
-const ctx = await load(['js/config.js', 'js/maplibre-loader.js', 'js/geocoder.js', 'js/state.js', 'js/geo.js', 'js/route.js']);
+const ctx = await load(['js/config.ts', 'js/maplibre-loader.ts', 'js/geocoder.ts', 'js/state.ts', 'js/geo.ts', 'js/route.ts']);
 const J = expr => JSON.parse(JSON.stringify(ev(ctx, expr)));
 const S = patch => `Object.assign(structuredClone(DEFAULT_STATE), ${patch})`;
 const TWO = S("{markerLabel:'Rencontre', markers2:[{lat:47.5856,lon:1.3311,label:'Château'}], texts:{...DEFAULT_STATE.texts,date:'14 juin 2019'}}");

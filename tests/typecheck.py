@@ -1,7 +1,7 @@
-"""Vérification TypeScript (#103) : `tsc -p .` (tsconfig.json, mode strict) sur les fichiers .ts de js/.
+"""Vérification TypeScript (#103) : `tsc -p .` (tsconfig.json, mode strict) sur tous les fichiers de js/.
 
-La migration se fait fichier par fichier : les .ts sont vérifiés strictement, les .js restants sont lus pour leurs
-types (allowJs) mais pas vérifiés. Aucune erreur tolérée.
+Aucune erreur tolérée ; aucun fichier JavaScript dans js/ (un nouveau module s'écrit en TypeScript). TypeScript refuse
+aussi un nom utilisé sans import et une variable importée réaffectée (contrôles qu'assurait ESLint jusqu'au lot 5).
 """
 import pathlib, subprocess, sys
 
@@ -10,6 +10,9 @@ ts = sorted(p.name for p in (ROOT / 'js').glob('*.ts') if not p.name.endswith('.
 js = sorted(p.name for p in (ROOT / 'js').glob('*.js'))
 r = subprocess.run(['npx', '--no-install', 'tsc', '-p', '.'], cwd=ROOT, capture_output=True, text=True)
 print((r.stdout + r.stderr).strip() or '  tsc : aucune erreur')
-print(f'  migrés en TypeScript : {len(ts)} ({", ".join(ts)}) · restent en JavaScript : {len(js)}')
-print('✓ types : aucune erreur' if r.returncode == 0 else '✗ types : erreurs TypeScript (voir ci-dessus)')
-sys.exit(r.returncode)
+print(f'  modules TypeScript : {len(ts)} ({", ".join(ts)})')
+fails = r.returncode != 0
+if js:
+    print(f'✗ fichiers JavaScript dans js/ : {", ".join(js)} (à écrire en TypeScript)'); fails = True
+print('✓ types : aucune erreur, tout js/ en TypeScript' if not fails else '✗ types : voir ci-dessus')
+sys.exit(1 if fails else 0)
