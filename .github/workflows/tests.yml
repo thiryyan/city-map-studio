@@ -100,10 +100,13 @@ jobs:
             const {owner, repo} = context.repo, n = context.issue.number;
             const base = `https://${owner}.github.io/${repo}/`;
             const marker = '<!-- preversion-pages -->';
+            // Après la bascule (.github/bascule, #104) : version publiée à la racine, version classique sous /classique/
+            const bascule = require('fs').existsSync('.github/bascule');
             const body = [marker,
               `**Préversion** de cette pull request : ${base}pr-${n}/`,
               '',
-              `Version classique : ${base} · version en cours de refonte : ${base}nouvelle/`,
+              bascule ? `Version publiée : ${base} · version classique : ${base}classique/`
+                      : `Version classique : ${base} · version en cours de refonte : ${base}nouvelle/`,
               '',
               '_Disponible une à deux minutes après la publication ; retirée à la fermeture de la pull request._'].join('\n');
             const comments = await github.paginate(github.rest.issues.listComments, {owner, repo, issue_number: n});

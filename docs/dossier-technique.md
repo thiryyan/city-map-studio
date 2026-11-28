@@ -21,7 +21,7 @@
 | E9 | Export | PNG A4 300 DPI (2480 × 3508 px) par défaut ; A3, 50 × 70 cm et 10 × 15 cm (tirage photo) ; PDF à la taille d'impression (§ 5). |
 | E10 | Livraison | Sources : `index.html` (balisage), `css/app.css`, `js/*.ts` (**modules ES** en TypeScript strict, #103 ; point d'entrée `js/main.ts`), construites puis servies en http pour développer (`npm run dev`). **Site publié construit** par `scripts/build.mjs` (#102, § 7.8) : `dist/`, un seul script et une seule feuille minifiés, `sw.js` généré ; il s'ouvre aussi en `file://`. MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
 | E11 | Écrans | Mobile en priorité, ordinateur en second. Interface en français. |
-| E12 | Hébergement | **GitHub Pages**, publié depuis la branche `gh-pages` par GitHub Actions (§ 7.6) : racine = version classique (branche `classique`), `/nouvelle/` = branche `main`, `/pr-N/` = préversions. |
+| E12 | Hébergement | **GitHub Pages**, publié depuis la branche `gh-pages` par GitHub Actions (§ 7.6) : racine = branche `main` (depuis la bascule du 28/11/2026, #104), `/classique/` = version classique (branche `classique`), `/nouvelle/` = renvoi vers la racine, `/pr-N/` = préversions. |
 | E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU : mention complète active par défaut. Décochée, la case laisse une **mention minimale toujours inscrite** (« © OpenStreetMap », plus « © OpenMapTiles » avec le moteur GPU ; `attributionText`). À l'écran, les sources de la carte sont rappelées en légende discrète **sous l'aperçu**, hors de l'affiche (`#mapCredit`, placée par `layoutPreview`) : l'aperçu montre ainsi exactement la mention de l'export. |
 | E14 | Vie privée | Aucune ressource de présentation (librairie, polices, styles) n'est chargée depuis un tiers : l'adresse IP du visiteur n'est transmise qu'aux services de données cartographiques nécessaires au fonctionnement, et **seulement après son accord explicite** (§ 2.4). Les polices sont auto-hébergées, conformément à la jurisprudence RGPD sur Google Fonts (LG München, 20/01/2022, 3 O 17493/20). |
 | E15 | Sécurité | Politique de sécurité du contenu (CSP) en balise meta : aucun script ni style en ligne, réseau limité aux services cartographiques. Tout état venu de l'extérieur (lien partagé, `localStorage`) est validé champ par champ (`normState`). CDN de secours chargés avec empreinte SRI. |
@@ -91,7 +91,7 @@ Les canevas de l'aperçu sont à la densité de l'écran (`devicePixelRatio`, 3 
   | `cms3.debug` | `'1'` : expose `window.__cms` (§ 8.2) | non |
   | IndexedDB `cms3`, magasin `images` | Illustrations, par empreinte SHA-256 (§ 4.13) | non (nettoyage des images orphelines) |
 
-  **Espace de noms propre (#100)** : toutes les clés de cette version commencent par `cms3.` et sa base IndexedDB s'appelle `cms3`. La version classique, publiée à la racine sur la même origine (§ 7.6), garde `cityMapStudio.*` et la base `cityMapStudio` : aucune des deux ne lit ni n'écrit les données de l'autre (vérifié par `tests/storage.py`). Conséquence : les affiches de la version classique n'apparaissent pas dans cette version (décision du 27/11/2026 : pas de relecture des anciens formats).
+  **Espace de noms propre (#100)** : toutes les clés de cette version commencent par `cms3.` et sa base IndexedDB s'appelle `cms3`. La version classique, publiée sous `/classique/` sur la même origine (§ 7.6), garde `cityMapStudio.*` et la base `cityMapStudio` : aucune des deux ne lit ni n'écrit les données de l'autre (vérifié par `tests/storage.py`). Conséquence : les affiches de la version classique n'apparaissent pas dans cette version (décision du 27/11/2026 : pas de relecture des anciens formats).
 
 ### 2.5. Villes préréglées
 
@@ -637,18 +637,20 @@ L'application installée (Chrome, Android, iOS) est le site dans une fenêtre d�
 
 ### 7.6. Publication à deux voies (#97, #99)
 
-Pendant la refonte, la version actuelle reste l'application de référence à l'adresse habituelle ; la nouvelle est publiée à côté. Le job `publish` de `.github/workflows/tests.yml` lance `.github/scripts/pages.sh` après des tests réussis, et écrit la branche `gh-pages`, source de GitHub Pages :
+Pendant la refonte, la version classique est restée l'application de référence à l'adresse habituelle, la nouvelle étant publiée à côté ; depuis la bascule du 28/11/2026 (#104), la nouvelle est à l'adresse habituelle et la classique reste accessible. Le job `publish` de `.github/workflows/tests.yml` lance `.github/scripts/pages.sh` après des tests réussis, et écrit la branche `gh-pages`, source de GitHub Pages :
 
 | Adresse | Contenu | Mise à jour |
 | :--- | :--- | :--- |
-| `/city-map-studio/` | Branche `classique` (étiquette `v1-classique` : version avant refonte) | À chaque publication ; après un correctif sur `classique`, relancer le workflow (Actions → Tests → Run workflow) |
-| `/city-map-studio/nouvelle/` | Branche `main` | À chaque push sur `main` |
+| `/city-map-studio/` | Branche `main` (avant la bascule : branche `classique`) | À chaque push sur `main` |
+| `/city-map-studio/classique/` | Branche `classique` (étiquette `v1-classique` : version avant refonte ; avant la bascule : à la racine) | À chaque publication ; après un correctif sur `classique`, relancer le workflow (Actions → Tests → Run workflow) |
+| `/city-map-studio/nouvelle/` | Renvoi vers la racine (avant la bascule : branche `main`) | À chaque publication |
 | `/city-map-studio/pr-N/` | Pull request N (commit de fusion testé) | À chaque push sur la pull request ; lien posté dans la pull request ; retirée à sa fermeture |
 
 * Seuls les fichiers servis sont copiés (`index.html`, `manifest.webmanifest`, `sw.js`, `.nojekyll`, `css/`, `js/`, `lib/`, `icons/`) ; les autres préversions publiées sont conservées.
 * Une seule écriture de `gh-pages` à la fois (`concurrency: gh-pages`) ; aucune publication pour une pull request venue d'un fork.
-* Chaque copie a son propre service worker, limité à son dossier, et son propre cache (§ 7.5). Stockage local séparé (#100) : `/nouvelle/` et les préversions utilisent les clés `cms3.*` et la base `cms3`, la version classique `cityMapStudio.*` (§ 2.4).
-* Bascule (lot 6, #104), seulement avec l'accord du propriétaire : `main` passe à la racine, la version classique sous `/classique/`.
+* Chaque copie a son propre service worker, limité à son dossier, et son propre cache (§ 7.5). Stockage local séparé (#100) : la nouvelle version (racine) et les préversions utilisent les clés `cms3.*` et la base `cms3`, la version classique `cityMapStudio.*` (§ 2.4).
+* **Bascule** (lot 6, #104), approuvée par le propriétaire le 28/11/2026 : le fichier `.github/bascule` de la branche `main` fait publier `main` à la racine et la version classique sous `/classique/`. La disposition suit la branche `main` publiée, jamais une pull request : la préversion de la pull request de bascule n'a rien changé. Le retirer rétablit la disposition d'avant.
+* Après la bascule : la version classique publiée sous `/classique/` nomme son cache `VERSION@dossier` et n'efface que les siens (adaptation faite à la publication par `pages.sh` ; sa branche reste figée), sinon son worker effacerait la copie hors ligne de la racine. `/nouvelle/` est une page de renvoi vers la racine (paramètres et lien partagé conservés) avec un worker qui efface ses caches et se retire. Les données de `/nouvelle/` (`cms3.*`) sont celles de la racine (même origine) ; celles de la version classique (`cityMapStudio.*`) restent lisibles sous `/classique/`. Sur un appareil où la version classique était installée à la racine, la nouvelle version s'affiche dès l'ouverture suivante, et le bandeau « Mettre à jour » remplace l'ancien worker.
 * Essai local : `REMOTE=<dépôt> PUSH=0 bash .github/scripts/pages.sh` (variables `PR`, `PR_DIR`, `PR_CLOSE` décrites en tête du script).
 
 ### 7.7. Mesures de performance (#101)
@@ -867,7 +869,7 @@ Restent à valider (⏳), faute de pouvoir les automatiser :
 
 ### 9.4. Contrôle de parité avant la bascule (#97, lot 6 : #104)
 
-La nouvelle version (`/nouvelle/`) ne remplace la version classique (racine du site) qu'avec l'accord du propriétaire, une fois chaque point de la liste de parité de #97 vérifié. Trois sortes de preuves :
+La nouvelle version ne remplace la version classique à la racine du site qu'avec l'accord du propriétaire, une fois la liste de parité de #97 vérifiée. **Bascule approuvée le 28/11/2026**, toutes les vérifications faites sur l'Appareil S2x, la semaine d'usage restant à courir sur la version publiée. Trois sortes de preuves :
 
 1. **Jumelage** (`tests/jumelage.py`, en CI) : la version classique (branche `classique`) et le site construit rendent les mêmes affiches, comparées **pixel par pixel** et **texte par texte** (textes tracés et leurs polices) : 82 affiches Carte (onze gabarits, portrait et paysage, seize thèmes, treize ambiances, dix repères, papiers et plis, onze effets, ornements, calques, textes et tailles, lignes masquées, lieux numérotés, itinéraire, Ciel du jour J, Lettres, Deux lieux, quatre formats) et 7 affiches illustrées (même image importée ; Illustration, plaques, cinq compositions Carte + illustration) ; mêmes listes proposées et mêmes dimensions d'export. Deux témoins vérifient que le test discrimine : les scénarios donnent des affiches différentes, et une teinte changée d'une unité est détectée. Résultat au 28/11/2026 : **89 affiches sur 89 identiques**.
 2. **Suite de la version classique** : les 51 tests de la version classique passent tous sur le site construit (`dist/`), en CI, avec les tests ajoutés pendant la refonte (stockage séparé, mesures, types, poids, jumelage).

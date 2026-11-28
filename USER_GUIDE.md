@@ -53,9 +53,14 @@ justification sont dans le [dossier technique](docs/dossier-technique.md).
 ### 2.1. Ouvrir l'application
 
 * **En ligne** : ouvrez l'adresse publiée (GitHub Pages). C'est le mode recommandé, en particulier sur téléphone.
-* **En local** : depuis le dossier du projet, lancez `python3 -m http.server 8000`, puis ouvrez `http://localhost:8000`.
-* **En fichier** : un double-clic sur `index.html` fonctionne aussi, mais l'application n'est alors ni installable
-  ni disponible hors ligne.
+* **En local** : depuis le dossier du projet, lancez `npm ci` puis `npm run dev`, et ouvrez `http://localhost:8000`.
+* **En fichier** : un double-clic sur `dist/index.html` (après `npm run build`) fonctionne aussi, mais l'application
+  n'est alors ni installable ni disponible hors ligne.
+* **Version d'origine** : depuis le 28/11/2026, l'adresse publiée sert la nouvelle version ; l'ancienne reste ouverte
+  à l'adresse publiée suivie de `classique/`, avec ses affiches. Les deux versions ne partagent pas Mes affiches. Pour
+  reprendre vos anciennes affiches : dans la version d'origine, onglet Export, touchez « Sauvegarder toutes mes affiches
+  dans un fichier » ; puis, dans la nouvelle version, même onglet, « Ouvrir un fichier » et choisissez ce fichier. Une application installée depuis
+  l'adresse publiée passe à la nouvelle version à l'ouverture suivante (bandeau « Mettre à jour »).
 
 ### 2.2. « Afficher la carte ? »
 
