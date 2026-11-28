@@ -1,5 +1,6 @@
 {
   "name": "city-map-studio",
+  "version": "2.0.0-alpha.1",
   "private": true,
   "description": "Atelier web de création d'affiches cartographiques souvenir",
   "license": "MIT",
@@ -15,5 +16,9 @@
     "esbuild": "0.28.2",
     "typescript": "5.9.3",
     "vitest": "3.2.4"
+  },
+  "dependencies": {
+    "@preact/signals-core": "1.14.5",
+    "valibot": "1.5.0"
   }
 }

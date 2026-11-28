@@ -26,19 +26,22 @@ SEED = "localStorage.setItem('cms3.consent','1'); localStorage.setItem('cms3.wel
 
 SW = (ROOT / 'sw.js').read_text(encoding='utf-8')
 VERSION = re.search(r"const VERSION = '([^']+)'", SW).group(1)
-# Script de l'application : js/main.ts dans la source, le script unique (js/app.<empreinte>.js) dans dist/
-MAIN = 'js/main.ts' if (ROOT / 'js' / 'main.ts').is_file() else re.search(r'<script src="(js/app\.[0-9a-f]+\.js)"', (ROOT / 'index.html').read_text(encoding='utf-8')).group(1)
+# Script de l'application : src/app/main.ts dans la source, le script unique (js/app.<empreinte>.js) dans dist/
+MAIN = 'src/app/main.ts' if (ROOT / 'src' / 'app' / 'main.ts').is_file() else re.search(r'<script src="(js/app\.[0-9a-f]+\.js)"', (ROOT / 'index.html').read_text(encoding='utf-8')).group(1)
 
 
 def label(v):
-    """Libellé affiché (CMS.build.label) : cms-2026-11-24h → 24/11/2026 (h) ; cms-2026-11-28-3522713 → 28/11/2026 (3522713)"""
+    """Libellé affiché (CMS.build.label) : 2.0.0-alpha.1+3522713 → 2.0.0-alpha.1 (3522713) ; ancien format
+    cms-2026-11-28-3522713 → 28/11/2026 (3522713)"""
+    s = re.match(r'(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\+([0-9A-Za-z.-]+))?$', v)
+    if s: return s[1] + (f' ({s[2]})' if s[2] else '')
     m = re.match(r'cms-(\d{4})-(\d\d)-(\d\d)-?(.*)$', v)
     return (f'{m[3]}/{m[2]}/{m[1]}' + (f' ({m[4]})' if m[4] else '')) if m else v
 
 
 class Q(SimpleHTTPRequestHandler):
     """Comme GitHub Pages : Cache-Control max-age=600. deploy : sw.js et les scripts servis avec une nouvelle VERSION
-    (source : js/core.ts ; dist/ : le script unique, qui contient CMS.build)."""
+    (source : src/core/cms.ts ; dist/ : le script unique, qui contient CMS.build)."""
     status = []; reqs = []; deploy = False
     def log_message(self, *a): pass
     def send_response(self, code, *a):
@@ -138,7 +141,7 @@ async def main():
 
         # 3 quater. Déploiement simulé : bandeau, « Mettre à jour », un seul rechargement, état conservé
         await page.evaluate("""()=>{ const i=document.querySelector('input[data-k="texts.title"]'); i.value='Mise à jour 65'; i.dispatchEvent(new Event('input',{bubbles:true})); }""")
-        await wait_js(page, "(localStorage.getItem('cms3.affiche')||'').includes('Mise à jour 65') || false", timeout=5000)
+        await wait_js(page, "(__cms.saved()||'').includes('Mise à jour 65') || false", timeout=5000)
         # Cache d'une autre copie de l'application sur la même origine (/nouvelle/, /pr-N/ ; #97) : jamais purgé par celle-ci
         await page.evaluate("caches.open('cms-autre@/autre-copie/').then(c=>c.put('autre-copie.txt', new Response('x')))")
         Q.deploy = True

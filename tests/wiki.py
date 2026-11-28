@@ -67,7 +67,7 @@ async def main():
         await page.wait_for_timeout(500)
         check(not wiki, 'accord général sans l\'option : aucune requête à Wikipédia')
         await page.evaluate("const c=document.getElementById('wikiOn'); c.checked=true; c.dispatchEvent(new Event('change'))")
-        st_ = await page.evaluate("[__cms.consent, document.getElementById('wikiOn').checked, document.getElementById('wikiBox').hidden, localStorage.getItem('cms3.wiki'), document.getElementById('consent').open]")
+        st_ = await page.evaluate("[__cms.consent, document.getElementById('wikiOn').checked, document.getElementById('wikiBox').hidden, localStorage.getItem('cms:wiki'), document.getElementById('consent').open]")
         check(st_[1:4] == [True, False, '1'], f'option activée et mémorisée {st_}')
         await page.wait_for_timeout(300)
         check(not wiki, 'activer l\'option n\'envoie rien : la recherche attend le bouton')
@@ -111,7 +111,7 @@ async def main():
 
         # Option décochée : plus de bouton
         await page.evaluate("const c=document.getElementById('wikiOn'); c.checked=false; c.dispatchEvent(new Event('change'))")
-        check(await page.evaluate("document.getElementById('wikiBox').hidden && localStorage.getItem('cms3.wiki')===null"), 'option décochée : bouton masqué, choix effacé')
+        check(await page.evaluate("document.getElementById('wikiBox').hidden && localStorage.getItem('cms:wiki')===null"), 'option décochée : bouton masqué, choix effacé')
         check(not errs, f'aucune erreur de page {errs[:2]}')
         for e in errs: print('PAGEERROR', e)
         await b.close()

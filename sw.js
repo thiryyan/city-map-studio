@@ -12,19 +12,19 @@
  * - Mise à jour (issue #65) : un nouveau worker attend (« waiting ») ; la page propose « Mettre à jour » et n'envoie
  *   {type:'SKIP_WAITING'} qu'à l'accord de l'utilisateur. {type:'GET_VERSION'} renvoie VERSION sur le port fourni.
  *
- * Changer VERSION (et sa copie CMS.build de js/core.ts, à l'identique) à chaque modification de la liste APP ci-dessous, de ce fichier ou d'un fichier de APP
+ * Changer VERSION (et sa copie CMS.build de src/core/cms.ts, à l'identique) à chaque modification de la liste APP ci-dessous, de ce fichier ou d'un fichier de APP
  * (vérifié par la CI : tests/swversion.py). Tout fichier de js/, css/ et lib/ (hors lib/sky/, polices woff2 et licences)
  * doit figurer dans APP (tests/pwa.py).
  */
 'use strict';
-const VERSION = 'cms-dev';   // remplacée au build (scripts/build.mjs) : cms-AAAA-MM-JJ-<empreinte>
+const VERSION = '0.0.0-dev';   // remplacée au build (scripts/build.mjs) : <version de package.json>+<empreinte> (SemVer)
 // Cache propre à ce dossier : une autre copie de l'application sur la même origine ne touche pas à ses fichiers
 const SCOPE = new URL(self.registration.scope).pathname, CACHE = `${VERSION}@${SCOPE}`;
 const APP = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png',
   'css/app.css',
-  'js/core.ts', 'js/config.ts', 'js/maplibre-loader.ts', 'js/geocoder.ts', 'js/wiki.ts', 'js/state.ts', 'js/geo.ts', 'js/render.ts', 'js/engines.ts', 'js/preview.ts',
-  'js/features.ts', 'js/route.ts', 'js/ui.ts', 'js/illus.ts', 'js/export.ts', 'js/main.ts',
+  'src/core/cms.ts', 'src/content/config.ts', 'src/map/maplibre-loader.ts', 'src/services/geocoder.ts', 'src/services/wikipedia.ts', 'src/core/doc/state.ts', 'src/core/geo/geo.ts', 'src/render/poster.ts', 'src/map/engines.ts', 'src/ui/preview.ts',
+  'src/features/features.ts', 'src/features/route.ts', 'src/ui/panel.ts', 'src/features/illustration.ts', 'src/features/export.ts', 'src/app/main.ts',
   'lib/maplibre-gl.js', 'lib/maplibre-gl.css', 'lib/fonts/fonts.css'
 ];
 

@@ -51,7 +51,7 @@ async def main():
         check(st == ['sauge', 'arch', 'feet'], f'ambiance appliquée {st}')
         check(await strip(page) and await page.evaluate("document.querySelector('#welAmb [data-v=naissance]').getAttribute('aria-pressed')") == 'true',
               'la proposition reste, ambiance choisie marquée (en essayer d\'autres)')
-        check(await page.evaluate("localStorage.getItem('cms3.welcomed')") == '1', 'choix mémorisé')
+        check(await page.evaluate("localStorage.getItem('cms:welcomed')") == '1', 'choix mémorisé')
         await page.click('#bUndo'); await page.wait_for_timeout(300)
         check(await page.evaluate("__cms.st.layout") == 'souvenir', '« Annuler » revient à l\'affiche de départ')
         await page.click('#welClose'); await page.wait_for_timeout(200)
@@ -74,7 +74,7 @@ async def main():
         await page.click('#welClose'); await page.wait_for_timeout(300)
         lay = await page.evaluate("__cms.st.layout")
         check(not await strip(page) and lay == 'souvenir', 'fermée : affiche par défaut conservée')
-        check(await page.evaluate("localStorage.getItem('cms3.welcomed')") == '1', 'fermeture mémorisée')
+        check(await page.evaluate("localStorage.getItem('cms:welcomed')") == '1', 'fermeture mémorisée')
         check(not errs, f'aucune erreur de page {errs}')
         await ctx.close()
 

@@ -141,8 +141,8 @@ async def main():
         check(not await ev("CMS.illus.mapMoved().title") and await page.is_hidden('#hitTitle'), 'gabarit Lettres : titre non déplacé')
         await ev("__cms.setLayout('classic',true)")
         # État enregistré : positions du mode Carte persistées
-        await wait_js(page, "JSON.parse(localStorage.getItem('cms3.affiche')||'{}').illusText?.map?.pos==='bd'")
-        check(await ev("normState(JSON.parse(localStorage.getItem('cms3.affiche'))).illusText.map.pos") == 'bd', 'position du mode Carte enregistrée et relue (normState)')
+        await wait_js(page, "JSON.parse(__cms.saved()||'{}').illusText?.map?.pos==='bd'")
+        check(await ev("normState(JSON.parse(__cms.saved())).illusText.map.pos") == 'bd', 'position du mode Carte enregistrée et relue (normState)')
 
         # ---------- Migration d'un état d'avant les valeurs Auto (affiche Carte) ----------
         n = await ev("normState({mode:'map',illusText:{style:'vintage',color:'#24365A',shadow:'#F3EAD8',outline:'#FFFFFF',off:4,pos:'hc'}}).illusText")

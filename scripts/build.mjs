@@ -1,16 +1,16 @@
 // City Map Studio — construction du site publié (#97, lot 4 : #102)
 //
-// Les sources sont des modules ES en TypeScript (js/main.ts et ses imports, #103) : le navigateur ne les lit pas telles
+// Les sources sont des modules ES en TypeScript (src/app/main.ts et ses imports, #103 ; src/ par domaine, #118) : le navigateur ne les lit pas telles
 // quelles. Le build produit dist/, la version publiée :
 //   - les modules réunis par esbuild en un seul script classique js/app.<empreinte>.js (format IIFE), minifié : aucun
-//     nom global (seuls CMS, posé sur globalThis, et en mode ?test window.__cms et la façade de test de js/main.ts) ;
+//     nom global (seuls CMS, posé sur globalThis, et en mode ?test window.__cms et la façade de test de src/app/main.ts) ;
 //     dist/index.html s'ouvre donc aussi en file:// ;
 //   - css/app.css minifiée en css/app.<empreinte>.css ;
-//   - VERSION (sw.js) et CMS.build (js/core.ts) générés : cms-AAAA-MM-JJ-<empreinte> ;
+//   - VERSION (sw.js) et CMS.build (src/core/cms.ts) générés, au format SemVer : <version de package.json>+<empreinte> ;
 //   - liste APP de sw.js générée à partir des fichiers réellement publiés ;
 //   - lib/, icons/, manifeste et .nojekyll copiés.
 //
-// Usage : node scripts/build.mjs [dossier de sortie, dist par défaut]
+// Usage : node scripts/build.mjs [dossier de sortie, dist par défaut] ; CMS_DEBUG_BUILD=1 : script non minifié (débogage)
 import {readFile, writeFile, mkdir, rm, cp} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
@@ -25,25 +25,26 @@ const fail = msg => { console.error('✗ ' + msg); process.exit(1); };
 
 let html = await read('index.html');
 
-// 1. Modules : point d'entrée js/main.ts (balise <script type="module"> de index.html)
-const SCRIPT_RE = /<script type="module" src="js\/main\.ts"><\/script>\n?/;
-if (!SCRIPT_RE.test(html)) fail('<script type="module" src="js/main.ts"> introuvable dans index.html');
+// 1. Modules : point d'entrée src/app/main.ts (balise <script type="module"> de index.html)
+const SCRIPT_RE = /<script type="module" src="src\/app\/main\.ts"><\/script>\n?/;
+if (!SCRIPT_RE.test(html)) fail('<script type="module" src="src/app/main.ts"> introuvable dans index.html');
 const bundle = async () => (await build({
-  entryPoints: [path.join(SRC, 'js/main.ts')], bundle: true, format: 'iife', write: false, metafile: true,
-  minify: true, target: 'es2020', legalComments: 'none', charset: 'utf8'
+  entryPoints: [path.join(SRC, 'src/app/main.ts')], bundle: true, format: 'iife', write: false, metafile: true,
+  minify: !process.env.CMS_DEBUG_BUILD, target: 'es2020', legalComments: 'none', charset: 'utf8'   // CMS_DEBUG_BUILD=1 : noms lisibles dans les piles d'appel
 })).outputFiles[0].text;
 let js = await bundle();
 
 // 2. CSS
 const cssSrc = await read('css/app.css');
 
-// 3. Version : date du jour (UTC) + empreinte du contenu publié
-const day = new Date().toISOString().slice(0, 10);
-// CMS.build (js/core.ts) vaut 'cms-dev' dans les sources : remplacé dans le script construit
-if ((js.match(/"cms-dev"/g) || []).length !== 1) fail('CMS.build : version « cms-dev » introuvable (ou en double) dans le script construit');
+// 3. Version (SemVer, #118) : version de package.json + empreinte du contenu publié en métadonnée de build
+const pkg = JSON.parse(await read('package.json'));
+if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(pkg.version || '')) fail(`package.json : version « ${pkg.version} » non conforme à SemVer`);
+// CMS.build (src/core/cms.ts) vaut '0.0.0-dev' dans les sources : remplacé dans le script construit
+if ((js.match(/"0\.0\.0-dev"/g) || []).length !== 1) fail('CMS.build : version « 0.0.0-dev » introuvable (ou en double) dans le script construit');
 const contentHash = hash(js + cssSrc + html).slice(0, 7);
-const version = `cms-${day}-${contentHash}`;
-const bundled = {code: js.replace('"cms-dev"', JSON.stringify(version))};
+const version = `${pkg.version}+${contentHash}`;
+const bundled = {code: js.replace('"0.0.0-dev"', JSON.stringify(version))};
 const css = await transform(cssSrc, {loader: 'css', minify: true, legalComments: 'none', charset: 'utf8'});
 const jsName = `js/app.${hash(bundled.code).slice(0, 10)}.js`;
 const cssName = `css/app.${hash(css.code).slice(0, 10)}.css`;

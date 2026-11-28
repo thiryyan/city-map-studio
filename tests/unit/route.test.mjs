@@ -3,7 +3,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { load, ev } from './load.mjs';
 
-const ctx = await load(['js/config.ts', 'js/maplibre-loader.ts', 'js/geocoder.ts', 'js/state.ts', 'js/geo.ts', 'js/route.ts']);
+const ctx = await load(['src/content/config.ts', 'src/map/maplibre-loader.ts', 'src/services/geocoder.ts', 'src/core/doc/state.ts', 'src/core/geo/geo.ts', 'src/features/route.ts']);
 const J = expr => JSON.parse(JSON.stringify(ev(ctx, expr)));
 const S = patch => `Object.assign(structuredClone(DEFAULT_STATE), ${patch})`;
 const TWO = S("{markerLabel:'Rencontre', markers2:[{lat:47.5856,lon:1.3311,label:'Château'}], texts:{...DEFAULT_STATE.texts,date:'14 juin 2019'}}");

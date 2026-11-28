@@ -1,7 +1,7 @@
 // Charge des modules de l'application dans un contexte isolé (node:vm), sans navigateur.
 // Les modules demandés (et leurs imports) sont réunis par esbuild en un script, puis exécutés dans le contexte ;
 // leurs exports y sont posés en variables globales, pour que les tests les évaluent par leur nom (#102).
-// Les API du navigateur utilisées au chargement sont remplacées par des bouchons minimaux. Les modules de js/ non
+// Les API du navigateur utilisées au chargement sont remplacées par des bouchons minimaux. Les modules de src/ non
 // demandés (interface, rendu…) sont remplacés par des bouchons dont les exports valent undefined, comme lorsque ces
 // fichiers n'étaient pas chargés.
 import { fileURLToPath } from 'node:url';
@@ -23,14 +23,14 @@ export async function load(files, extra = {}) {
     ...extra,
   });
   ctx.globalThis = ctx; ctx.window = ctx;
-  const mods = ['js/core.ts', ...files];
+  const mods = ['src/core/cms.ts', ...files];
   const entry = mods.map((f, i) => `import * as m${i} from ${JSON.stringify(ROOT + f)};`).join('\n')
     + `\nObject.assign(globalThis, ${mods.map((_, i) => `m${i}`).join(', ')});`;
-  const noExt = p => p.replace(/\.[jt]s$/, '');   // js/geo.js désigne aussi js/geo.ts (migration TypeScript, #103)
+  const noExt = p => p.replace(/\.[jt]s$/, '');   // src/core/geo/geo.ts désigne aussi src/core/geo/geo.ts (migration TypeScript, #103)
   const wanted = new Set(mods.map(f => noExt(ROOT + f)));
   const stub = {
     name: 'bouchons', setup(b) {
-      b.onLoad({ filter: /[\\/]js[\\/][\w-]+\.[jt]s$/ }, a => {
+      b.onLoad({ filter: /[\\/]src[\\/].+\.[jt]s$/ }, a => {
         if (wanted.has(noExt(a.path))) return undefined;
         const names = [...readFileSync(a.path, 'utf8').matchAll(/^export \{([^}]*)\};$/gm)].flatMap(m => m[1].split(',').map(n => n.trim()).filter(Boolean));
         return { contents: names.length ? `export const ${names.map(n => `${n} = undefined`).join(', ')};` : '', loader: 'js' };
