@@ -17,10 +17,10 @@
  * doit figurer dans APP (tests/pwa.py).
  */
 'use strict';
-const VERSION = '2.0.0-alpha.1+6242c70';   // remplacée au build (scripts/build.mjs) : <version de package.json>+<empreinte> (SemVer)
+const VERSION = '2.0.0-alpha.1+eb93753';   // remplacée au build (scripts/build.mjs) : <version de package.json>+<empreinte> (SemVer)
 // Cache propre à ce dossier : une autre copie de l'application sur la même origine ne touche pas à ses fichiers
 const SCOPE = new URL(self.registration.scope).pathname, CACHE = `${VERSION}@${SCOPE}`;
-const APP = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'css/app.6de28c91c0.css', 'js/app.89447f3e2a.js', 'lib/maplibre-gl.js', 'lib/maplibre-gl.css', 'lib/fonts/fonts.css'];
+const APP = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'css/app.6de28c91c0.css', 'js/app.d189568300.js', 'lib/maplibre-gl.js', 'lib/maplibre-gl.css', 'lib/fonts/fonts.css'];
 
 self.addEventListener('install', e => {
   // Pas de skipWaiting() ici : à la première installation, le worker s'active seul (aucun autre en place) ;
