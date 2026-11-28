@@ -1,6 +1,6 @@
 {
-  // TypeScript (#103) : vérification seule (noEmit), esbuild compile au build. Tous les fichiers de js/ sont en .ts,
-  // vérifiés en mode strict ; js/types.d.ts décrit les noms globaux (CMS, MapLibre, données du ciel).
+  // TypeScript (#103) : vérification seule (noEmit), esbuild compile au build. Tous les fichiers de src/ sont en .ts,
+  // vérifiés en mode strict ; src/types.d.ts décrit les noms globaux (CMS, MapLibre, données du ciel).
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
@@ -14,5 +14,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["js/**/*.ts"]
+  "include": ["src/**/*.ts"]
 }

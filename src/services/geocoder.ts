@@ -1,5 +1,5 @@
 /* City Map Studio — Client de géocodage Nominatim, espace CMS.geocoder.
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs).
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs).
  *
  * Politique d'usage (https://operations.osmfoundation.org/policies/nominatim/) : requêtes à la demande seulement
  * (jamais pendant la frappe), au plus une par seconde, résultats mis en cache, arrêt en cas de blocage (429 / 403).
@@ -9,10 +9,10 @@
  * - réponse validée : coordonnées finies et dans les bornes Mercator, textes tronqués ; aucune donnée brute n'est rendue.
  * Erreurs typées : err.code ∈ EMPTY, TIMEOUT, RATE_LIMITED, NETWORK, HTTP, BAD_RESPONSE, ABORTED.
  */
-import {late} from './core.js';
-import {NOMINATIM} from './config.js';
+import {late} from '../core/cms.js';
+import {NOMINATIM} from '../content/config.js';
 (function (g: typeof globalThis) {
-  const CMS = g.CMS;   // js/core.ts
+  const CMS = g.CMS;   // src/core/cms.ts
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
   const MIN_INTERVAL = testCfg.geoInterval ?? 1100, TIMEOUT = testCfg.geoTimeout ?? 10000, RETRY_DELAY = testCfg.geoRetry ?? 1500;
   const CACHE_MAX = 50, DEFAULT_COOLDOWN = 60000;

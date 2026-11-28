@@ -1,12 +1,13 @@
 /* City Map Studio — Lieux multiples, itinéraire GPX, partage par lien, ambiances, panneau coulissant.
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {keysOf, late} from './core.js';
-import {type Colors, type PosterState, type Route, AMBIANCES, DEFAULT_STATE, DUOS, EXPORT_MAX_DPI, FONTS, FORMATS, LAYOUTS, MARKERS, OCCASIONS, REF_W, STORE_KEY, TEXTURES, THEMES} from './config.js';
-import {SHARE_MAX_BYTES, SHARE_MAX_CHARS, V, normState, osmData, saveState, saveT, st, ui} from './state.js';
-import {clamp, exportSpec, imerc, merc} from './geo.js';
-import {contrast, drawPoster, lum, mix} from './render.js';
-import {drawVectors} from './engines.js';
-import {$, applyTexture, changed, composePoster, drawTexture, h, layoutPreview, redrawAll, scheduleOver, slot} from './preview.js';
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import {keysOf, late} from '../core/cms.js';
+import {type Colors, type PosterState, type Route, AMBIANCES, DEFAULT_STATE, DUOS, EXPORT_MAX_DPI, FONTS, FORMATS, LAYOUTS, MARKERS, OCCASIONS, REF_W, STORE_KEY, TEXTURES, THEMES} from '../content/config.js';
+import {SHARE_MAX_BYTES, SHARE_MAX_CHARS, V, normState, osmData, saveState, saveT, st, ui} from '../core/doc/state.js';
+import {clamp, exportSpec, imerc, merc} from '../core/geo/geo.js';
+import {contrast, drawPoster, lum, mix} from '../render/poster.js';
+import {drawVectors} from '../map/engines.js';
+import {applyTexture, changed, composePoster, drawTexture, layoutPreview, redrawAll, scheduleOver, slot} from '../ui/preview.js';
+import {$, h, pressed, setSeg, toast} from '../ui/dom.js';
 // ---------- Plusieurs lieux ----------
 function placeAt(lat: number,lon: number){
   const i=ui.placeIdx||0;
@@ -73,7 +74,7 @@ function fitRoute(){
 function renderRoute(){
   const r=st.route; $('routeBox').hidden=!r;
   if(r){ $('routeInfo').textContent=`${r.name||'Itinéraire'} · ${r.pts.length} points`; $('routeShow').checked=r.show!==false; }
-  late.setSeg('routeColor',st.routeStyle.color); $('routeDash').checked=!!st.routeStyle.dash; $('routeW').value=String(st.routeStyle.width); $('oRouteW').textContent='× '+st.routeStyle.width;
+  setSeg('routeColor',st.routeStyle.color); $('routeDash').checked=!!st.routeStyle.dash; $('routeW').value=String(st.routeStyle.width); $('oRouteW').textContent='× '+st.routeStyle.width;
 }
 
 // ---------- Partage par lien ----------
@@ -148,7 +149,7 @@ function maybeWelcome(){
   if($('consent').classList.contains('show')) return;   // repris après le choix d'accord (giveConsent / declineConsent)
   const box=$('welAmb'); box.textContent='';
   AMBIANCES.forEach(([k,n])=>{ const b=h('button',{type:'button',dataset:{v:k},ariaPressed:'false'},h('canvas',{width:70,height:99}),h('small',{},n));
-    b.onclick=()=>{ closeWelcome(false); applyAmbiance(k); box.querySelectorAll('button').forEach(x=>late.pressed(x,x===b)); }; box.appendChild(b); });
+    b.onclick=()=>{ closeWelcome(false); applyAmbiance(k); box.querySelectorAll('button').forEach(x=>pressed(x,x===b)); }; box.appendChild(b); });
   const draw=()=>box.querySelectorAll('button').forEach(b=>{ const p=AMBIANCES.find(a=>a[0]===b.dataset.v)![2];
     late.thumb(b.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
   draw();
@@ -199,12 +200,12 @@ function setLayout(k: string,quiet?: boolean){
   ui.snap=null; late.refreshCards(); updateLayoutUI(); layoutPreview(); saveState();
   if(!quiet && k==='diptych') toast('Deux lieux : touchez la seconde carte pour la cadrer et y placer son repère');
 }
-function setOrient(v: string){ st.orient=v; late.setSeg('orientSeg',v); updateExportLabel(); ui.snap=null; late.refreshCards(); layoutPreview(); saveState(); }
+function setOrient(v: string){ st.orient=v; setSeg('orientSeg',v); updateExportLabel(); ui.snap=null; late.refreshCards(); layoutPreview(); saveState(); }
 /** Format d'impression : le rapport de l'affiche peut changer (50 × 70 cm) ; aperçu et vignettes suivent */
-function setFormat(v: string){ st.format=v; late.setSeg('formatSeg',v); updateExportLabel(); ui.snap=null; late.refreshCards(); layoutPreview(); saveState(); }
+function setFormat(v: string){ st.format=v; setSeg('formatSeg',v); updateExportLabel(); ui.snap=null; late.refreshCards(); layoutPreview(); saveState(); }
 /** Retour à la ligne de la dédicace : la carte peut céder de la hauteur (geom), d'où la mise en page complète */
-function setDedWrap(v: string){ st.dedWrap=v; late.setSeg('dedWrapSeg',v); ui.snap=null; late.refreshCards(); layoutPreview(); saveState(); }
-function setFileType(v: string){ st.fileType=v; late.setSeg('fileSeg',v); updateExportLabel(); saveState(); }
+function setDedWrap(v: string){ st.dedWrap=v; setSeg('dedWrapSeg',v); ui.snap=null; late.refreshCards(); layoutPreview(); saveState(); }
+function setFileType(v: string){ st.fileType=v; setSeg('fileSeg',v); updateExportLabel(); saveState(); }
 /** Dimensions affichées sur le bouton d'export et sous le choix du format : suivent le format et l'orientation */
 function updateExportLabel(){
   const e=exportSpec(), pdf=st.fileType==='pdf', cm=(v: number)=>(v/10).toLocaleString('fr-FR');
@@ -225,7 +226,7 @@ function updateLayoutUI(){
   $('mixFormH').hidden=$('mixFormHint').hidden=mix && cp!=='med' && cp!=='vig';
   $('mixFormHint').textContent=cp==='med' ? 'Médaillon : trait autour de la forme de la carte.' : cp==='vig' ? 'Vignette : marge autour de la carte et de sa bande de texte.' : '';
   $('skyBox').hidden=L!=='sky'; $('placeBox').hidden=L!=='diptych'; $('labelsBox').hidden=L!=='diptych';
-  late.setSeg('placeSeg',String(st.active||0));
+  setSeg('placeSeg',String(st.active||0));
   if(L==='sky'){ $('skyWhen').value=st.sky.when; $('skyTz').value=String(st.sky.tz); }
   if($('mList')) renderPlaces();
 }
@@ -239,22 +240,6 @@ function updateContrast(){
 }
 
 // ---------- Interface ----------
-/** Ligne d'état (voyant sur la scène) : « Prêt » réduit à la pastille ; un message sans gravité s'efface après 4 s ;
- *  chargement, attente et erreur restent écrits tant qu'ils durent. */
-function setStatus(t: string,kind?: string,detail?: string){
-  $('stTxt').textContent=t; $('stPill').title=$('stTxt').title=detail?t+' — '+detail:t; $('stDot').className='dot'+(kind?' '+kind:'');
-  const ready=!kind && /^Prêt/.test(t); clearTimeout(statusT);
-  $('stPill').classList.toggle('quiet',ready);
-  if(!kind && !ready) statusT=setTimeout(()=>$('stPill').classList.add('quiet'),4000);
-}
-let toastT=0, statusT=0;
-/** Message bref ; `action` {label,fn} ajoute un bouton (ex. « Annuler » après un réglage) et prolonge l'affichage. */
-function toast(msg: string,err?: boolean,action?: {label: string; fn: ()=>void}){
-  const t=$('toast'); t.textContent=msg;
-  if(action){ const b=document.createElement('button'); b.type='button'; b.textContent=action.label;
-    b.onclick=()=>{ t.className=''; action.fn(); }; t.append(b); }
-  t.className='show'+(err?' err':'')+(action?' act':''); clearTimeout(toastT);
-  toastT=setTimeout(()=>t.className='',err?6000:action?5000:3200); }
 function showBanner(show: boolean,txt?: string,label?: string,action?: (()=>void) | null){
   $('banner').classList.toggle('show',!!show); if(txt) $('bannerTxt').textContent=txt;
   if(ui.sheet==='peek') applySheet();
@@ -594,7 +579,7 @@ CMS.define('actbar', () => {
 // visible (« Toucher pour modifier ») s'affiche aux deux premières utilisations.
 // Modification : un seul choix actif à la fois (Carte · Repère · Illustration · Textes, selon le type d'affiche) ; ce qui
 // est choisi reçoit les gestes, le reste est inerte (CSS `#app[data-intent]`, calque cadré de CMS.illus, gestes de l'image
-// dans js/illus.ts). Choix de départ : onglet Repère ou Illustration, sinon la zone touchée (carte ou illustration), sinon le
+// dans src/features/illustration.ts). Choix de départ : onglet Repère ou Illustration, sinon la zone touchée (carte ou illustration), sinon le
 // calque cadré. « Textes » n'est jamais choisi d'office : c'est un interrupteur (un second toucher revient au choix d'avant).
 // Le choix reste hors de l'état de l'affiche (pas d'historique, pas d'enregistrement).
 CMS.define('intent', () => {
@@ -989,7 +974,7 @@ CMS.define('palette', () => {
   function apply(v: string){
     if(!photoPal) return;
     const before=late.cmpSnap();
-    st.colors=photoTheme(photoPal,v==='dark'); late.setSeg('photoSeg',v);
+    st.colors=photoTheme(photoPal,v==='dark'); setSeg('photoSeg',v);
     late.noteChange(before,{theme:true}); late.refreshColors(); changed({all:true,cards:true});
     toast((photoSrc==='illus' ? 'Couleurs tirées de l\'illustration' : 'Palette de la photo appliquée')+' · « Annuler » pour revenir');
   }
@@ -1124,7 +1109,7 @@ function initSaves(){
   addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase()==='s'){ e.preventDefault(); saveCurrent(defaultSaveName()); } });
 }
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
-Object.assign(late, {maybeWelcome, placeAt, setDedWrap, setStatus, showBanner, toast});
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
+Object.assign(late, {maybeWelcome, placeAt, setDedWrap, showBanner});
 
-export {addPlace, applyAmbiance, applyConfig, applyOccasion, applySheet, closeWelcome, decodeShare, deleteSave, downloadBackup, downloadConfig, encodeShare, fitRoute, importConfigFile, importGpx, initSaves, initSheet, isSheet, loadFromHash, loadSaves, maybeWelcome, openSaves, paletteOf, parseGpx, photoTheme, placeAt, renderRoute, replaceState, restoreSave, saveCurrent, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setPlacing, setSheet, setStatus, shareLink, showBanner, toast, updateContrast, updateExportLabel, updateLayoutUI, welcomeDone};
+export {addPlace, applyAmbiance, applyConfig, applyOccasion, applySheet, closeWelcome, decodeShare, deleteSave, downloadBackup, downloadConfig, encodeShare, fitRoute, importConfigFile, importGpx, initSaves, initSheet, isSheet, loadFromHash, loadSaves, maybeWelcome, openSaves, paletteOf, parseGpx, photoTheme, placeAt, renderRoute, replaceState, restoreSave, saveCurrent, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setPlacing, setSheet, shareLink, showBanner, updateContrast, updateExportLabel, updateLayoutUI, welcomeDone};

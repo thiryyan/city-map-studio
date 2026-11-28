@@ -1,9 +1,9 @@
 /* City Map Studio — Projection de Mercator et géométrie des gabarits.
- * Module TypeScript (#103), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from './core.js';
-import {type PosterState, CANVAS_MAX_PX, EXPORT_MAX_DPI, FORMATS, REF_W} from './config.js';
-import {st, ui} from './state.js';
-/** État de l'affiche (js/state.ts) */
+ * Module TypeScript (#103), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import {late} from '../cms.js';
+import {type PosterState, CANVAS_MAX_PX, EXPORT_MAX_DPI, FORMATS, REF_W} from '../../content/config.js';
+import {st, ui} from '../doc/state.js';
+/** État de l'affiche (src/core/doc/state.ts) */
 /** Rectangle en pixels ; une carte peut avoir une forme (cercle, cœur, arche) */
 export interface Rect { x: number; y: number; w: number; h: number; shape?: string | null; circle?: boolean; fade?: boolean }
 export interface LatLon { lat: number; lon: number }

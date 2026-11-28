@@ -1,25 +1,13 @@
 /* City Map Studio — Aperçu à l'écran, deux lieux, gestes, papier, composition complète, aperçu au mur.
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from './core.js';
-import {type Place, LAYOUTS, THEMES} from './config.js';
-import {consent, mlLib, mlMap, needConsent, openDialog, osmData, saveState, setBusy, st, ui} from './state.js';
-import {type Rect, clamp, clipMap, geom, imerc, merc, posterDims, ratio, shapeD, textLine, unproject, worldSize} from './geo.js';
-import {CART_ROWS, POLA_ROWS, cartDed, drawPoster, ensureSky, fitSink, lum, setFitSink, souvenirFoot} from './render.js';
-import {checkDataBanner, drawVectors, initMaplibre, mlKeepAlive, mlRestyle, mlUpdateView, renderMaplibreOffscreen} from './engines.js';
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import {late} from '../core/cms.js';
+import {type Place, LAYOUTS, THEMES} from '../content/config.js';
+import {consent, mlLib, mlMap, needConsent, openDialog, osmData, saveState, setBusy, st, ui} from '../core/doc/state.js';
+import {type Rect, clamp, clipMap, geom, imerc, merc, posterDims, ratio, shapeD, textLine, unproject, worldSize} from '../core/geo/geo.js';
+import {CART_ROWS, POLA_ROWS, cartDed, drawPoster, ensureSky, fitSink, lum, setFitSink, souvenirFoot} from '../render/poster.js';
+import {checkDataBanner, drawVectors, initMaplibre, mlKeepAlive, mlRestyle, mlUpdateView, renderMaplibreOffscreen} from '../map/engines.js';
+import {$, h, setSeg, setStatus, toast} from './dom.js';
 // ---------- Aperçu ----------
-/** Élément du document par son id, supposé présent (balisage de index.html). Type par défaut : champ de saisie, le plus
- *  fréquent (value, checked, disabled) ; préciser sinon : $<HTMLCanvasElement>('c'). */
-const $=<T extends HTMLElement = HTMLInputElement>(id: string) => document.getElementById(id) as T;
-/** Crée un élément sans innerHTML : h('button', {type:'button', className:'card', dataset:{v:k}, style:{…}}, enfant, 'texte').
- *  Les textes sont insérés comme texte (jamais interprétés) et les styles passent par le CSSOM (compatibles avec la CSP). */
-function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, any>={}, ...kids: (Node | string | null | undefined)[]): HTMLElementTagNameMap[K] {
-  const e=document.createElement(tag);
-  for(const [k,v] of Object.entries(props)){
-    if(k==='dataset') Object.assign(e.dataset,v); else if(k==='style') Object.assign(e.style,v);
-    else if(k in e && !k.includes('-')) (e as any)[k]=v; else e.setAttribute(k,v);
-  }
-  e.append(...kids.filter((x): x is Node | string=>x!=null)); return e;
-}
 const cvU=$<HTMLCanvasElement>('cvUnder'), cvO=$<HTMLCanvasElement>('cvOver'), cvT=$<HTMLCanvasElement>('cvTex'), vecC=$<HTMLCanvasElement>('vecCanvas'), slot=$<HTMLDivElement>('slot'), poster=$<HTMLDivElement>('poster'), stage=$<HTMLDivElement>('stage');
 function layoutPreview(){
   const SW=stage.clientWidth, SH=stage.clientHeight, small=innerWidth<900;
@@ -113,9 +101,9 @@ function setActivePlace(i: number){
   if(st.layout!=='diptych' || i===(st.active||0)) return;
   const cur={center:st.center,zoom:st.zoom,marker:st.marker}, o=otherView();
   st.center=o.center; st.zoom=o.zoom; st.marker=o.marker; st.place2=cur; st.active=i; ui.snap=null;
-  late.setSeg('placeSeg',String(i)); late.syncZoomUI(); late.updateMarkerTxt();
+  setSeg('placeSeg',String(i)); late.syncZoomUI(); late.updateMarkerTxt();
   layoutPreview(); if(mlMap) mlRestyle(); saveState();
-  late.toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
+  toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
 }
 function drawOver(){ const ctx=cvO.getContext('2d')!; ctx.clearRect(0,0,cvO.width,cvO.height); setFitSink({}); ui.inkSink=CMS.safe?.on?[]:null;
   const g=drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; setFitSink(null); showFit(fit!); describePoster();
@@ -164,7 +152,7 @@ function renderMap(viewChanged?: boolean){
   $('mlMap').hidden = !isML;
   vecC.hidden = isML;
   mlKeepAlive(isML);
-  if(isML){ if(!mlMap) initMaplibre(); if(viewChanged) mlUpdateView(); if(mlLib==='loading') late.setStatus('Chargement de la librairie MapLibre…','busy'); }
+  if(isML){ if(!mlMap) initMaplibre(); if(viewChanged) mlUpdateView(); if(mlLib==='loading') setStatus('Chargement de la librairie MapLibre…','busy'); }
   else scheduleOp();
   scheduleOver();
 }
@@ -311,11 +299,11 @@ const FRAMES=[['Chêne','oak'],['Noir','#1B1B1B'],['Blanc','#F4F4F2'],['Doré','
 const mock: {wall: number; frame: number; mat: boolean; poster: HTMLCanvasElement | null}={wall:0,frame:0,mat:true,poster:null};
 async function openMockup(){
   if(st.engine==='maplibre' && !needConsent(()=>openMockup())) return;
-  if(st.engine!=='maplibre' && !osmData){ late.toast('Chargez d\'abord la carte (onglet Lieu, section Avancé).',true); return; }
+  if(st.engine!=='maplibre' && !osmData){ toast('Chargez d\'abord la carte (onglet Lieu, section Avancé).',true); return; }
   setBusy(true,'Préparation de l\'aperçu…'); let ok=false;
   try{ const d=posterDims(), k=1100/Math.max(d.W,d.H); mock.poster=(await composePoster(Math.round(d.W*k),Math.round(d.H*k),t=>{ $('busyTxt').textContent=t; })).canvas;
     drawMockup(); ok=true; }
-  catch(e){ console.error(e); late.toast('Aperçu impossible : '+((e as Error).message||e),true); }
+  catch(e){ console.error(e); toast('Aperçu impossible : '+((e as Error).message||e),true); }
   finally{ setBusy(false); }
   if(ok) openDialog('mockup');
 }
@@ -348,7 +336,7 @@ function downloadMockup(){
   $<HTMLCanvasElement>('mockCv').toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`apercu-au-mur-${late.slug(st.texts.title)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); },'image/png');
 }
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
-Object.assign(late, {$, drawUnder, renderMap, scheduleOver});
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
+Object.assign(late, {drawUnder, renderMap, scheduleOver});
 
-export {$, FIT_NAMES, FRAMES, WALLS, applyTexture, changed, composePoster, downloadMockup, drawMockup, drawOp, drawOver, drawTexture, drawUnder, h, layoutPreview, mock, openMockup, poster, redrawAll, renderMap, scheduleOver, setActivePlace, slot, stage, textureBase};
+export {FIT_NAMES, FRAMES, WALLS, applyTexture, changed, composePoster, downloadMockup, drawMockup, drawOp, drawOver, drawTexture, drawUnder, layoutPreview, mock, openMockup, poster, redrawAll, renderMap, scheduleOver, setActivePlace, slot, stage, textureBase};

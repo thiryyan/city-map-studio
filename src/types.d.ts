@@ -1,4 +1,4 @@
-// Types partagés de City Map Studio (#103). L'espace de noms CMS est posé sur globalThis par js/core.ts ;
+// Types partagés de City Map Studio (#103). L'espace de noms CMS est posé sur globalThis par src/core/cms.ts ;
 // ses modules (CMS.geo, CMS.perf…) sont ajoutés par CMS.define, typés ici au fur et à mesure de la migration.
 
 interface PerfMeasure { k: string; ms: number; info: string; at: number }

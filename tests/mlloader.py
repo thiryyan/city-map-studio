@@ -1,4 +1,4 @@
-"""e2e : chargement résilient de MapLibre (js/maplibre-loader.js, issue #31).
+"""e2e : chargement résilient de MapLibre (src/map/maplibre-loader.ts, issue #31).
 
 Réseau simulé : lib/ peut être bloquée, retardée au-delà du délai, ou servir une autre version ; les CDN servent la
 copie de lib/ (empreinte SRI identique) avec l'en-tête CORS, ou sont bloqués. Délai du chargeur abaissé à 1 s

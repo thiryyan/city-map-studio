@@ -1,5 +1,5 @@
 /* City Map Studio — Itinéraire préparé avec une IA externe (issue #85), espace CMS.route.
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs).
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs).
  *
  * Comme pour l'illustration : l'application rédige le prompt (buildRoutePrompt), l'utilisateur le colle dans son IA (ChatGPT,
  * Gemini…) et ramène le GPX, en fichier ou collé tel quel (extractGpx tolère les phrases et les clôtures de code autour).
@@ -7,12 +7,12 @@
  * du lieu de l'affiche ou fait de longs tronçons rectilignes (étapes reliées en ligne droite).
  * Fonctions pures testées sans navigateur : tests/unit/route.test.mjs.
  */
-import {late} from './core.js';
-import type {PosterState, Route} from './config.js';
-import {saveState, st, ui} from './state.js';
-import {ratio, viewBounds} from './geo.js';
-import {$, changed, h} from './preview.js';
-import {fitRoute, parseGpx, renderRoute, toast} from './features.js';
+import type {PosterState, Route} from '../content/config.js';
+import {saveState, st, ui} from '../core/doc/state.js';
+import {ratio, viewBounds} from '../core/geo/geo.js';
+import {changed} from '../ui/preview.js';
+import {fitRoute, parseGpx, renderRoute} from './features.js';
+import {$, h, setSeg, toast} from '../ui/dom.js';
 /** Emprise {s, w, n, e} (degrés) */
 type Bounds = {s: number; w: number; n: number; e: number};
 type Kind = 'walk' | 'bike' | 'car' | 'trip';
@@ -151,7 +151,7 @@ CMS.define('route', () => {
     const o=$('routePromptOut'), t=buildRoutePrompt(st); if(o.value!==t) o.value=t;
   }
   function sync(){
-    late.setSeg('rpKind',P().kind); late.setSeg('rpLoop',P().loop?'1':'0'); late.setSeg('rpLang',P().lang);
+    setSeg('rpKind',P().kind); setSeg('rpLoop',P().loop?'1':'0'); setSeg('rpLang',P().lang);
     const x=$('rpExtra'); if(document.activeElement!==x && x.value!==P().extra) x.value=P().extra;
     syncPlaces(); update();
   }

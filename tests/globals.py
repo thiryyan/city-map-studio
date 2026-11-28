@@ -1,8 +1,8 @@
-"""Garde-fou d'architecture des modules ES de js/ (issues #35, #102).
+"""Garde-fou d'architecture des modules ES de src/ (issues #35, #102).
 
 Les noms utilisés sans import et les variables importées réaffectées sont refusés par TypeScript (tests/typecheck.py,
-mode strict : tous les fichiers de js/ sont en .ts depuis #103) ; ESLint n'est plus nécessaire.
-Registre « late » (js/core.ts) : un fichier qui appelle une fonction d'un fichier chargé après lui la lit dans ce
+mode strict : tous les fichiers de src/ sont en .ts) ; ESLint n'est plus nécessaire.
+Registre « late » (src/core/cms.ts) : un fichier qui appelle une fonction d'un fichier chargé après lui la lit dans ce
    registre plutôt que de l'importer (l'import créerait un cycle et changerait l'ordre d'exécution). Chaque entrée est
    une dépendance à l'envers entre couches : leur nombre ne peut pas dépasser le plafond de tests/globals.max ; quand
    il baisse, abaisser le plafond.
@@ -16,7 +16,7 @@ MAX = int((T / 'globals.max').read_text().split()[0])
 fails = []
 
 late = {}
-for f in sorted([*(ROOT / 'js').glob('*.js'), *(ROOT / 'js').glob('*.ts')]):
+for f in sorted([*(ROOT / 'src').rglob('*.js'), *(ROOT / 'src').rglob('*.ts')]):
     for m in re.finditer(r'Object\.assign\(late, \{([^}]*)\}\)', f.read_text(encoding='utf-8')):
         late[f.name] = [n.strip() for n in m.group(1).split(',') if n.strip()]
 total = sum(len(v) for v in late.values())

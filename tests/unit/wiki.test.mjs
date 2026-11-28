@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { load, ev } from './load.mjs';
 
-const ctx = await load(['js/config.ts', 'js/maplibre-loader.ts', 'js/geocoder.ts', 'js/wiki.ts']);
+const ctx = await load(['src/content/config.ts', 'src/map/maplibre-loader.ts', 'src/services/geocoder.ts', 'src/services/wikipedia.ts']);
 const BLOIS = readFileSync(new URL('../wiki_blois.json', import.meta.url), 'utf8');
 const J = expr => JSON.parse(JSON.stringify(ev(ctx, expr)));
 

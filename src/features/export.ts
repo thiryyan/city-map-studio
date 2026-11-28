@@ -1,13 +1,14 @@
 /* City Map Studio — Export PNG et PDF, contexte d'exécution, diagnostic réseau, import de fichier.
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from './core.js';
-import {OFM_URL, REF_W} from './config.js';
-import {mlCdn, mlLib, needConsent, osmData, saveState, setBusy, setOsmData, st, ui} from './state.js';
-import {clamp, exportSpec} from './geo.js';
-import {netMsg, parseOsm} from './engines.js';
-import {$, composePoster, h, renderMap} from './preview.js';
-import {setStatus, showBanner, toast} from './features.js';
-import {openAdvanced, setSeg, showTab, syncZoomUI, updateEngineUI, updateMarkerTxt} from './ui.js';
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import {late} from '../core/cms.js';
+import {OFM_URL, REF_W} from '../content/config.js';
+import {mlCdn, mlLib, needConsent, osmData, saveState, setBusy, setOsmData, st, ui} from '../core/doc/state.js';
+import {clamp, exportSpec} from '../core/geo/geo.js';
+import {netMsg, parseOsm} from '../map/engines.js';
+import {composePoster, renderMap} from '../ui/preview.js';
+import {showBanner} from './features.js';
+import {openAdvanced, showTab, syncZoomUI, updateEngineUI, updateMarkerTxt} from '../ui/panel.js';
+import {$, h, setSeg, setStatus, toast} from '../ui/dom.js';
 // Module CMS.export : tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier (utilisées par les autres fichiers).
 const EXPORT = CMS.define('export', () => {
 // ---------- Export PNG (résolution inscrite dans le fichier) ----------
@@ -239,7 +240,7 @@ CMS.define('perfUI', () => {
   return {init, text};
 });
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
 Object.assign(late, {exportPoster, importFile, runDiagnostics, slug});
 
 export {ENV, exportPoster, importFile, importText, runDiagnostics, showEnvWarning, slug};

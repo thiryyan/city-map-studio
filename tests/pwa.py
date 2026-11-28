@@ -26,8 +26,8 @@ SEED = "localStorage.setItem('cms3.consent','1'); localStorage.setItem('cms3.wel
 
 SW = (ROOT / 'sw.js').read_text(encoding='utf-8')
 VERSION = re.search(r"const VERSION = '([^']+)'", SW).group(1)
-# Script de l'application : js/main.ts dans la source, le script unique (js/app.<empreinte>.js) dans dist/
-MAIN = 'js/main.ts' if (ROOT / 'js' / 'main.ts').is_file() else re.search(r'<script src="(js/app\.[0-9a-f]+\.js)"', (ROOT / 'index.html').read_text(encoding='utf-8')).group(1)
+# Script de l'application : src/app/main.ts dans la source, le script unique (js/app.<empreinte>.js) dans dist/
+MAIN = 'src/app/main.ts' if (ROOT / 'src' / 'app' / 'main.ts').is_file() else re.search(r'<script src="(js/app\.[0-9a-f]+\.js)"', (ROOT / 'index.html').read_text(encoding='utf-8')).group(1)
 
 
 def label(v):
@@ -41,7 +41,7 @@ def label(v):
 
 class Q(SimpleHTTPRequestHandler):
     """Comme GitHub Pages : Cache-Control max-age=600. deploy : sw.js et les scripts servis avec une nouvelle VERSION
-    (source : js/core.ts ; dist/ : le script unique, qui contient CMS.build)."""
+    (source : src/core/cms.ts ; dist/ : le script unique, qui contient CMS.build)."""
     status = []; reqs = []; deploy = False
     def log_message(self, *a): pass
     def send_response(self, code, *a):

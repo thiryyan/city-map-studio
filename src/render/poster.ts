@@ -1,6 +1,6 @@
 /* City Map Studio — Rendu de l'affiche (drawPoster) : textes, repères, ciel — commun à l'aperçu et à l'export.
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from './core.js';
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import {late} from '../core/cms.js';
 /** Contexte de dessin 2D ; options de tracé d'un texte, d'un repère, d'un cartouche (sacs d'options, non typés) */
 type Ctx = CanvasRenderingContext2D;
 type Opts = Record<string, any>;
@@ -14,9 +14,10 @@ type MapView = View & {marker: LatLon};
 /** Dessin d'un caractère (graphème) à une position */
 type GlyphFn = (g: string, x: number, y: number)=>void;
 type MapFn = (ctx: Ctx, rect: Rect, view: MapView, i: number)=>void;
-import {FONTS, MARKER_BASE} from './config.js';
-import {st, ui} from './state.js';
-import {type Geom, type LatLon, type Rect, type View, D2R, clipMap, geom, placeCoordText, project, strokeShape, textLine, unproject, worldSize} from './geo.js';
+import {FONTS, MARKER_BASE} from '../content/config.js';
+import {st, ui} from '../core/doc/state.js';
+import {type Geom, type LatLon, type Rect, type View, D2R, clipMap, geom, placeCoordText, project, strokeShape, textLine, unproject, worldSize} from '../core/geo/geo.js';
+import {toast} from '../ui/dom.js';
 // ---------- Typographie ----------
 /** Police d'un rôle : 'title' (titre) ou texte (autres lignes). Une police manuscrite ne sert qu'aux lignes
  *  d'émotion (dédicace, noms, légendes des lieux) : sous-titre, coordonnées, date et légende prennent la police du titre. */
@@ -342,7 +343,7 @@ function drawMarkers(ctx: Ctx, r: Rect, view: MapView, U: number, W: number, mai
 // Étoiles (magnitude ≤ 5,5) et constellations : lib/sky/sky-data.js (d3-celestial, BSD-3), chargé à la demande.
 let skyLoading: Promise<boolean> | null=null;
 function ensureSky(){ if(window.SKY_DATA) return Promise.resolve(true);
-  if(!skyLoading) skyLoading=late.loadScript('lib/sky/sky-data.js',15000).then(()=>{ late.drawUnder(); late.refreshCards(); return true; }).catch((e: Error)=>{ skyLoading=null; late.toast('Données du ciel indisponibles : '+e.message,true); return false; });
+  if(!skyLoading) skyLoading=late.loadScript('lib/sky/sky-data.js',15000).then(()=>{ late.drawUnder(); late.refreshCards(); return true; }).catch((e: Error)=>{ skyLoading=null; toast('Données du ciel indisponibles : '+e.message,true); return false; });
   return skyLoading; }
 /** Instant observé, en ms UTC : date et heure locales du lieu, fuseau choisi (« auto » : celui de l'appareil à cette date) */
 function skyTime(s=st.sky){
@@ -362,7 +363,7 @@ function altAz(ra: number, dec: number, lat: number, lon: number, ms: number){
 // ---------- Ciel : Voie lactée, planètes, Lune ----------
 let mwLoading: Promise<boolean> | null=null;
 function ensureMilkyWay(){ if(window.SKY_MW) return Promise.resolve(true);
-  if(!mwLoading) mwLoading=late.loadScript('lib/sky/milkyway.js',15000).then(()=>{ late.drawUnder(); return true; }).catch((e: Error)=>{ mwLoading=null; late.toast('Voie lactée indisponible : '+e.message,true); return false; });
+  if(!mwLoading) mwLoading=late.loadScript('lib/sky/milkyway.js',15000).then(()=>{ late.drawUnder(); return true; }).catch((e: Error)=>{ mwLoading=null; toast('Voie lactée indisponible : '+e.message,true); return false; });
   return mwLoading; }
 const OBLIQ=23.43928*D2R;
 /** Coordonnées écliptiques (degrés) → équatoriales {ra, dec} (degrés) */
@@ -600,8 +601,8 @@ function drawPoster(ctx: Ctx, W: number, H: number, pass: string, mapFn?: MapFn)
 }
 function drawPosterAt(ctx: Ctx, W: number, H: number, pass: string, mapFn?: MapFn){
   const c=st.colors, g=geom(st,W,H), m=g.m, U=g.U, r=g.map;
-  if(g.mix){ CMS.illus.drawMix(ctx,W,H,pass,g,mapFn); return g; }   // carte + illustration (js/illus.ts)
-  if(g.illus){ CMS.illus.draw(ctx,W,H,pass,g); return g; }   // modes illustrés : image importée et textes (js/illus.ts)
+  if(g.mix){ CMS.illus.drawMix(ctx,W,H,pass,g,mapFn); return g; }   // carte + illustration (src/features/illustration.ts)
+  if(g.illus){ CMS.illus.draw(ctx,W,H,pass,g); return g; }   // modes illustrés : image importée et textes (src/features/illustration.ts)
   if(pass!=='over'){ ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H); if(g.sky) drawSky(ctx,g.sky,U); }
   if(pass==='all' && mapFn) g.places.forEach((p,i)=>{ ctx.save(); clipMap(ctx,p.rect); ctx.fillStyle=c.land; ctx.fillRect(p.rect.x,p.rect.y,p.rect.w,p.rect.h); mapFn(ctx,p.rect,p.view,i); ctx.restore(); });
   if(pass==='under') return g;
@@ -702,7 +703,7 @@ function attributionText(sky: boolean){
 }
 function hexA(hex: string){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g=n>>8&255,b=n&255;return (a: number)=>`rgba(${r},${g},${b},${a})`}
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
 Object.assign(late, {CART_ROWS, cartDed, souvenirFoot});
 
 export {CART_ROWS, POLA_ROWS, altAz, attributionText, cartDed, contrast, dedLeading, dedLines, drawHalo, drawMarker, drawMarkers, drawOrnaments, drawPoster, drawText, ensureSky, fitSink, focusRadius, foilCtx, fontOf, fontStr, hexA, lum, markerOpts, metersPerPx, mix, moonSun, noteFit, paint, planetsAt, setFitSink, shade, skyTime, souvenirFoot, tScale, textW, tint, typoFit};

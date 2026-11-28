@@ -1,8 +1,8 @@
 /* City Map Studio — Socle : espace de noms CMS et bus d'événements. Chargé en premier.
- * Module TypeScript (#103), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs, esbuild).
- * Types de l'espace de noms CMS : js/types.d.ts.
+ * Module TypeScript (#103), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs, esbuild).
+ * Types de l'espace de noms CMS : src/types.d.ts.
  *
- * Chaque fichier de js/ est un module ES : il importe ce qu'il utilise des fichiers chargés avant lui, et lit dans le
+ * Chaque fichier de src/ est un module ES : il importe ce qu'il utilise des fichiers chargés avant lui, et lit dans le
  * registre late (fin de ce fichier) ce qu'il appelle des fichiers chargés après lui. CMS.define('nom', …) range des
  * fonctions sous CMS.nom (testées seules : tests/unit) ; les modules se parlent aussi par événements :
  * CMS.on('state:saved', …), CMS.emit('state:saved'). Garde-fous : tests/globals.py (ESLint, plafond du registre late).

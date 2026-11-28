@@ -1,5 +1,5 @@
 /* City Map Studio — Chargement résilient de MapLibre GL JS (lib/ → unpkg → jsDelivr → cdnjs), espace CMS.maplibre.
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs).
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs).
  *
  * - Une seule promesse de chargement en cours ; une source en échec définitif (réseau, CSP, SRI, version) n'est pas retentée.
  * - Un <script> dont le délai est dépassé continue de se télécharger et s'exécute quand même à son arrivée (on ne peut pas
@@ -9,9 +9,9 @@
  * - Feuille de style chargée avec onload/onerror : même source que le script, puis les autres sources autorisées.
  * - CDN tiers seulement après l'accord préalable (load({consent:true})).
  */
-import {ML_CDNS, ML_SRI, ML_VERSION} from './config.js';
+import {ML_CDNS, ML_SRI, ML_VERSION} from '../content/config.js';
 (function (g: typeof globalThis) {
-  const CMS = g.CMS;   // js/core.ts
+  const CMS = g.CMS;   // src/core/cms.ts
   const S = Object.freeze({ IDLE: 'idle', LOADING: 'loading', OK: 'ok', NEED_CONSENT: 'local-fail', FAIL: 'fail' } as const);
   type LoadState = typeof S[keyof typeof S];
   // Délais réglables par les tests seulement (adresse avec ?test et objet __cmsTestConfig posé avant le chargement)

@@ -1,5 +1,5 @@
 /* City Map Studio — Modes illustrés : affiche de voyage façon vintage à partir d'une illustration importée.
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs).html.
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs).html.
  *
  * L'application ne génère pas l'image : elle rédige un prompt pour l'IA de l'utilisateur (ChatGPT, Gemini…), qui pose
  * ses questions puis livre une illustration sans texte ni marge ; l'image importée est cadrée, retouchée, et le titre
@@ -7,14 +7,15 @@
  * demande et après accord, lire les tuiles de la carte ou interroger Wikipédia (option désactivée par défaut, CMS.wiki).
  * L'image n'est pas dans l'état (st) : elle est tenue ici (image source ré-encodée, copie réduite pour l'aperçu).
  */
-import {type PosterState, type Pt, CANVAS_MAX_PX, DEFAULT_STATE, DUOS, FONTS, FORMATS} from './config.js';
-import {V, needConsent, osmData, saveState, st, ui} from './state.js';
-import {type Geom, type Rect, clamp, clipMap, exportSpec, geom, posterDims, ratio, shapeD, strokeShape, textLine, viewBounds} from './geo.js';
-import {attributionText, contrast, dedLeading, dedLines, drawHalo, drawMarkers, drawOrnaments, drawText, fontOf, fontStr, hexA, noteFit, paint, tScale, textW} from './render.js';
-import {loadMaplibre} from './engines.js';
-import {$, changed, drawUnder, h, layoutPreview, poster, scheduleOver, slot, stage} from './preview.js';
-import {loadSaves, setOrient, setStatus, toast, updateLayoutUI} from './features.js';
-import {loadFonts, pressed, refreshCards, setSeg, showTab, syncFonts, syncInputs, updateEngineUI} from './ui.js';
+import {type PosterState, type Pt, CANVAS_MAX_PX, DEFAULT_STATE, DUOS, FONTS, FORMATS} from '../content/config.js';
+import {V, needConsent, osmData, saveState, st, ui} from '../core/doc/state.js';
+import {type Geom, type Rect, clamp, clipMap, exportSpec, geom, posterDims, ratio, shapeD, strokeShape, textLine, viewBounds} from '../core/geo/geo.js';
+import {attributionText, contrast, dedLeading, dedLines, drawHalo, drawMarkers, drawOrnaments, drawText, fontOf, fontStr, hexA, noteFit, paint, tScale, textW} from '../render/poster.js';
+import {loadMaplibre} from '../map/engines.js';
+import {changed, drawUnder, layoutPreview, poster, scheduleOver, slot, stage} from '../ui/preview.js';
+import {loadSaves, setOrient, updateLayoutUI} from './features.js';
+import {loadFonts, refreshCards, showTab, syncFonts, syncInputs, updateEngineUI} from '../ui/panel.js';
+import {$, h, pressed, setSeg, setStatus, toast} from '../ui/dom.js';
 /** Contexte 2D ; réglages de l'illustration (st.illus) ; sacs d'options */
 type Ctx = CanvasRenderingContext2D;
 type Illus = PosterState['illus'];
@@ -362,7 +363,7 @@ CMS.define('illus', () => {
     for(const ref of new Set(refs.filter((r: string)=>REF_RE.test(r)))){ const rec=await store.get(ref); if(rec?.blob) out[ref]={data:await blobToDataUrl(rec.blob), name:rec.name, w:rec.w, h:rec.h}; }
     return out;
   }
-  // Fichiers de configuration et sauvegardes avec illustrations intégrées (js/features.ts) : version 2, limites propres
+  // Fichiers de configuration et sauvegardes avec illustrations intégrées (src/features/features.ts) : version 2, limites propres
   const FILE=Object.freeze({version:2, cfgMax:60*1024*1024, bakMax:400*1024*1024});
   /** Ajoute à un fichier les illustrations de ses affiches (include : case « Inclure les illustrations ») ; renvoie {o, note} */
   async function attachImages(o: Record<string, unknown>, states: Parameters<typeof refOf>[0][], include: boolean){

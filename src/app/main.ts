@@ -1,32 +1,33 @@
 /* City Map Studio — Démarrage.
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
 // Ordre d'exécution des modules : celui des anciens scripts classiques (aucun import vers un fichier postérieur :
-// registre late de js/core.ts), donc chaque fichier s'exécute après ceux dont il dépend
-import {late} from './core.js';
-import './core.js';
-import './config.js';
-import './maplibre-loader.js';
-import './geocoder.js';
-import './wiki.js';
-import './state.js';
-import './geo.js';
-import './render.js';
-import './engines.js';
-import './preview.js';
-import './features.js';
-import './route.js';
-import './ui.js';
-import './illus.js';
-import './export.js';
-import {AMBIANCES, FONTS, THEMES} from './config.js';
-import {V, consent, declineConsent, dlgCancel, giveConsent, initDialogs, mlLib, mlMap, needConsent, normState, osmData, st, ui, updateConsentInfo} from './state.js';
-import {dms, exportSpec, geom, posterDims} from './geo.js';
-import {CART_ROWS, altAz, attributionText, cartDed, contrast, dedLines, drawMarker, drawPoster, drawText, foilCtx, lum, markerOpts, metersPerPx, moonSun, planetsAt, skyTime, souvenirFoot, textW, typoFit} from './render.js';
-import {VEC_CACHE_MAX, buildStyle, drawVectors, hatchTile, loadMaplibre, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, vecCache} from './engines.js';
-import {$, changed, composePoster, drawOp, drawOver, drawUnder, h, layoutPreview, renderMap, scheduleOver, setActivePlace, stage, textureBase} from './preview.js';
-import {addPlace, applyAmbiance, applyConfig, applyOccasion, applySheet, decodeShare, deleteSave, downloadBackup, downloadConfig, encodeShare, fitRoute, importConfigFile, initSaves, initSheet, loadFromHash, loadSaves, maybeWelcome, openSaves, paletteOf, parseGpx, photoTheme, placeAt, restoreSave, saveCurrent, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setSheet, setStatus, showBanner, toast, welcomeDone} from './features.js';
-import {applyUiScale, buildUI, frDate, hist, histSnap, isoFromFr, loadFonts, parseCoords, pressed, redo, refreshCards, refreshColors, resetAll, setEngine, showTab, syncInputs, undo, updateEngineUI, updateHistUI} from './ui.js';
-import {ENV, exportPoster, importText, runDiagnostics, showEnvWarning} from './export.js';
+// registre late de src/core/cms.ts), donc chaque fichier s'exécute après ceux dont il dépend
+import {late} from '../core/cms.js';
+import '../core/cms.js';
+import '../content/config.js';
+import '../map/maplibre-loader.js';
+import '../services/geocoder.js';
+import '../services/wikipedia.js';
+import '../core/doc/state.js';
+import '../core/geo/geo.js';
+import '../render/poster.js';
+import '../map/engines.js';
+import '../ui/preview.js';
+import '../features/features.js';
+import '../features/route.js';
+import '../ui/panel.js';
+import '../features/illustration.js';
+import '../features/export.js';
+import {AMBIANCES, FONTS, THEMES} from '../content/config.js';
+import {V, consent, declineConsent, dlgCancel, giveConsent, initDialogs, mlLib, mlMap, needConsent, normState, osmData, st, ui, updateConsentInfo} from '../core/doc/state.js';
+import {dms, exportSpec, geom, posterDims} from '../core/geo/geo.js';
+import {CART_ROWS, altAz, attributionText, cartDed, contrast, dedLines, drawMarker, drawPoster, drawText, foilCtx, lum, markerOpts, metersPerPx, moonSun, planetsAt, skyTime, souvenirFoot, textW, typoFit} from '../render/poster.js';
+import {VEC_CACHE_MAX, buildStyle, drawVectors, hatchTile, loadMaplibre, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, vecCache} from '../map/engines.js';
+import {changed, composePoster, drawOp, drawOver, drawUnder, layoutPreview, renderMap, scheduleOver, setActivePlace, stage, textureBase} from '../ui/preview.js';
+import {addPlace, applyAmbiance, applyConfig, applyOccasion, applySheet, decodeShare, deleteSave, downloadBackup, downloadConfig, encodeShare, fitRoute, importConfigFile, initSaves, initSheet, loadFromHash, loadSaves, maybeWelcome, openSaves, paletteOf, parseGpx, photoTheme, placeAt, restoreSave, saveCurrent, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setSheet, showBanner, welcomeDone} from '../features/features.js';
+import {applyUiScale, buildUI, frDate, hist, histSnap, isoFromFr, loadFonts, parseCoords, redo, refreshCards, refreshColors, resetAll, setEngine, showTab, syncInputs, undo, updateEngineUI, updateHistUI} from '../ui/panel.js';
+import {ENV, exportPoster, importText, runDiagnostics, showEnvWarning} from '../features/export.js';
+import {$, h, pressed, setStatus, toast} from '../ui/dom.js';
 // ---------- Démarrage ----------
 // Fonctions internes exposées (window.__cms) seulement pour les tests et le débogage : adresse avec ?test,
 // ou localStorage['cms3.debug']='1'. En usage normal, rien n'est exposé.
@@ -147,7 +148,7 @@ CMS.define('pwa', () => {
 const {install: installPwa} = CMS.pwa;
 boot();
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
 Object.assign(late, {TEST_HOOKS});
 
 export {TEST_HOOKS};

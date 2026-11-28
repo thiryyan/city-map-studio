@@ -1,7 +1,8 @@
 /* City Map Studio — État de l'affiche : validation, chargement, enregistrement ; fenêtres modales ; accord préalable.
- * Module TypeScript (#103), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from './core.js';
-import {type PosterState, type Route, DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, STORE_KEY, TEXTURES, THEMES} from './config.js';
+ * Module TypeScript (#103), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import {late} from '../cms.js';
+import {type PosterState, type Route, DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, STORE_KEY, TEXTURES, THEMES} from '../../content/config.js';
+import {setStatus} from '../../ui/dom.js';
 // ---------- Validation de l'état (lien partagé, localStorage) ----------
 // Un état venu de l'extérieur n'est jamais repris tel quel : seuls les champs connus sont lus, chacun est vérifié
 // (type, liste de valeurs, bornes) et remplacé par sa valeur par défaut s'il est invalide. Un lien forgé ne peut donc
@@ -189,7 +190,7 @@ function giveConsent(){
 function declineConsent(){
   consentNext=null; closeDialog('consent');
   late.setEngine('file',true); late.openAdvanced(true); late.maybeWelcome();   // consigne d'import : ligne d'état et section Avancé
-  if(!osmData) late.setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
+  if(!osmData) setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
 }
 function withdrawConsent(){
   try{ localStorage.removeItem(CONSENT_KEY); }catch(e){}
@@ -213,7 +214,7 @@ function saveState(){if(ui.comparing) return; clearTimeout(saveT);saveT=setTimeo
 function getPath(o: unknown, p: string): any {return p.split('.').reduce((a: any,k)=>a?.[k],o)}
 function setPath(o: unknown, p: string, v: unknown){const ks=p.split('.');const last=ks.pop() as string;ks.reduce((a: any,k)=>a[k],o)[last]=v}
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
 Object.assign(late, {st});
 
 export {SHARE_MAX_BYTES, SHARE_MAX_CHARS, V, closeDialog, consent, declineConsent, dlgCancel, getPath, giveConsent, initDialogs, mlCdn, mlFailMsg, mlLib, mlMap, needConsent, normState, openDialog, osmData, saveState, saveT, setBusy, setMlCdn, setMlFailMsg, setMlLib, setMlMap, setOsmData, setPath, st, ui, updateConsentInfo};

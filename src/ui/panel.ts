@@ -1,13 +1,14 @@
 /* City Map Studio — Interface : taille du texte, coordonnées, historique, construction de l'interface, recherche, polices.
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from './core.js';
-import {AMBIANCES, COLOR_LABELS, DEFAULT_STATE, DUOS, FONTS, FONT_CATS, FONT_LIST, GOLD, LAYOUTS, MARKERS, MARKER_COLORS, OCCASIONS, PRESETS, STORE_KEY, TEXTURES, THEMES, THEME_CATS} from './config.js';
-import {closeDialog, getPath, mlLib, mlMap, needConsent, osmData, saveState, saveT, setMlFailMsg, setOsmData, setPath, st, ui} from './state.js';
-import {type Rect, clamp, coordText, dms, geom, posterDims, viewBounds} from './geo.js';
-import {drawMarker, drawPoster, fontOf} from './render.js';
-import {mlRestyle, mlZoom} from './engines.js';
-import {$, FIT_NAMES, FRAMES, WALLS, changed, downloadMockup, drawMockup, drawTexture, drawUnder, h, layoutPreview, mock, openMockup, redrawAll, renderMap, scheduleOver, setActivePlace} from './preview.js';
-import {addPlace, applyAmbiance, applyOccasion, applySheet, closeWelcome, fitRoute, importGpx, isSheet, renderRoute, replaceState, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setPlacing, setSheet, setStatus, shareLink, showBanner, toast, updateContrast, updateExportLabel, updateLayoutUI} from './features.js';
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import {late} from '../core/cms.js';
+import {AMBIANCES, COLOR_LABELS, DEFAULT_STATE, DUOS, FONTS, FONT_CATS, FONT_LIST, GOLD, LAYOUTS, MARKERS, MARKER_COLORS, OCCASIONS, PRESETS, STORE_KEY, TEXTURES, THEMES, THEME_CATS} from '../content/config.js';
+import {closeDialog, getPath, mlLib, mlMap, needConsent, osmData, saveState, saveT, setMlFailMsg, setOsmData, setPath, st, ui} from '../core/doc/state.js';
+import {type Rect, clamp, coordText, dms, geom, posterDims, viewBounds} from '../core/geo/geo.js';
+import {drawMarker, drawPoster, fontOf} from '../render/poster.js';
+import {mlRestyle, mlZoom} from '../map/engines.js';
+import {FIT_NAMES, FRAMES, WALLS, changed, downloadMockup, drawMockup, drawTexture, drawUnder, layoutPreview, mock, openMockup, redrawAll, renderMap, scheduleOver, setActivePlace} from './preview.js';
+import {addPlace, applyAmbiance, applyOccasion, applySheet, closeWelcome, fitRoute, importGpx, isSheet, renderRoute, replaceState, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setPlacing, setSheet, shareLink, showBanner, updateContrast, updateExportLabel, updateLayoutUI} from '../features/features.js';
+import {$, h, pressed, setSeg, setStatus, toast} from './dom.js';
 // ---------- Taille du texte de l'interface (A− / A+) ----------
 // Préférence d'affichage propre à l'appareil : hors de l'état de l'affiche, non concernée par « Réinitialiser ».
 const UI_SCALE_KEY='cms3.uiScale', UI_SCALES=[0.875,1,1.125,1.25,1.375];
@@ -103,8 +104,6 @@ function goTo(lat: number,lon: number,zoom?: number){
   if(mlMap&&st.engine==='maplibre'&&st.mode!=='illus'){ mlMap.jumpTo({center:[lon,lat],zoom:mlZoom(ui.slotCss.w)}); mlRestyle(); }   // carte masquée : recadrée au retour en mode Carte
   renderMap(true); saveState(); updateMarkerTxt();
 }
-function setSeg(id: string,v: string){ document.querySelectorAll<HTMLElement>(`#${id} button`).forEach(b=>{ const on=b.dataset.v===String(v); b.classList.toggle('on',on);
-  if(b.getAttribute('role')==='radio') b.setAttribute('aria-checked',String(on)); else b.setAttribute('aria-pressed',String(on)); }); }
 /** Affiche un onglet (état ARIA, focus clavier). Le panneau coulissant n'est pas modifié. */
 function showTab(name: string, focus?: boolean){
   document.querySelectorAll<HTMLElement>('#tabs button').forEach(x=>{ const on=x.dataset.tab===name; x.classList.toggle('on',on); x.setAttribute('aria-selected',String(on)); x.tabIndex=on?0:-1; if(on&&focus) x.focus(); });
@@ -356,7 +355,7 @@ function buildUI(){
       if(k==='folds'){ drawTexture(); saveState(); return; }
       if(k==='focusR'){ if(st.fx.quarter) redrawAll(true); else changed(); return; }
       if(k==='numbered'||k==='linkMarkers'){ changed(); return; }
-      if(k.startsWith('illus.')||k.startsWith('illusText.')){ CMS.emit('illus:input',k); return; }   // modes illustrés (js/illus.ts)
+      if(k.startsWith('illus.')||k.startsWith('illusText.')){ CMS.emit('illus:input',k); return; }   // modes illustrés (src/features/illustration.ts)
       if(k.startsWith('layers.')||k.startsWith('fx.')){ ui.snap=null; redrawAll(true); }
       else if(k==='margin'){ layoutPreview(); saveState(); }
       else if(k==='stroke'||k==='waterMult'){ redrawAll(true); }
@@ -444,8 +443,6 @@ function colorChanged(k: string){
     document.querySelectorAll<HTMLInputElement>('[data-c],#mColor').forEach(i=>{ const c=i.id==='mColor'?'marker':i.dataset.c!; if(ks.includes(c) && i!==document.activeElement) i.value=st.colors[c]; });
     if(ks.some(x=>x==='marker'||x==='paper')) refreshCards(); });
 }
-/** État « choisi » d'un bouton de sélection : classe visuelle et état ARIA */
-function pressed(b: Element,on: boolean){ b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); }
 /** Couleur Repère du thème choisi dans la liste des thèmes */
 function themeMarker(){ return (THEMES[st.theme]?.c.marker || st.colors.marker).toUpperCase(); }
 function refreshColors(){ document.querySelectorAll<HTMLInputElement>('[data-c]').forEach(i=>i.value=st.colors[i.dataset.c!]); $('mColor').value=st.colors.marker;
@@ -526,7 +523,7 @@ function locateMe(){
 
 // ---------- Géocodage Nominatim ----------
 // Recherche uniquement à la validation (pas d'autocomplétion : interdite par la politique d'usage de Nominatim).
-// Délai, quota, relance, cache et validation des réponses : CMS.geocoder (js/geocoder.ts).
+// Délai, quota, relance, cache et validation des réponses : CMS.geocoder (src/services/geocoder.ts).
 const SEARCH_UI = CMS.define('searchUI', () => {
 const GEO_MSG: Record<string, (e: CmsError)=>string>={
   TIMEOUT:()=>'Le service de recherche ne répond pas.',
@@ -673,7 +670,7 @@ const COMPARE = CMS.define('compare', () => {
 });
 const {snap: cmpSnap, note: noteChange, update: updateCompare, hold: compareBefore, init: initCompare} = COMPARE;
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
-Object.assign(late, {HIST_MAX, applySnap, cmpSnap, commitHistory, compareBefore, fontsReady, goTo, hist, isoFromFr, loadFonts, noteChange, openAdvanced, pressed, recordHistory, refreshCards, refreshColors, setEngine, setMarker, setSeg, showTab, syncInputs, syncOutputs, syncZoomUI, thumb, thumbMap, updateEngineUI, updateMarkerTxt});
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
+Object.assign(late, {HIST_MAX, applySnap, cmpSnap, commitHistory, compareBefore, fontsReady, goTo, hist, isoFromFr, loadFonts, noteChange, openAdvanced, recordHistory, refreshCards, refreshColors, setEngine, setMarker, showTab, syncInputs, syncOutputs, syncZoomUI, thumb, thumbMap, updateEngineUI, updateMarkerTxt});
 
-export {HIST_MAX, applySnap, applyUiScale, buildUI, cmpSnap, commitHistory, compareBefore, fontsReady, frDate, goTo, hist, histSnap, isoFromFr, loadFonts, noteChange, openAdvanced, parseCoords, pressed, recordHistory, redo, refreshCards, refreshColors, resetAll, setEngine, setMarker, setSeg, showTab, syncFonts, syncInputs, syncOutputs, syncZoomUI, thumb, thumbMap, undo, updateEngineUI, updateHistUI, updateMarkerTxt};
+export {HIST_MAX, applySnap, applyUiScale, buildUI, cmpSnap, commitHistory, compareBefore, fontsReady, frDate, goTo, hist, histSnap, isoFromFr, loadFonts, noteChange, openAdvanced, parseCoords, recordHistory, redo, refreshCards, refreshColors, resetAll, setEngine, setMarker, showTab, syncFonts, syncInputs, syncOutputs, syncZoomUI, thumb, thumbMap, undo, updateEngineUI, updateHistUI, updateMarkerTxt};

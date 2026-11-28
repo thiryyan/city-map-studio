@@ -1,5 +1,5 @@
 /* City Map Studio — Lieux remarquables de Wikipédia autour du lieu (recherche géographique), espace CMS.wiki (issue #46).
- * Module ES (#102), importé par js/main.ts ; réuni en un seul script par le build (scripts/build.mjs).
+ * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs).
  *
  * Option désactivée par défaut (onglet Illustration, Pistes), soumise à l'accord préalable (needConsent) : aucune requête sans elle.
  * - une seule requête : generator=geosearch (articles géolocalisés les plus proches) avec la longueur de l'article,
@@ -11,9 +11,9 @@
  *   un peu de distance ; communes, quartiers, gares, écoles, rues… sont écartés (ce ne sont pas des sujets d'illustration).
  * Erreurs typées : err.code ∈ TIMEOUT, RATE_LIMITED, NETWORK, HTTP, BAD_RESPONSE, ABORTED.
  */
-import {late} from './core.js';
+import {late} from '../core/cms.js';
 (function (g: typeof globalThis) {
-  const CMS = g.CMS;   // js/core.ts
+  const CMS = g.CMS;   // src/core/cms.ts
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
   const API = 'https://fr.wikipedia.org/w/api.php', TIMEOUT = testCfg.wikiTimeout ?? 10000, CACHE_MAX = 30, LIMIT = 100;
   /** Article validé (sanitize) */
