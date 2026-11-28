@@ -12,15 +12,15 @@
  * - Mise à jour (issue #65) : un nouveau worker attend (« waiting ») ; la page propose « Mettre à jour » et n'envoie
  *   {type:'SKIP_WAITING'} qu'à l'accord de l'utilisateur. {type:'GET_VERSION'} renvoie VERSION sur le port fourni.
  *
- * Changer VERSION (et sa copie CMS.build de js/core.js, à l'identique) à chaque modification de la liste APP ci-dessous, de ce fichier ou d'un fichier de APP
+ * Changer VERSION (et sa copie CMS.build de js/core.ts, à l'identique) à chaque modification de la liste APP ci-dessous, de ce fichier ou d'un fichier de APP
  * (vérifié par la CI : tests/swversion.py). Tout fichier de js/, css/ et lib/ (hors lib/sky/, polices woff2 et licences)
  * doit figurer dans APP (tests/pwa.py).
  */
 'use strict';
-const VERSION = 'cms-2026-11-28-1271d87';   // remplacée au build (scripts/build.mjs) : cms-AAAA-MM-JJ-<empreinte>
+const VERSION = 'cms-2026-11-28-d158d94';   // remplacée au build (scripts/build.mjs) : cms-AAAA-MM-JJ-<empreinte>
 // Cache propre à ce dossier : une autre copie de l'application sur la même origine ne touche pas à ses fichiers
 const SCOPE = new URL(self.registration.scope).pathname, CACHE = `${VERSION}@${SCOPE}`;
-const APP = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'css/app.6de28c91c0.css', 'js/app.3fb557541f.js', 'lib/maplibre-gl.js', 'lib/maplibre-gl.css', 'lib/fonts/fonts.css'];
+const APP = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'css/app.6de28c91c0.css', 'js/app.0f04a345ba.js', 'lib/maplibre-gl.js', 'lib/maplibre-gl.css', 'lib/fonts/fonts.css'];
 
 self.addEventListener('install', e => {
   // Pas de skipWaiting() ici : à la première installation, le worker s'active seul (aucun autre en place) ;
