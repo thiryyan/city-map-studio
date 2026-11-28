@@ -655,14 +655,26 @@ Pendant la refonte, la version actuelle reste l'application de référence à l'
 
 L'application relève ses propres temps (`CMS.perf`, `js/core.js`), en mémoire seulement : rien n'est enregistré ni envoyé. Lieu › Avancé › « Mesures de performance » affiche la dernière mesure de chaque type, son budget et ✓ / ✗ ; « Copier les mesures » copie la version, l'appareil (navigateur, écran, densité) et les mesures, à coller dans une issue.
 
-| Mesure | Début → fin | Budget (Galaxy A35) |
+| Mesure | Début → fin | Budget |
 | :--- | :--- | :--- |
 | Ouverture jusqu'à l'aperçu | Début du chargement de la page → premier `idle` de la carte GPU (ou premier aperçu, sans carte GPU) | 3 s |
 | Réglage visible | `changed()` → aperçu redessiné (`drawOver`), ou carte GPU au repos pour un réglage qui la restyle | 0,2 s |
 | Export A4, Export 10 × 15 (et A3, 50 × 70 sans budget) | Clic sur Exporter, après l'accord → fichier PNG ou PDF prêt | 6 s, 3 s |
 | Geste sur la carte | Doigt ou souris enfoncé sur la carte → relâché : 95e centile de l'intervalle entre deux images (10 images au moins) | 20 ms (60 images/s, gigue tolérée) |
 
-Une mesure en attente qui n'aboutit pas en 10 s est abandonnée. Les mesures de référence se font sur `/nouvelle/` (même comportement que la version classique tant que l'horizon 1 n'a pas commencé), sur le Galaxy A35 et le Galaxy S26 Ultra.
+Une mesure en attente qui n'aboutit pas en 10 s est abandonnée. Un seul appareil de référence (décision du 28/11/2026) : le téléphone de mesure, écran 412 × 892 à densité 3,5, Chrome 159 sous Android.
+
+**Relevés de référence du 28/11/2026** (même appareil ; deux relevés par adresse quand ils existent) :
+
+| Mesure | `/nouvelle/` (sources, lot 3) | Site construit (lot 4a, préversion #108) | Budget |
+| :--- | :--- | :--- | :--- |
+| Ouverture | 1,8 s · 467 ms | 614 ms · 813 ms | 3 s ✓ |
+| Réglage visible (thème, carte) | 352 ms · 370 ms | 360 ms · 380 ms | 200 ms ✗ |
+| Export A4 (PNG) | 851 ms · 784 ms | 558 ms · 583 ms | 6 s ✓ |
+| Export 10 × 15 (PNG) | 1,1 s | 437 ms | 3 s ✓ |
+| Geste sur la carte | 17 ms (59 images/s) | 18 ms (55 images/s) | 20 ms ✓ |
+
+Le build ne fait rien régresser et accélère les exports. Seul le réglage d'un thème dépasse son budget, avant comme après le build : la mesure s'arrête quand la carte GPU est entièrement redessinée (`idle`), ce qui inclut le recalcul de toutes les tuiles ; point à traiter à l'horizon 1 (#61).
 
 ### 7.8. Construction du site publié (#102)
 
