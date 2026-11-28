@@ -2,7 +2,7 @@
  * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
 // Ordre d'exécution des modules : celui des anciens scripts classiques (aucun import vers un fichier postérieur :
 // registre late de src/core/cms.ts), donc chaque fichier s'exécute après ceux dont il dépend
-import {late} from '../core/cms.js';
+import {TEST_HOOKS} from '../core/cms.js';
 import '../core/cms.js';
 import '../content/config.js';
 import '../map/maplibre-loader.js';
@@ -12,7 +12,7 @@ import '../core/doc/state.js';
 import '../core/geo/geo.js';
 import '../render/poster.js';
 import '../map/engines.js';
-import '../ui/preview.js';
+import '../view/preview.js';
 import '../features/features.js';
 import '../features/route.js';
 import '../ui/panel.js';
@@ -21,17 +21,15 @@ import '../features/export.js';
 import {AMBIANCES, FONTS, THEMES} from '../content/config.js';
 import {V, consent, declineConsent, dlgCancel, giveConsent, initDialogs, mlLib, mlMap, needConsent, normState, osmData, st, ui, updateConsentInfo} from '../core/doc/state.js';
 import {dms, exportSpec, geom, posterDims} from '../core/geo/geo.js';
-import {CART_ROWS, altAz, attributionText, cartDed, contrast, dedLines, drawMarker, drawPoster, drawText, foilCtx, lum, markerOpts, metersPerPx, moonSun, planetsAt, skyTime, souvenirFoot, textW, typoFit} from '../render/poster.js';
+import {CART_ROWS, altAz, attributionText, cartDed, dedLines, drawMarker, drawPoster, drawText, foilCtx, markerOpts, metersPerPx, moonSun, planetsAt, skyTime, souvenirFoot, textW, typoFit} from '../render/poster.js';
 import {VEC_CACHE_MAX, buildStyle, drawVectors, hatchTile, loadMaplibre, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, vecCache} from '../map/engines.js';
-import {changed, composePoster, drawOp, drawOver, drawUnder, layoutPreview, renderMap, scheduleOver, setActivePlace, stage, textureBase} from '../ui/preview.js';
+import {changed, composePoster, drawOp, drawOver, drawUnder, layoutPreview, renderMap, scheduleOver, setActivePlace, stage, textureBase} from '../view/preview.js';
 import {addPlace, applyAmbiance, applyConfig, applyOccasion, applySheet, decodeShare, deleteSave, downloadBackup, downloadConfig, encodeShare, fitRoute, importConfigFile, initSaves, initSheet, loadFromHash, loadSaves, maybeWelcome, openSaves, paletteOf, parseGpx, photoTheme, placeAt, restoreSave, saveCurrent, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setSheet, showBanner, welcomeDone} from '../features/features.js';
 import {applyUiScale, buildUI, frDate, hist, histSnap, isoFromFr, loadFonts, parseCoords, redo, refreshCards, refreshColors, resetAll, setEngine, showTab, syncInputs, undo, updateEngineUI, updateHistUI} from '../ui/panel.js';
 import {ENV, exportPoster, importText, runDiagnostics, showEnvWarning} from '../features/export.js';
-import {$, h, pressed, setStatus, toast} from '../ui/dom.js';
+import {$, h, pressed, setStatus, toast} from '../core/dom.js';
+import {contrast, lum} from '../core/color.js';
 // ---------- Démarrage ----------
-// Fonctions internes exposées (window.__cms) seulement pour les tests et le débogage : adresse avec ?test,
-// ou localStorage['cms3.debug']='1'. En usage normal, rien n'est exposé.
-const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ return localStorage.getItem('cms3.debug')==='1'; }catch(e){ return false; } })();
 async function boot(){
   buildUI(); CMS.illus.init(); CMS.route.init(); initSaves(); initSheet(); CMS.deps.init(); CMS.safe.init(); CMS.actbar.init(); CMS.changes.init(); applyUiScale();
   $('bConsentYes').onclick=giveConsent; $('bConsentFile').onclick=declineConsent; updateConsentInfo();
@@ -149,6 +147,5 @@ const {install: installPwa} = CMS.pwa;
 boot();
 
 // Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
-Object.assign(late, {TEST_HOOKS});
 
-export {TEST_HOOKS};
+

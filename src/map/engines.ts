@@ -1,11 +1,12 @@
 /* City Map Studio — Moteurs cartographiques : données OSM + Canvas (moteur Fichier), effets de tracé, MapLibre + OpenFreeMap.
  * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from '../core/cms.js';
+import {late, TEST_HOOKS} from '../core/cms.js';
 import {GL_TILE_MAX, HW_CLASS, OFM_ATTRIBUTION, OFM_URL, REF_W, ROADS, WATERWAY_W} from '../content/config.js';
 import {consent, mlFailMsg, mlLib, mlMap, needConsent, osmData, saveState, setMlCdn, setMlFailMsg, setMlLib, setMlMap, st, ui} from '../core/doc/state.js';
-import {type LatLon, type Rect, type View, imerc, merc, project, worldSize, zoomFactor} from '../core/geo/geo.js';
-import {focusRadius, lum, mix, shade, tint} from '../render/poster.js';
-import {$, setStatus} from '../ui/dom.js';
+import {focusRadius, imerc, type LatLon, merc, type Rect, project, type View, worldSize, zoomFactor} from '../core/geo/geo.js';
+import {$, setStatus} from '../core/dom.js';
+import {netMsg} from '../services/network.js';
+import {lum, mix, shade, tint} from '../core/color.js';
 /** Point OSM ; objet tracé (anneaux en [lon, merc(lat)], boîte englobante [x0, y0, x1, y1]) ; emprise en degrés */
 type LL = {lat: number; lon: number};
 export interface Feature { rings: number[][][]; bb: number[]; cls?: string; tunnel?: boolean }
@@ -204,11 +205,6 @@ function drawVectors(ctx: Ctx, r: Rect, data: OsmData, view: MapView=st){
 function checkDataBanner(){
   if(st.engine==='file') late.showBanner(!osmData,'Aucun fichier importé','Importer',()=>$('fileIn').click());
 }
-function netMsg(e: unknown){
-  const m=((e as Error)?.message)||String(e);
-  return /Failed to fetch|NetworkError|Load failed|blocked/i.test(m) ? 'accès réseau bloqué ou serveur injoignable' : m;
-}
-
 // ---------- Effets de tracé (communs aux deux moteurs, aperçu et export) ----------
 // Toutes les mesures sont en px pour un cadre de 800 px (REF_W) puis mises à l'échelle du cadre : même rendu à toute taille.
 const FX_HATCH=6, FX_DOTS=5, FX_CROSS=7;  // pas des motifs : eau hachurée, bâtiments pointillés, parcs hachurés
@@ -307,14 +303,6 @@ function buildStyle(k: number, scale=k/(st.stroke*zoomFactor(st.zoom)), pr=windo
   if(fx.riso) L.push(...water('-plate',[RISO[0]*scale,RISO[1]*scale]));   // plaque d'eau décalée, par-dessus (fondu approché par l'opacité)
   return {version:8,sources:{omt:{type:'vector',url:OFM_URL,attribution:OFM_ATTRIBUTION}},layers:L};
 }
-/** Charge un script local (données du ciel) ; `integrity` (SRI) pour un fichier servi par un tiers */
-function loadScript(src: string,ms: number,integrity?: string){
-  return new Promise<void>((res,rej)=>{ const sc=document.createElement('script'); sc.src=src; sc.async=true;
-    if(integrity){ sc.integrity=integrity; sc.crossOrigin='anonymous'; }
-    const t=setTimeout(()=>{sc.remove();rej(new Error('délai dépassé'))},ms);
-    sc.onload=()=>{clearTimeout(t);res()}; sc.onerror=()=>{clearTimeout(t);sc.remove();rej(new Error('bloqué'))};
-    document.head.appendChild(sc); });
-}
 /** Charge MapLibre (src/map/maplibre-loader.ts) et reporte son état dans mlLib / mlCdn */
 async function loadMaplibre(){
   if(mlLib!=='ok') setMlLib('loading');
@@ -371,7 +359,7 @@ let mlReleaseT=0;
 function mlKeepAlive(active: boolean){
   if(active){ clearTimeout(mlReleaseT); mlReleaseT=0; return; }
   if(!mlMap || mlReleaseT) return;
-  const ms=(typeof late.TEST_HOOKS!=='undefined' && late.TEST_HOOKS && globalThis.__cmsTestConfig?.mlRelease) || ML_RELEASE_MS;
+  const ms=(typeof TEST_HOOKS!=='undefined' && TEST_HOOKS && globalThis.__cmsTestConfig?.mlRelease) || ML_RELEASE_MS;
   mlReleaseT=setTimeout(()=>{ mlReleaseT=0;
     if(st.engine==='maplibre' || !mlMap) return;
     try{ mlMap.remove(); }catch(e){ console.warn('MapLibre',e); }
@@ -472,11 +460,11 @@ async function renderMaplibreOffscreen(wPx: number,hPx: number,view: MapView=st)
   return {canvas:out,warn};
 }
 
-return {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest, mlQuery};
+return {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, patTile, hatchTile, buildStyle, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest, mlQuery};
 });
-const {stitch, parseOsm, vecCache, VEC_CACHE_MAX, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest} = ENGINES;
+const {stitch, parseOsm, vecCache, VEC_CACHE_MAX, drawVectors, checkDataBanner, patTile, hatchTile, buildStyle, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest} = ENGINES;
 
 // Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
-Object.assign(late, {loadMaplibre, loadScript, netMsg});
+Object.assign(late, {loadMaplibre});
 
-export {VEC_CACHE_MAX, buildStyle, checkDataBanner, drawVectors, hatchTile, initMaplibre, loadMaplibre, loadScript, mlKeepAlive, mlRestyle, mlUpdateView, mlZoom, netMsg, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, vecCache};
+export {buildStyle, checkDataBanner, drawVectors, hatchTile, initMaplibre, loadMaplibre, mlKeepAlive, mlRestyle, mlUpdateView, mlZoom, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, VEC_CACHE_MAX, vecCache};

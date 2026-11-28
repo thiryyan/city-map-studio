@@ -1,5 +1,5 @@
-/* City Map Studio — Utilitaires du DOM (#118) : accès aux éléments, création sans innerHTML, boutons, état et messages.
- * Couche basse de l'interface : n'importe rien, utilisable par tous les modules. */
+/* City Map Studio — Socle navigateur (#118) : accès aux éléments, création sans innerHTML, boutons, état et messages,
+ * chargement de script. Couche basse : n'importe rien, utilisable par tous les modules. */
 /** Élément du document par son id, supposé présent (balisage de index.html). Type par défaut : champ de saisie, le plus
  *  fréquent (value, checked, disabled) ; préciser sinon : $<HTMLCanvasElement>('c'). */
 const $=<T extends HTMLElement = HTMLInputElement>(id: string) => document.getElementById(id) as T;
@@ -33,5 +33,13 @@ function toast(msg: string,err?: boolean,action?: {label: string; fn: ()=>void})
     b.onclick=()=>{ t.className=''; action.fn(); }; t.append(b); }
   t.className='show'+(err?' err':'')+(action?' act':''); clearTimeout(toastT);
   toastT=setTimeout(()=>t.className='',err?6000:action?5000:3200); }
+/** Charge un script local (données du ciel) ; `integrity` (SRI) pour un fichier servi par un tiers */
+function loadScript(src: string,ms: number,integrity?: string){
+  return new Promise<void>((res,rej)=>{ const sc=document.createElement('script'); sc.src=src; sc.async=true;
+    if(integrity){ sc.integrity=integrity; sc.crossOrigin='anonymous'; }
+    const t=setTimeout(()=>{sc.remove();rej(new Error('délai dépassé'))},ms);
+    sc.onload=()=>{clearTimeout(t);res()}; sc.onerror=()=>{clearTimeout(t);sc.remove();rej(new Error('bloqué'))};
+    document.head.appendChild(sc); });
+}
 
-export {$, h, pressed, setSeg, setStatus, toast};
+export {$, h, loadScript, pressed, setSeg, setStatus, toast};

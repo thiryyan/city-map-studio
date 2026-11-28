@@ -4,11 +4,13 @@ import {late} from '../core/cms.js';
 import {OFM_URL, REF_W} from '../content/config.js';
 import {mlCdn, mlLib, needConsent, osmData, saveState, setBusy, setOsmData, st, ui} from '../core/doc/state.js';
 import {clamp, exportSpec} from '../core/geo/geo.js';
-import {netMsg, parseOsm} from '../map/engines.js';
-import {composePoster, renderMap} from '../ui/preview.js';
+import {parseOsm} from '../map/engines.js';
+import {composePoster, renderMap} from '../view/preview.js';
 import {showBanner} from './features.js';
 import {openAdvanced, showTab, syncZoomUI, updateEngineUI, updateMarkerTxt} from '../ui/panel.js';
-import {$, h, setSeg, setStatus, toast} from '../ui/dom.js';
+import {$, h, setSeg, setStatus, toast} from '../core/dom.js';
+import {netMsg} from '../services/network.js';
+import {slug} from '../core/text.js';
 // Module CMS.export : tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier (utilisées par les autres fichiers).
 const EXPORT = CMS.define('export', () => {
 // ---------- Export PNG (résolution inscrite dans le fichier) ----------
@@ -52,7 +54,6 @@ function pdfFromJpeg(jpeg: Uint8Array, wPx: number, hPx: number, mm: number[], t
   return new Blob(parts as BlobPart[],{type:'application/pdf'});
 }
 
-const slug=(s: string)=>(s||'ville').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'ville';
 const toBlobP=(cv: HTMLCanvasElement,type: string,q?: number)=>new Promise<Blob>((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('l\'image n\'a pas pu être encodée (mémoire insuffisante ?)')),type,q));
 let lastUrl: string | null=null, lastImgUrl: string | null=null;
 async function exportPoster(){
@@ -207,9 +208,9 @@ async function importFile(f: File){
   catch(e){ setStatus('Import impossible : '+(e as Error).message,'err'); toast('Import impossible : '+(e as Error).message,true); }
 }
 
-return {slug, exportPoster, ENV, showEnvWarning, runDiagnostics, importText, importFile};
+return {exportPoster, ENV, showEnvWarning, runDiagnostics, importText, importFile};
 });
-const {slug, exportPoster, ENV, showEnvWarning, runDiagnostics, importText, importFile} = EXPORT;
+const {exportPoster, ENV, showEnvWarning, runDiagnostics, importText, importFile} = EXPORT;
 
 // ---------- Mesures de performance : affichage et copie (#101) ----------
 CMS.define('perfUI', () => {
@@ -241,6 +242,6 @@ CMS.define('perfUI', () => {
 });
 
 // Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
-Object.assign(late, {exportPoster, importFile, runDiagnostics, slug});
+Object.assign(late, {exportPoster, importFile, runDiagnostics});
 
-export {ENV, exportPoster, importFile, importText, runDiagnostics, showEnvWarning, slug};
+export {ENV, exportPoster, importFile, importText, runDiagnostics, showEnvWarning};

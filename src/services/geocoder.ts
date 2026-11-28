@@ -9,8 +9,8 @@
  * - réponse validée : coordonnées finies et dans les bornes Mercator, textes tronqués ; aucune donnée brute n'est rendue.
  * Erreurs typées : err.code ∈ EMPTY, TIMEOUT, RATE_LIMITED, NETWORK, HTTP, BAD_RESPONSE, ABORTED.
  */
-import {late} from '../core/cms.js';
 import {NOMINATIM} from '../content/config.js';
+import {netMsg} from './network.js';
 (function (g: typeof globalThis) {
   const CMS = g.CMS;   // src/core/cms.ts
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
@@ -63,7 +63,7 @@ import {NOMINATIM} from '../content/config.js';
       try { res = await fetch(url, { signal: ctl.signal, headers: { Accept: 'application/json' } }); }
       catch (e) {
         if (ctl.signal.aborted) throw geoError(timedOut ? 'TIMEOUT' : 'ABORTED', timedOut ? 'délai dépassé' : 'annulée');
-        throw geoError('NETWORK', typeof late.netMsg === 'function' ? late.netMsg(e) : (e as Error).message);
+        throw geoError('NETWORK', typeof netMsg === 'function' ? netMsg(e) : (e as Error).message);
       } finally { clearTimeout(timer); }
       if (res.status === 429 || res.status === 403) {
         const ms = retryAfterMs(res.headers.get('Retry-After'));

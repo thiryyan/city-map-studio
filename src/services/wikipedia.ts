@@ -11,7 +11,7 @@
  *   un peu de distance ; communes, quartiers, gares, écoles, rues… sont écartés (ce ne sont pas des sujets d'illustration).
  * Erreurs typées : err.code ∈ TIMEOUT, RATE_LIMITED, NETWORK, HTTP, BAD_RESPONSE, ABORTED.
  */
-import {late} from '../core/cms.js';
+import {netMsg} from './network.js';
 (function (g: typeof globalThis) {
   const CMS = g.CMS;   // src/core/cms.ts
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
@@ -80,7 +80,7 @@ import {late} from '../core/cms.js';
       try { res = await fetch(url, { signal: ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer', headers: { Accept: 'application/json' } }); }
       catch (e) {
         if (ctl.signal.aborted) throw wikiError(timedOut ? 'TIMEOUT' : 'ABORTED', timedOut ? 'délai dépassé' : 'annulée');
-        throw wikiError('NETWORK', typeof late.netMsg === 'function' ? late.netMsg(e) : (e as Error).message);
+        throw wikiError('NETWORK', typeof netMsg === 'function' ? netMsg(e) : (e as Error).message);
       }
       if (res.status === 429 || res.status === 403) throw wikiError('RATE_LIMITED', 'trop de requêtes', { status: res.status });
       if (!res.ok) throw wikiError('HTTP', `HTTP ${res.status}`, { status: res.status });

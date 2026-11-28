@@ -1,6 +1,5 @@
 /* City Map Studio — Constantes et réglages (thèmes, polices, gabarits, état par défaut).
  * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from '../core/cms.js';
 /* =========================================================================
    City Map Studio — 100 % open source
    Licence MIT © Contributeurs de City Map Studio (cf. LICENSE)
@@ -238,27 +237,5 @@ CMS.define('illusConf', () => ({
   PALETTES:['ia','theme','photo'], LANGS:['fr','en'], VINTAGE:['none','light','strong'], FITS:['cover','contain'], TSTYLES:['auto','vintage','font'],
   PISTES_MAX:8
 }));
-// ---------- Ordre des lignes de texte (Textes, Plus de réglages) ----------
-// st.lineOrder : null (ordre du gabarit) ou permutation de KEYS. Appliqué au cartouche des gabarits centrés et, dans
-// chaque bloc, aux mises en page des modes illustrés (titre et sous-titre ; dédicace, noms, date · coordonnées).
-CMS.define('order', () => {
-  const KEYS=['title','subtitle','coords','dedication','names','date'];
-  /** Ordre valide (permutation complète de KEYS) ou null */
-  const norm=(v: unknown): string[] | null=>Array.isArray(v) && v.length===KEYS.length && KEYS.every(k=>v.includes(k)) ? [...v] : null;
-  /** Clés triées selon l'ordre choisi (tri stable ; une clé hors de KEYS, comme la légende, reste en fin) ; sans ordre : inchangées */
-  function sort(keys: string[], s=late.st): string[] {
-    const O=s.lineOrder; if(!O) return keys;
-    const r=(k: string)=>{ const i=O.indexOf(k); return i<0 ? 99 : i; };
-    return keys.map((k,i)=>[k,i] as [string, number]).sort((a,b)=>r(a[0])-r(b[0]) || a[1]-b[1]).map(x=>x[0]);
-  }
-  /** Ordre affiché : celui choisi, sinon celui du gabarit (Polaroid : dédicace en tête ; modes illustrés : titre, puis bloc du bas) */
-  function current(s=late.st){
-    if(s.lineOrder) return [...s.lineOrder];
-    if(s.mode==='map' && s.layout==='polaroid') return ['dedication','names','title','date','coords','subtitle'];
-    if(s.mode!=='map') return ['title','subtitle','dedication','names','date','coords'];
-    return [...KEYS];
-  }
-  return {KEYS, norm, sort, current};
-});
 
 export {AMBIANCES, CANVAS_MAX_PX, COLOR_LABELS, DEFAULT_STATE, DUOS, EXPORT_MAX_DPI, FONTS, FONT_CATS, FONT_LIST, FORMATS, GL_TILE_MAX, GOLD, HW_CLASS, LAYOUTS, MARKERS, MARKER_BASE, MARKER_COLORS, ML_CDNS, ML_SRI, ML_VERSION, NOMINATIM, OCCASIONS, OFM_ATTRIBUTION, OFM_URL, PRESETS, REF_W, ROADS, STORE_KEY, TEXTURES, THEMES, THEME_CATS, WATERWAY_W};

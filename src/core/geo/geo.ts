@@ -186,5 +186,7 @@ function strokeShape(ctx: CanvasRenderingContext2D, r: Rect, o: number): void { 
 return {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, geom, shapeD, clipMap, strokeShape};
 });
 const {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, geom, shapeD, clipMap, strokeShape} = GEO;
+/** Rayon du halo et du quartier en relief, en px pour un cadre de largeur w */
+const focusRadius=(w: number)=>(st.focusR??30)/100*w;
 
-export {D2R, clamp, clipMap, coordText, dms, exportSpec, geom, imerc, merc, placeCoordText, posterDims, project, ratio, shapeD, strokeShape, textLine, unproject, viewBounds, worldSize, zoomFactor};
+export {clamp, clipMap, coordText, D2R, dms, exportSpec, focusRadius, geom, imerc, merc, placeCoordText, posterDims, project, ratio, shapeD, strokeShape, textLine, unproject, viewBounds, worldSize, zoomFactor};

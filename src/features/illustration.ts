@@ -10,12 +10,13 @@
 import {type PosterState, type Pt, CANVAS_MAX_PX, DEFAULT_STATE, DUOS, FONTS, FORMATS} from '../content/config.js';
 import {V, needConsent, osmData, saveState, st, ui} from '../core/doc/state.js';
 import {type Geom, type Rect, clamp, clipMap, exportSpec, geom, posterDims, ratio, shapeD, strokeShape, textLine, viewBounds} from '../core/geo/geo.js';
-import {attributionText, contrast, dedLeading, dedLines, drawHalo, drawMarkers, drawOrnaments, drawText, fontOf, fontStr, hexA, noteFit, paint, tScale, textW} from '../render/poster.js';
+import {attributionText, dedLeading, dedLines, drawHalo, drawMarkers, drawOrnaments, drawText, fontOf, fontStr, hexA, noteFit, paint, tScale, textW} from '../render/poster.js';
 import {loadMaplibre} from '../map/engines.js';
-import {changed, drawUnder, layoutPreview, poster, scheduleOver, slot, stage} from '../ui/preview.js';
+import {changed, drawUnder, layoutPreview, poster, scheduleOver, slot, stage} from '../view/preview.js';
 import {loadSaves, setOrient, updateLayoutUI} from './features.js';
 import {loadFonts, refreshCards, showTab, syncFonts, syncInputs, updateEngineUI} from '../ui/panel.js';
-import {$, h, pressed, setSeg, setStatus, toast} from '../ui/dom.js';
+import {$, h, pressed, setSeg, setStatus, toast} from '../core/dom.js';
+import {contrast} from '../core/color.js';
 /** Contexte 2D ; réglages de l'illustration (st.illus) ; sacs d'options */
 type Ctx = CanvasRenderingContext2D;
 type Illus = PosterState['illus'];

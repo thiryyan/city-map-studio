@@ -16,8 +16,9 @@ type GlyphFn = (g: string, x: number, y: number)=>void;
 type MapFn = (ctx: Ctx, rect: Rect, view: MapView, i: number)=>void;
 import {FONTS, MARKER_BASE} from '../content/config.js';
 import {st, ui} from '../core/doc/state.js';
-import {type Geom, type LatLon, type Rect, type View, D2R, clipMap, geom, placeCoordText, project, strokeShape, textLine, unproject, worldSize} from '../core/geo/geo.js';
-import {toast} from '../ui/dom.js';
+import {clipMap, D2R, focusRadius, geom, type Geom, placeCoordText, type LatLon, type Rect, project, strokeShape, unproject, type View, worldSize, textLine} from '../core/geo/geo.js';
+import {loadScript, toast} from '../core/dom.js';
+import {lum, shade, tint} from '../core/color.js';
 // ---------- Typographie ----------
 /** Police d'un rôle : 'title' (titre) ou texte (autres lignes). Une police manuscrite ne sert qu'aux lignes
  *  d'émotion (dédicace, noms, légendes des lieux) : sous-titre, coordonnées, date et légende prennent la police du titre. */
@@ -343,7 +344,7 @@ function drawMarkers(ctx: Ctx, r: Rect, view: MapView, U: number, W: number, mai
 // Étoiles (magnitude ≤ 5,5) et constellations : lib/sky/sky-data.js (d3-celestial, BSD-3), chargé à la demande.
 let skyLoading: Promise<boolean> | null=null;
 function ensureSky(){ if(window.SKY_DATA) return Promise.resolve(true);
-  if(!skyLoading) skyLoading=late.loadScript('lib/sky/sky-data.js',15000).then(()=>{ late.drawUnder(); late.refreshCards(); return true; }).catch((e: Error)=>{ skyLoading=null; toast('Données du ciel indisponibles : '+e.message,true); return false; });
+  if(!skyLoading) skyLoading=loadScript('lib/sky/sky-data.js',15000).then(()=>{ late.drawUnder(); late.refreshCards(); return true; }).catch((e: Error)=>{ skyLoading=null; toast('Données du ciel indisponibles : '+e.message,true); return false; });
   return skyLoading; }
 /** Instant observé, en ms UTC : date et heure locales du lieu, fuseau choisi (« auto » : celui de l'appareil à cette date) */
 function skyTime(s=st.sky){
@@ -363,7 +364,7 @@ function altAz(ra: number, dec: number, lat: number, lon: number, ms: number){
 // ---------- Ciel : Voie lactée, planètes, Lune ----------
 let mwLoading: Promise<boolean> | null=null;
 function ensureMilkyWay(){ if(window.SKY_MW) return Promise.resolve(true);
-  if(!mwLoading) mwLoading=late.loadScript('lib/sky/milkyway.js',15000).then(()=>{ late.drawUnder(); return true; }).catch((e: Error)=>{ mwLoading=null; toast('Voie lactée indisponible : '+e.message,true); return false; });
+  if(!mwLoading) mwLoading=loadScript('lib/sky/milkyway.js',15000).then(()=>{ late.drawUnder(); return true; }).catch((e: Error)=>{ mwLoading=null; toast('Voie lactée indisponible : '+e.message,true); return false; });
   return mwLoading; }
 const OBLIQ=23.43928*D2R;
 /** Coordonnées écliptiques (degrés) → équatoriales {ra, dec} (degrés) */
@@ -450,16 +451,7 @@ function drawSky(ctx: Ctx, r: Rect, U: number){
   const cs=0.016*U, o=R+0.032*U;
   ([['N',0,-1],['E',-1,0],['S',0,1],['O',1,0]] as [string, number, number][]).forEach(([t,dx,dy])=>drawText(ctx,t,cx+dx*o,cy+dy*o+cs*0.36,{size:cs,align:'center',color:c.text}));
 }
-function lum(hex: string){ const n=parseInt(hex.slice(1),16), f=(v: number)=>{ v/=255; return v<=0.03928?v/12.92:((v+0.055)/1.055)**2.4; }; return 0.2126*f(n>>16&255)+0.7152*f(n>>8&255)+0.0722*f(n&255); }
-function contrast(a: string,b: string){ const x=lum(a), y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); }
-
 // ---------- Couleurs dérivées ----------
-/** Teinte assombrie (f : part de noir) ou éclaircie (f : part de blanc) */
-const shade=(hex: string,f: number)=>'#'+[1,3,5].map(i=>Math.round(parseInt(hex.slice(i,i+2),16)*(1-f)).toString(16).padStart(2,'0')).join('');
-const tint=(hex: string,f: number)=>'#'+[1,3,5].map(i=>{ const v=parseInt(hex.slice(i,i+2),16); return Math.round(v+(255-v)*f).toString(16).padStart(2,'0'); }).join('');
-/** Mélange de deux teintes (t : part de b) */
-const mix=(a: string,b: string,t: number)=>'#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-t)+parseInt(b.slice(i,i+2),16)*t).toString(16).padStart(2,'0')).join('');
-
 // ---------- Dorure ----------
 // Textes, filets et repères en dégradé métallique tiré de leur propre couleur (or, argent, cuivre…) :
 // bandes de reflets en diagonale, calculées sur toute l'affiche (même rendu à l'aperçu et à l'export).
@@ -478,8 +470,6 @@ function paint(color: string){
 }
 
 // ---------- Autour du repère ----------
-/** Rayon du halo et du quartier en relief, en px pour un cadre de largeur w */
-const focusRadius=(w: number)=>(st.focusR??30)/100*w;
 /** Halo du souvenir : la ville se dissout dans le papier en s'éloignant du lieu */
 function drawHalo(ctx: Ctx, r: Rect, view: MapView){
   const q=project(view.marker.lat,view.marker.lon,r,view), R=focusRadius(r.w), pc=hexA(st.colors.paper);
@@ -706,4 +696,4 @@ function hexA(hex: string){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g
 // Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
 Object.assign(late, {CART_ROWS, cartDed, souvenirFoot});
 
-export {CART_ROWS, POLA_ROWS, altAz, attributionText, cartDed, contrast, dedLeading, dedLines, drawHalo, drawMarker, drawMarkers, drawOrnaments, drawPoster, drawText, ensureSky, fitSink, focusRadius, foilCtx, fontOf, fontStr, hexA, lum, markerOpts, metersPerPx, mix, moonSun, noteFit, paint, planetsAt, setFitSink, shade, skyTime, souvenirFoot, tScale, textW, tint, typoFit};
+export {altAz, attributionText, CART_ROWS, cartDed, dedLeading, dedLines, drawHalo, drawMarker, drawMarkers, drawOrnaments, drawPoster, drawText, ensureSky, fitSink, foilCtx, fontOf, fontStr, hexA, markerOpts, metersPerPx, moonSun, noteFit, paint, planetsAt, POLA_ROWS, setFitSink, skyTime, souvenirFoot, textW, tScale, typoFit};

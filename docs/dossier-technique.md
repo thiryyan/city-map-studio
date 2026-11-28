@@ -731,7 +731,7 @@ city-map-studio/
     ├── run_all.py          # génère les données puis lance toute la suite (utilisé par la CI)
     ├── fixture.py, make_formats.py, make_city.py   # données de test : osm.json, data.osm, data.geojson, frame.html, city.json
     ├── jswait.py, seed.py  # attente d'une condition compatible avec la CSP ; préparation du localStorage (§ 9.1)
-    ├── globals.max         # plafond du registre late, dépendances vers l'avant (tests/globals.py)
+    ├── layers.max          # plafonds de la règle des couches : imports hors règle, appels late (tests/layers.py)
     └── layouts.py, make_og.py   # outils hors suite : captures des gabarits, image d'aperçu des liens
 ```
 
@@ -748,7 +748,7 @@ Ce sont des **modules ES** (#102) : chaque fichier importe ce qu'il utilise et e
 | `illus:input` | champs liés `illus.*` / `illusText.*` | `CMS.illus` |
 | `illus:loaded` | `CMS.illus` (image rechargée depuis IndexedDB) | — (point d'accroche) |
 
-`tests/globals.py` interdit toute hausse du registre `late` (plafond `tests/globals.max` : 44 ; ramené à 0 au lot 1 de l'Horizon 1, #118) ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur (Vitest ; modules réunis par esbuild, `tests/unit/load.mjs`). **TypeScript** (#103) : les 16 modules sont en TypeScript, vérifiés en mode strict (`tsconfig.json`, `noEmit`) ; les imports gardent l'extension `.js`, esbuild compile les `.ts` au build ; `tests/typecheck.py` lance `tsc`, échoue à la moindre erreur et refuse tout `.js` dans `js/`. TypeScript refuse aussi les noms non importés et les imports réaffectés (contrôles d'ESLint jusqu'au lot 5, retiré). Types partagés : `PosterState`, `Colors`, `Route`, `Font`, `Theme` (`config.ts`), `Rect`, `View`, `Geom`, `ExportSpec` (`geo.ts`), `OsmData`, `Feature` (`engines.ts`), `LatLon` (`state.ts`) ; noms globaux (`src/types.d.ts`) : `CMS`, `maplibregl`, `SKY_DATA`, `SKY_MW`, façade de test. Les modules définis par `CMS.define` sont réexportés depuis la valeur rendue (`const GEO = CMS.define('geo', …)`), donc typés partout. **Poids** : `tests/poids.py` borne le script, la feuille de style, la page, MapLibre et le site entier (brut et compressé, § 9.2).
+**Règle des couches** (#118, `scripts/check-layers.mjs`, `tests/layers.py`) : `content` (données pures) < `core` < `render`, `services`, `storage` < `map` < `view` < `features` < `ui` < `app` ; une couche n'importe que des couches inférieures. Les imports hors règle et les appels par le registre `late` sont plafonnés (`tests/layers.max`) et ramenés à 0 au lot 1 de l'Horizon 1 ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur (Vitest ; modules réunis par esbuild, `tests/unit/load.mjs`). **TypeScript** (#103) : les 16 modules sont en TypeScript, vérifiés en mode strict (`tsconfig.json`, `noEmit`) ; les imports gardent l'extension `.js`, esbuild compile les `.ts` au build ; `tests/typecheck.py` lance `tsc`, échoue à la moindre erreur et refuse tout `.js` dans `js/`. TypeScript refuse aussi les noms non importés et les imports réaffectés (contrôles d'ESLint jusqu'au lot 5, retiré). Types partagés : `PosterState`, `Colors`, `Route`, `Font`, `Theme` (`config.ts`), `Rect`, `View`, `Geom`, `ExportSpec` (`geo.ts`), `OsmData`, `Feature` (`engines.ts`), `LatLon` (`state.ts`) ; noms globaux (`src/types.d.ts`) : `CMS`, `maplibregl`, `SKY_DATA`, `SKY_MW`, façade de test. Les modules définis par `CMS.define` sont réexportés depuis la valeur rendue (`const GEO = CMS.define('geo', …)`), donc typés partout. **Poids** : `tests/poids.py` borne le script, la feuille de style, la page, MapLibre et le site entier (brut et compressé, § 9.2).
 
 | Fichier | Contenu |
 | :--- | :--- |
@@ -846,7 +846,7 @@ Tests de bout en bout Playwright (Python), un fichier par domaine, avec un **ré
 | `typecheck.py` | Types (#103) | `tsc -p .` sans erreur (mode strict) sur tout `src/` (noms non importés et imports réaffectés compris) ; aucun fichier `.js` dans `src/`. |
 | `poids.py` | Poids (#103) | Site construit : script ≤ 330 Ko (125 Ko compressé), feuille de style ≤ 38 Ko (9 Ko), page ≤ 72 Ko (18 Ko), `sw.js` ≤ 6 Ko, MapLibre ≤ 790 Ko (210 Ko) ; démarrage (page, script, feuille compressés) ≤ 150 Ko ; site entier ≤ 2,6 Mo. |
 | `references.py` | Références d'image (#118) | Site de la branche de base (point de départ de la branche, construit à part) et site construit, sur la même machine : 82 affiches Carte et 7 affiches illustrées identiques pixel par pixel et texte par texte ; mêmes listes (gabarits, thèmes, ambiances, polices, repères, formats) et mêmes dimensions d'export ; témoins de sensibilité. Sans objet sur `main` (fait dans la pull request) ; `REFERENCES=off` pour un changement visuel déclaré. |
-| `globals.py` | Architecture | Entrées du registre `late` ≤ `tests/globals.max`. |
+| `layers.py` | Architecture (#118) | Règle des couches sur le graphe d'imports d'esbuild ; imports hors règle et appels par le registre `late` ≤ `tests/layers.max`. |
 
 Outils hors suite : `layouts.py` (captures des 11 gabarits, contrôle visuel) et `make_og.py` (régénère `icons/og-image.jpg` à partir du rendu actuel).
 

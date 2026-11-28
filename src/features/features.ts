@@ -4,10 +4,12 @@ import {keysOf, late} from '../core/cms.js';
 import {type Colors, type PosterState, type Route, AMBIANCES, DEFAULT_STATE, DUOS, EXPORT_MAX_DPI, FONTS, FORMATS, LAYOUTS, MARKERS, OCCASIONS, REF_W, STORE_KEY, TEXTURES, THEMES} from '../content/config.js';
 import {SHARE_MAX_BYTES, SHARE_MAX_CHARS, V, normState, osmData, saveState, saveT, st, ui} from '../core/doc/state.js';
 import {clamp, exportSpec, imerc, merc} from '../core/geo/geo.js';
-import {contrast, drawPoster, lum, mix} from '../render/poster.js';
+import {drawPoster} from '../render/poster.js';
 import {drawVectors} from '../map/engines.js';
-import {applyTexture, changed, composePoster, drawTexture, layoutPreview, redrawAll, scheduleOver, slot} from '../ui/preview.js';
-import {$, h, pressed, setSeg, toast} from '../ui/dom.js';
+import {applyTexture, changed, composePoster, drawTexture, layoutPreview, redrawAll, scheduleOver, slot} from '../view/preview.js';
+import {$, h, pressed, setSeg, toast} from '../core/dom.js';
+import {slug} from '../core/text.js';
+import {contrast, lum, mix} from '../core/color.js';
 // ---------- Plusieurs lieux ----------
 function placeAt(lat: number,lon: number){
   const i=ui.placeIdx||0;
@@ -1045,7 +1047,7 @@ const configOf=(name: string,state: Save['state'],savedAt?: string)=>({format:CF
 async function downloadConfig(entry: Save | null){
   const c = entry ? configOf(entry.name,entry.state,entry.savedAt) : configOf(defaultSaveName(),savedState());
   const {o,note}=await CMS.illus.attachImages(c,[c.state],$('cfgImg').checked);
-  downloadJson(o,`affiche-${late.slug(c.name)}.json`); toast('Configuration téléchargée'+note);
+  downloadJson(o,`affiche-${slug(c.name)}.json`); toast('Configuration téléchargée'+note);
 }
 async function downloadBackup(){
   const saves=loadSaves(); if(!saves.length){ toast('Aucune affiche enregistrée à sauvegarder',true); return; }

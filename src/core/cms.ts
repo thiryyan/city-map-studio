@@ -5,7 +5,7 @@
  * Chaque fichier de src/ est un module ES : il importe ce qu'il utilise des fichiers chargés avant lui, et lit dans le
  * registre late (fin de ce fichier) ce qu'il appelle des fichiers chargés après lui. CMS.define('nom', …) range des
  * fonctions sous CMS.nom (testées seules : tests/unit) ; les modules se parlent aussi par événements :
- * CMS.on('state:saved', …), CMS.emit('state:saved'). Garde-fous : tests/globals.py (ESLint, plafond du registre late).
+ * CMS.on('state:saved', …), CMS.emit('state:saved'). Garde-fous : tests/layers.py (règle des couches, plafond du registre late, #118).
  */
 (function (g: typeof globalThis) {
   const CMS = g.CMS = g.CMS || ({} as CmsNamespace);
@@ -96,4 +96,8 @@ CMS.define('perf', () => {
 const late: Record<string, any> = Object.create(null);
 /** Clés d'un objet, typées (Object.keys renvoie string[]) */
 const keysOf=<T extends object>(o: T)=>Object.keys(o) as (keyof T)[];
-export {keysOf, late};
+// Fonctions internes exposées (window.__cms) seulement pour les tests et le débogage : adresse avec ?test,
+// ou localStorage['cms3.debug']='1'. En usage normal, rien n'est exposé.
+const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ return localStorage.getItem('cms3.debug')==='1'; }catch(e){ return false; } })();
+
+export {keysOf, late, TEST_HOOKS};

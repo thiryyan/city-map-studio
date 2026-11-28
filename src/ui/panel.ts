@@ -6,9 +6,9 @@ import {closeDialog, getPath, mlLib, mlMap, needConsent, osmData, saveState, sav
 import {type Rect, clamp, coordText, dms, geom, posterDims, viewBounds} from '../core/geo/geo.js';
 import {drawMarker, drawPoster, fontOf} from '../render/poster.js';
 import {mlRestyle, mlZoom} from '../map/engines.js';
-import {FIT_NAMES, FRAMES, WALLS, changed, downloadMockup, drawMockup, drawTexture, drawUnder, layoutPreview, mock, openMockup, redrawAll, renderMap, scheduleOver, setActivePlace} from './preview.js';
+import {FIT_NAMES, FRAMES, WALLS, changed, downloadMockup, drawMockup, drawTexture, drawUnder, layoutPreview, mock, openMockup, redrawAll, renderMap, scheduleOver, setActivePlace} from '../view/preview.js';
 import {addPlace, applyAmbiance, applyOccasion, applySheet, closeWelcome, fitRoute, importGpx, isSheet, renderRoute, replaceState, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setPlacing, setSheet, shareLink, showBanner, updateContrast, updateExportLabel, updateLayoutUI} from '../features/features.js';
-import {$, h, pressed, setSeg, setStatus, toast} from './dom.js';
+import {$, h, pressed, setSeg, setStatus, toast} from '../core/dom.js';
 // ---------- Taille du texte de l'interface (A− / A+) ----------
 // Préférence d'affichage propre à l'appareil : hors de l'état de l'affiche, non concernée par « Réinitialiser ».
 const UI_SCALE_KEY='cms3.uiScale', UI_SCALES=[0.875,1,1.125,1.25,1.375];

@@ -4,9 +4,11 @@ import {late} from '../core/cms.js';
 import {type Place, LAYOUTS, THEMES} from '../content/config.js';
 import {consent, mlLib, mlMap, needConsent, openDialog, osmData, saveState, setBusy, st, ui} from '../core/doc/state.js';
 import {type Rect, clamp, clipMap, geom, imerc, merc, posterDims, ratio, shapeD, textLine, unproject, worldSize} from '../core/geo/geo.js';
-import {CART_ROWS, POLA_ROWS, cartDed, drawPoster, ensureSky, fitSink, lum, setFitSink, souvenirFoot} from '../render/poster.js';
+import {CART_ROWS, POLA_ROWS, cartDed, drawPoster, ensureSky, fitSink, setFitSink, souvenirFoot} from '../render/poster.js';
 import {checkDataBanner, drawVectors, initMaplibre, mlKeepAlive, mlRestyle, mlUpdateView, renderMaplibreOffscreen} from '../map/engines.js';
-import {$, h, setSeg, setStatus, toast} from './dom.js';
+import {$, h, setSeg, setStatus, toast} from '../core/dom.js';
+import {slug} from '../core/text.js';
+import {lum} from '../core/color.js';
 // ---------- Aperçu ----------
 const cvU=$<HTMLCanvasElement>('cvUnder'), cvO=$<HTMLCanvasElement>('cvOver'), cvT=$<HTMLCanvasElement>('cvTex'), vecC=$<HTMLCanvasElement>('vecCanvas'), slot=$<HTMLDivElement>('slot'), poster=$<HTMLDivElement>('poster'), stage=$<HTMLDivElement>('stage');
 function layoutPreview(){
@@ -333,7 +335,7 @@ function drawMockup(){
   $('mockMat').checked=mock.mat;
 }
 function downloadMockup(){
-  $<HTMLCanvasElement>('mockCv').toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`apercu-au-mur-${late.slug(st.texts.title)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); },'image/png');
+  $<HTMLCanvasElement>('mockCv').toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`apercu-au-mur-${slug(st.texts.title)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); },'image/png');
 }
 
 // Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
