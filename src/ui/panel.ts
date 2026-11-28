@@ -334,7 +334,7 @@ function buildUI(){
       if(k==='folds'){ drawTexture(); saveState(); return; }
       if(k==='focusR'){ if(st.fx.quarter) redrawAll(true); else changed(); return; }
       if(k==='numbered'||k==='linkMarkers'){ changed(); return; }
-      if(k.startsWith('illus.')||k.startsWith('illusText.')){ CMS.emit('illus:input',k); return; }   // modes illustrés (src/features/illustration.ts)
+      if(k.startsWith('illus.')||k.startsWith('illusText.')){ CMS.emit('illus:input',k); return; }   // modes illustrés (src/ui/illustration.ts)
       if(k.startsWith('layers.')||k.startsWith('fx.')){ ui.snap=null; redrawAll(true); }
       else if(k==='margin'){ layoutPreview(); saveState(); }
       else if(k==='stroke'||k==='waterMult'){ redrawAll(true); }

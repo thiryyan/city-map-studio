@@ -9,7 +9,7 @@ import {st, ui} from '../core/doc/state.js';
 // visible (« Toucher pour modifier ») s'affiche aux deux premières utilisations.
 // Modification : un seul choix actif à la fois (Carte · Repère · Illustration · Textes, selon le type d'affiche) ; ce qui
 // est choisi reçoit les gestes, le reste est inerte (CSS `#app[data-intent]`, calque cadré de CMS.illus, gestes de l'image
-// dans src/features/illustration.ts). Choix de départ : onglet Repère ou Illustration, sinon la zone touchée (carte ou illustration), sinon le
+// dans src/ui/illustration.ts). Choix de départ : onglet Repère ou Illustration, sinon la zone touchée (carte ou illustration), sinon le
 // calque cadré. « Textes » n'est jamais choisi d'office : c'est un interrupteur (un second toucher revient au choix d'avant).
 // Le choix reste hors de l'état de l'affiche (pas d'historique, pas d'enregistrement).
 CMS.define('intent', () => {

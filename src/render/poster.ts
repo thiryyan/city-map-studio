@@ -592,8 +592,8 @@ function drawPoster(ctx: Ctx, W: number, H: number, pass: string, mapFn?: MapFn)
 }
 function drawPosterAt(ctx: Ctx, W: number, H: number, pass: string, mapFn?: MapFn){
   const c=st.colors, g=geom(st,W,H), m=g.m, U=g.U, r=g.map;
-  if(g.mix){ CMS.illus.drawMix(ctx,W,H,pass,g,mapFn); return g; }   // carte + illustration (src/features/illustration.ts)
-  if(g.illus){ CMS.illus.draw(ctx,W,H,pass,g); return g; }   // modes illustrés : image importée et textes (src/features/illustration.ts)
+  if(g.mix){ CMS.illus.drawMix(ctx,W,H,pass,g,mapFn); return g; }   // carte + illustration (src/ui/illustration.ts)
+  if(g.illus){ CMS.illus.draw(ctx,W,H,pass,g); return g; }   // modes illustrés : image importée et textes (src/ui/illustration.ts)
   if(pass!=='over'){ ctx.fillStyle=c.paper; ctx.fillRect(0,0,W,H); if(g.sky) drawSky(ctx,g.sky,U); }
   if(pass==='all' && mapFn) g.places.forEach((p,i)=>{ ctx.save(); clipMap(ctx,p.rect); ctx.fillStyle=c.land; ctx.fillRect(p.rect.x,p.rect.y,p.rect.w,p.rect.h); mapFn(ctx,p.rect,p.view,i); ctx.restore(); });
   if(pass==='under') return g;

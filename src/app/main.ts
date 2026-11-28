@@ -30,7 +30,7 @@ import '../features/palette.js';
 import '../features/saves.js';
 import '../features/route.js';
 import '../ui/panel.js';
-import '../features/illustration.js';
+import '../ui/illustration.js';
 import '../features/export.js';
 import {AMBIANCES, FONTS, THEMES} from '../content/config.js';
 import {declineConsent, giveConsent} from '../ui/consent.js';

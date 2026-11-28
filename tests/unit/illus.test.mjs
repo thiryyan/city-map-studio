@@ -3,7 +3,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { load, ev } from './load.mjs';
 
-const ctx = await load(['src/content/config.ts', 'src/map/maplibre-loader.ts', 'src/services/geocoder.ts', 'src/core/doc/state.ts', 'src/core/geo/geo.ts', 'src/render/layout.ts', 'src/features/illustration.ts']);
+const ctx = await load(['src/content/config.ts', 'src/map/maplibre-loader.ts', 'src/services/geocoder.ts', 'src/core/doc/state.ts', 'src/core/geo/geo.ts', 'src/render/layout.ts', 'src/core/illustration-state.ts', 'src/render/illustration-image.ts', 'src/render/illustration-text.ts', 'src/render/illustration-draw.ts', 'src/storage/illustration-images.ts', 'src/features/illustration-prompt.ts', 'src/ui/illustration-hits.ts', 'src/ui/illustration-text.ts', 'src/ui/illustration.ts']);
 const J = expr => JSON.parse(JSON.stringify(ev(ctx, expr)));
 const S = patch => `Object.assign(structuredClone(DEFAULT_STATE), ${patch})`;
 

@@ -191,12 +191,12 @@ const DEFAULT_STATE = {
   focusR:30,                    // rayon du halo et du quartier en relief (% de la largeur de la carte)
   orn:dyn<boolean>()({scale:false,compass:false,grid:false}),     // ornements : échelle graphique, rose des vents, graduations
   folds:false,                  // papier : plis d'une carte dépliée
-  mode:'map',                   // type d'affiche : 'map' (carte) | 'illus' (illustration importée, cf. src/features/illustration.ts) | 'mix' (carte + illustration)
+  mode:'map',                   // type d'affiche : 'map' (carte) | 'illus' (illustration importée, cf. src/ui/illustration.ts) | 'mix' (carte + illustration)
   mix:{compo:'med',shape:'circle',pos:'bas',split:'half'},   // carte + illustration : composition (médaillon, vignette, haut/bas, côte à côte, fondu), forme et position du médaillon, partage haut/bas
   // Illustration : cadrage (zoom en %, décalage en fraction de l'affiche), retouches, filtre vintage, choix du prompt.
   // L'image elle-même n'est pas dans l'état (trop lourde) : elle est tenue par CMS.illus.
   illus:{fit:'cover',zoom:100,ox:0,oy:0,bright:0,contrast:0,satur:0,vintage:'none',grain:false,paper:false,flat:false,upscale:false,
-    img:null as {ref: string; name: string; w: number; h: number} | null,   // image importée : {ref (empreinte SHA-256), name, w, h} ; l'image est dans IndexedDB (src/features/illustration.ts)
+    img:null as {ref: string; name: string; w: number; h: number} | null,   // image importée : {ref (empreinte SHA-256), name, w, h} ; l'image est dans IndexedDB (src/ui/illustration.ts)
     prompt:{pistes:[] as string[],moment:'any',saison:'any',palette:'ia',lang:'fr'}},
   // Style des textes, commun aux trois types d'affiche (#71) : style du titre, couleurs (ombre et contour : '' = aucun), décalage de l'ombre.
   // 'auto' : valeur propre au type d'affiche (CMS.illus.textStyle) : titre Police en Carte, Vintage sinon ; lettres à la couleur

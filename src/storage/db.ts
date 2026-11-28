@@ -1,6 +1,6 @@
 /* City Map Studio — Base IndexedDB unique (#118) : « city-map-studio », quatre magasins.
  *   documents : affiche en cours (« current ») et Mes affiches (« saves »), au format PosterDoc (src/core/doc/poster-doc.ts)
- *   images    : illustrations importées, par empreinte SHA-256 (src/features/illustration.ts)
+ *   images    : illustrations importées, par empreinte SHA-256 (src/storage/illustration-images.ts)
  *   history   : historique annuler / rétablir de l'affiche en cours (#16)
  *   legacy    : copie brute des données d'avant le #118 (clés cms3.*), gardée jusqu'à la porte 2 de l'Horizon 1
  * Sans IndexedDB (navigation privée stricte, stockage bloqué), chaque appel échoue : les appelants gardent alors les

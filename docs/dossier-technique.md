@@ -530,7 +530,7 @@ Aucun réglage ne dépend du moteur : les effets de tracé, motifs, calques, orn
   On glisse la poignée (aimantation au cran le plus proche, avec une préférence pour le sens du geste), ou on la touche pour passer d'un cran à l'autre (flèches haut et bas au clavier). Toucher un onglet depuis le cran réduit ouvre la mi-hauteur ; toucher l'onglet actif bascule entre mi-hauteur et déplié. Le panneau se déplie pendant la saisie d'un texte, puis reprend sa place.
 * **Deux colonnes** (`TWO_COL` : largeur ≥ 900 px, ou paysage et largeur ≥ 560 px) : panneau à gauche (`min(400px, 46vw)`), table lumineuse à droite. Pas de poignée ; Lecture et Modification comme sur mobile (souris : glisser, molette).
 * **Lecture et Modification** (#82 ; mobile et ordinateur) : en **Lecture** (par défaut), rien ne bouge sur l'affiche : un calque transparent (`#shield`) la couvre entièrement ; les zones de texte et de vignette sont inertes au pointeur (le clavier reste possible). Une invitation visible (« ✎ Toucher pour modifier », « Cliquer pour modifier » à la souris) s'affiche aux deux premières utilisations (`cms:editUses`). Le bouton **Modifier** de la barre d'actions (`#bEdit`), ou un toucher sur l'affiche, ouvre la **Modification** (`ui.framing`) : sur mobile, panneau réduit ; indication en haut de la scène (`#frameBar`) ; sélecteur « Que déplacer ? » dans le pied ; Modifier devient **Terminer**, et Comparer et l'étape suivante laissent la place. « Placer le repère » (onglet Lieu) reste possible en Lecture : il réduit le panneau et le rétablit une fois le repère posé (`stageMode`). « Modifier » est inactif quand rien ne peut bouger (Illustration sans image importée) ; une Modification où plus rien ne peut bouger (image retirée) revient en Lecture. « Modifier le lieu 2 » (Deux lieux) reste au-dessus du verrou : choisir le lieu édité ne déplace rien.
-* **« Que déplacer ? »** (`CMS.intent`, `src/ui/edit-intent.ts` ; `#intentBar`) : en Modification, **un seul choix est actif à la fois**, parmi **Carte · Repère · Illustration · Textes** (boutons radio ARIA, flèches au clavier, cibles de 44 px). Ce qui est choisi reçoit les gestes ; le reste est inerte (CSS `#app[data-intent]` ; gestes de l'image dans `src/features/illustration.ts`). Les choix suivent le type d'affiche :
+* **« Que déplacer ? »** (`CMS.intent`, `src/ui/edit-intent.ts` ; `#intentBar`) : en Modification, **un seul choix est actif à la fois**, parmi **Carte · Repère · Illustration · Textes** (boutons radio ARIA, flèches au clavier, cibles de 44 px). Ce qui est choisi reçoit les gestes ; le reste est inerte (CSS `#app[data-intent]` ; gestes de l'image dans `src/ui/illustration.ts`). Les choix suivent le type d'affiche :
 
   | Type | Choix proposés |
   |---|---|
@@ -547,7 +547,7 @@ Aucun réglage ne dépend du moteur : les effets de tracé, motifs, calques, orn
 
 ### 6.3. Type d'affiche et onglets
 
-* **Type d'affiche d'abord** (#62) : le choix **Carte / Illustration / Carte + illus.** est une barre unique (`#modeSeg`), épinglée au-dessus des onglets sur tous les écrans, y compris au cran réduit. Les onglets en découlent (`applyMode`, `src/features/illustration.ts`) :
+* **Type d'affiche d'abord** (#62) : le choix **Carte / Illustration / Carte + illus.** est une barre unique (`#modeSeg`), épinglée au-dessus des onglets sur tous les écrans, y compris au cran réduit. Les onglets en découlent (`applyMode`, `src/ui/illustration.ts`) :
 
   | Type | Onglets |
   |---|---|
@@ -773,7 +773,11 @@ Ce sont des **modules ES** (#102), rangés par couche (#118) : chaque fichier im
 | `src/features/places.ts`, `gpx.ts`, `route.ts` | features | Lieux multiples, `goTo`, `setMarker` ; itinéraire GPX importé ; itinéraire préparé avec une IA (`CMS.route`). |
 | `src/features/share.ts`, `saves.ts`, `export.ts` | features | Partage par lien et `applyConfig` ; Mes affiches ; export PNG et PDF, diagnostic, import de fichier (`CMS.export`). |
 | `src/features/presets.ts`, `palette.ts`, `compare.ts` | features | Ambiances, modèles, gabarit, orientation, format ; couleurs d'après une image ; comparer avant / après (`CMS.compare`). |
-| `src/features/illustration.ts` | features | `CMS.illus` : modes Illustration et Carte + illustration (§ 4.13 et 4.14). À découper (#118). |
+| `src/ui/illustration.ts`, `illustration-text.ts`, `illustration-hits.ts` | ui | `CMS.illus` : modes Illustration et Carte + illustration (§ 4.13 et 4.14) ; réglages des textes ; zones de prise des textes (découpage de l'ancien fichier unique, #119). |
+| `src/features/illustration-prompt.ts` | features | Prompt du mode illustré et pistes lues dans la carte ou dans Wikipédia. |
+| `src/render/illustration-image.ts`, `illustration-text.ts`, `illustration-draw.ts` | render | Cadrage et retouches de l'image ; mise en page des textes ; dessin des plaques, des blocs et de la composition Carte + illustration. |
+| `src/storage/illustration-images.ts` | storage | Conservation des illustrations (IndexedDB), empreinte SHA-256, export et import avec les fichiers de configuration. |
+| `src/core/illustration-state.ts` | core | `IS` : état partagé de l'illustration (image importée, étape, pistes, zones de prise) ; `hooks.note` : crochet du rendu vers l'aperçu. |
 | `src/ui/panel.ts` | ui | Taille de l'interface, coordonnées, `buildUI`, `syncInputs`, vignettes du panneau, recherche (`CMS.searchUI`), moteur. |
 | `src/ui/sheet.ts`, `shell.ts`, `action-bar.ts`, `edit-intent.ts`, `clean-view.ts` | ui | Panneau coulissant ; repère à placer et bandeau ; barre d'actions ; « Que déplacer ? » (`CMS.intent`) ; affiche seule et loupe (`CMS.clean`). |
 | `src/ui/changes.ts`, `dependent-settings.ts`, `safe-zone.ts`, `welcome.ts`, `consent.ts` | ui | Réglages modifiés (`CMS.changes`) ; réglages dépendants (`CMS.deps`) ; zone de sécurité (`CMS.safe`) ; ambiance du premier lancement ; réponse à la demande d'accord. |
