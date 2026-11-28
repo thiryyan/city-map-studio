@@ -27,14 +27,15 @@
 // Identique à VERSION de sw.js (vérifié par tests/swversion.py et tests/pwa.py) : la page connaît sa version même
 // sans service worker (file://, première visite, hors ligne, tests). Format : cms-AAAA-MM-JJ suivi d'une lettre.
 CMS.define('build', () => {
-  const version = 'cms-2026-11-28a';
-  /** Libellé lisible : « 24/11/2026 (h) » ; identifiant d'un autre format rendu tel quel */
-  const label = v => { const m = /^cms-(\d{4})-(\d\d)-(\d\d)(.*)$/.exec(v || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` + (m[4] ? ` (${m[4]})` : '') : (v || 'inconnue'); };
+  const version = 'cms-dev';   // remplacée au build (scripts/build.mjs), comme VERSION de sw.js
+  /** Libellé lisible : « 24/11/2026 (h) », « 28/11/2026 (3522713) » pour une version construite ; autre format rendu tel quel */
+  const label = v => { const m = /^cms-(\d{4})-(\d\d)-(\d\d)-?(.*)$/.exec(v || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` + (m[4] ? ` (${m[4]})` : '') : (v || 'inconnue'); };
   return { version, label };
 });
 // ---------- Mesures de performance (#97, lot 3 : #101) ----------
 // Temps relevés sur l'appareil, gardés en mémoire seulement (rien n'est enregistré ni envoyé) et affichés dans
-// Lieu › Avancé › « Mesures de performance ». Budgets fixés le 27/11/2026 pour le Samsung Galaxy A35.
+// Lieu › Avancé › « Mesures de performance ». Budgets fixés le 27/11/2026 ; un seul appareil de référence,
+// l'« Appareil S2x » (téléphone 412 × 892, densité 3,5 ; décision du 28/11/2026).
 CMS.define('perf', () => {
   /** Budgets : durée maximale en ms ; « geste » : 95e centile de l'intervalle entre images (60 images/s, gigue de l'écran tolérée) */
   const BUDGET = {ouverture: 3000, reglage: 200, 'export-a4': 6000, 'export-10x15': 3000, geste: 20};

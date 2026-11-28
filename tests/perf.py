@@ -12,7 +12,8 @@ from playwright.async_api import async_playwright
 from jswait import wait_js
 
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri() + '?test'
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+APP = (ROOT / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None
 TILEJSON = json.dumps({'tilejson': '3.0.0', 'tiles': ['https://tiles.openfreemap.org/t/{z}/{x}/{y}.pbf'], 'minzoom': 0, 'maxzoom': 14})
 CORS = {'Access-Control-Allow-Origin': '*'}

@@ -12,7 +12,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from functools import partial
 from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
-ROOT = T.parent
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
 CHROME = os.environ.get('CHROME') or None
 FIX = (T / 'osm.json').read_text()
 WATCH = "window.__csp=[]; document.addEventListener('securitypolicyviolation', e=>window.__csp.push(e.violatedDirective+' '+e.blockedURI));"
@@ -32,7 +32,7 @@ async def main():
     check(not re.search(r'<script(?![^>]*\bsrc=)', html) and '<style' not in html, 'aucun script ni style en ligne dans index.html')
     check(' style="' not in body and not re.search(r'\son[a-z]+="', body), 'aucun attribut style ni gestionnaire on…= dans le HTML')
     srcs = re.findall(r'<script src="([^"]+)"', html)
-    check(all((ROOT / s).exists() for s in srcs) and len(srcs) >= 5, f'scripts présents : {srcs}')
+    check(all((ROOT / s).exists() for s in srcs) and srcs, f'scripts présents : {srcs}')   # source : un par fichier ; dist/ : un seul
 
     srv = ThreadingHTTPServer(('127.0.0.1', 0), partial(Q, directory=str(ROOT)))
     threading.Thread(target=srv.serve_forever, daemon=True).start()

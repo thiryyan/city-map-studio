@@ -13,10 +13,11 @@ from playwright.async_api import async_playwright
 from jswait import wait_js
 
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri() + '?test'
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+APP = (ROOT / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
-VERSION = re.search(r"const VERSION = '([^']+)'", (T.parent / 'sw.js').read_text(encoding='utf-8')).group(1)
+VERSION = re.search(r"const VERSION = '([^']+)'", (ROOT / 'sw.js').read_text(encoding='utf-8')).group(1)
 GPX = ('<?xml version="1.0"?><gpx version="1.1" creator="test"><trk><name>Balade</name><trkseg>'
        + ''.join(f'<trkpt lat="{47.586 + i * 0.0002}" lon="{1.333 + i * 0.0003}"/>' for i in range(40)) + '</trkseg></trk></gpx>')
 fails = []

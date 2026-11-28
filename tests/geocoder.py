@@ -10,7 +10,8 @@ from playwright.async_api import async_playwright
 from jswait import wait_js
 
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri() + '?test'
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+APP = (ROOT / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None
 OK = json.dumps([
     {'lat': '48.8582599', 'lon': '2.2945006', 'name': 'Tour Eiffel', 'display_name': 'Tour Eiffel, Paris, France', 'osm_type': 'way', 'osm_id': 5013364},

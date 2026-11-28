@@ -1,0 +1,15 @@
+{
+  "name": "city-map-studio",
+  "private": true,
+  "description": "Atelier web de création d'affiches cartographiques souvenir",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/build.mjs && CMS_ROOT=dist python3 tests/run_all.py",
+    "test:source": "python3 tests/run_all.py"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

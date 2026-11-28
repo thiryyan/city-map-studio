@@ -4,7 +4,7 @@ tests/data.osm (XML OSM : nœuds, chemins à références, relations multipolygo
 (FeatureCollection) et tests/frame.html (l'application dans une iframe, pour tests/offline.py). Lancé par
 tests/run_all.py après tests/fixture.py.
 """
-import json, pathlib
+import os, json, pathlib
 T=pathlib.Path(__file__).resolve().parent
 d=json.load(open(T/'osm.json'))
 nodes={}; xml=['<?xml version="1.0"?><osm version="0.6">']; ways=[]; rels=[]
@@ -37,5 +37,5 @@ for e in d['elements']:
         polys=[[[ [g['lon'],g['lat']] for g in m['geometry']] for m in e['members']]]
         feats.append({"type":"Feature","properties":e['tags'],"geometry":{"type":"MultiLineString","coordinates":polys[0]}})
 json.dump({"type":"FeatureCollection","features":feats},open(T/'data.geojson','w'))
-(T/'frame.html').write_text('<iframe src="'+(T.parent/'index.html').as_uri()+'?test'+'" style="width:420px;height:900px"></iframe>')
+(T/'frame.html').write_text('<iframe src="'+(pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()/'index.html').as_uri()+'?test'+'" style="width:420px;height:900px"></iframe>')
 print('ok')

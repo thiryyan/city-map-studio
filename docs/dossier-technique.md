@@ -19,7 +19,7 @@
 | E7 | Libellés | Aucun libellé sur la carte : le tracé est purement graphique. |
 | E8 | Ville au lancement | Blois et la Loire. |
 | E9 | Export | PNG A4 300 DPI (2480 × 3508 px) par défaut ; A3, 50 × 70 cm et 10 × 15 cm (tirage photo) ; PDF à la taille d'impression (§ 5). |
-| E10 | Livraison | Fichiers statiques **sans étape de build**, servis tels quels : `index.html` (balisage), `css/app.css`, `js/*.js` (scripts classiques chargés dans l'ordre, sans module ES, pour que l'ouverture en `file://` reste possible). MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
+| E10 | Livraison | Sources : `index.html` (balisage), `css/app.css`, `js/*.js` (scripts classiques chargés dans l'ordre), ouvrables telles quelles (`file://` ou serveur local). **Site publié construit** par `scripts/build.mjs` (#102, § 7.8) : `dist/`, un seul script et une seule feuille minifiés, `sw.js` généré ; il s'ouvre aussi en `file://`. MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
 | E11 | Écrans | Mobile en priorité, ordinateur en second. Interface en français. |
 | E12 | Hébergement | **GitHub Pages**, publié depuis la branche `gh-pages` par GitHub Actions (§ 7.6) : racine = version classique (branche `classique`), `/nouvelle/` = branche `main`, `/pr-N/` = préversions. |
 | E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU : mention complète active par défaut. Décochée, la case laisse une **mention minimale toujours inscrite** (« © OpenStreetMap », plus « © OpenMapTiles » avec le moteur GPU ; `attributionText`). À l'écran, les sources de la carte sont rappelées en légende discrète **sous l'aperçu**, hors de l'affiche (`#mapCredit`, placée par `layoutPreview`) : l'aperçu montre ainsi exactement la mention de l'export. |
@@ -624,14 +624,14 @@ Les deux services distants (tuiles OpenFreeMap, Nominatim) et, en secours, les C
 
 ### 7.5. Application installée et mises à jour (issue #65)
 
-L'application installée (Chrome, Android, iOS) est le site dans une fenêtre dédiée : tout repose sur `sw.js` (cache) et `manifest.webmanifest` (icône, nom). Le navigateur voit une nouvelle version quand `sw.js` change d'au moins un octet ; d'où la constante `VERSION`, à changer à chaque modification de `sw.js` ou d'un fichier de sa liste `APP`.
+L'application installée (Chrome, Android, iOS) est le site dans une fenêtre dédiée : tout repose sur `sw.js` (cache) et `manifest.webmanifest` (icône, nom). Le navigateur voit une nouvelle version quand `sw.js` change d'au moins un octet ; d'où la constante `VERSION`, **générée au build** (§ 7.8) : `cms-AAAA-MM-JJ-<empreinte du contenu>`, donc nouvelle à chaque changement publié. Dans les sources, elle vaut `cms-dev`.
 
 * **Stratégies de cache** : application (HTML, CSS, JS, manifeste, icônes) en **réseau d'abord**, avec une requête `cache: 'no-cache'` : le navigateur revalide auprès du serveur (304 peu coûteux) et ne sert jamais une copie périmée de son cache HTTP (GitHub Pages répond `Cache-Control: max-age=600`, sans possibilité de changer les en-têtes). `lib/` (versions figées) en cache d'abord. Le worker est enregistré avec `updateViaCache: 'none'`.
 * **Détection** : `reg.update()` au démarrage, puis au retour au premier plan (`visibilitychange`), au plus une fois par heure : une PWA peut rester des jours en arrière-plan sur mobile.
 * **Pas d'activation sans accord** : le nouveau worker reste en attente (`waiting`, pas de `skipWaiting()` à l'installation). Si la page est déjà contrôlée (donc pas à la première installation), un bandeau `#updBanner` affiche « Nouvelle version disponible » / **Mettre à jour** (✕ pour plus tard). Le bouton envoie `{type:'SKIP_WAITING'}` au worker ; `controllerchange` recharge alors la page **une seule fois**. Pas de rechargement automatique : un export ou un import d'illustration peut être en cours. L'état de l'affiche, enregistré en local, est retrouvé après le rechargement. Si un autre onglet a déjà activé la nouvelle version, le bandeau propose simplement de recharger.
-* **Version visible** : onglet Lieu, section Avancé, sous le diagnostic (`#appVersion`). La page porte sa propre version (`CMS.build.version`, `js/core.js`), copie exacte de `VERSION` : elle est donc connue partout (`file://`, première visite, hors ligne, tests), affichée en date (« Version : 24/11/2026 (h) » pour `cms-2026-11-24h`). La version du worker actif est demandée en plus (`{type:'GET_VERSION'}` sur un `MessageChannel`) ; si elle diffère (mise à jour activée dans un autre onglet, copie hors ligne en retard), elle est ajoutée : « · copie hors ligne : 23/11/2026 (c) ». Identifiants bruts dans `data-version` et `data-sw`. Le diagnostic (« Diagnostiquer la connexion ») commence par une ligne **Version** : page, copie hors ligne à jour ou en retard (« Mettre à jour » ou recharger).
+* **Version visible** : onglet Lieu, section Avancé, sous le diagnostic (`#appVersion`). La page porte sa propre version (`CMS.build.version`, `js/core.js`), copie exacte de `VERSION` : elle est donc connue partout (`file://`, première visite, hors ligne, tests), affichée en date (« Version : 28/11/2026 (3522713) » pour `cms-2026-11-28-3522713` ; « (h) » pour l'ancien format `cms-2026-11-24h`). La version du worker actif est demandée en plus (`{type:'GET_VERSION'}` sur un `MessageChannel`) ; si elle diffère (mise à jour activée dans un autre onglet, copie hors ligne en retard), elle est ajoutée : « · copie hors ligne : 23/11/2026 (c) ». Identifiants bruts dans `data-version` et `data-sw`. Le diagnostic (« Diagnostiquer la connexion ») commence par une ligne **Version** : page, copie hors ligne à jour ou en retard (« Mettre à jour » ou recharger).
 * **Identité** : le manifeste fixe `"id": "./"` (identique à l'identité dérivée de `start_url`) : changer un jour `start_url` ne créera pas une seconde application.
-* **Garde-fous** : `tests/pwa.py` vérifie que tout fichier `.js` et `.css` de `js/`, `css/` et `lib/` (hors `lib/sky/`, chargé à la demande) figure dans `APP` et que tout élément de `APP` existe ; les polices woff2 sont mises en cache à leur premier usage. En CI, `tests/swversion.py` échoue si une pull request modifie `sw.js` ou un fichier de `APP` sans changer `VERSION`, ou si la version de la page (`CMS.build`) diffère de `VERSION` (vérifié aussi par `tests/pwa.py`, dans la suite). Pas encore d'injection de hash au déploiement : prévue avec le build (#102).
+* **Garde-fous** : `tests/pwa.py` vérifie que tout fichier `.js` et `.css` de `js/`, `css/` et `lib/` (hors `lib/sky/`, chargé à la demande) figure dans `APP` et que tout élément de `APP` existe ; les polices woff2 sont mises en cache à leur premier usage. `VERSION`, la version de la page (`CMS.build`) et la liste `APP` sont produites ensemble par le build : plus de mise à jour à la main ni de contrôle en CI (l'ancien `tests/swversion.py` est retiré) ; `tests/pwa.py` vérifie toujours leur égalité et la liste.
 * **Plusieurs copies sur la même origine** (#97) : la racine, `/nouvelle/` et les préversions `/pr-N/` partagent le stockage des caches du navigateur. Chaque worker nomme son cache `VERSION@dossier` (ex. `cms-2026-11-27d@/city-map-studio/nouvelle/`) et, à l'activation, ne purge que les anciens caches de son propre dossier : une préversion ne vide jamais le cache hors ligne de la version classique (vérifié par `tests/pwa.py`). La version classique figée (`v1-classique`) garde l'ancien nommage, sans `@`.
 * **Hors de notre contrôle** : la mise à jour de l'icône et du nom de l'application installée par Chrome est asynchrone (WebAPK sur Android) ; elle se vérifie sur l'URL publiée, pas par test automatique.
 
@@ -655,14 +655,37 @@ Pendant la refonte, la version actuelle reste l'application de référence à l'
 
 L'application relève ses propres temps (`CMS.perf`, `js/core.js`), en mémoire seulement : rien n'est enregistré ni envoyé. Lieu › Avancé › « Mesures de performance » affiche la dernière mesure de chaque type, son budget et ✓ / ✗ ; « Copier les mesures » copie la version, l'appareil (navigateur, écran, densité) et les mesures, à coller dans une issue.
 
-| Mesure | Début → fin | Budget (Galaxy A35) |
+| Mesure | Début → fin | Budget |
 | :--- | :--- | :--- |
 | Ouverture jusqu'à l'aperçu | Début du chargement de la page → premier `idle` de la carte GPU (ou premier aperçu, sans carte GPU) | 3 s |
 | Réglage visible | `changed()` → aperçu redessiné (`drawOver`), ou carte GPU au repos pour un réglage qui la restyle | 0,2 s |
 | Export A4, Export 10 × 15 (et A3, 50 × 70 sans budget) | Clic sur Exporter, après l'accord → fichier PNG ou PDF prêt | 6 s, 3 s |
 | Geste sur la carte | Doigt ou souris enfoncé sur la carte → relâché : 95e centile de l'intervalle entre deux images (10 images au moins) | 20 ms (60 images/s, gigue tolérée) |
 
-Une mesure en attente qui n'aboutit pas en 10 s est abandonnée. Les mesures de référence se font sur `/nouvelle/` (même comportement que la version classique tant que l'horizon 1 n'a pas commencé), sur le Galaxy A35 et le Galaxy S26 Ultra.
+Une mesure en attente qui n'aboutit pas en 10 s est abandonnée. Un seul appareil de référence (décision du 28/11/2026) : l'**Appareil S2x**, téléphone à écran 412 × 892 à densité 3,5, Chrome 159 sous Android.
+
+**Relevés de référence du 28/11/2026** (Appareil S2x ; deux relevés par adresse quand ils existent) :
+
+| Mesure | `/nouvelle/` (sources, lot 3) | Site construit (lot 4a, préversion #108) | Budget |
+| :--- | :--- | :--- | :--- |
+| Ouverture | 1,8 s · 467 ms | 614 ms · 813 ms | 3 s ✓ |
+| Réglage visible (thème, carte) | 352 ms · 370 ms | 360 ms · 380 ms | 200 ms ✗ |
+| Export A4 (PNG) | 851 ms · 784 ms | 558 ms · 583 ms | 6 s ✓ |
+| Export 10 × 15 (PNG) | 1,1 s | 437 ms | 3 s ✓ |
+| Geste sur la carte | 17 ms (59 images/s) | 18 ms (55 images/s) | 20 ms ✓ |
+
+Le build ne fait rien régresser et accélère les exports. Seul le réglage d'un thème dépasse son budget, avant comme après le build : la mesure s'arrête quand la carte GPU est entièrement redessinée (`idle`), ce qui inclut le recalcul de toutes les tuiles ; point à traiter à l'horizon 1 (#61).
+
+### 7.8. Construction du site publié (#102)
+
+`npm run build` (`scripts/build.mjs`, esbuild) produit `dist/` à partir des sources, sans les modifier :
+
+* les scripts de `index.html`, dans leur ordre, réunis en **un seul script classique** `js/app.<empreinte>.js`, minifié (environ 474 → 311 Ko). Même portée globale partagée qu'avant : esbuild ne renomme pas les noms de premier niveau d'un script ; les noms globaux disparaîtront avec la conversion en modules ES (étape 4b) ;
+* `css/app.css` minifiée en `css/app.<empreinte>.css` ;
+* `VERSION` (`sw.js`) et `CMS.build.version` (`js/core.js`) : `cms-AAAA-MM-JJ-<empreinte>` ; liste `APP` de `sw.js` : les fichiers réellement publiés ;
+* `lib/`, `icons/`, `manifest.webmanifest`, `.nojekyll` copiés.
+
+Les noms de fichiers à empreinte changent avec leur contenu : jamais de copie périmée d'un ancien script. La CI construit puis teste `dist/` ; `.github/scripts/pages.sh` construit `main` et chaque pull request avant de les publier (la version classique, sans build, est copiée telle quelle). `dist/index.html` s'ouvre en `file://` comme la source.
 
 ---
 
@@ -672,12 +695,13 @@ Une mesure en attente qui n'aboutit pas en 10 s est abandonnée. Les mesures de 
 
 ```
 city-map-studio/
-├── index.html              # balisage, CSP, métadonnées ; charge css/ et js/ (sans build)
+├── index.html              # balisage, CSP, métadonnées ; charge css/ et js/ (sources ; dist/ = site construit, § 7.8)
 ├── css/app.css             # feuille de styles de l'application
 ├── js/                     # scripts classiques, chargés dans cet ordre (cf. § 8.2)
 │   ├── core.js  config.js  maplibre-loader.js  geocoder.js  state.js  geo.js  render.js
 │   └── engines.js  preview.js  features.js  ui.js  illus.js  export.js  main.js
-├── sw.js                   # service worker (cache de l'application, http(s) seulement ; constante VERSION, liste APP)
+├── sw.js                   # service worker (cache de l'application, http(s) seulement ; VERSION et liste APP générées au build)
+├── package.json            # build : npm run build (scripts/build.mjs, esbuild) → dist/ ; npm test
 ├── manifest.webmanifest    # application installable
 ├── icons/                  # icône SVG, PNG 192 / 512 / maskable / apple-touch, image d'aperçu des liens (og-image.jpg)
 ├── .github/workflows/      # tests.yml : suite de bout en bout à chaque pull request et push sur main
@@ -763,7 +787,7 @@ Principales sections :
 
 ### 9.1. Organisation des tests
 
-Tests de bout en bout Playwright (Python), un fichier par domaine, avec un **réseau simulé** : OpenFreeMap (TileJSON et tuiles MVT générées à partir des données de test) et Nominatim sont simulés, tout autre accès externe est coupé. Les données de test sont générées avant la suite (`fixture.py`, `make_formats.py`, `make_city.py` ; non versionnées). `python tests/run_all.py` lance toute la suite, plusieurs tests à la fois ; le workflow `.github/workflows/tests.yml` l'exécute à chaque pull request et à chaque push sur `main`, avec le Google Chrome de l'image du runner, lance `tests/swversion.py` sur les pull requests, puis publie le site si tout passe (§ 7.6). Les commandes figurent dans `CONTRIBUTING.md`.
+Tests de bout en bout Playwright (Python), un fichier par domaine, avec un **réseau simulé** : OpenFreeMap (TileJSON et tuiles MVT générées à partir des données de test) et Nominatim sont simulés, tout autre accès externe est coupé. Les données de test sont générées avant la suite (`fixture.py`, `make_formats.py`, `make_city.py` ; non versionnées). `python tests/run_all.py` lance toute la suite, plusieurs tests à la fois ; le workflow `.github/workflows/tests.yml` l'exécute à chaque pull request et à chaque push sur `main`, avec le Google Chrome de l'image du runner, après construction (`npm run build`) et **sur `dist/`** (variable `CMS_ROOT=dist`, lue par chaque test ; par défaut, la source), puis publie le site si tout passe (§ 7.6). `unit` et `globals` portent toujours sur les sources. Les commandes figurent dans `CONTRIBUTING.md`.
 
 **Verdict** : un test échoue si son code de sortie n'est pas nul, ou si sa sortie contient une vérification en échec (ligne commençant par « ✗ » suivie d'un texte), une erreur de page (`PAGEERROR`) ou une trace Python. Chaque test imprime ses vérifications (« ✓ » / « ✗ ») et se termine par une assertion. Un test en échec sous charge est relancé seul une fois : s'il passe, il est signalé « INSTABLE ».
 
@@ -808,7 +832,7 @@ Tests de bout en bout Playwright (Python), un fichier par domaine, avec un **ré
 | `security.py`, `csp.py` | Sécurité | Lien forgé (types faux, valeurs hors bornes, champs inconnus) : valeurs remplacées, rien d'invalide enregistré ; lien piégé (> 512 Ko décompressé) refusé ; `window.__cms` seulement avec `?test` ; aucune violation de la CSP en `file://` et en HTTP, aucun style ni script en ligne. |
 | `mesures.py` | Mesures de performance | Ouverture, réglage, geste sur la carte et export 10 × 15 mesurés ; affichés avec leur budget dans Lieu › Avancé ; texte à copier (version, appareil, écran, mesures) ; rien envoyé sur le réseau (#101). |
 | `storage.py` | Stockage séparé | Données de la version classique (`cityMapStudio.*`, base `cityMapStudio`) ni lues, ni modifiées, ni supprimées, même après enregistrement d'une affiche, import d'une illustration et réinitialisation ; données de cette version sous `cms3.*` et dans la base `cms3` (#100). |
-| `pwa.py`, `swversion.py` | Déploiement | Servi sous `/city-map-studio/` sans ressource manquante ; manifeste et icônes ; service worker sans ressource tierce, liste `APP` complète ; cache propre à son dossier, celui d'une autre copie conservé ; cache HTTP contourné ; mise à jour proposée par un bandeau, un seul rechargement, état conservé ; démarrage hors ligne ; `VERSION` changée quand `sw.js` ou un fichier de `APP` change (CI). |
+| `pwa.py` | Déploiement | Servi sous `/city-map-studio/` sans ressource manquante ; manifeste et icônes ; service worker sans ressource tierce, liste `APP` complète ; cache propre à son dossier, celui d'une autre copie conservé ; cache HTTP contourné ; mise à jour proposée par un bandeau, un seul rechargement, état conservé ; démarrage hors ligne ; `VERSION` changée quand `sw.js` ou un fichier de `APP` change (CI). |
 | `unit.py` | Fonctions pures (Node) | Socle `CMS`, Mercator, `zoomFactor`, `dms`, `exportSpec`, `normState`, `CMS.geocoder.sanitize` ; `CMS.illus` : qualité, placement, retouches, prompt, pistes, proportions ; `CMS.route` : prompt d'itinéraire (FR / EN, réglages), `extractGpx`, contrôle de vraisemblance, `routePrompt` et `wpts` dans `normState` ; `CMS.wiki` : classement sur une réponse réelle autour de Blois (`tests/wiki_blois.json`), validation, requête limitée aux coordonnées. |
 | `wiki.py` | Pistes Wikipédia (#46) | Option désactivée par défaut ; sans accord : aucune requête (option refusée si l'accord général l'est) ; Blois : château et cathédrale en tête ; requête limitée aux coordonnées et au rayon ; cache ; service muet : message en moins de 11 s, interface utilisable ; hors ligne : bouton grisé, pistes de la carte disponibles. |
 | `routeai.py` | Itinéraire préparé avec une IA (#85) | Prompt : lieux (noms, coordonnées), type, emprise, format, mis à jour à chaque réglage, anglais ; réponse d'IA collée telle quelle importée (étapes nommées), texte sans GPX refusé sans toucher à l'affiche, « Coller le GPX » (presse-papiers simulé), Annuler ; tracé à 50 km et tracé rectiligne signalés, « Pointillés » ; aucun appel réseau, `connect-src` sans hôte pour l'itinéraire. |

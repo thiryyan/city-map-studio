@@ -9,7 +9,7 @@ Atelier web de création d'affiches cartographiques souvenir : tracé minimalist
 - **Affiche illustrée** : un mode Illustration pour une affiche de voyage façon vintage, et un mode Carte + illustration (carte en médaillon sur l'illustration, ou illustration en vignette sur la carte). L'application rédige le prompt à coller dans votre IA (ChatGPT, Gemini…), puis importe l'image obtenue, la cadre, la retouche (filtre vintage, grain) et pose un grand titre ; indicateur de qualité d'impression par format.
 - **Plus que la carte** : jusqu'à trois lieux, itinéraire GPX, carte du ciel du jour J (Lune en phase, planètes, Voie lactée), aperçu au mur, partage par lien.
 - **Mes affiches** : configurations enregistrées dans le navigateur (avec vignette), restaurées en un toucher et annulables ; fichier de configuration d'une affiche et sauvegarde complète à garder ou à ouvrir sur un autre appareil ; Ctrl + S.
-- **Sans build** : HTML, CSS et JavaScript natifs (`index.html`, `css/`, `js/`) servis tels quels, pensés d'abord pour le mobile.
+- **Simple à développer** : HTML, CSS et JavaScript natifs (`index.html`, `css/`, `js/`), ouvrables tels quels ; le site publié est construit par `npm run build` (un script et une feuille minifiés), pensé d'abord pour le mobile.
 - **Sûre, accessible, hors ligne** : politique de sécurité du contenu stricte, liens partagés validés, fenêtres et commandes accessibles au clavier ; installable, et utilisable sans réseau après une première visite (moteur Fichier).
 
 ## Utilisation

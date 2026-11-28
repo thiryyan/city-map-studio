@@ -8,7 +8,8 @@ Captures : tests/mobile.png, tests/desktop.png et les exports tests/export-*.png
 import pathlib, os, asyncio, struct
 from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
-APP = (T.parent / 'index.html').as_uri() + '?test'
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+APP = (ROOT / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None   # Chrome/Chromium ; vide = Chromium de Playwright
 FIX = open(T / 'osm.json').read()
 INIT = "try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.advOpen','1');localStorage.setItem('cms3.styleMoreOpen','1');localStorage.setItem('cms3.themeOpen','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}"   # accord préalable donné (cf. tests/consent.py)

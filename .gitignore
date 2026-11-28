@@ -8,3 +8,5 @@ tests/city.json
 tests/city.meta.json
 tests/saves-*.json
 tests/*.pdf
+node_modules/
+dist/

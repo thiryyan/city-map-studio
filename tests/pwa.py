@@ -18,7 +18,7 @@ from functools import partial
 from playwright.async_api import async_playwright
 from jswait import wait_js
 T = pathlib.Path(__file__).resolve().parent
-ROOT = T.parent
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
 CHROME = os.environ.get('CHROME') or None
 FIX = (T / 'osm.json').read_text()
 SEED = "localStorage.setItem('cms3.consent','1'); localStorage.setItem('cms3.welcomed','1')"
@@ -26,17 +26,19 @@ SEED = "localStorage.setItem('cms3.consent','1'); localStorage.setItem('cms3.wel
 
 SW = (ROOT / 'sw.js').read_text(encoding='utf-8')
 VERSION = re.search(r"const VERSION = '([^']+)'", SW).group(1)
-CORE = (ROOT / 'js' / 'core.js').read_text(encoding='utf-8')
+# Script de l'application : js/main.js dans la source, le script unique (js/app.<empreinte>.js) dans dist/
+MAIN = 'js/main.js' if (ROOT / 'js' / 'main.js').is_file() else re.search(r'<script src="(js/app\.[0-9a-f]+\.js)"', (ROOT / 'index.html').read_text(encoding='utf-8')).group(1)
 
 
 def label(v):
-    """Libellé affiché (CMS.build.label) : cms-2026-11-24h → 24/11/2026 (h)"""
-    m = re.match(r'cms-(\d{4})-(\d\d)-(\d\d)(.*)$', v)
-    return f'{m[3]}/{m[2]}/{m[1]}' + (f' ({m[4]})' if m[4] else '')
+    """Libellé affiché (CMS.build.label) : cms-2026-11-24h → 24/11/2026 (h) ; cms-2026-11-28-3522713 → 28/11/2026 (3522713)"""
+    m = re.match(r'cms-(\d{4})-(\d\d)-(\d\d)-?(.*)$', v)
+    return (f'{m[3]}/{m[2]}/{m[1]}' + (f' ({m[4]})' if m[4] else '')) if m else v
 
 
 class Q(SimpleHTTPRequestHandler):
-    """Comme GitHub Pages : Cache-Control max-age=600. deploy : sw.js et js/core.js servis avec une nouvelle VERSION."""
+    """Comme GitHub Pages : Cache-Control max-age=600. deploy : sw.js et les scripts servis avec une nouvelle VERSION
+    (source : js/core.js ; dist/ : le script unique, qui contient CMS.build)."""
     status = []; reqs = []; deploy = False
     def log_message(self, *a): pass
     def send_response(self, code, *a):
@@ -45,8 +47,10 @@ class Q(SimpleHTTPRequestHandler):
         self.send_header('Cache-Control', 'max-age=600'); super().end_headers()
     def do_GET(self):
         Q.reqs.append((self.path, self.headers.get('Cache-Control', ''), self.headers.get('Service-Worker', '')))
-        if Q.deploy and self.path.split('?')[0].endswith(('/sw.js', '/js/core.js')):
-            body = (SW if self.path.split('?')[0].endswith('/sw.js') else CORE).replace(VERSION, VERSION + '-deploy').encode()
+        p = self.path.split('?')[0]
+        f = ROOT / p.removeprefix('/city-map-studio/')
+        if Q.deploy and p.endswith('.js') and f.is_file() and VERSION in (src := f.read_text(encoding='utf-8')):
+            body = src.replace(VERSION, VERSION + '-deploy').encode()
             self.send_response(200); self.send_header('Content-Type', 'text/javascript'); self.send_header('Content-Length', str(len(body)))
             self.end_headers(); self.wfile.write(body); return
         super().do_GET()
@@ -106,15 +110,15 @@ async def main():
         await page.reload(); await page.wait_for_timeout(1500)
         ctl = await page.evaluate("!!navigator.serviceWorker.controller")
         keys = await page.evaluate("caches.keys().then(async ks=>{ const out=[]; for(const k of ks){ const c=await caches.open(k); for(const r of await c.keys()) out.push(r.url); } return out; })")
-        check(ctl and any(k.endswith('/js/main.js') for k in keys) and any(k.endswith('/lib/maplibre-gl.js') for k in keys), f'service worker actif, application en cache ({len(keys)} fichiers)')
+        check(ctl and any(k.endswith('/' + MAIN) for k in keys) and any(k.endswith('/lib/maplibre-gl.js') for k in keys), f'service worker actif, application en cache ({len(keys)} fichiers)')
         check(all(k.startswith(base) for k in keys), 'cache : aucune ressource tierce')
 
         # 3 bis. Cache HTTP contourné : malgré max-age=600, l'application est revalidée auprès du serveur (#65)
         Q.reqs.clear(); await page.goto(url)
         await wait_js(page, "(window.__cms && __cms.pwa.checks>0) || false", timeout=15000); await page.wait_for_timeout(500)
-        main_js = [r for r in Q.reqs if r[0].split('?')[0].endswith('/js/main.js')]
+        main_js = [r for r in Q.reqs if r[0].split('?')[0].endswith('/' + MAIN)]
         check(main_js and all('max-age=0' in r[1] or 'no-cache' in r[1] for r in main_js),
-              f'réseau d\'abord sans copie du cache HTTP : js/main.js redemandé au serveur ({main_js})')
+              f'réseau d\'abord sans copie du cache HTTP : {MAIN} redemandé au serveur ({main_js})')
         sw_reqs = [r for r in Q.reqs if r[0].split('?')[0].endswith('/sw.js')]
         check(sw_reqs, f'vérification de mise à jour au démarrage (sw.js redemandé : {len(sw_reqs)})')
         await wait_js(page, "!!document.getElementById('appVersion').dataset.sw || false", timeout=5000)
