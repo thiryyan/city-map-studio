@@ -1,45 +1,36 @@
-"""Garde-fou d'architecture : nombre de déclarations globales des scripts js/*.js (issue #35).
+"""Garde-fou d'architecture des modules ES de js/ (issues #35, #102).
 
-Les scripts classiques partagent une seule portée globale. Le code placé dans un module CMS.define(…) lui est privé ;
-seuls comptent les noms déclarés en tête de fichier (fonctions, const / let / var, noms d'une déstructuration).
-Le nombre ne peut pas dépasser le plafond enregistré dans tests/globals.max : quand il baisse, abaisser le plafond.
+1. ESLint (eslint.config.js) : aucun nom utilisé sans import (no-undef), aucune variable importée réaffectée
+   (no-import-assign) ; un module qui oublie un import échouerait sinon seulement au moment de l'appel.
+2. Registre « late » (js/core.js) : un fichier qui appelle une fonction d'un fichier chargé après lui la lit dans ce
+   registre plutôt que de l'importer (l'import créerait un cycle et changerait l'ordre d'exécution). Chaque entrée est
+   une dépendance à l'envers entre couches : leur nombre ne peut pas dépasser le plafond de tests/globals.max ; quand
+   il baisse, abaisser le plafond.
 """
-import pathlib, re, sys
+import pathlib, re, subprocess, sys
 
 T = pathlib.Path(__file__).resolve().parent
-JS = sorted((T.parent / 'js').glob('*.js'))
+ROOT = T.parent
 MAX = int((T / 'globals.max').read_text().split()[0])
 
+fails = []
+lint = subprocess.run(['npx', '--no-install', 'eslint', 'js'], cwd=ROOT, capture_output=True, text=True)
+print(lint.stdout.strip() or '  ESLint : aucun problème')
+if lint.returncode != 0:
+    fails.append('ESLint signale des problèmes dans js/ (voir ci-dessus)')
 
-def top_level_names(src):
-    names, inside, prev = [], False, ''
-    for line in src.splitlines():
-        if line.startswith('CMS.define('): inside = True; continue
-        if inside:   # fin du module : « }); » juste après son « return {…}; », ou « })); » (module écrit en objet littéral)
-            if (line.startswith('});') and prev.strip().startswith('return {')) or line.startswith('}));'): inside = False
-            if line.strip(): prev = line
-            continue
-        m = re.match(r'(?:async\s+)?function\s*\*?\s*([\w$]+)', line)
-        if m: names.append(m.group(1)); continue
-        m = re.match(r'(?:const|let|var)\s+(.*)', line)
-        if not m: continue
-        rest = m.group(1)
-        d = re.match(r'\{([^}]*)\}\s*=', rest)
-        if d: names += [n.split(':')[-1].strip() for n in d.group(1).split(',') if n.strip()]
-        else: names += re.findall(r'(?:^|,\s*)([A-Za-z_$][\w$]*)\s*=', rest) or [rest.split()[0]]
-    return names
+late = {}
+for f in sorted((ROOT / 'js').glob('*.js')):
+    for m in re.finditer(r'Object\.assign\(late, \{([^}]*)\}\)', f.read_text(encoding='utf-8')):
+        late[f.name] = [n.strip() for n in m.group(1).split(',') if n.strip()]
+total = sum(len(v) for v in late.values())
+for f, names in late.items():
+    print(f'  {f:22} {len(names):3}  {", ".join(names)}')
+print(f'  références vers l\'avant (registre late) : {total} (plafond {MAX})')
+if total > MAX:
+    fails.append(f'registre late : {total} entrées, plafond {MAX} (importer depuis un fichier antérieur, ou passer par un événement)')
+elif total < MAX:
+    print(f'  → abaisser le plafond de tests/globals.max à {total}')
 
-
-total = 0
-for f in JS:
-    n = top_level_names(f.read_text(encoding='utf-8'))
-    total += len(n)
-    print(f'  {f.name:22} {len(n):4}')
-dup = {}
-for f in JS:
-    for n in top_level_names(f.read_text(encoding='utf-8')): dup.setdefault(n, []).append(f.name)
-dups = {n: fs for n, fs in dup.items() if len(fs) > 1}
-print(('✓ ' if not dups else '✗ ') + f'aucun nom global déclaré deux fois {dups or ""}')
-print(('✓ ' if total <= MAX else '✗ ') + f'{total} déclarations globales (plafond {MAX})')
-if total < MAX: print(f'  → plafond à abaisser : echo {total} > tests/globals.max')
-sys.exit(0 if total <= MAX and not dups else 1)
+print('✓ modules ES : imports explicites, registre late borné' if not fails else '\n'.join('✗ ' + f for f in fails))
+sys.exit(1 if fails else 0)

@@ -1,11 +1,17 @@
 /* City Map Studio — Lieux multiples, itinéraire GPX, partage par lien, ambiances, panneau coulissant.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
-'use strict';
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+import {late} from './core.js';
+import {AMBIANCES, DEFAULT_STATE, DUOS, EXPORT_MAX_DPI, FONTS, FORMATS, LAYOUTS, MARKERS, OCCASIONS, REF_W, STORE_KEY, TEXTURES, THEMES} from './config.js';
+import {SHARE_MAX_BYTES, SHARE_MAX_CHARS, V, normState, osmData, saveState, saveT, st, ui} from './state.js';
+import {clamp, exportSpec, imerc, merc} from './geo.js';
+import {contrast, drawPoster, lum, mix} from './render.js';
+import {drawVectors} from './engines.js';
+import {$, applyTexture, changed, composePoster, drawTexture, h, layoutPreview, redrawAll, scheduleOver, slot} from './preview.js';
 // ---------- Plusieurs lieux ----------
 function placeAt(lat,lon){
   const i=ui.placeIdx||0;
   if(i && st.markers2[i-1]){ st.markers2[i-1].lat=lat; st.markers2[i-1].lon=lon; setPlacing(false); renderPlaces(); changed(); toast(`Lieu ${i+1} placé`); }
-  else setMarker(lat,lon);
+  else late.setMarker(lat,lon);
 }
 function renderPlaces(){
   const box=$('mList'); box.textContent='';
@@ -62,12 +68,12 @@ function fitRoute(){
   const r=ui.slotCss, dl=Math.max(x1-x0,1e-6), dm=Math.max(merc(y1)-merc(y0),1e-9);
   const zx=Math.log2(0.82*360*REF_W/(512*dl)), zy=Math.log2(0.82*2*Math.PI*REF_W*(r.h/r.w)/(512*dm));
   const z=Math.min(zx,zy); if(z<10) toast('Itinéraire très étendu : la carte est au zoom minimal, une partie peut sortir du cadre.');
-  goTo(imerc((merc(y0)+merc(y1))/2),(x0+x1)/2,clamp(z,10,18));
+  late.goTo(imerc((merc(y0)+merc(y1))/2),(x0+x1)/2,clamp(z,10,18));
 }
 function renderRoute(){
   const r=st.route; $('routeBox').hidden=!r;
   if(r){ $('routeInfo').textContent=`${r.name||'Itinéraire'} · ${r.pts.length} points`; $('routeShow').checked=r.show!==false; }
-  setSeg('routeColor',st.routeStyle.color); $('routeDash').checked=!!st.routeStyle.dash; $('routeW').value=st.routeStyle.width; $('oRouteW').textContent='× '+st.routeStyle.width;
+  late.setSeg('routeColor',st.routeStyle.color); $('routeDash').checked=!!st.routeStyle.dash; $('routeW').value=st.routeStyle.width; $('oRouteW').textContent='× '+st.routeStyle.width;
 }
 
 // ---------- Partage par lien ----------
@@ -116,13 +122,13 @@ async function loadFromHash(){
 function applyConfig(o,msg){
   let before=null;
   try{
-    commitHistory(0);
+    late.commitHistory(0);
     const eng=st.engine, fresh=normState(o); before=structuredClone(st);
     replaceState(fresh,{engine:eng});
-    setPlacing(false); syncInputs(); renderPlaces(); renderRoute(); layoutPreview(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); goTo(st.center.lat,st.center.lon,st.zoom); redrawAll(true); drawTexture();
-    commitHistory(); if(msg) toast(msg);
+    setPlacing(false); late.syncInputs(); renderPlaces(); renderRoute(); layoutPreview(); late.loadFonts().then(()=>{ scheduleOver(); late.refreshCards(); }); late.goTo(st.center.lat,st.center.lon,st.zoom); redrawAll(true); drawTexture();
+    late.commitHistory(); if(msg) toast(msg);
   }catch(e){
-    if(before){ replaceState(before); try{ syncInputs(); layoutPreview(); }catch(_){} commitHistory(); }   // jamais d'état à moitié appliqué
+    if(before){ replaceState(before); try{ late.syncInputs(); layoutPreview(); }catch(_){} late.commitHistory(); }   // jamais d'état à moitié appliqué
     throw e;
   }
 }
@@ -142,9 +148,9 @@ function maybeWelcome(){
   if($('consent').classList.contains('show')) return;   // repris après le choix d'accord (giveConsent / declineConsent)
   const box=$('welAmb'); box.textContent='';
   AMBIANCES.forEach(([k,n])=>{ const b=h('button',{type:'button',dataset:{v:k},ariaPressed:'false'},h('canvas',{width:70,height:99}),h('small',{},n));
-    b.onclick=()=>{ closeWelcome(false); applyAmbiance(k); box.querySelectorAll('button').forEach(x=>pressed(x,x===b)); }; box.appendChild(b); });
+    b.onclick=()=>{ closeWelcome(false); applyAmbiance(k); box.querySelectorAll('button').forEach(x=>late.pressed(x,x===b)); }; box.appendChild(b); });
   const draw=()=>box.querySelectorAll('button').forEach(b=>{ const p=AMBIANCES.find(a=>a[0]===b.dataset.v)[2];
-    thumb(b.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
+    late.thumb(b.querySelector('canvas'),{layout:p.layout,colors:THEMES[p.theme].c,font:p.font,fontTitle:p.fontTitle,markerStyle:p.markerStyle}); });
   draw();
   // polices des ambiances : chargées une fois (fichiers locaux), puis vignettes redessinées
   Promise.all(AMBIANCES.flatMap(([,,p])=>[p.font,p.fontTitle].filter(Boolean)).flatMap(f=>FONTS[f].load).map(f=>document.fonts.load(f).catch(()=>0))).then(draw);
@@ -162,8 +168,8 @@ function closeWelcome(hide=true){
 // ---------- Ambiances et modèles de texte ----------
 function applyAmbiance(k){
   const a=AMBIANCES.find(x=>x[0]===k); if(!a) return; const p=a[2];
-  commitHistory(0);   // étape d'historique explicite : un choix fait juste après le démarrage reste annulable
-  const before=cmpSnap();
+  late.commitHistory(0);   // étape d'historique explicite : un choix fait juste après le démarrage reste annulable
+  const before=late.cmpSnap();
   // Seulement ce qui existe dans le type d'affiche courant (#77) : rien ne change en silence pour un autre type.
   // Illustration : ni carte ni repère ; Carte + illustration : sans gabarit (la composition en tient lieu).
   const map=st.mode==='map', withMap=st.mode!=='illus', parts=['thème','polices','papier'];
@@ -172,33 +178,33 @@ function applyAmbiance(k){
   if(withMap){ st.markerStyle=p.markerStyle; st.fx=fx; st.orn={...DEFAULT_STATE.orn,...(p.orn||{})}; parts.push('repère','effets'); }
   else st.fx.foil=fx.foil;   // dorure des textes : seul effet d'une affiche illustrée
   if(map){ setLayout(p.layout,true); parts.push('gabarit'); }
-  noteChange(before,`l'ambiance « ${a[1]} »`);
-  syncInputs(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); redrawAll(true); drawTexture(); commitHistory();
+  late.noteChange(before,`l'ambiance « ${a[1]} »`);
+  late.syncInputs(); late.loadFonts().then(()=>{ scheduleOver(); late.refreshCards(); }); redrawAll(true); drawTexture(); late.commitHistory();
   toast(`Ambiance « ${a[1]} » : ${parts.slice(0,-1).join(', ')} et ${parts.at(-1)} · « Annuler » pour revenir`);
 }
 function applyOccasion(k){
-  const o=OCCASIONS.find(x=>x[0]===k); if(!o) return; commitHistory(0);
-  const before=cmpSnap();
+  const o=OCCASIONS.find(x=>x[0]===k); if(!o) return; late.commitHistory(0);
+  const before=late.cmpSnap();
   st.texts.dedication=o[2]; st.show.dedication=true;
   if(!st.texts.names.trim() || OCCASIONS.some(x=>x[3]===st.texts.names)) st.texts.names=o[3];
-  noteChange(before,`le modèle « ${o[1]} »`);
-  syncInputs(); scheduleOver(); commitHistory(); toast(`Modèle « ${o[1]} » appliqué · « Annuler » pour revenir`);
+  late.noteChange(before,`le modèle « ${o[1]} »`);
+  late.syncInputs(); scheduleOver(); late.commitHistory(); toast(`Modèle « ${o[1]} » appliqué · « Annuler » pour revenir`);
 }
 /** Gabarit : met à jour l'état propre à certains gabarits (deux lieux, ciel), puis l'aperçu */
 function setLayout(k,quiet){
   st.layout=k;
   if(k==='diptych' && !st.place2) st.place2={center:{...st.center},zoom:st.zoom,marker:{...st.marker}};
   if(k!=='diptych' && (st.active||0)===1) { st.active=0; const o=st.place2; st.place2={center:st.center,zoom:st.zoom,marker:st.marker}; st.center=o.center; st.zoom=o.zoom; st.marker=o.marker; }
-  if(k==='sky' && !st.sky.when){ st.sky.when=(isoFromFr(st.texts.date)||new Date().toISOString().slice(0,10))+'T22:00'; }
-  ui.snap=null; refreshCards(); updateLayoutUI(); layoutPreview(); saveState();
+  if(k==='sky' && !st.sky.when){ st.sky.when=(late.isoFromFr(st.texts.date)||new Date().toISOString().slice(0,10))+'T22:00'; }
+  ui.snap=null; late.refreshCards(); updateLayoutUI(); layoutPreview(); saveState();
   if(!quiet && k==='diptych') toast('Deux lieux : touchez la seconde carte pour la cadrer et y placer son repère');
 }
-function setOrient(v){ st.orient=v; setSeg('orientSeg',v); updateExportLabel(); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
+function setOrient(v){ st.orient=v; late.setSeg('orientSeg',v); updateExportLabel(); ui.snap=null; late.refreshCards(); layoutPreview(); saveState(); }
 /** Format d'impression : le rapport de l'affiche peut changer (50 × 70 cm) ; aperçu et vignettes suivent */
-function setFormat(v){ st.format=v; setSeg('formatSeg',v); updateExportLabel(); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
+function setFormat(v){ st.format=v; late.setSeg('formatSeg',v); updateExportLabel(); ui.snap=null; late.refreshCards(); layoutPreview(); saveState(); }
 /** Retour à la ligne de la dédicace : la carte peut céder de la hauteur (geom), d'où la mise en page complète */
-function setDedWrap(v){ st.dedWrap=v; setSeg('dedWrapSeg',v); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
-function setFileType(v){ st.fileType=v; setSeg('fileSeg',v); updateExportLabel(); saveState(); }
+function setDedWrap(v){ st.dedWrap=v; late.setSeg('dedWrapSeg',v); ui.snap=null; late.refreshCards(); layoutPreview(); saveState(); }
+function setFileType(v){ st.fileType=v; late.setSeg('fileSeg',v); updateExportLabel(); saveState(); }
 /** Dimensions affichées sur le bouton d'export et sous le choix du format : suivent le format et l'orientation */
 function updateExportLabel(){
   const e=exportSpec(), pdf=st.fileType==='pdf', cm=v=>(v/10).toLocaleString('fr-FR');
@@ -219,7 +225,7 @@ function updateLayoutUI(){
   $('mixFormH').hidden=$('mixFormHint').hidden=mix && cp!=='med' && cp!=='vig';
   $('mixFormHint').textContent=cp==='med' ? 'Médaillon : trait autour de la forme de la carte.' : cp==='vig' ? 'Vignette : marge autour de la carte et de sa bande de texte.' : '';
   $('skyBox').hidden=L!=='sky'; $('placeBox').hidden=L!=='diptych'; $('labelsBox').hidden=L!=='diptych';
-  setSeg('placeSeg',String(st.active||0));
+  late.setSeg('placeSeg',String(st.active||0));
   if(L==='sky'){ $('skyWhen').value=st.sky.when; $('skyTz').value=String(st.sky.tz); }
   if($('mList')) renderPlaces();
 }
@@ -569,7 +575,7 @@ CMS.define('actbar', () => {
     const n=next();
     if(isSheet() && ui.sheet==='peek') setSheet('half');   // résultat de l'export ou onglet suivant : visibles
     if(!n){ $('bExport').click(); return; }
-    showTab(n); document.querySelector('.tabbody').scrollTop=0;
+    late.showTab(n); document.querySelector('.tabbody').scrollTop=0;
   }
   function init(){
     $('bNext').onclick=go;
@@ -824,7 +830,7 @@ CMS.define('changes', () => {
     return out;
   }
   function reveal(g){
-    showTab(g.tab); if(isSheet() && ui.sheet==='peek') setSheet('half');
+    late.showTab(g.tab); if(isSheet() && ui.sheet==='peek') setSheet('half');
     if(g.step) document.querySelector(`#illusStepSeg [data-v="${g.step}"]`)?.click();
     const el=$(g.at); if(!el) return;
     for(let d=el.closest('details'); d; d=d.parentElement.closest('details')) d.open=true;
@@ -833,11 +839,11 @@ CMS.define('changes', () => {
   }
   function reset(id){
     const g=GROUPS.find(x=>x.id===id); if(!g) return false;
-    compareBefore(false); clearTimeout(saveT); recordHistory();
+    late.compareBefore(false); clearTimeout(saveT); late.recordHistory();
     const {engine,...o}=structuredClone(st); g.reset(o);
-    const s=JSON.stringify(o); if(s===hist.cur) return false;
-    hist.past.push(hist.cur); if(hist.past.length>HIST_MAX) hist.past.shift(); hist.future=[];
-    applySnap(s); hist.quietUntil=Date.now()+1500;
+    const s=JSON.stringify(o); if(s===late.hist.cur) return false;
+    late.hist.past.push(late.hist.cur); if(late.hist.past.length>late.HIST_MAX) late.hist.past.shift(); late.hist.future=[];
+    late.applySnap(s); late.hist.quietUntil=Date.now()+1500;
     toast(`${g.name} : réglages par défaut rétablis · « Annuler » pour revenir en arrière`);
     update(); return true;
   }
@@ -977,9 +983,9 @@ CMS.define('palette', () => {
   }
   function apply(v){
     if(!photoPal) return;
-    const before=cmpSnap();
-    st.colors=photoTheme(photoPal,v==='dark'); setSeg('photoSeg',v);
-    noteChange(before,{theme:true}); refreshColors(); changed({all:true,cards:true});
+    const before=late.cmpSnap();
+    st.colors=photoTheme(photoPal,v==='dark'); late.setSeg('photoSeg',v);
+    late.noteChange(before,{theme:true}); late.refreshColors(); changed({all:true,cards:true});
     toast((photoSrc==='illus' ? 'Couleurs tirées de l\'illustration' : 'Palette de la photo appliquée')+' · « Annuler » pour revenir');
   }
   return {fromFile:importPhotoPalette, fromIllus:illusPalette, apply};
@@ -1016,7 +1022,7 @@ function storeSaves(list){
 /** Vignette de l'affiche courante (JPEG, ~150 px) : carte réelle avec le moteur Fichier, schématique sinon */
 function saveThumb(){
   const land=st.orient==='landscape', cv=document.createElement('canvas'); cv.width=land?212:150; cv.height=land?150:212; const ctx=cv.getContext('2d');
-  const mapFn=(c,r,view)=> st.engine==='file' && osmData ? drawVectors(c,r,osmData,view) : thumbMap(c,r);
+  const mapFn=(c,r,view)=> st.engine==='file' && osmData ? drawVectors(c,r,osmData,view) : late.thumbMap(c,r);
   ui.thumb=true; try{ drawPoster(ctx,cv.width,cv.height,'all',mapFn); applyTexture(ctx,cv.width,cv.height); } finally{ ui.thumb=false; }
   return cv.toDataURL('image/jpeg',0.8);
 }
@@ -1047,7 +1053,7 @@ const configOf=(name,state,savedAt)=>({format:CFG_FORMAT, version:CFG_VERSION, a
 async function downloadConfig(entry){
   const c = entry ? configOf(entry.name,entry.state,entry.savedAt) : configOf(defaultSaveName(),savedState());
   const {o,note}=await CMS.illus.attachImages(c,[c.state],$('cfgImg').checked);
-  downloadJson(o,`affiche-${slug(c.name)}.json`); toast('Configuration téléchargée'+note);
+  downloadJson(o,`affiche-${late.slug(c.name)}.json`); toast('Configuration téléchargée'+note);
 }
 async function downloadBackup(){
   const saves=loadSaves(); if(!saves.length){ toast('Aucune affiche enregistrée à sauvegarder',true); return; }
@@ -1100,7 +1106,7 @@ function renderSaves(){
   }
 }
 /** Mes affiches : section Sauvegarde de l'onglet Export (nom proposé, liste à jour, champ du nom sélectionné) */
-function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); showTab('export'); CMS.panelScroll.to($('savesTitle')); setTimeout(()=>$('saveName').focus({preventScroll:true}),50); }
+function openSaves(){ $('saveName').value=defaultSaveName(); renderSaves(); late.showTab('export'); CMS.panelScroll.to($('savesTitle')); setTimeout(()=>$('saveName').focus({preventScroll:true}),50); }
 function initSaves(){
   renderSaves();
   CMS.on('tab:export',()=>{ if(!$('saveName').value.trim()) $('saveName').value=defaultSaveName(); renderSaves(); });
@@ -1110,3 +1116,8 @@ function initSaves(){
   addEventListener('storage',e=>{ if(e.key===SAVES_KEY) renderSaves(); });   // autre onglet
   addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase()==='s'){ e.preventDefault(); saveCurrent(defaultSaveName()); } });
 }
+
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+Object.assign(late, {maybeWelcome, placeAt, setDedWrap, setStatus, showBanner, toast});
+
+export {addPlace, applyAmbiance, applyConfig, applyOccasion, applySheet, closeWelcome, decodeShare, deleteSave, downloadBackup, downloadConfig, encodeShare, fitRoute, importConfigFile, importGpx, initSaves, initSheet, isSheet, loadFromHash, loadSaves, maybeWelcome, openSaves, paletteOf, parseGpx, photoTheme, placeAt, renderRoute, replaceState, restoreSave, saveCurrent, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setPlacing, setSheet, setStatus, shareLink, showBanner, toast, updateContrast, updateExportLabel, updateLayoutUI, welcomeDone};

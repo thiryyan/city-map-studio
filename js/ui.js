@@ -1,6 +1,13 @@
 /* City Map Studio — Interface : taille du texte, coordonnées, historique, construction de l'interface, recherche, polices.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
-'use strict';
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+import {late} from './core.js';
+import {AMBIANCES, COLOR_LABELS, DEFAULT_STATE, DUOS, FONTS, FONT_CATS, FONT_LIST, GOLD, LAYOUTS, MARKERS, MARKER_COLORS, OCCASIONS, PRESETS, STORE_KEY, TEXTURES, THEMES, THEME_CATS} from './config.js';
+import {closeDialog, getPath, mlFailMsg, mlLib, mlMap, needConsent, osmData, saveState, saveT, setMlFailMsg, setOsmData, setPath, st, ui} from './state.js';
+import {clamp, coordText, dms, geom, posterDims, viewBounds} from './geo.js';
+import {drawMarker, drawPoster, fontOf} from './render.js';
+import {mlRestyle, mlZoom} from './engines.js';
+import {$, FIT_NAMES, FRAMES, WALLS, changed, downloadMockup, drawMockup, drawTexture, drawUnder, h, layoutPreview, mock, openMockup, redrawAll, renderMap, scheduleOver, setActivePlace} from './preview.js';
+import {addPlace, applyAmbiance, applyOccasion, applySheet, closeWelcome, fitRoute, importGpx, isSheet, renderRoute, replaceState, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setPlacing, setSheet, setStatus, shareLink, showBanner, toast, updateContrast, updateExportLabel, updateLayoutUI} from './features.js';
 // ---------- Taille du texte de l'interface (A− / A+) ----------
 // Préférence d'affichage propre à l'appareil : hors de l'état de l'affiche, non concernée par « Réinitialiser ».
 const UI_SCALE_KEY='cms3.uiScale', UI_SCALES=[0.875,1,1.125,1.25,1.375];
@@ -237,7 +244,7 @@ function buildUI(){
   // presets
   const pr=$('presets');
   PRESETS.forEach(([lbl,lat,lon,z,title,sub])=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=lbl;
-    b.onclick=()=>{ st.marker={lat,lon}; st.texts.title=title; st.texts.subtitle=sub; syncInputs(); updateMarkerTxt(); osmData=null; goTo(lat,lon,z); redrawAll(); };
+    b.onclick=()=>{ st.marker={lat,lon}; st.texts.title=title; st.texts.subtitle=sub; syncInputs(); updateMarkerTxt(); setOsmData(null); goTo(lat,lon,z); redrawAll(); };
     pr.appendChild(b); });
   // gabarits
   const lay=$('layouts');
@@ -361,15 +368,15 @@ function buildUI(){
   $('markerForm').onsubmit=e=>{ e.preventDefault(); placeMarkerFromInput(); };
   $('bMarkerCenter').onclick=()=>setMarker(st.center.lat,st.center.lon);
   $('bToMarker').onclick=()=>onIllus() ? CMS.illus.recenter() : goTo(st.marker.lat,st.marker.lon);
-  $('bDiag').onclick=runDiagnostics;
+  $('bDiag').onclick=late.runDiagnostics;
   $('bReset').onclick=askReset;
   $('bUiSmaller').onclick=()=>stepUiScale(-1); $('bUiLarger').onclick=()=>stepUiScale(1);
   $('bTsReset').onclick=()=>{ st.textScale={...DEFAULT_STATE.textScale}; st.textScaleAll=DEFAULT_STATE.textScaleAll; syncInputs(); changed(); toast('Tailles des textes rétablies'); };
-  $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); e.target.value=''; };
+  $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) late.importFile(f); e.target.value=''; };
   const submitSearch=CMS.geocoder.debounceSubmit(q=>search(q),300);
   $('searchForm').onsubmit=e=>{ e.preventDefault(); submitSearch($('q').value); };
   $('results').addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeResults(); } });
-  $('bExport').onclick=exportPoster;
+  $('bExport').onclick=late.exportPoster;
   $('resClose').onclick=()=>{ $('result').hidden=true; $('bExport').focus(); };
 }
 /** Réinitialisation : un premier appui demande confirmation (pas de confirm(), bloqué dans les aperçus intégrés) */
@@ -496,7 +503,7 @@ function setEngine(v,quiet){
   if(v!=='maplibre') openAdvanced();
   hist.quietUntil=Date.now()+1500;   // le moteur n'entre pas dans l'historique ; ses recentrages non plus
   if(v==='file'){ renderMap(true); if(!osmData && !quiet) toast('Importez un fichier de données (onglet Lieu).'); }
-  else { mlFailMsg=''; renderMap(true); mlRestyle(); }
+  else { setMlFailMsg(''); renderMap(true); mlRestyle(); }
   saveState();
 }
 
@@ -658,3 +665,8 @@ CMS.define('compare', () => {
   return {snap:cmpSnap,note:noteChange,update:updateCompare,hold:compareBefore,init:initCompare,fxLabel};
 });
 const {snap: cmpSnap, note: noteChange, update: updateCompare, hold: compareBefore, init: initCompare} = CMS.compare;
+
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+Object.assign(late, {HIST_MAX, applySnap, cmpSnap, commitHistory, compareBefore, fontsReady, goTo, hist, isoFromFr, loadFonts, noteChange, openAdvanced, pressed, recordHistory, refreshCards, refreshColors, setEngine, setMarker, setSeg, showTab, syncInputs, syncOutputs, syncZoomUI, thumb, thumbMap, updateEngineUI, updateMarkerTxt});
+
+export {HIST_MAX, applySnap, applyUiScale, buildUI, cmpSnap, commitHistory, compareBefore, fontsReady, frDate, goTo, hist, histSnap, isoFromFr, loadFonts, noteChange, openAdvanced, parseCoords, pressed, recordHistory, redo, refreshCards, refreshColors, resetAll, setEngine, setMarker, setSeg, showTab, syncFonts, syncInputs, syncOutputs, syncZoomUI, thumb, thumbMap, undo, updateEngineUI, updateHistUI, updateMarkerTxt};

@@ -10,7 +10,7 @@ Aucun script injecté : le stockage est écrit par la page elle-même (cf. tests
 import pathlib, os, asyncio, json
 from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
-ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent / 'dist').resolve()   # site testé : dist/ (construit par run_all.py), ou CMS_ROOT
 APP = (ROOT / 'index.html').as_uri()+'?test'
 CHROME = os.environ.get('CHROME') or None
 shown = lambda page, id_: page.evaluate(f"document.getElementById('{id_}').classList.contains('show')")

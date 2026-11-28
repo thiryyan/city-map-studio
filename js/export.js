@@ -1,6 +1,13 @@
 /* City Map Studio — Export PNG et PDF, contexte d'exécution, diagnostic réseau, import de fichier.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
-'use strict';
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+import {late} from './core.js';
+import {OFM_URL, REF_W} from './config.js';
+import {mlCdn, mlLib, needConsent, osmData, saveState, setBusy, setOsmData, st, ui} from './state.js';
+import {clamp, exportSpec} from './geo.js';
+import {netMsg, parseOsm} from './engines.js';
+import {$, composePoster, h, renderMap} from './preview.js';
+import {setStatus, showBanner, toast} from './features.js';
+import {openAdvanced, setSeg, showTab, syncZoomUI, updateEngineUI, updateMarkerTxt} from './ui.js';
 // Module CMS.export : tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier (utilisées par les autres fichiers).
 CMS.define('export', () => {
 // ---------- Export PNG (résolution inscrite dans le fichier) ----------
@@ -177,7 +184,7 @@ function importText(txt,name=''){
   const d=parseOsm({elements:els});
   if(!d.count || !d.extent) throw new Error('aucun objet cartographique exploitable');
   d.source='file'; d.bounds=d.extent; d.layers=JSON.stringify(st.layers);
-  osmData=d;
+  setOsmData(d);
   // recadrage si la vue courante ne recoupe pas les données
   const e=d.extent, inside=(st.center.lat>e.s&&st.center.lat<e.n&&st.center.lon>e.w&&st.center.lon<e.e);
   if(!inside){
@@ -227,3 +234,8 @@ CMS.define('perfUI', () => {
   };
   return {init, text};
 });
+
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+Object.assign(late, {exportPoster, importFile, runDiagnostics, slug});
+
+export {ENV, exportPoster, importFile, importText, runDiagnostics, showEnvWarning, slug};

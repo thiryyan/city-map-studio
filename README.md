@@ -18,7 +18,7 @@ Ouvrir la version publiée sur GitHub Pages, ou servir le dépôt localement. Pe
 ```bash
 python3 -m http.server 8000   # puis http://localhost:8000
 ```
-Ouvrir directement `index.html` en `file://` fonctionne aussi (scripts classiques, sans module ES), mais l'application n'est alors ni installable ni mise en cache.
+Les sources sont des modules ES : elles se servent en http, pas en `file://`. Le site construit (`npm ci && npm run build`, dossier `dist/`) s'ouvre aussi directement en `file://`, mais n'est alors ni installable ni mis en cache.
 
 ## Documentation
 - [Guide de l'utilisateur](USER_GUIDE.md) : toutes les fonctions, leurs options et des astuces.

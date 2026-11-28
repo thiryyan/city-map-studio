@@ -1,5 +1,5 @@
 /* City Map Studio — Lieux remarquables de Wikipédia autour du lieu (recherche géographique), espace CMS.wiki (issue #46).
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé après geocoder.js.
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).js.
  *
  * Option désactivée par défaut (onglet Illustration, Pistes), soumise à l'accord préalable (needConsent) : aucune requête sans elle.
  * - une seule requête : generator=geosearch (articles géolocalisés les plus proches) avec la longueur de l'article,
@@ -11,7 +11,7 @@
  *   un peu de distance ; communes, quartiers, gares, écoles, rues… sont écartés (ce ne sont pas des sujets d'illustration).
  * Erreurs typées : err.code ∈ TIMEOUT, RATE_LIMITED, NETWORK, HTTP, BAD_RESPONSE, ABORTED.
  */
-'use strict';
+import {late} from './core.js';
 (function (g) {
   const CMS = g.CMS;   // js/core.js
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
@@ -78,7 +78,7 @@
       try { res = await fetch(url, { signal: ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer', headers: { Accept: 'application/json' } }); }
       catch (e) {
         if (ctl.signal.aborted) throw wikiError(timedOut ? 'TIMEOUT' : 'ABORTED', timedOut ? 'délai dépassé' : 'annulée');
-        throw wikiError('NETWORK', typeof netMsg === 'function' ? netMsg(e) : e.message);
+        throw wikiError('NETWORK', typeof late.netMsg === 'function' ? late.netMsg(e) : e.message);
       }
       if (res.status === 429 || res.status === 403) throw wikiError('RATE_LIMITED', 'trop de requêtes', { status: res.status });
       if (!res.ok) throw wikiError('HTTP', `HTTP ${res.status}`, { status: res.status });

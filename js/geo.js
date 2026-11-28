@@ -1,6 +1,8 @@
 /* City Map Studio — Projection de Mercator et géométrie des gabarits.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
-'use strict';
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+import {late} from './core.js';
+import {CANVAS_MAX_PX, EXPORT_MAX_DPI, FORMATS, REF_W} from './config.js';
+import {st, ui} from './state.js';
 // Module CMS.geo : fonctions de projection, de format et de géométrie des gabarits (testées seules : tests/unit).
 // Tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier.
 CMS.define('geo', () => {
@@ -136,8 +138,8 @@ function geom(s, W, H){
   }
   // Dédicace sur deux lignes : la carte cède la hauteur de la deuxième ligne quand le texte est sous la carte et que
   // la place n'y est pas déjà (Souvenir : pied ; Cadre, Arche, Lettres : cartouche). Ailleurs, le cartouche a la marge nécessaire.
-  if(lay==='souvenir' && !land){ const ex=souvenirFoot(W,U,m).extra*U; g.map.h-=ex; }
-  else if(!land && ['classic','arch','typo'].includes(lay)){ const ex=cartDed(CART_ROWS,g.text.maxW/U).extra*U; g.map.h-=ex; g.text.y0-=ex; g.text.avail+=ex; }
+  if(lay==='souvenir' && !land){ const ex=late.souvenirFoot(W,U,m).extra*U; g.map.h-=ex; }
+  else if(!land && ['classic','arch','typo'].includes(lay)){ const ex=late.cartDed(late.CART_ROWS,g.text.maxW/U).extra*U; g.map.h-=ex; g.text.y0-=ex; g.text.avail+=ex; }
   if(g.rects){ g.map=g.rects[s.active||0]; g.places=[{rect:g.rects[s.active||0],view:s,main:true},{rect:g.rects[1-(s.active||0)],view:s.place2||s}]; }
   else g.places=[{rect:g.map,view:s,main:true}];
   g.map.circle=g.map.shape==='circle';
@@ -167,3 +169,5 @@ function strokeShape(ctx, r, o){ const e={...r,x:r.x-o,y:r.y-o,w:r.w+2*o,h:r.h+2
 return {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, geom, shapeD, clipMap, strokeShape};
 });
 const {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, geom, shapeD, clipMap, strokeShape} = CMS.geo;
+
+export {D2R, clamp, clipMap, coordText, dms, exportSpec, geom, imerc, merc, placeCoordText, posterDims, project, ratio, shapeD, strokeShape, textLine, unproject, viewBounds, worldSize, zoomFactor};

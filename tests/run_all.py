@@ -32,6 +32,10 @@ def main(args):
     jobs = int(os.environ.get('JOBS') or os.cpu_count() or 2)
     if args[:1] == ['-j']: jobs, args = int(args[1]), args[2:]
     names = args or TESTS
+    # Les tests ouvrent le site construit (dist/, modules ES réunis en un script ; #102) : construit ici, sauf si
+    # CMS_ROOT désigne déjà un site (la CI construit avant de lancer la suite)
+    if not os.environ.get('CMS_ROOT'):
+        subprocess.run(['node', str(T.parent / 'scripts' / 'build.mjs')], check=True, stdout=subprocess.DEVNULL)
     for gen in ('fixture', 'make_formats', 'make_city'):
         subprocess.run([sys.executable, str(T / f'{gen}.py')], check=True, stdout=subprocess.DEVNULL)
     order = sorted(names, key=lambda n: SLOW.index(n) if n in SLOW else len(SLOW))

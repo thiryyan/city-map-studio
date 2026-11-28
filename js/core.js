@@ -1,13 +1,11 @@
 /* City Map Studio — Socle : espace de noms CMS et bus d'événements. Chargé en premier.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://).
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).
  *
- * Les scripts classiques partagent une seule portée globale. Pour la réduire, un fichier déclare ses fonctions dans
- * un module : CMS.define('nom', () => ({…})) ; seules ses fonctions publiques sont reprises en tête de portée
- * (const {a, b} = CMS.nom), le reste lui reste privé. Les modules se parlent par des événements plutôt que par
- * des tests de présence (typeof f === 'function') : CMS.on('state:saved', …), CMS.emit('state:saved').
- * Le nombre de déclarations globales est surveillé par tests/globals.py (plafond : tests/globals.max).
+ * Chaque fichier de js/ est un module ES : il importe ce qu'il utilise des fichiers chargés avant lui, et lit dans le
+ * registre late (fin de ce fichier) ce qu'il appelle des fichiers chargés après lui. CMS.define('nom', …) range des
+ * fonctions sous CMS.nom (testées seules : tests/unit) ; les modules se parlent aussi par événements :
+ * CMS.on('state:saved', …), CMS.emit('state:saved'). Garde-fous : tests/globals.py (ESLint, plafond du registre late).
  */
-'use strict';
 (function (g) {
   const CMS = g.CMS = g.CMS || {};
   const bus = new EventTarget();
@@ -81,3 +79,10 @@ CMS.define('perf', () => {
   const ok = m => !(m.k in BUDGET) || m.ms <= BUDGET[m.k];
   return {BUDGET, LABEL, add, since, ready, start, end, watchFrames, latest, ok, get log() { return log.slice(); }};
 });
+
+// ---------- Références vers l'avant (modules ES, #102) ----------
+// Un fichier qui appelle une fonction d'un fichier chargé APRÈS lui ne l'importe pas (l'import créerait un cycle et
+// changerait l'ordre d'exécution des modules) : il la lit dans ce registre, rempli par le fichier qui la définit.
+// Chaque entrée est une dépendance « à l'envers » entre couches, à faire disparaître (événements, injection).
+const late = Object.create(null);
+export {late};

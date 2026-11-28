@@ -1,6 +1,11 @@
 /* City Map Studio — Aperçu à l'écran, deux lieux, gestes, papier, composition complète, aperçu au mur.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
-'use strict';
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+import {late} from './core.js';
+import {LAYOUTS, THEMES} from './config.js';
+import {consent, mlLib, mlMap, needConsent, openDialog, osmData, saveState, setBusy, st, ui} from './state.js';
+import {clamp, clipMap, geom, imerc, merc, posterDims, ratio, shapeD, textLine, unproject, worldSize} from './geo.js';
+import {CART_ROWS, POLA_ROWS, cartDed, drawPoster, ensureSky, fitSink, lum, setFitSink, souvenirFoot} from './render.js';
+import {checkDataBanner, drawVectors, initMaplibre, mlKeepAlive, mlRestyle, mlUpdateView, renderMaplibreOffscreen} from './engines.js';
 // ---------- Aperçu ----------
 const $=id=>document.getElementById(id);
 /** Crée un élément sans innerHTML : h('button', {type:'button', className:'card', dataset:{v:k}, style:{…}}, enfant, 'texte').
@@ -106,12 +111,12 @@ function setActivePlace(i){
   if(st.layout!=='diptych' || i===(st.active||0)) return;
   const cur={center:st.center,zoom:st.zoom,marker:st.marker}, o=otherView();
   st.center=o.center; st.zoom=o.zoom; st.marker=o.marker; st.place2=cur; st.active=i; ui.snap=null;
-  setSeg('placeSeg',String(i)); syncZoomUI(); updateMarkerTxt();
+  late.setSeg('placeSeg',String(i)); late.syncZoomUI(); late.updateMarkerTxt();
   layoutPreview(); if(mlMap) mlRestyle(); saveState();
-  toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
+  late.toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
 }
-function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); fitSink={}; ui.inkSink=CMS.safe?.on?[]:null;
-  const g=drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; fitSink=null; showFit(fit); describePoster();
+function drawOver(){ const ctx=cvO.getContext('2d'); ctx.clearRect(0,0,cvO.width,cvO.height); setFitSink({}); ui.inkSink=CMS.safe?.on?[]:null;
+  const g=drawPoster(ctx,cvO.width,cvO.height,'over'); const fit=fitSink; setFitSink(null); showFit(fit); describePoster();
   CMS.safe?.check(ui.inkSink,cvO.width,cvO.height); ui.inkSink=null; CMS.perf.end('reglage','aperçu');
   // Un texte peut déplacer la carte (dédicace passée sur deux lignes, ou revenue sur une) : son cadre est replacé
   // (comparaison en fraction de la hauteur : le canevas est arrondi au pixel, pas la taille CSS de l'affiche)
@@ -133,14 +138,14 @@ function showFit(fit){
   const key=JSON.stringify([fit,st.dedWrap]); if(key===fitPrev) return; fitPrev=key;
   for(const k of Object.keys(FIT_NAMES)){ const o=$('oTs-'+k); if(!o) continue; const f=fit[k];
     o.classList.toggle('shrunk',!!f); o.title = f ? `Réduit à ${Math.round(f*100)} % pour tenir dans l'affiche` : ''; }
-  syncOutputs();
+  late.syncOutputs();
   const ks=Object.keys(fit);
   const note=$('fitNote');
   note.textContent = ks.length ? '↘ Réduit pour tenir dans l\'affiche : '+ks.map(k=>`${FIT_NAMES[k]} (${Math.round(fit[k]*100)} %)`).join(', ')+'. Raccourcissez le texte ou baissez une autre taille.' : '';
   // Dédicace réduite sur une seule ligne : proposer de la passer sur deux lignes
   if(fit.dedication && st.dedWrap!=='two' && textLine('dedication').includes(' ') && dedWrapsOnce()<2){
     const b=h('button',{type:'button',className:'lnk'},'Passer la dédicace sur deux lignes');
-    b.onclick=()=>setDedWrap('two'); note.append(' ',b);
+    b.onclick=()=>late.setDedWrap('two'); note.append(' ',b);
   }
 }
 /** Nombre de lignes de la dédicace dans le rendu courant (gabarit Souvenir ou cartouche) */
@@ -157,7 +162,7 @@ function renderMap(viewChanged){
   $('mlMap').hidden = !isML;
   vecC.hidden = isML;
   mlKeepAlive(isML);
-  if(isML){ if(!mlMap) initMaplibre(); if(viewChanged) mlUpdateView(); if(mlLib==='loading') setStatus('Chargement de la librairie MapLibre…','busy'); }
+  if(isML){ if(!mlMap) initMaplibre(); if(viewChanged) mlUpdateView(); if(mlLib==='loading') late.setStatus('Chargement de la librairie MapLibre…','busy'); }
   else scheduleOp();
   scheduleOver();
 }
@@ -173,7 +178,7 @@ function redrawAll(restyle){ drawUnder(); if(restyle) mlRestyle(); renderMap(fal
  *  Par défaut, la couche du dessus (textes, repères) ; cards : vignettes ; all : fond, carte et style MapLibre. */
 function changed(o={}){
   CMS.perf.start('reglage', o.all && st.engine==='maplibre' && mlMap ? 'carte' : '');   // mesuré jusqu'à l'aperçu (ou la carte GPU) redessiné
-  if(o.cards) refreshCards();
+  if(o.cards) late.refreshCards();
   if(o.all) redrawAll(true);
   else { scheduleOver(); saveState(); }
 }
@@ -185,7 +190,7 @@ function changed(o={}){
     if(pts.size===2){ const [a,b]=[...pts.values()]; startD=Math.hypot(a.x-b.x,a.y-b.y); startZ=st.zoom; } });
   vecC.addEventListener('pointermove',e=>{
     if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pts.size===2){ const [a,b]=[...pts.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); if(startD>0){ st.zoom=clamp(startZ+Math.log2(d/startD),10,18); moved=true; syncZoomUI(); renderMap(); } return; }
+    if(pts.size===2){ const [a,b]=[...pts.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); if(startD>0){ st.zoom=clamp(startZ+Math.log2(d/startD),10,18); moved=true; late.syncZoomUI(); renderMap(); } return; }
     const dx=e.clientX-last.x, dy=e.clientY-last.y; if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>4) moved=true;
     last={x:e.clientX,y:e.clientY};
     const S=worldSize(ui.slotCss.w,st.zoom);
@@ -193,7 +198,7 @@ function changed(o={}){
     renderMap();
   });
   const up=e=>{ const wasTap=!moved && pts.size===1; pts.delete(e.pointerId); if(pts.size<2) startD=0; if(pts.size===1){ const q=[...pts.values()][0]; last={x:q.x,y:q.y}; moved=true; }
-    if(wasTap && ui.placing){ const rc=vecC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); placeAt(ll.lat,ll.lon); }
+    if(wasTap && ui.placing){ const rc=vecC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); late.placeAt(ll.lat,ll.lon); }
     if(pts.size===0) saveState(); };
   vecC.addEventListener('pointerup',up); vecC.addEventListener('pointercancel',up);
   // Clavier (la carte MapLibre a le sien) : flèches = 10 % du cadre (Maj : 50 %), + / − = zoom, Entrée = repère au centre en mode placement
@@ -202,12 +207,12 @@ function changed(o={}){
     const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
     if(d){ const f=e.shiftKey?0.5:0.1, S=worldSize(ui.slotCss.w,st.zoom), dx=d[0]*f*ui.slotCss.w, dy=d[1]*f*ui.slotCss.h;
       st.center={lon:st.center.lon+dx/S*360, lat:imerc(merc(st.center.lat)-dy*2*Math.PI/S)}; }
-    else if(e.key==='+'||e.key==='='||e.key==='-'||e.key==='_'){ st.zoom=clamp(st.zoom+(e.key==='+'||e.key==='='?0.5:-0.5),10,18); syncZoomUI(); }
-    else if(e.key==='Enter' && ui.placing){ placeAt(st.center.lat,st.center.lon); }
+    else if(e.key==='+'||e.key==='='||e.key==='-'||e.key==='_'){ st.zoom=clamp(st.zoom+(e.key==='+'||e.key==='='?0.5:-0.5),10,18); late.syncZoomUI(); }
+    else if(e.key==='Enter' && ui.placing){ late.placeAt(st.center.lat,st.center.lon); }
     else return;
     e.preventDefault(); renderMap(); saveState();
   });
-  vecC.addEventListener('wheel',e=>{ e.preventDefault(); st.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18); syncZoomUI(); renderMap(); saveState(); },{passive:false});
+  vecC.addEventListener('wheel',e=>{ e.preventDefault(); st.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18); late.syncZoomUI(); renderMap(); saveState(); },{passive:false});
 })();
 
 // ---------- Papier : textures générées (aucune image) ----------
@@ -284,7 +289,7 @@ function drawTexture(){
 
 // ---------- Composition complète (export et aperçu au mur) ----------
 async function composePoster(W,H,step=()=>{}){
-  step('Chargement des polices…'); await loadFonts(); const fontWarn=!fontsReady();
+  step('Chargement des polices…'); await late.loadFonts(); const fontWarn=!late.fontsReady();
   const g=geom(st,W,H); if(g.sky){ step('Chargement du ciel…'); await ensureSky(); }
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d');
   let warn=false; const imgs=[];
@@ -304,11 +309,11 @@ const FRAMES=[['Chêne','oak'],['Noir','#1B1B1B'],['Blanc','#F4F4F2'],['Doré','
 const mock={wall:0,frame:0,mat:true,poster:null};
 async function openMockup(){
   if(st.engine==='maplibre' && !needConsent(()=>openMockup())) return;
-  if(st.engine!=='maplibre' && !osmData){ toast('Chargez d\'abord la carte (onglet Lieu, section Avancé).',true); return; }
+  if(st.engine!=='maplibre' && !osmData){ late.toast('Chargez d\'abord la carte (onglet Lieu, section Avancé).',true); return; }
   setBusy(true,'Préparation de l\'aperçu…'); let ok=false;
   try{ const d=posterDims(), k=1100/Math.max(d.W,d.H); mock.poster=(await composePoster(Math.round(d.W*k),Math.round(d.H*k),t=>$('busyTxt').textContent=t)).canvas;
     drawMockup(); ok=true; }
-  catch(e){ console.error(e); toast('Aperçu impossible : '+(e.message||e),true); }
+  catch(e){ console.error(e); late.toast('Aperçu impossible : '+(e.message||e),true); }
   finally{ setBusy(false); }
   if(ok) openDialog('mockup');
 }
@@ -338,5 +343,10 @@ function drawMockup(){
   $('mockMat').checked=mock.mat;
 }
 function downloadMockup(){
-  $('mockCv').toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`apercu-au-mur-${slug(st.texts.title)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); },'image/png');
+  $('mockCv').toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`apercu-au-mur-${late.slug(st.texts.title)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); },'image/png');
 }
+
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+Object.assign(late, {$, drawUnder, renderMap, scheduleOver});
+
+export {$, FIT_NAMES, FRAMES, WALLS, applyTexture, changed, composePoster, downloadMockup, drawMockup, drawOp, drawOver, drawTexture, drawUnder, h, layoutPreview, mock, openMockup, poster, redrawAll, renderMap, scheduleOver, setActivePlace, slot, stage, textureBase};

@@ -1,6 +1,7 @@
 /* City Map Studio — État de l'affiche : validation, chargement, enregistrement ; fenêtres modales ; accord préalable.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
-'use strict';
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+import {late} from './core.js';
+import {DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, STORE_KEY, TEXTURES, THEMES} from './config.js';
 // ---------- Validation de l'état (lien partagé, localStorage) ----------
 // Un état venu de l'extérieur n'est jamais repris tel quel : seuls les champs connus sont lus, chacun est vérifié
 // (type, liste de valeurs, bornes) et remplacé par sa valeur par défaut s'il est invalide. Un lien forgé ne peut donc
@@ -119,6 +120,9 @@ let st = loadState();
 const ui = {intent:'map', clean:false, inkSink:null, comparing:false, cmpKeep:null, placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
 let mlMap = null, osmData = null;
 let mlLib = 'loading', mlCdn = '', mlFailMsg = '';   // état de la librairie MapLibre
+// Modules ES : une variable importée ne se réaffecte pas ; les autres fichiers passent par ces fonctions (#102)
+const setMlMap = v => { mlMap = v; }, setOsmData = v => { osmData = v; };
+const setMlLib = v => { mlLib = v; }, setMlCdn = v => { mlCdn = v; }, setMlFailMsg = v => { mlFailMsg = v; };
 
 // ---------- Fenêtres modales ----------
 // <dialog> + showModal() : focus retenu dans la fenêtre, arrière-plan inerte, touche Échap (événement « cancel »).
@@ -170,16 +174,16 @@ function giveConsent(){
   updateConsentInfo();
   const next=consentNext; consentNext=null;
   (async()=>{
-    if(mlLib==='fail'||mlLib==='local-fail'){ await loadMaplibre(); updateEngineUI(); }
+    if(mlLib==='fail'||mlLib==='local-fail'){ await late.loadMaplibre(); late.updateEngineUI(); }
     if(next) next();
-    maybeWelcome();
-    if(st.engine==='maplibre') renderMap(true);                              // la carte s'affiche dans tous les cas
+    late.maybeWelcome();
+    if(st.engine==='maplibre') late.renderMap(true);                              // la carte s'affiche dans tous les cas
   })();
 }
 function declineConsent(){
   consentNext=null; closeDialog('consent');
-  setEngine('file',true); openAdvanced(true); maybeWelcome();   // consigne d'import : ligne d'état et section Avancé
-  if(!osmData) setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
+  late.setEngine('file',true); late.openAdvanced(true); late.maybeWelcome();   // consigne d'import : ligne d'état et section Avancé
+  if(!osmData) late.setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
 }
 function withdrawConsent(){
   try{ localStorage.removeItem(CONSENT_KEY); }catch(e){}
@@ -202,3 +206,8 @@ let saveT=0;
 function saveState(){if(ui.comparing) return; clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} CMS.emit('state:saved');},300)}
 function getPath(o,p){return p.split('.').reduce((a,k)=>a?.[k],o)}
 function setPath(o,p,v){const ks=p.split('.');const last=ks.pop();ks.reduce((a,k)=>a[k],o)[last]=v}
+
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+Object.assign(late, {st});
+
+export {SHARE_MAX_BYTES, SHARE_MAX_CHARS, V, closeDialog, consent, declineConsent, dlgCancel, getPath, giveConsent, initDialogs, mlCdn, mlFailMsg, mlLib, mlMap, needConsent, normState, openDialog, osmData, saveState, saveT, setBusy, setMlCdn, setMlFailMsg, setMlLib, setMlMap, setOsmData, setPath, st, ui, updateConsentInfo};

@@ -1,22 +1,21 @@
 // City Map Studio — construction du site publié (#97, lot 4 : #102)
 //
-// Étape 4a : le code source reste tel quel (scripts classiques, ouvrables directement en file:// ou par
-// python -m http.server). Le build produit dist/, la version publiée :
-//   - les scripts de index.html, dans leur ordre, réunis en un seul script classique js/app.<empreinte>.js, minifié et
-//     enveloppé dans une fonction : les fichiers gardent leur portée commune, mais plus aucun nom n'est global (seuls
-//     CMS, posé sur globalThis, et en mode ?test window.__cms et la façade de test de js/main.js restent visibles) ;
+// Les sources sont des modules ES (js/main.js et ses imports) : elles se servent en http (python -m http.server),
+// pas en file://. Le build produit dist/, la version publiée :
+//   - les modules réunis par esbuild en un seul script classique js/app.<empreinte>.js (format IIFE), minifié : aucun
+//     nom global (seuls CMS, posé sur globalThis, et en mode ?test window.__cms et la façade de test de js/main.js) ;
+//     dist/index.html s'ouvre donc aussi en file:// ;
 //   - css/app.css minifiée en css/app.<empreinte>.css ;
 //   - VERSION (sw.js) et CMS.build (js/core.js) générés : cms-AAAA-MM-JJ-<empreinte> ;
 //   - liste APP de sw.js générée à partir des fichiers réellement publiés ;
 //   - lib/, icons/, manifeste et .nojekyll copiés.
-// dist/index.html s'ouvre aussi en file:// (chemins relatifs, script classique).
 //
 // Usage : node scripts/build.mjs [dossier de sortie, dist par défaut]
 import {readFile, writeFile, mkdir, rm, cp} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {transform} from 'esbuild';
+import {build, transform} from 'esbuild';
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.resolve(SRC, process.argv[2] || 'dist');
@@ -26,36 +25,31 @@ const fail = msg => { console.error('✗ ' + msg); process.exit(1); };
 
 let html = await read('index.html');
 
-// 1. Scripts : ordre de index.html, un seul bloc contigu attendu
-const SCRIPT_RE = /<script src="(js\/[^"]+\.js)"><\/script>\n?/g;
-const scripts = [...html.matchAll(SCRIPT_RE)].map(m => m[1]);
-if (scripts.length < 2 || !scripts.includes('js/core.js')) fail('scripts de index.html introuvables');
-let js = '';
-for (const f of scripts) js += `\n// ---- ${f} ----\n` + await read(f) + '\n';
+// 1. Modules : point d'entrée js/main.js (balise <script type="module"> de index.html)
+const SCRIPT_RE = /<script type="module" src="js\/main\.js"><\/script>\n?/;
+if (!SCRIPT_RE.test(html)) fail('<script type="module" src="js/main.js"> introuvable dans index.html');
+const bundle = async () => (await build({
+  entryPoints: [path.join(SRC, 'js/main.js')], bundle: true, format: 'iife', write: false, metafile: true,
+  minify: true, target: 'es2020', legalComments: 'none', charset: 'utf8'
+})).outputFiles[0].text;
+let js = await bundle();
 
 // 2. CSS
 const cssSrc = await read('css/app.css');
 
 // 3. Version : date du jour (UTC) + empreinte du contenu publié
 const day = new Date().toISOString().slice(0, 10);
-const VERSION_RE = /const version = '[^']*';/;
-if (!VERSION_RE.test(js)) fail('CMS.build : constante version introuvable dans js/core.js');
+// CMS.build (js/core.js) vaut 'cms-dev' dans les sources : remplacé dans le script construit
+if ((js.match(/"cms-dev"/g) || []).length !== 1) fail('CMS.build : version « cms-dev » introuvable (ou en double) dans le script construit');
 const contentHash = hash(js + cssSrc + html).slice(0, 7);
 const version = `cms-${day}-${contentHash}`;
-js = js.replace(VERSION_RE, `const version = '${version}';`);
-
-// Une seule fonction englobante, en mode strict : portée commune aux fichiers, aucun nom global (lot 4b, #102)
-const bundled = await transform(`(function(){'use strict';\n${js}\n})();`, {
-  loader: 'js', minify: true, target: 'es2020', legalComments: 'none', charset: 'utf8'
-});
+const bundled = {code: js.replace('"cms-dev"', JSON.stringify(version))};
 const css = await transform(cssSrc, {loader: 'css', minify: true, legalComments: 'none', charset: 'utf8'});
 const jsName = `js/app.${hash(bundled.code).slice(0, 10)}.js`;
 const cssName = `css/app.${hash(css.code).slice(0, 10)}.css`;
 
 // 4. index.html : un seul script, la feuille minifiée
-const first = html.search(SCRIPT_RE);
-html = html.replace(SCRIPT_RE, '');
-html = html.slice(0, first) + `<script src="${jsName}"></script>\n` + html.slice(first);
+html = html.replace(SCRIPT_RE, `<script src="${jsName}"></script>\n`);
 if (!html.includes('href="css/app.css"')) fail('feuille css/app.css introuvable dans index.html');
 html = html.replace('href="css/app.css"', `href="${cssName}"`);
 
@@ -82,4 +76,4 @@ await writeFile(path.join(OUT, 'sw.js'), sw);
 
 const kb = n => (n / 1024).toFixed(0) + ' Ko';
 console.log(`✓ ${path.relative(SRC, OUT) || '.'}/ · ${version}`);
-console.log(`  ${jsName} : ${kb(bundled.code.length)} (source ${kb(js.length)}, ${scripts.length} scripts) · ${cssName} : ${kb(css.code.length)} (source ${kb(cssSrc.length)})`);
+console.log(`  ${jsName} : ${kb(bundled.code.length)} · ${cssName} : ${kb(css.code.length)} (source ${kb(cssSrc.length)})`);

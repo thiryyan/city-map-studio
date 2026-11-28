@@ -1,5 +1,5 @@
 /* City Map Studio — Client de géocodage Nominatim, espace CMS.geocoder.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé après config.js.
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).js.
  *
  * Politique d'usage (https://operations.osmfoundation.org/policies/nominatim/) : requêtes à la demande seulement
  * (jamais pendant la frappe), au plus une par seconde, résultats mis en cache, arrêt en cas de blocage (429 / 403).
@@ -9,7 +9,8 @@
  * - réponse validée : coordonnées finies et dans les bornes Mercator, textes tronqués ; aucune donnée brute n'est rendue.
  * Erreurs typées : err.code ∈ EMPTY, TIMEOUT, RATE_LIMITED, NETWORK, HTTP, BAD_RESPONSE, ABORTED.
  */
-'use strict';
+import {late} from './core.js';
+import {NOMINATIM} from './config.js';
 (function (g) {
   const CMS = g.CMS;   // js/core.js
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
@@ -60,7 +61,7 @@
       try { res = await fetch(url, { signal: ctl.signal, headers: { Accept: 'application/json' } }); }
       catch (e) {
         if (ctl.signal.aborted) throw geoError(timedOut ? 'TIMEOUT' : 'ABORTED', timedOut ? 'délai dépassé' : 'annulée');
-        throw geoError('NETWORK', typeof netMsg === 'function' ? netMsg(e) : e.message);
+        throw geoError('NETWORK', typeof late.netMsg === 'function' ? late.netMsg(e) : e.message);
       } finally { clearTimeout(timer); }
       if (res.status === 429 || res.status === 403) {
         const ms = retryAfterMs(res.headers.get('Retry-After'));
