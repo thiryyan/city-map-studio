@@ -1,8 +1,8 @@
 /* City Map Studio — Mise en page de l'affiche (#118, issu de src/core/geo/geo.ts) : rectangle ou cercle de la carte et
  * zone des textes selon le gabarit ; dépend de la mesure des textes du cartouche (src/render/poster.ts). */
-import {CART_ROWS, cartDed, souvenirFoot} from './poster.js';
+import {CART_ROWS, cartDed, souvenirFoot} from './poster-text.js';
 import {Geom, Rect, TextArea} from '../core/geo/geo.js';
-import {PosterState} from '../content/config.js';
+import {PosterState, illusConf} from '../content/config.js';
 // U : unité de mise en page = petit côté de l'affiche (2480 px à l'export A4, en portrait comme en paysage).
 // Renvoie : map (cadre de la carte interactive), places (une ou deux vues : {rect, view}), sky (disque du ciel),
 // text (zone du cartouche : cx, maxW, y0, avail, mode 'top' | 'bottom' | 'center').
@@ -14,7 +14,7 @@ function geom(s: PosterState, W: number, H: number): Geom {
   if(s.mode==='illus'){ g.illus={x:0,y:0,w:W,h:H}; g.map={x:0,y:0,w:0,h:0}; g.places=[]; return g; }
   // Carte + illustration : médaillon (illustration pleine page, carte dans une forme) ou vignette (carte encadrée, illustration en arche)
   if(s.mode==='mix'){
-    const M=s.mix||{}; g.mix=CMS.illusConf.COMPOS.includes(M.compo) ? M.compo : 'med';
+    const M=s.mix||{}; g.mix=illusConf.COMPOS.includes(M.compo) ? M.compo : 'med';
     const gap=0.012*U;   // filet couleur papier entre illustration et carte
     if(g.mix==='med'){
       const d=(land?H:W)*0.45, sh=M.shape||'circle', h=sh==='heart' ? d*0.92 : sh==='arch' ? d*1.2 : d;

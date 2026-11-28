@@ -8,6 +8,7 @@
  * L'image n'est pas dans l'état (st) : elle est tenue dans IS (src/core/illustration-state.ts).
  * Le découpage de l'ancien fichier unique (#119) : rendu → src/render/illustration-*.ts, stockage → src/storage/illustration-images.ts,
  * pistes et prompt → src/features/illustration-prompt.ts, zones de prise et textes → src/ui/illustration-*.ts. */
+import {illusConf as C} from '../content/config.js';
 import {needConsent, saveState, st, ui} from '../core/doc/state.js';
 import {update} from '../core/doc/store.js';
 import {$, h, pressed, setSeg, setStatus, toast} from '../core/dom.js';
@@ -18,8 +19,8 @@ import {clamp, exportSpec} from '../core/geo/geo.js';
 import {refreshCards, showTab, syncInputs, updateEngineUI} from '../core/port.js';
 import {loadFonts} from '../render/fonts.js';
 import {FILE, MAX_BYTES, MIN_SIDE, PREV_SIDE, attachImages, encode, exportImages, gc, importImages, sha256, store, toCanvas} from '../storage/illustration-images.js';
-import {adjust, cache, cropPct, placement, processPixels, quality, region, resample} from '../render/illustration-image.js';
-import {IMG, Opts, WIKI_KEY, ready, refOf} from '../core/illustration-state.js';
+import {adjust, cache, cropPct, placement, processPixels, quality, ready, region, resample} from '../render/illustration-image.js';
+import {IMG, Opts, WIKI_KEY, refOf} from '../core/illustration-state.js';
 import {FADE_STOP, draw, drawMapTexts, drawMix} from '../render/illustration-draw.js';
 import {buildPrompt, compoLine, omtPiste, osmPiste, rankPistes, ratioText, refresh, scanPistes, scanWiki} from '../features/illustration-prompt.js';
 import {loadSaves} from '../features/saves.js';
@@ -27,7 +28,6 @@ import {initHits, placeHits} from './illustration-hits.js';
 import {arcShape, decoOf, decoWhy, mapMoved, plateInk, posOf, textLayout, textStyle, titleRC, zoneOf} from '../render/illustration-text.js';
 import {COL_NAMES, DECO_NAMES, DECO_TIPS, MORE_KEY, POS_ARROWS, POS_NAMES, SW_FILL, SW_OUTLINE, SW_PLATE, SW_SHADOW, SW_TEXT, TPL_NAMES, TPL_TIPS, setDeco, setPos, setTpl, setZone, swatches, syncDecos, syncMoreOpen, syncOrder, syncPlate, syncText} from './illustration-text.js';
 import {IS} from '../core/illustration-state.js';
-const C = CMS.illusConf;
 
 // ---------- Fonctions pures (testées sans navigateur : tests/unit/illus.test.mjs) ----------
 export const GRADES: Record<string, string> = {ok:'Bonne', mid:'Juste', bad:'Insuffisante'};

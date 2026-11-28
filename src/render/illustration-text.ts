@@ -1,11 +1,11 @@
 /* City Map Studio — Mise en page des textes des modes illustrés : lignes, blocs, présentations, arcs (extrait de features/illustration.ts, #119). */
-import {FONTS} from '../content/config.js';
-import {dedLeading, dedLines, drawText, fontOf, fontStr, noteFit, tScale, textW} from './poster.js';
+import {sortLines} from '../core/order.js';
+import {FONTS, illusConf as C} from '../content/config.js';
+import {dedLeading, dedLines, drawText, fontOf, fontStr, noteFit, tScale, textW} from './poster-text.js';
 import {clamp, textLine} from '../core/geo/geo.js';
-import {st} from '../core/doc/state.js';
+import {st} from '../core/scene.js';
 import {contrast} from '../core/color.js';
 import {Ctx, Opts, Part, Txt, present} from '../core/illustration-state.js';
-const C = CMS.illusConf;
 
 // ---------- Textes des modes illustrés : mise en page des deux blocs (titre, bas), commune au rendu, aux zones de prise et au prompt ----------
 // Bloc de titre (titre + sous-titre) : 9 positions (pos) ou position libre (free). Bloc du bas (dédicace, noms, date et
@@ -39,7 +39,7 @@ export function drawLine(ctx: Ctx, t: Txt, x: number, y: number, o: Opts){
 export function infoLine(U: number, base: number, o: Opts): {t: Txt; o: Opts} | null {
   const d=textLine('date'), c=textLine('coords');
   const od={...o,key:'date',size:base*U*tScale('date')}, oc={...o,key:'coords',size:base*U*tScale('coords')};
-  if(d && c) return {t:CMS.order.sort(['date','coords'])[0]==='coords' ? [[c,oc],['  ·  ',od],[d,od]] : [[d,od],['  ·  ',od],[c,oc]], o:{...od,size:Math.max(od.size,oc.size)}};
+  if(d && c) return {t:sortLines(['date','coords'],st)[0]==='coords' ? [[c,oc],['  ·  ',od],[d,od]] : [[d,od],['  ·  ',od],[c,oc]], o:{...od,size:Math.max(od.size,oc.size)}};
   return d ? {t:d,o:od} : c ? {t:c,o:oc} : null;
 }
 /** Lignes du bloc du bas, communes à toutes les mises en page des modes illustrés (et aux blocs sortis du gabarit en mode Carte) :
@@ -52,11 +52,11 @@ export function footRows(U: number, maxW: number, sizes?: Opts){
     G.dedication=L.lines.map((t: string,i: number)=>({t,o:{italic:true,key:'dedication',size:sz},lead:i ? dedLeading(sz/U)*U : lead(sz)})); }
   const names=textLine('names');
   if(names){ const sz=S.names*U*tScale('names'); G.names=[{t:names,o:{italic:true,key:'names',size:sz},lead:lead(sz)}]; }
-  const info=infoLine(U,S.info,{spacing:0.2}), ik=CMS.order.sort(['date','coords'])[0];   // ligne date · coordonnées : rang de la première des deux
+  const info=infoLine(U,S.info,{spacing:0.2}), ik=sortLines(['date','coords'],st)[0];   // ligne date · coordonnées : rang de la première des deux
   if(info) G[ik]=[{...info,lead:lead(info.o.size)}];
   const leg=textLine('legend');
   if(leg){ const sz=S.legend*U; G.legend=[{t:leg,o:{spacing:0.06,key:'legend',size:sz},lead:lead(sz)}]; }
-  return CMS.order.sort(['dedication','names',ik,'legend']).flatMap((k: string)=>G[k]||[]);
+  return sortLines(['dedication','names',ik,'legend'],st).flatMap((k: string)=>G[k]||[]);
 }
 /** Gabarits du bloc du bas (#90) : Ligne unique, Souvenir, Carnet, Colonnes. Lignes [{t, o, at, x?, al?}] : x depuis le bord
  *  gauche du contenu, al : alignement propre ; rules : filets [{x1, y1, x2, y2}]. La légende des lieux numérotés suit, alignée
@@ -69,19 +69,19 @@ export function footTpl(ctx: Ctx, U: number, mw: number, tpl: string, sk: Opts |
   let w=0, h=0;
   if(tpl==='ligne'){   // tout sur une ligne, dans l'ordre des lignes choisi, réduite pour tenir
     const P: Record<string, Part | ''>={dedication:ded && [ded,od(0.022)], names:names && [names,on(0.022)], date:date && [date,oi('date',0.015)], coords:coords && [coords,oi('coords',0.015)]};
-    const parts=present(CMS.order.sort(['dedication','names','date','coords']).map((k: string)=>P[k]));
+    const parts=present(sortLines(['dedication','names','date','coords'],st).map((k: string)=>P[k]));
     if(parts.length){ const t: Part[]=[], sep=oi('date',0.015);
       parts.forEach((p,i)=>{ if(i) t.push(['   ·   ',{...sep,key:''}]); t.push(p); });
       const big=Math.max(...parts.map(p=>p[1].size)); h=big*1.15;
       lines.push({t,at:big*0.85,o:{size:big,maxW:mw,key:parts[0][1].key,stroke:sk}}); w=Math.min(mw,W_(t,{})); }
   } else if(tpl==='pile'){   // chaque information sur sa propre ligne, dans l'ordre choisi (la date et les coordonnées ne sont pas réunies)
     const P: Record<string, Part | ''>={dedication:ded && [ded,od(0.024)], names:names && [names,on(0.02)], date:date && [date,oi('date',0.015)], coords:coords && [coords,oi('coords',0.015)]};
-    let y=0; for(const [t,o] of present(CMS.order.sort(['dedication','names','date','coords']).map((k: string)=>P[k]))){
+    let y=0; for(const [t,o] of present(sortLines(['dedication','names','date','coords'],st).map((k: string)=>P[k]))){
       const q: Opts={...o,maxW:mw}; y+=q.size*(y ? 1.4 : 0.85); lines.push({t,at:y,o:q}); w=Math.max(w,W_(t,q)); }
     w=Math.min(w,mw); h=y+0.008*U;
   } else if(tpl==='souvenir'){   // dédicace | noms à gauche ; date sur coordonnées à droite
-    const L=present(CMS.order.sort(['dedication','names']).map((k: string)=>k==='dedication' ? ded && [ded,od(0.03)] : names && [names,on(0.022)]));
-    const R=present(CMS.order.sort(['date','coords']).map((k: string)=>k==='date' ? date && [date,oi('date',0.015)] : coords && [coords,oi('coords',0.015)]));
+    const L=present(sortLines(['dedication','names'],st).map((k: string)=>k==='dedication' ? ded && [ded,od(0.03)] : names && [names,on(0.022)]));
+    const R=present(sortLines(['date','coords'],st).map((k: string)=>k==='date' ? date && [date,oi('date',0.015)] : coords && [coords,oi('coords',0.015)]));
     const g=0.028*U, G=0.05*U, wl=L.map(([t,o])=>W_(t,o)), wr=Math.max(0,...R.map(([t,o])=>W_(t,o)));
     const need=wl.reduce((a,b)=>a+b,0)+(L.length>1 ? 2*g : 0)+(R.length && L.length ? G+wr : wr);
     const f=Math.min(1,mw/Math.max(need,1)); if(f<1) for(const [,o] of [...L,...R]){ o.size*=f; noteFit(o.key,f); }
@@ -198,7 +198,7 @@ export function textLayout(ctx: Ctx, W: number, H: number, U: number, over: Opts
     const tl: Opts[]=[], sh=flat ? null : shadow, sk=(w: number)=>flat ? null : stroke(w); let y=0;
     const it: Opts={title:title && {t:title,cap:capT,o:{size:ts,spacing:vint?0.03:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,maxW:mw,shadow:sh,stroke:sk(0.004)}},
       subtitle:sub && {t:sub,cap:capS,o:{size:ss,spacing:0.3,upper:true,key:'subtitle',maxW:mw,stroke:sk(0.0012),shadow:sh && {color:sh.color,dx:sh.dx*0.3,dy:sh.dy*0.3}}}};
-    CMS.order.sort(['title','subtitle']).filter((k: string)=>it[k]).forEach((k: string,i: number)=>{ if(i) y+=gap; y+=it[k].cap; tl.push({t:it[k].t,at:y,o:it[k].o}); });   // ordre des lignes choisi
+    sortLines(['title','subtitle'],st).filter((k: string)=>it[k]).forEach((k: string,i: number)=>{ if(i) y+=gap; y+=it[k].cap; tl.push({t:it[k].t,at:y,o:it[k].o}); });   // ordre des lignes choisi
     return blockOf(ctx,tl,y);
   };
   const footBlock=(mw: number,flat: boolean)=>{

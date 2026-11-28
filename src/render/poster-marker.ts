@@ -1,5 +1,6 @@
 /* City Map Studio — Rendu de l'affiche : repères vectoriels, itinéraire, repères multiples (extrait de render/poster.ts, #119). */
-import {st, ui} from '../core/doc/state.js';
+import {ink} from './poster-text.js';
+import {st, ui} from '../core/scene.js';
 import {project, type Rect} from '../core/geo/geo.js';
 import {MARKER_BASE} from '../content/config.js';
 import {Ctx, MapView, Opts} from './poster-types.js';
@@ -106,6 +107,6 @@ export function drawMarkers(ctx: Ctx, r: Rect, view: MapView, U: number, W: numb
   }
   const pts=[view.marker,...extra];
   pts.forEach((p,i)=>{ const q=project(p.lat,p.lon,r,view), s=i?size*0.75:size; drawMarker(ctx,q.x,q.y,s,markerOpts());
-    if(ui.inkSink && q.x>=r.x && q.x<=r.x+r.w && q.y>=r.y && q.y<=r.y+r.h) CMS.ink.box(ctx,'marker',q.x-s/2,q.y-s/2,q.x+s/2,q.y+s/2);
+    if(ui.inkSink && q.x>=r.x && q.x<=r.x+r.w && q.y>=r.y && q.y<=r.y+r.h) ink.box(ctx,'marker',q.x-s/2,q.y-s/2,q.x+s/2,q.y+s/2);
     if(st.numbered && extra.length){ const s=(i?size*0.75:size); drawBadge(ctx,q.x+s*0.55,q.y-s*0.55,i+1,Math.max(U*0.026,s*0.38)); } });
 }

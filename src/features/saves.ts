@@ -1,4 +1,5 @@
 /* City Map Studio — Mes affiches : sauvegarde et restauration de la configuration (#118, issu de features.ts). */
+import type {Ctx2D} from '../core/canvas.js';
 import {$, h, toast} from '../core/dom.js';
 import {LAYOUTS, PosterState, THEMES} from '../content/config.js';
 import {osmData, st, ui, V} from '../core/doc/state.js';
@@ -44,7 +45,7 @@ function storeSaves(list: Save[]){
 /** Vignette de l'affiche courante (JPEG, ~150 px) : carte réelle avec le moteur Fichier, schématique sinon */
 function saveThumb(){
   const land=st.orient==='landscape', cv=document.createElement('canvas'); cv.width=land?212:150; cv.height=land?150:212; const ctx=cv.getContext('2d')!;
-  const mapFn=(c: CanvasRenderingContext2D,r: any,view?: any)=> st.engine==='file' && osmData ? drawVectors(c,r,osmData,view) : thumbMap(c,r);
+  const mapFn=(c: Ctx2D,r: any,view?: any)=> st.engine==='file' && osmData ? drawVectors(c,r,osmData,view) : thumbMap(c,r);
   ui.thumb=true; try{ drawPoster(ctx,cv.width,cv.height,'all',mapFn); applyTexture(ctx,cv.width,cv.height); } finally{ ui.thumb=false; }
   return cv.toDataURL('image/jpeg',0.8);
 }

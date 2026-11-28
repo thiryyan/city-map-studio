@@ -1,5 +1,5 @@
 /* City Map Studio — Prompt du mode illustré et pistes (lues dans la carte, Wikipédia) (extrait de features/illustration.ts, #119). */
-import {type PosterState} from '../content/config.js';
+import {type PosterState, illusConf as C} from '../content/config.js';
 import {clamp, posterDims, ratio, viewBounds} from '../core/geo/geo.js';
 import {$, toast} from '../core/dom.js';
 import {needConsent, osmData, st, ui} from '../core/doc/state.js';
@@ -10,7 +10,6 @@ import {region} from '../render/illustration-image.js';
 import {IS} from '../core/illustration-state.js';
 /** Rappels vers l'interface (une couche de fonctions n'importe pas l'interface) : posés par src/ui/illustration.ts */
 export const refresh = {prompt: (): void => {}, wiki: (): void => {}};
-const C = CMS.illusConf;
 
 // ---------- Pistes lues dans la carte (monuments, cours d'eau, paysages) ----------
 export const POI_W: Record<string, number>={castle:10,palace:9,lighthouse:9,monument:7,fort:7,city_gate:6,attraction:7,ruins:6,viewpoint:5,museum:5,harbor:5,marina:5,townhall:4,zoo:3,theatre:3};

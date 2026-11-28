@@ -1,5 +1,6 @@
 /* City Map Studio — Moteurs cartographiques : données OSM + Canvas (moteur Fichier), effets de tracé, MapLibre + OpenFreeMap.
  * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import type {Ctx2D} from '../core/canvas.js';
 import {TEST_HOOKS} from '../core/cms.js';
 import {GL_TILE_MAX, HW_CLASS, OFM_ATTRIBUTION, OFM_URL, REF_W, ROADS, WATERWAY_W} from '../content/config.js';
 import {consent, mlFailMsg, mlLib, mlMap, needConsent, osmData, saveState, setMlCdn, setMlFailMsg, setMlLib, setMlMap, st, ui} from '../core/doc/state.js';
@@ -17,7 +18,7 @@ export interface Extent { w: number; e: number; s: number; n: number }
 export interface OsmData { water: Feature[]; waterLines: Feature[]; parks: Feature[]; buildings: Feature[]; rails: Feature[];
   roads: Record<string, Feature[]>; count: number; extent: Extent | null; named: {t: Record<string, string>; lat: number; lon: number}[];
   source?: string; bounds?: Extent | null; layers?: string }
-type Ctx = CanvasRenderingContext2D;
+type Ctx = Ctx2D;
 /** Vue avec son repère ; style MapLibre (objets et expressions JSON, non typés) */
 type MapView = View & {marker: LatLon};
 type Json = any;

@@ -1,7 +1,7 @@
 /* City Map Studio — Zones de prise des textes (aperçu) : glisser, clavier, chevauchements (extrait de features/illustration.ts, #119). */
 import {$, toast} from '../core/dom.js';
 import {saveState, st, ui} from '../core/doc/state.js';
-import {type Pt} from '../content/config.js';
+import {type Pt, illusConf as C} from '../content/config.js';
 import {update} from '../core/doc/store.js';
 import {scheduleOver} from '../view/preview.js';
 import {clamp} from '../core/geo/geo.js';
@@ -9,7 +9,6 @@ import {Ctx, Opts} from '../core/illustration-state.js';
 import {posOf, textLayout} from '../render/illustration-text.js';
 import {syncText} from './illustration-text.js';
 import {IS, hooks} from '../core/illustration-state.js';
-const C = CMS.illusConf;
 
 export function noteLayout(ctx: Ctx, PW: number, PH: number, B: Opts, avoid?: Opts | null){
   if(ctx.canvas!==$<HTMLCanvasElement>('cvOver')) return;   // seulement l'aperçu (ni l'export, ni les vignettes)

@@ -222,7 +222,7 @@ const DEFAULT_STATE = {
 /** État d'une affiche (enregistré, partagé, validé par normState) */
 export type PosterState = typeof DEFAULT_STATE;
 // Modes illustrés : listes de valeurs (aussi utilisées par normState pour valider un état venu de l'extérieur)
-CMS.define('illusConf', () => ({
+const illusConf: Record<string, any> = {
   MODES:['map','illus','mix'],
   // mode Carte + illustration : compositions, forme et position du médaillon
   COMPOS:['med','vig','hb','cote','fondu'], SHAPES:['circle','heart','arch'], MPOS:['haut','centre','bas'], SPLITS:['half','two'],
@@ -235,6 +235,6 @@ CMS.define('illusConf', () => ({
   SAISONS:[['any','Au choix','any season'],['printemps','Printemps','spring'],['ete','Été','summer'],['automne','Automne','autumn'],['hiver','Hiver','winter']],
   PALETTES:['ia','theme','photo'], LANGS:['fr','en'], VINTAGE:['none','light','strong'], FITS:['cover','contain'], TSTYLES:['auto','vintage','font'],
   PISTES_MAX:8
-}));
+};
 
-export {AMBIANCES, CANVAS_MAX_PX, COLOR_LABELS, DEFAULT_STATE, DUOS, EXPORT_MAX_DPI, FONTS, FONT_CATS, FONT_LIST, FORMATS, GL_TILE_MAX, GOLD, HW_CLASS, LAYOUTS, MARKERS, MARKER_BASE, MARKER_COLORS, ML_CDNS, ML_SRI, ML_VERSION, NOMINATIM, OCCASIONS, OFM_ATTRIBUTION, OFM_URL, PRESETS, REF_W, ROADS, TEXTURES, THEMES, THEME_CATS, WATERWAY_W};
+export {illusConf, AMBIANCES, CANVAS_MAX_PX, COLOR_LABELS, DEFAULT_STATE, DUOS, EXPORT_MAX_DPI, FONTS, FONT_CATS, FONT_LIST, FORMATS, GL_TILE_MAX, GOLD, HW_CLASS, LAYOUTS, MARKERS, MARKER_BASE, MARKER_COLORS, ML_CDNS, ML_SRI, ML_VERSION, NOMINATIM, OCCASIONS, OFM_ATTRIBUTION, OFM_URL, PRESETS, REF_W, ROADS, TEXTURES, THEMES, THEME_CATS, WATERWAY_W};

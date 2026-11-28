@@ -1,11 +1,11 @@
 /* City Map Studio — État partagé de l'illustration : image importée, étape, pistes, zones de prise (extrait de features/illustration.ts, #119).
  * Un seul objet (IS) tient les variables qui étaient locales à la fermeture du module d'origine ; les couches de rendu, de stockage,
  * de fonctions et d'interface le lisent sans se connaître entre elles. */
+import {type Ctx2D, createCanvas} from './canvas.js';
 import {CANVAS_MAX_PX, type PosterState} from '../content/config.js';
-import {st} from './doc/state.js';
 
 /** Contexte 2D ; réglages de l'illustration (st.illus) ; sacs d'options */
-export type Ctx = CanvasRenderingContext2D;
+export type Ctx = Ctx2D;
 export type Illus = PosterState['illus'];
 export type Opts = Record<string, any>;
 /** Image importée : source ré-encodée, copie réduite (aperçu), dimensions, métadonnées, adresse locale (blob) */
@@ -20,9 +20,9 @@ export type Piste = {name: string; w: number; rank?: number; d?: number};
 export const MAX_PX=Math.min(36e6, CANVAS_MAX_PX*0.6);
 /** Image importée, supposée présente (appelants : après ready()) */
 export const IMG=()=>IS.img!;
-export const canvasOf=(w: number,h: number)=>{ const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w)); c.height=Math.max(1,Math.round(h)); return c; };
+/** Canevas de travail (page : élément canvas ; Worker : OffscreenCanvas, typé comme l'élément : mêmes méthodes utilisées) */
+export const canvasOf=(w: number,h: number)=>createCanvas(Math.max(1,Math.round(w)),Math.max(1,Math.round(h))) as HTMLCanvasElement;
 export const refOf=(s: {illus?: {img?: {ref: string} | null}} | null | undefined)=>s?.illus?.img?.ref||'';
-export const ready=()=>!!IS.img && IS.img.ref===refOf(st);
 // ---------- Pistes Wikipédia (#46) : option désactivée par défaut, accord préalable, coordonnées du lieu seulement ----------
 export const WIKI_KEY='cms:wiki';
 

@@ -1,7 +1,5 @@
 /* City Map Studio — Rendu de l'affiche : carte du ciel du jour J (Voie lactée, planètes, Lune) (extrait de render/poster.ts, #119). */
-import {loadScript, toast} from '../core/dom.js';
-import {drawUnder, refreshCards} from '../core/port.js';
-import {st, ui} from '../core/doc/state.js';
+import {st, ui} from '../core/scene.js';
 import {D2R, type Rect} from '../core/geo/geo.js';
 import {lum} from '../core/color.js';
 import {Ctx, Planet} from './poster-types.js';
@@ -9,10 +7,8 @@ import {drawText} from './poster-text.js';
 import {paint} from './poster-paint.js';
 // ---------- Carte du ciel ----------
 // Étoiles (magnitude ≤ 5,5) et constellations : lib/sky/sky-data.js (d3-celestial, BSD-3), chargé à la demande.
-let skyLoading: Promise<boolean> | null=null;
-export function ensureSky(){ if(window.SKY_DATA) return Promise.resolve(true);
-  if(!skyLoading) skyLoading=loadScript('lib/sky/sky-data.js',15000).then(()=>{ drawUnder(); refreshCards(); return true; }).catch((e: Error)=>{ skyLoading=null; toast('Données du ciel indisponibles : '+e.message,true); return false; });
-  return skyLoading; }
+/** Chargement des données du ciel à la demande : rappels posés par l'application (src/view/sky-loader.ts) ; le rendu lit SKY_DATA et SKY_MW s'ils sont présents */
+export const skyLoaders = {sky: (): void => {}, milkyWay: (): void => {}};
 /** Instant observé, en ms UTC : date et heure locales du lieu, fuseau choisi (« auto » : celui de l'appareil à cette date) */
 export function skyTime(s=st.sky){
   const m=/^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(s?.when||''); if(!m) return null;
@@ -29,10 +25,6 @@ export function altAz(ra: number, dec: number, lat: number, lon: number, ms: num
   return {alt:alt/D2R, az:(az/D2R+360)%360};
 }
 // ---------- Ciel : Voie lactée, planètes, Lune ----------
-let mwLoading: Promise<boolean> | null=null;
-function ensureMilkyWay(){ if(window.SKY_MW) return Promise.resolve(true);
-  if(!mwLoading) mwLoading=loadScript('lib/sky/milkyway.js',15000).then(()=>{ drawUnder(); return true; }).catch((e: Error)=>{ mwLoading=null; toast('Voie lactée indisponible : '+e.message,true); return false; });
-  return mwLoading; }
 const OBLIQ=23.43928*D2R;
 /** Coordonnées écliptiques (degrés) → équatoriales {ra, dec} (degrés) */
 function eclToEq(lon: number,lat: number){ const l=lon*D2R, b=lat*D2R;
@@ -83,16 +75,16 @@ export function drawSky(ctx: Ctx, r: Rect, U: number){
   const c=st.colors, dark=lum(c.paper)<0.3, R=r.w/2, cx=r.x+R, cy=r.y+R;
   const bg=dark?c.land:c.text, ink=dark?c.text:c.paper;
   ctx.save(); ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill(); ctx.clip();
-  const ms=skyTime(), S=window.SKY_DATA;
+  const ms=skyTime(), S=globalThis.SKY_DATA;
   if(ms!=null && S){
     const {lat,lon}=st.marker;
     // projection stéréographique centrée sur le zénith : horizon = bord du disque, nord en haut, est à gauche
     const P=(ra: number,dec: number)=>{ const a=altAz(ra,dec,lat,lon,ms), q=Math.tan((90-Math.max(a.alt,-75))*D2R/2)*R, z=a.az*D2R; return {x:cx-q*Math.sin(z), y:cy-q*Math.cos(z), alt:a.alt}; };
     if(st.sky.milky){   // Voie lactée : cinq niveaux superposés, du plus diffus au plus dense
-      if(window.SKY_MW){ ctx.save(); ctx.fillStyle=ink; ctx.globalAlpha=0.055;
+      if(globalThis.SKY_MW){ ctx.save(); ctx.fillStyle=ink; ctx.globalAlpha=0.055;
         for(const lvl of SKY_MW!){ ctx.beginPath(); for(const ring of lvl){ for(let i=0;i<ring.length;i+=2){ const p=P(ring[i],ring[i+1]); i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y); } ctx.closePath(); } ctx.fill('evenodd'); }
         ctx.restore(); }
-      else if(!ui.thumb) ensureMilkyWay();
+      else if(!ui.thumb) skyLoaders.milkyWay();
     }
     ctx.strokeStyle=ink;
     if(st.sky.grid){ ctx.globalAlpha=0.18; ctx.lineWidth=U*0.0008;
@@ -110,7 +102,7 @@ export function drawSky(ctx: Ctx, r: Rect, U: number){
       drawText(ctx,pl.name,p.x+rr*2.6,p.y+U*0.003,{size:U*0.0095,italic:true,align:'left',color:ink}); }
     if(st.sky.moon){ const ml=moonSun(ms), p=P(ml.moon.ra,ml.moon.dec);
       if(p.alt>-1){ const s=P(ml.sun.ra,ml.sun.dec); drawMoon(ctx,p.x,p.y,U*0.014,ml.frac,Math.atan2(s.y-p.y,s.x-p.x),ink,bg); } }
-  } else if(!S && !ui.thumb) ensureSky();
+  } else if(!S && !ui.thumb) skyLoaders.sky();
   ctx.restore();
   // horizon, points cardinaux
   ctx.strokeStyle=paint(c.frame); ctx.lineWidth=0.0022*U; ctx.beginPath(); ctx.arc(cx,cy,R+0.012*U,0,7); ctx.stroke();

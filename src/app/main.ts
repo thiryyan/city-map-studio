@@ -35,6 +35,7 @@ import '../features/export.js';
 import {AMBIANCES, FONTS, THEMES} from '../content/config.js';
 import {declineConsent, giveConsent} from '../ui/consent.js';
 import {V, consent, dlgCancel, initDialogs, mlLib, mlMap, needConsent, normState, osmData, rawState, st, ui, updateConsentInfo} from '../core/doc/state.js';
+import {useLive} from '../core/scene.js';
 import {dms, exportSpec, posterDims} from '../core/geo/geo.js';
 import {CART_ROWS, altAz, attributionText, cartDed, dedLines, drawMarker, drawPoster, drawText, foilCtx, markerOpts, metersPerPx, moonSun, planetsAt, skyTime, souvenirFoot, textW, typoFit} from '../render/poster.js';
 import {VEC_CACHE_MAX, buildStyle, drawVectors, hatchTile, loadMaplibre, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, vecCache} from '../map/engines.js';
@@ -60,6 +61,7 @@ import {geom} from '../render/layout.js';
 import {replaceState, update} from '../core/doc/store.js';
 import {adoptHistory, loadStorage, savedCurrent, savedList} from '../storage/documents.js';
 // ---------- Démarrage ----------
+useLive(st, ui);   // le rendu (src/render) suit l'état vivant : il ne lit rien d'autre (#119)
 async function boot(){
   // Affiche en cours, Mes affiches et historique relus d'IndexedDB (après la migration unique des données cms3.*, #118)
   const stored=await loadStorage();

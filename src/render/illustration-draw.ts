@@ -1,10 +1,14 @@
 /* City Map Studio — Dessin des modes illustrés : plaques, blocs de texte, bande, composition Carte + illustration (extrait de features/illustration.ts, #119). */
+import {sortLines} from '../core/order.js';
 import {clamp, clipMap, shapeD, strokeShape, textLine, type Geom, type Rect} from '../core/geo/geo.js';
-import {st} from '../core/doc/state.js';
-import {attributionText, drawHalo, drawMarkers, drawOrnaments, drawText, hexA, paint, tScale} from './poster.js';
+import {st} from '../core/scene.js';
+import {attributionText, drawHalo, drawOrnaments} from './poster-ornaments.js';
+import {drawMarkers} from './poster-marker.js';
+import {drawText, tScale} from './poster-text.js';
+import {hexA, paint} from './poster-paint.js';
 import {contrast} from '../core/color.js';
-import {Ctx, Opts, canvasOf, ready} from '../core/illustration-state.js';
-import {drawImageIn, placeholder, placeholderIn} from './illustration-image.js';
+import {Ctx, Opts, canvasOf} from '../core/illustration-state.js';
+import {drawImageIn, placeholder, placeholderIn, ready} from './illustration-image.js';
 import {drawLine, footRows, measureLine, plateInk, posOf, textLayout, textStyle, third, zoneOf} from './illustration-text.js';
 import {hooks} from '../core/illustration-state.js';
 
@@ -197,7 +201,7 @@ export function drawBand(ctx: Ctx, W: number, _H: number, U: number, g: Geom, in
   // Bloc du bas : mêmes lignes que les autres mises en page (dédicace sur deux lignes, noms, date · coordonnées, légende ; #77)
   const head: Opts={title:['title',textLine('title'),(vint?0.13:0.075)*U*tScale('title'),{spacing:vint?0.04:0.12,upper:true,role:'title',key:'title',fk:vint?'bebas':undefined,shadow},vint?0.84:0.72],
     subtitle:['title',textLine('subtitle'),0.021*U*tScale('subtitle'),{spacing:0.3,upper:true,key:'subtitle'},0.75]};
-  const rows=[...CMS.order.sort(['title','subtitle']).map((k: string)=>head[k]),
+  const rows=[...sortLines(['title','subtitle'],st).map((k: string)=>head[k]),
     ...footRows(U,maxW,{dedication:0.03,names:0.022,info:0.015,legend:0.013}).map((r: Opts)=>['foot',r.t,r.o.size,r.o,0.75])].filter(x=>x[1] && only.includes(x[0]));
   if(!rows.length) return {};
   const gap=0.022*U; let total=rows.reduce((a,x)=>a+x[2]*x[4],0)+gap*(rows.length-1);

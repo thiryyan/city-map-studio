@@ -1,9 +1,11 @@
 /* City Map Studio — Aperçu à l'écran, deux lieux, gestes, papier, composition complète, aperçu au mur.
  * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import type {Ctx2D} from '../core/canvas.js';
 import {type Place, LAYOUTS, THEMES} from '../content/config.js';
 import {consent, mlLib, mlMap, needConsent, openDialog, osmData, saveState, setBusy, st, ui} from '../core/doc/state.js';
 import {type Rect, clamp, clipMap, imerc, merc, posterDims, ratio, shapeD, textLine, unproject, worldSize} from '../core/geo/geo.js';
-import {CART_ROWS, POLA_ROWS, cartDed, drawPoster, ensureSky, fitSink, setFitSink, souvenirFoot} from '../render/poster.js';
+import {ensureSky} from './sky-loader.js';
+import {CART_ROWS, POLA_ROWS, cartDed, drawPoster, fitSink, setFitSink, souvenirFoot} from '../render/poster.js';
 import {checkDataBanner, drawVectors, initMaplibre, mlKeepAlive, mlRestyle, mlUpdateView, renderMaplibreOffscreen} from '../map/engines.js';
 import {$, h, setSeg, setStatus, toast} from '../core/dom.js';
 import {slug} from '../core/text.js';
@@ -257,7 +259,7 @@ function textureBase(kind: string, land: boolean, dark: boolean, folds=false){
 }
 /** Plis d'une carte dépliée : trois volets dans la largeur, deux dans la hauteur (selon l'orientation),
  *  chaque pli = une ombre douce d'un côté et un fin trait de cassure ; usure plus marquée aux croisements */
-function drawFolds(c: CanvasRenderingContext2D,w: number,h: number){
+function drawFolds(c: Ctx2D,w: number,h: number){
   const R=rng(97), port=h>w, xs=port?[w/2]:[w/3,2*w/3], ys=port?[h/3,2*h/3]:[h/2], band=Math.min(w,h)*0.035;
   const fold=(x: number,y: number,vert: boolean)=>{ const gr=vert?c.createLinearGradient(x-band,0,x+band,0):c.createLinearGradient(0,y-band,0,y+band);
     gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(0.47,'rgba(60,45,30,0.10)'); gr.addColorStop(0.5,'rgba(60,45,30,0.16)'); gr.addColorStop(0.53,'rgba(60,45,30,0.03)'); gr.addColorStop(1,'rgba(0,0,0,0)');
@@ -271,7 +273,7 @@ function drawFolds(c: CanvasRenderingContext2D,w: number,h: number){
 const hasPaper=()=>(st.texture && st.texture!=='none') || !!st.folds;
 function texMode(){ return lum(st.colors.paper)<0.3 ? 'screen' : 'multiply'; }
 /** Applique le papier à un rendu complet (export, aperçu au mur) */
-function applyTexture(ctx: CanvasRenderingContext2D,W: number,H: number){
+function applyTexture(ctx: Ctx2D,W: number,H: number){
   if(!hasPaper()) return;
   ctx.save(); ctx.globalCompositeOperation=texMode(); ctx.drawImage(textureBase(st.texture||'none',W>H,texMode()==='screen',!!st.folds),0,0,W,H); ctx.restore();
 }
@@ -292,7 +294,7 @@ async function composePoster(W: number,H: number,step: (msg: string)=>void=()=>{
     step('Rendu vectoriel haute définition…');
     for(const [i,p] of g.places.entries()){ const r=await renderMaplibreOffscreen(Math.round(p.rect.w),Math.round(p.rect.h),p.view); imgs[i]=r.canvas; warn=warn||r.warn; }
   } else step('Re-projection des vecteurs…');
-  const mapFn=(c: CanvasRenderingContext2D,rect: Rect,view: any,i: number)=> st.engine==='maplibre' ? c.drawImage(imgs[i],rect.x,rect.y,rect.w,rect.h) : drawVectors(c,rect,osmData,view);
+  const mapFn=(c: Ctx2D,rect: Rect,view: any,i: number)=> st.engine==='maplibre' ? c.drawImage(imgs[i],rect.x,rect.y,rect.w,rect.h) : drawVectors(c,rect,osmData,view);
   drawPoster(ctx,W,H,'all',mapFn); applyTexture(ctx,W,H);
   for(const c of imgs) if(c){ c.width=c.height=0; }   // rendus MapLibre intermédiaires : mémoire rendue tout de suite (iOS)
   return {canvas:cv,warn,fontWarn};

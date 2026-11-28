@@ -1,7 +1,8 @@
 /* City Map Studio — Projection de Mercator et géométrie des gabarits.
  * Module TypeScript (#103), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import type {Ctx2D} from '../canvas.js';
 import {CANVAS_MAX_PX, EXPORT_MAX_DPI, FORMATS, REF_W} from '../../content/config.js';
-import {st, ui} from '../doc/state.js';
+import {st, ui} from '../scene.js';
 /** État de l'affiche (src/core/doc/state.ts) */
 /** Rectangle en pixels ; une carte peut avoir une forme (cercle, cœur, arche) */
 export interface Rect { x: number; y: number; w: number; h: number; shape?: string | null; circle?: boolean; fade?: boolean }
@@ -21,7 +22,7 @@ export interface ExportSpec { key: string; name: string; dpi: number; W: number;
 
 // Module CMS.geo : fonctions de projection, de format et de géométrie des gabarits (testées seules : tests/unit).
 // Tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier.
-const GEO = CMS.define('geo', () => {
+const GEO = Object.freeze((() => {
 // ---------- Mathématiques ----------
 const D2R = Math.PI/180;
 const merc = (lat: number): number => Math.log(Math.tan(Math.PI/4 + lat*D2R/2));
@@ -95,16 +96,18 @@ function shapeD(shape: string | undefined, w: number, h: number): string {
   if(shape==='circle'){ const R=w/2; return `M0,${f(R)} A${f(R)},${f(R)} 0 1 1 ${f(w)},${f(R)} A${f(R)},${f(R)} 0 1 1 0,${f(R)} Z`; }
   return `M0,0 H${f(w)} V${f(h)} H0 Z`;
 }
-function shapePath(ctx: CanvasRenderingContext2D, r: Rect): Path2D | null {
+function shapePath(ctx: Ctx2D, r: Rect): Path2D | null {
   if(r.shape==='circle'){ ctx.beginPath(); ctx.arc(r.x+r.w/2, r.y+r.h/2, r.w/2, 0, Math.PI*2); return null; }
   if(r.shape){ const p=new Path2D(); p.addPath(new Path2D(shapeD(r.shape,r.w,r.h)),new DOMMatrix().translate(r.x,r.y)); return p; }
   ctx.beginPath(); ctx.rect(r.x,r.y,r.w,r.h); return null;
 }
-function clipMap(ctx: CanvasRenderingContext2D, r: Rect): void { const p=shapePath(ctx,r); p ? ctx.clip(p) : ctx.clip(); }
-function strokeShape(ctx: CanvasRenderingContext2D, r: Rect, o: number): void { const e={...r,x:r.x-o,y:r.y-o,w:r.w+2*o,h:r.h+2*o}; const p=shapePath(ctx,e); p ? ctx.stroke(p) : ctx.stroke(); }
+function clipMap(ctx: Ctx2D, r: Rect): void { const p=shapePath(ctx,r); p ? ctx.clip(p) : ctx.clip(); }
+function strokeShape(ctx: Ctx2D, r: Rect, o: number): void { const e={...r,x:r.x-o,y:r.y-o,w:r.w+2*o,h:r.h+2*o}; const p=shapePath(ctx,e); p ? ctx.stroke(p) : ctx.stroke(); }
 
 return {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, shapeD, clipMap, strokeShape};
-});
+})());
+// Sous CMS.geo sur la page (fonctions testées seules) ; un Worker n'a pas de registre CMS : le rendu importe ce module directement
+if(typeof CMS!=='undefined') CMS.define('geo', () => GEO);
 const {D2R, merc, imerc, clamp, zoomFactor, worldSize, project, unproject, viewBounds, dms, textLine, placeCoordText, coordText, exportSpec, posterDims, ratio, shapeD, clipMap, strokeShape} = GEO;
 /** Rayon du halo et du quartier en relief, en px pour un cadre de largeur w */
 const focusRadius=(w: number)=>(st.focusR??30)/100*w;

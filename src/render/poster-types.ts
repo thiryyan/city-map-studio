@@ -1,7 +1,8 @@
 /* City Map Studio — Types du rendu de l'affiche (extrait de render/poster.ts, #119). */
+import type {Ctx2D} from '../core/canvas.js';
 import {type LatLon, type Rect, type View} from '../core/geo/geo.js';
 /** Contexte de dessin 2D ; options de tracé d'un texte, d'un repère, d'un cartouche (sacs d'options, non typés) */
-export type Ctx = CanvasRenderingContext2D;
+export type Ctx = Ctx2D;
 export type Opts = Record<string, any>;
 /** Ligne d'un cartouche : clé de ligne, écart au-dessus (U), style */
 export type Row = [string, number, Opts];

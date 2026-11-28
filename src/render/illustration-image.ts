@@ -2,9 +2,9 @@
 import {FORMATS, type PosterState} from '../content/config.js';
 import {clipMap, posterDims, type Rect} from '../core/geo/geo.js';
 import {geom} from './layout.js';
-import {st} from '../core/doc/state.js';
-import {hexA} from './poster.js';
-import {Ctx, IMG, Illus, MAX_PX, canvasOf} from '../core/illustration-state.js';
+import {st} from '../core/scene.js';
+import {hexA} from './poster-paint.js';
+import {Ctx, IMG, Illus, MAX_PX, canvasOf, refOf} from '../core/illustration-state.js';
 import {IS} from '../core/illustration-state.js';
 
 /** Résolution d'impression de l'image pour chaque format (ppp), selon le cadrage ; agrandissement ×2 : lissage crédité de 45 %.
@@ -127,3 +127,5 @@ export function placeholder(ctx: Ctx, W: number, H: number, U: number, want: Ill
   ctx.font=`400 ${0.024*U}px system-ui, sans-serif`; ctx.fillText(l2,W/2,H*0.58+0.05*U,W-0.16*U);
   ctx.restore();
 }
+/** Une illustration est prête quand l'image importée est celle de l'affiche (même empreinte) */
+export const ready=()=>!!IS.img && IS.img.ref===refOf(st);

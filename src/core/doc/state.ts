@@ -1,29 +1,12 @@
 /* City Map Studio — État de l'affiche : validation, chargement, enregistrement ; fenêtres modales ; accord préalable.
  * Module TypeScript (#103), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
 import {TEST_HOOKS} from '../cms.js';
-import {type PosterState, type Route, DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, TEXTURES, THEMES} from '../../content/config.js';
+import {LINE_KEYS, currentOrder, normLineOrder, sortLines} from '../order.js';
+import {type PosterState, type Route, DEFAULT_STATE, FONTS, illusConf, FORMATS, LAYOUTS, MARKERS, TEXTURES, THEMES} from '../../content/config.js';
 // ---------- Ordre des lignes de texte (Textes, Plus de réglages) ----------
 // st.lineOrder : null (ordre du gabarit) ou permutation de KEYS. Appliqué au cartouche des gabarits centrés et, dans
 // chaque bloc, aux mises en page des modes illustrés (titre et sous-titre ; dédicace, noms, date · coordonnées).
-CMS.define('order', () => {
-  const KEYS=['title','subtitle','coords','dedication','names','date'];
-  /** Ordre valide (permutation complète de KEYS) ou null */
-  const norm=(v: unknown): string[] | null=>Array.isArray(v) && v.length===KEYS.length && KEYS.every(k=>v.includes(k)) ? [...v] : null;
-  /** Clés triées selon l'ordre choisi (tri stable ; une clé hors de KEYS, comme la légende, reste en fin) ; sans ordre : inchangées */
-  function sort(keys: string[], s=st): string[] {
-    const O=s.lineOrder; if(!O) return keys;
-    const r=(k: string)=>{ const i=O.indexOf(k); return i<0 ? 99 : i; };
-    return keys.map((k,i)=>[k,i] as [string, number]).sort((a,b)=>r(a[0])-r(b[0]) || a[1]-b[1]).map(x=>x[0]);
-  }
-  /** Ordre affiché : celui choisi, sinon celui du gabarit (Polaroid : dédicace en tête ; modes illustrés : titre, puis bloc du bas) */
-  function current(s=st){
-    if(s.lineOrder) return [...s.lineOrder];
-    if(s.mode==='map' && s.layout==='polaroid') return ['dedication','names','title','date','coords','subtitle'];
-    if(s.mode!=='map') return ['title','subtitle','dedication','names','date','coords'];
-    return [...KEYS];
-  }
-  return {KEYS, norm, sort, current};
-});
+CMS.define('order', () => ({KEYS: LINE_KEYS, norm: normLineOrder, sort: (keys: string[], s=st) => sortLines(keys, s), current: (s=st) => currentOrder(s)}));
 // ---------- Validation de l'état (lien partagé, localStorage) ----------
 // Un état venu de l'extérieur n'est jamais repris tel quel : seuls les champs connus sont lus, chacun est vérifié
 // (type, liste de valeurs, bornes) et remplacé par sa valeur par défaut s'il est invalide. Un lien forgé ne peut donc
@@ -94,14 +77,14 @@ function normState(src: unknown): PosterState {
     focusR:V.num(s.focusR,D.focusR,10,60),
     orn:V.each(s.orn,D.orn,V.bool),
     folds:V.bool(s.folds,D.folds),
-    mode:V.oneOf(s.mode,CMS.illusConf.MODES,D.mode),
-    mix:{compo:V.oneOf(V.obj(s.mix).compo,CMS.illusConf.COMPOS,D.mix.compo), shape:V.oneOf(V.obj(s.mix).shape,CMS.illusConf.SHAPES,D.mix.shape), pos:V.oneOf(V.obj(s.mix).pos,CMS.illusConf.MPOS,D.mix.pos), split:V.oneOf(V.obj(s.mix).split,CMS.illusConf.SPLITS,D.mix.split)},
+    mode:V.oneOf(s.mode,illusConf.MODES,D.mode),
+    mix:{compo:V.oneOf(V.obj(s.mix).compo,illusConf.COMPOS,D.mix.compo), shape:V.oneOf(V.obj(s.mix).shape,illusConf.SHAPES,D.mix.shape), pos:V.oneOf(V.obj(s.mix).pos,illusConf.MPOS,D.mix.pos), split:V.oneOf(V.obj(s.mix).split,illusConf.SPLITS,D.mix.split)},
     illus:normIllus(s.illus,D.illus),
     illusText:normIllusText(s.illusText,D.illusText)
   };
   /** Illustration : cadrage, retouches, filtre et choix du prompt (pistes : textes courts, 8 au plus, sans doublon) */
   function normIllus(src: unknown, d: typeof DEFAULT_STATE.illus){
-    const o=V.obj(src), p=V.obj(o.prompt), C=CMS.illusConf, keys=(a: readonly (readonly unknown[])[])=>a.map(x=>x[0] as string);
+    const o=V.obj(src), p=V.obj(o.prompt), C=illusConf, keys=(a: readonly (readonly unknown[])[])=>a.map(x=>x[0] as string);
     const pistes=[...new Set((Array.isArray(p.pistes)?p.pistes:[]).filter((x: unknown): x is string=>typeof x==='string').map((x: string)=>x.replace(/\s+/g,' ').trim().slice(0,80)).filter(Boolean))].slice(0,C.PISTES_MAX);
     return {fit:V.oneOf(o.fit,C.FITS,d.fit), zoom:V.num(o.zoom,d.zoom,30,300), ox:V.num(o.ox,d.ox,-1,1), oy:V.num(o.oy,d.oy,-1,1),
       bright:V.num(o.bright,d.bright,-50,50), contrast:V.num(o.contrast,d.contrast,-50,50), satur:V.num(o.satur,d.satur,-50,50),
@@ -116,7 +99,7 @@ function normState(src: unknown): PosterState {
    *  Migration d'un état antérieur aux valeurs Auto (sans v:2, #74) : style Vintage → Auto (même rendu dans chaque mode) ;
    *  affiche Carte : lettres, ombre et contour reviennent à Auto (le mode Carte ne les dessinait pas : rendu inchangé). */
   function normIllusText(src: unknown, d: typeof DEFAULT_STATE.illusText){
-    const o=V.obj(src), C=CMS.illusConf, hexOrNone=(v: unknown, dv: string)=>v==='' ? '' : V.hex(v,dv), orAuto=(v: unknown, f: ()=>string)=>v==='auto' ? 'auto' : f();
+    const o=V.obj(src), C=illusConf, hexOrNone=(v: unknown, dv: string)=>v==='' ? '' : V.hex(v,dv), orAuto=(v: unknown, f: ()=>string)=>v==='auto' ? 'auto' : f();
     const pt=(p: unknown)=>{ const q=V.obj(p); return Number.isFinite(q.x) && Number.isFinite(q.y) ? {x:V.num(q.x,0.5,0,1), y:V.num(q.y,0.5,0,1)} : null; };   // position libre
     const m=V.obj(o.map), dm=d.map;
     // présentation des blocs (#86) ; un état antérieur n'en a pas : texte seul

@@ -1,5 +1,7 @@
 /* City Map Studio — Rendu de l'affiche : typographie, textes, dédicace, cartouche (extrait de render/poster.ts, #119). */
-import {st, ui} from '../core/doc/state.js';
+import {context2d, createCanvas, fontFaces} from '../core/canvas.js';
+import {sortLines} from '../core/order.js';
+import {st, ui} from '../core/scene.js';
 import {FONTS} from '../content/config.js';
 import {textLine} from '../core/geo/geo.js';
 import {Ctx, GlyphFn, Opts, Row} from './poster-types.js';
@@ -18,7 +20,7 @@ export function fontStr(size: number, o: Opts={}){const f=o.fk ? FONTS[o.fk] : f
 /** Graphèmes d'un texte (ce que le lecteur voit comme un caractère : « é » décomposé, émoji composé, drapeau) :
  *  l'interlettrage les trace d'un bloc, jamais un signe combinant isolé. Repli sans Intl.Segmenter : NFC puis points de code.
  *  Largeurs mises en cache par police (l'aperçu redessine les mêmes lettres à chaque image). */
-CMS.define('glyphs', () => {
+export const glyphs = (() => {
   const seg = typeof Intl!=='undefined' && Intl.Segmenter ? new Intl.Segmenter('fr',{granularity:'grapheme'}) : null;
   const graphemes = (t: string) => seg ? Array.from(seg.segment(t),x=>x.segment) : Array.from(t.normalize('NFC'));
   const cache=new Map<string, number>();
@@ -27,14 +29,14 @@ CMS.define('glyphs', () => {
   /** Parcourt les graphèmes d'une ligne espacée : fn(graphème, x) ; avance = largeur + spPx */
   const each=(ctx: Ctx,t: string,x: number,spPx: number,fn: (g: string, x: number)=>void)=>{ for(const g of graphemes(t)){ fn(g,x); x+=width(ctx,g)+spPx; } };
   // Une police chargée après une première mesure (police de secours en attendant) : les largeurs mémorisées sont fausses
-  if(typeof document!=='undefined') document.fonts?.addEventListener?.('loadingdone',()=>cache.clear());
+  fontFaces?.addEventListener?.('loadingdone',()=>cache.clear());
   return {graphemes, width, each, clear:()=>cache.clear()};
-});
+})();
 /** Largeur dessinée : texte d'un bloc sans interlettrage ; sinon somme des graphèmes dessinés un à un (comme drawText),
  *  pour que le centrage et l'alignement à droite tombent juste (le crénage d'un bloc ne s'applique pas lettre à lettre). */
 export function textW(ctx: Ctx, t: string, sp: number, size: number){
   if(!sp) return ctx.measureText(t).width;
-  const gs=CMS.glyphs.graphemes(t); let w=0; for(const g of gs) w+=CMS.glyphs.width(ctx,g);
+  const gs=glyphs.graphemes(t); let w=0; for(const g of gs) w+=glyphs.width(ctx,g);
   return w + sp*size*Math.max(0,gs.length-1);
 }
 /** Facteur de taille d'une ligne de texte : réglage de la ligne × réglage global */
@@ -48,17 +50,17 @@ const FIT_WARN=0.9;
 export function noteFit(k: string,f: number){ if(fitSink && k && f<FIT_WARN) fitSink[k]=Math.min(fitSink[k]??1,f); }
 /** Emprise des textes et repères, relevée pendant le rendu de l'aperçu quand ui.inkSink est un tableau (zone de sécurité, #60).
  *  Boîte en px du canevas (transformation courante appliquée) ; les jambages sous la ligne de base sont ignorés. */
-CMS.define('ink', () => ({
+export const ink = {
   box(ctx: Ctx,k: string,x1: number,y1: number,x2: number,y2: number){
     const m=ctx.getTransform(), P=[[x1,y1],[x2,y1],[x1,y2],[x2,y2]].map(([x,y])=>[m.a*x+m.c*y+m.e, m.b*x+m.d*y+m.f]);
     const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]);
     ui.inkSink.push({k, x1:Math.min(...xs), y1:Math.min(...ys), x2:Math.max(...xs), y2:Math.max(...ys)});
   }
-}));
+};
 /** Mode Carte : style des textes de l'affiche (#74) appliqué aux lignes du gabarit pendant leur dessin (ui.textFx, posé par
  *  drawPosterAt) : couleur des lettres, ombre et contour proportionnés à la taille, police Vintage du titre. La mention des
  *  sources (sans clé de ligne) n'est pas concernée. */
-CMS.define('textFx', () => ({
+export const textFx = {
   styled(o: Opts){
     const fx=ui.textFx; if(!fx || !o.key) return o;
     const q: Opts={...o,color:fx.color}, sz=o.size||0;
@@ -67,14 +69,14 @@ CMS.define('textFx', () => ({
     if(fx.outline) q.stroke={color:fx.outline, w:Math.max(1,0.035*sz)};
     return q;
   }
-}));
+};
 /** Dessine un texte avec interlettrage et réduction automatique ; renvoie la largeur dessinée.
  *  Une police manuscrite n'est jamais mise en capitales ni espacée.
  *  Options des modes illustrés : fk (police imposée, clé de FONTS), shadow {color, dx, dy} (ombre décalée, nette),
  *  stroke {color, w} (contour des lettres, sous le remplissage). */
 export function drawText(ctx: Ctx, t: string, x: number, y: number, o: Opts){
   if(!t) return 0;
-  o=CMS.textFx.styled(o);
+  o=textFx.styled(o);
   const F=o.fk ? FONTS[o.fk] : fontOf(o.role,o.key);
   if(o.upper && !F.script) t=t.toUpperCase();
   let size=o.size; const sp=F.script?0:(o.spacing||0);
@@ -83,25 +85,25 @@ export function drawText(ctx: Ctx, t: string, x: number, y: number, o: Opts){
   if(o.maxW && w>o.maxW){ noteFit(o.key,o.maxW/w); size*=o.maxW/w; ctx.font=fontStr(size,o); w=textW(ctx,t,sp,size); }
   ctx.textBaseline='alphabetic'; ctx.textAlign='left';
   let sx = o.align==='center' ? x-w/2 : o.align==='right' ? x-w : x;
-  const pass=(fn: GlyphFn,dx: number,dy: number)=>{ if(!sp) fn(t,sx+dx,y+dy); else CMS.glyphs.each(ctx,t,sx+dx,sp*size,(g: string,gx: number)=>fn(g,gx,y+dy)); };
+  const pass=(fn: GlyphFn,dx: number,dy: number)=>{ if(!sp) fn(t,sx+dx,y+dy); else glyphs.each(ctx,t,sx+dx,sp*size,(g: string,gx: number)=>fn(g,gx,y+dy)); };
   if(o.shadow){ ctx.fillStyle=o.shadow.color; pass((g: string,gx: number,gy: number)=>ctx.fillText(g,gx,gy),o.shadow.dx,o.shadow.dy); }
   if(o.stroke){ ctx.save(); ctx.strokeStyle=o.stroke.color; ctx.lineWidth=o.stroke.w; ctx.lineJoin='round'; ctx.miterLimit=2;
     pass((g: string,gx: number,gy: number)=>ctx.strokeText(g,gx,gy),0,0); ctx.restore(); }
   ctx.fillStyle=paint(o.color);
   pass((g: string,gx: number,gy: number)=>ctx.fillText(g,gx,gy),0,0);
-  if(ui.inkSink) CMS.ink.box(ctx,o.ink||o.key||'text',sx,y-size*0.75,sx+w,y);
+  if(ui.inkSink) ink.box(ctx,o.ink||o.key||'text',sx,y-size*0.75,sx+w,y);
   return w;
 }
 /** Dessine bout à bout plusieurs segments de tailles différentes, alignés sur la même ligne de base,
  *  avec une réduction commune s'ils dépassent maxW. parts : [{t, size, key, italic, role}] ; renvoie la largeur. */
 export function drawRun(ctx: Ctx, parts: Opts[], x: number, y: number, o: Opts){
-  parts=parts.filter(p=>p.t).map(p=>({...p,fk:CMS.textFx.styled(p).fk})); if(!parts.length) return 0;
+  parts=parts.filter(p=>p.t).map(p=>({...p,fk:textFx.styled(p).fk})); if(!parts.length) return 0;
   const fx=ui.textFx; if(fx) o={...o,color:fx.color};   // mode Carte : style des textes (#74)
   const ws=parts.map(p=>{ ctx.font=fontStr(p.size,p); return ctx.measureText(p.t).width; });
   let tot=ws.reduce((a,b)=>a+b,0), f=1;
   if(o.maxW && tot>o.maxW){ f=o.maxW/tot; parts.forEach(p=>(p.keys||[p.key]).forEach((k: string)=>noteFit(k,f))); }
   let sx = o.align==='right' ? x-tot*f : o.align==='center' ? x-tot*f/2 : x;
-  if(ui.inkSink) CMS.ink.box(ctx,o.ink||parts.find(p=>p.key)?.key||parts.find(p=>p.keys)?.keys[0]||'text',sx,y-Math.max(...parts.map(p=>p.size))*f*0.75,sx+tot*f,y);
+  if(ui.inkSink) ink.box(ctx,o.ink||parts.find(p=>p.key)?.key||parts.find(p=>p.keys)?.keys[0]||'text',sx,y-Math.max(...parts.map(p=>p.size))*f*0.75,sx+tot*f,y);
   ctx.fillStyle=paint(o.color); ctx.textBaseline='alphabetic'; ctx.textAlign='left';
   parts.forEach((p,i)=>{ ctx.font=fontStr(p.size*f,p); const sz=p.size*f;
     if(fx?.shadow){ ctx.fillStyle=fx.shadow; ctx.fillText(p.t,sx+fx.off*0.008*sz,y+fx.off*0.008*sz); }
@@ -114,8 +116,8 @@ export function drawRun(ctx: Ctx, parts: Opts[], x: number, y: number, o: Opts){
 // sur une seule, elle serait réduite de plus de 20 %. Les mesures se font en unités U (petit côté de l'affiche) :
 // la décision est la même dans l'aperçu, les vignettes et l'export, quelle que soit la résolution.
 const WRAP_AT=0.8;
-const measCtx=document.createElement('canvas').getContext('2d'), wrapCache=new Map();
-if(document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone',()=>wrapCache.clear());
+const measCtx=context2d(createCanvas(1,1)), wrapCache=new Map();
+fontFaces?.addEventListener?.('loadingdone',()=>wrapCache.clear());
    // mesures refaites avec les vraies polices
 /** Largeur d'un texte (en U) pour une taille donnée (en U) */
 function measU(t: string,sizeU: number,o: Opts){ measCtx!.font=fontStr(sizeU*1000,o); return measCtx!.measureText(t).width/1000; }
@@ -187,7 +189,7 @@ export function drawCartouche(ctx: Ctx, U: number, box: Opts){
     .map(([k,d,o]): [string, number, Opts, string]=>[textLine(k),d,{...o,size:o.size*U,maxW:maxW*(o.narrow||1),key:k},k]).filter(([txt])=>txt);
   if(!rows.length) return;
   // Ordre des lignes choisi (Textes, Plus de réglages) : chaque ligne garde son style et son écart
-  const ord=CMS.order.sort(rows.map(r=>r[3])); rows.sort((a,b)=>ord.indexOf(a[3])-ord.indexOf(b[3]));
+  const ord=sortLines(rows.map(r=>r[3]),st); rows.sort((a,b)=>ord.indexOf(a[3])-ord.indexOf(b[3]));
   // Taille choisie : la ligne grandit (ou rétrécit) et les interlignes suivent (≈ 0,8 × l'écart de corps de la ligne, 0,25 × celui de la précédente)
   let prevGrow=0;
   for(const r of rows){ const base=r[2].size, grow=base*(tScale(r[3])-1); r[2].size=base+grow; r[1]=Math.max(0.2*r[2].size/U, r[1]+(0.8*grow+0.25*prevGrow)/U); prevGrow=grow; }
