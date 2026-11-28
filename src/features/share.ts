@@ -1,13 +1,14 @@
 /* City Map Studio — Partage par lien et application d'une configuration (#118, issu de features.ts). */
 import {$, toast} from '../core/dom.js';
 import {PosterState} from '../content/config.js';
-import {normState, replaceState, SHARE_MAX_BYTES, SHARE_MAX_CHARS, st} from '../core/doc/state.js';
+import {normState, SHARE_MAX_BYTES, SHARE_MAX_CHARS, st} from '../core/doc/state.js';
 import {commitHistory} from '../core/doc/history.js';
 import {drawTexture, layoutPreview, redrawAll, scheduleOver} from '../view/preview.js';
 import {loadFonts} from '../render/fonts.js';
 import {goTo, renderPlaces} from './places.js';
 import {renderRoute} from './gpx.js';
 import {refreshCards, setPlacing, syncInputs} from '../core/port.js';
+import {replaceState, snapshotDoc} from '../core/doc/store.js';
 // ---------- Partage par lien ----------
 // L'état de l'affiche (sans le moteur, ni un itinéraire long) est compressé dans l'ancre de l'adresse (#a=…) :
 // rien n'est envoyé à un serveur ; le lien contient le lieu et les textes.
@@ -55,7 +56,7 @@ function applyConfig(o: unknown,msg?: string){
   let before: PosterState | null=null;
   try{
     commitHistory(0);
-    const eng=st.engine, fresh=normState(o); before=structuredClone(st);
+    const eng=st.engine, fresh=normState(o); before=snapshotDoc();
     replaceState(fresh,{engine:eng});
     setPlacing(false); syncInputs(); renderPlaces(); renderRoute(); layoutPreview(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); goTo(st.center.lat,st.center.lon,st.zoom); redrawAll(true); drawTexture();
     commitHistory(); if(msg) toast(msg);

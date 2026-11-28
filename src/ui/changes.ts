@@ -8,6 +8,7 @@ import {saveT, st, ui} from '../core/doc/state.js';
 import {setPlacing} from './shell.js';
 import {compareBefore} from '../features/compare.js';
 import {showTab} from './panel.js';
+import {snapshotDoc} from '../core/doc/store.js';
 // ---------- Réglages modifiés : pastilles, comptes et relecture (évolutions 5 et 7) ----------
 // Une seule table de parties : chacune dit quels réglages s'écartent des valeurs par défaut (DEFAULT_STATE ; pour les
 // couleurs, la palette du thème choisi) et sait les rétablir. Le lieu, le cadrage, les textes saisis, le type d'affiche, le
@@ -140,7 +141,7 @@ CMS.define('changes', () => {
   function reset(id: string){
     const g=GROUPS.find(x=>x.id===id); if(!g) return false;
     compareBefore(false); clearTimeout(saveT); recordHistory();
-    const {engine,...o}=structuredClone(st); g.reset(o as PosterState);
+    const {engine,...o}=snapshotDoc(); g.reset(o as PosterState);
     const s=JSON.stringify(o); if(s===hist.cur) return false;
     hist.past.push(hist.cur!); if(hist.past.length>HIST_MAX) hist.past.shift(); hist.future=[];
     applySnap(s); hist.quietUntil=Date.now()+1500;

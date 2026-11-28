@@ -7,6 +7,7 @@ import {mlRestyle} from '../map/engines.js';
 import {st, ui} from '../core/doc/state.js';
 import {loadFonts} from '../render/fonts.js';
 import {applySheet} from '../core/port.js';
+import {update} from '../core/doc/store.js';
 /** Dernier changement « comparable » (issue #63) : thème ou palette, ambiance, modèle de texte, effet de tracé, ornement,
  *  plis, papier. On retient les seuls champs modifiés (valeurs d'avant et d'après) : le bouton disparaît dès que l'un
  *  d'eux change de nouveau (autre choix, retouche, annulation), mais pas pour une autre modification (titre, cadrage).
@@ -50,8 +51,8 @@ const COMPARE = CMS.define('compare', () => {
   function compareBefore(on: boolean){
     if(on===!!ui.comparing) return;
     if(on && !compareAvailable()) return;
-    if(on){ commitHistory(0); ui.cmpKeep={}; for(const k of cmp!.keys){ ui.cmpKeep[k]=S()[k]; S()[k]=JSON.parse(JSON.stringify(cmp!.vals[k])); } }
-    else { Object.assign(st,ui.cmpKeep); ui.cmpKeep=null; }
+    if(on){ commitHistory(0); ui.cmpKeep={}; for(const k of cmp!.keys){ ui.cmpKeep[k]=S()[k]; update(_s=>((_s as Record<string, any>)[k]=JSON.parse(JSON.stringify(cmp!.vals[k])))); } }
+    else { update(_s=>Object.assign(_s,ui.cmpKeep)); ui.cmpKeep=null; }
     ui.comparing=on;
     const b=$('bCompare'); b.setAttribute('aria-pressed',String(on)); b.classList.toggle('on',on);
     const badge=$('cmpBadge'); badge.hidden=!on; if(on) badge.textContent=cmp!.badge;

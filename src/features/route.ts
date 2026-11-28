@@ -13,6 +13,7 @@ import {ratio, viewBounds} from '../core/geo/geo.js';
 import {changed} from '../view/preview.js';
 import {$, h, setSeg, toast} from '../core/dom.js';
 import {fitRoute, parseGpx, renderRoute} from './gpx.js';
+import {update as updateDoc} from '../core/doc/store.js';
 /** Emprise {s, w, n, e} (degrés) */
 type Bounds = {s: number; w: number; n: number; e: number};
 type Kind = 'walk' | 'bike' | 'car' | 'trip';
@@ -143,7 +144,7 @@ CMS.define('route', () => {
     const box=$('rpPlaces'), list=placesOf(st);
     box.replaceChildren(...list.map((p,i)=>{
       const c=h('input',{type:'checkbox',checked:!(P().off||[]).includes(i)});
-      c.onchange=()=>{ const off=new Set(P().off); c.checked ? off.delete(i) : off.add(i); P().off=[...off].sort(); update(); saveState(); };
+      c.onchange=()=>{ const off=new Set(P().off); c.checked ? off.delete(i) : off.add(i); updateDoc(()=>{ P().off=[...off].sort(); }); update(); saveState(); };
       return h('label',{className:'tog'},`${p.name} · ${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}`,c);
     }));
   }
@@ -161,7 +162,7 @@ CMS.define('route', () => {
     const msg=[far && `Une partie du tracé est loin du lieu de l'affiche (jusqu'à ${km(far.km)} km) : vérifiez les étapes.`,
       str && `Le tracé relie des étapes en ligne droite (tronçon de ${km(str.km)} km) : l'IA n'a pas suivi les rues.`].filter(Boolean).join(' ');
     $('routeWarn').textContent=msg; $('routeWarn').hidden=false;
-    toast(msg, true, str && !st.routeStyle.dash ? {label:'Pointillés', fn:()=>{ st.routeStyle.dash=true; renderRoute(); changed(); }} : undefined);
+    toast(msg, true, str && !st.routeStyle.dash ? {label:'Pointillés', fn:()=>{ updateDoc(_s=>(_s.routeStyle.dash=true)); renderRoute(); changed(); }} : undefined);
   }
   /** Import d'un texte GPX (fichier, ou collé : extractGpx) ; en cas d'erreur, l'affiche n'est pas modifiée.
    *  Le contrôle porte sur les points lus avant simplification, et sur le lieu et l'emprise d'avant le recadrage (fitRoute) */
@@ -170,16 +171,16 @@ CMS.define('route', () => {
     try{ route=parseGpx(pasted ? extractGpx(txt) : txt, info); }
     catch(e){ toast((pasted ? 'Collage GPX impossible : ' : 'Import GPX impossible : ')+(e as Error).message,true); return false; }
     const issues=routeChecks(info.raw||route.pts, st, P().kind);
-    st.route=route; $('routeWarn').hidden=true; renderRoute(); fitRoute(); changed();
+    updateDoc(_s=>(_s.route=route)); $('routeWarn').hidden=true; renderRoute(); fitRoute(); changed();
     if(issues.length) warn(issues);
     else toast(`Itinéraire importé · ${route.pts.length} points`+(route.wpts?.length ? ` · ${route.wpts.length} étapes` : ''));
     return true;
   }
   function init(){
-    for(const [k,n] of KIND_NAMES){ const b=h('button',{type:'button',dataset:{v:k}},n); b.onclick=()=>{ P().kind=k; sync(); saveState(); }; $('rpKind').append(b); }
-    document.querySelectorAll<HTMLElement>('#rpLoop button').forEach(b=>b.onclick=()=>{ P().loop=b.dataset.v==='1'; sync(); saveState(); });
-    document.querySelectorAll<HTMLElement>('#rpLang button').forEach(b=>b.onclick=()=>{ P().lang=b.dataset.v!; sync(); saveState(); });
-    $('rpExtra').oninput=e=>{ P().extra=(e.target as HTMLInputElement).value.slice(0,EXTRA_MAX); update(); saveState(); };
+    for(const [k,n] of KIND_NAMES){ const b=h('button',{type:'button',dataset:{v:k}},n); b.onclick=()=>{ updateDoc(()=>{ P().kind=k; }); sync(); saveState(); }; $('rpKind').append(b); }
+    document.querySelectorAll<HTMLElement>('#rpLoop button').forEach(b=>b.onclick=()=>{ updateDoc(()=>{ P().loop=b.dataset.v==='1'; }); sync(); saveState(); });
+    document.querySelectorAll<HTMLElement>('#rpLang button').forEach(b=>b.onclick=()=>{ updateDoc(()=>{ P().lang=b.dataset.v!; }); sync(); saveState(); });
+    $('rpExtra').oninput=e=>{ updateDoc(()=>{ P().extra=(e.target as HTMLInputElement).value.slice(0,EXTRA_MAX); }); update(); saveState(); };
     $('routeAi').addEventListener('toggle',()=>{ if($<HTMLDetailsElement>('routeAi').open) sync(); });
     $('bCopyRoute').onclick=async()=>{
       update(); const t=$('routePromptOut').value, okMsg='Prompt copié : collez-le dans ChatGPT ou Gemini, puis rapportez le GPX';

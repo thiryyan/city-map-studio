@@ -20,6 +20,7 @@ import {loadSaves} from './saves.js';
 import {setOrient, updateLayoutUI} from './presets.js';
 import {refreshCards, showTab, syncFonts, syncInputs, updateEngineUI} from '../core/port.js';
 import {geom} from '../render/layout.js';
+import {update} from '../core/doc/store.js';
 /** Contexte 2D ; réglages de l'illustration (st.illus) ; sacs d'options */
 type Ctx = CanvasRenderingContext2D;
 type Illus = PosterState['illus'];
@@ -314,7 +315,7 @@ CMS.define('illus', () => {
     x.putImageData(id,0,0); grainTex={land,c}; return c;
   }
   // ---------- Conservation : IndexedDB (images binaires), l'état ne garde qu'une référence ----------
-  // st.illus.img = {ref, name, w, h} : ref = empreinte SHA-256 du fichier importé (64 hexa). L'image ré-encodée (WebP,
+  // update(_s=>(_s.illus.img = {ref, name, w, h})) : ref = empreinte SHA-256 du fichier importé (64 hexa). L'image ré-encodée (WebP,
   // PNG si le navigateur n'encode pas le WebP) est rangée sous cette clé. Les configurations restent dans localStorage.
   // Sans IndexedDB (navigation privée stricte, stockage bloqué) : l'image n'est gardée que pendant la visite.
   const DB_NAME='cms3', DB_STORE='images', REF_RE=/^[0-9a-f]{64}$/, DATA_RE=/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/]+=*$/;
@@ -456,8 +457,8 @@ CMS.define('illus', () => {
       const name=(file.name||'image collée').slice(0,120);
       setImage(full,{name, size:file.size, ref});
       const same=!!expected && expected.ref===ref, other=wasMissing && !!expected && !same;
-      st.illus.img={ref, name, w:full.width, h:full.height};
-      if(!same) Object.assign(st.illus,{zoom:100,ox:0,oy:0});
+      update(_s=>(_s.illus.img={ref, name, w:full.width, h:full.height}));
+      if(!same) update(_s=>Object.assign(_s.illus,{zoom:100,ox:0,oy:0}));
       missing=false; fail('');
       setStep('image'); sync(); redraw(); saveState();
       toast(same ? 'Illustration retrouvée' : other ? `Ce n’est pas l’illustration de l’affiche (« ${expected.name} ») : la nouvelle image la remplace` : 'Illustration importée'+(reduced?' (réduite pour tenir en mémoire)':''), other);
@@ -469,7 +470,7 @@ CMS.define('illus', () => {
   /** Retire l'illustration de l'affiche (l'image reste stockée jusqu'au prochain nettoyage : « Annuler » la retrouve) */
   function removeImage(){
     if(!img && !st.illus.img) return;
-    freeImage(); st.illus.img=null; missing=false; sync(); redraw(); saveState(); toast('Illustration retirée');
+    freeImage(); update(_s=>(_s.illus.img=null)); missing=false; sync(); redraw(); saveState(); toast('Illustration retirée');
   }
 
   // ---------- Rendu (appelé par drawPoster : aperçu et export) ----------
@@ -995,11 +996,11 @@ CMS.define('illus', () => {
     }
     CMS.emit('hits:placed');   // le choix « Textes » du mode Cadrer n'existe que s'il y a un bloc à déplacer
   }
-  const setFree=(k: string,p: Pt | null)=>{ if(k==='title') posOf().free=p; else posOf().ffree=p; scheduleOver(); };
+  const setFree=(k: string,p: Pt | null)=>{update(()=>{ if(k==='title') posOf().free=p; else posOf().ffree=p; scheduleOver(); });};
   /** Centre actuel d'un bloc, en fraction de sa zone */
   function centerOf(k: string){ const r=hitInfo![k], A=r.area; return {x:(r.x+r.w/2-A.x)/A.w, y:(r.y+r.h/2-A.y)/A.h}; }
   /** Fin d'un déplacement : aimantation sur les positions prédéfinies (et « Auto » pour le bloc du bas) */
-  function snapToPreset(k: string){
+  function snapToPreset(k: string){return update(()=>{
     const T=posOf(), c=k==='title' ? T.free : T.ffree, I=hitInfo?.[k]; if(!c || !I) return;
     if(I.kind==='band'){   // bande de la vignette : gauche, centre, droite
       const i=[0,0.5,1].findIndex(v=>Math.abs(c.x-v)<0.04); if(i<0) return;
@@ -1012,7 +1013,7 @@ CMS.define('illus', () => {
       const b=textLayout(ctx,W,H,U,over,I.env)[k]; if(!b) continue;
       if(Math.hypot((b.rect.x+b.rect.w/2)/W-c.x,(b.rect.y+b.rect.h/2)/H-c.y)<0.04){ Object.assign(T,over); return; }
     }
-  }
+  });}
   function initHits(){
     let tdrag: {k: string; id: number; x: number; y: number; c: {x: number; y: number}; moved: boolean} | null=null;
     for(const k of ['title','foot']){
@@ -1043,7 +1044,7 @@ CMS.define('illus', () => {
         if(d && hitInfo[k].fixed) return;
         if(d){ const s=e.shiftKey?0.05:0.01, c=centerOf(k), T=posOf(), cur=(k==='title'?T.free:T.ffree)||c;
           setFree(k,{x:clamp(cur.x+d[0]*s,0,1),y:hitInfo[k].kind==='band'?0.5:clamp(cur.y+d[1]*s,0,1)}); syncText(); saveState(); }
-        else if(e.key==='Home'){ if(k==='title') Object.assign(posOf(),{free:null},st.mode==='map'?{pos:'auto'}:{}); else Object.assign(posOf(),{ffree:null,fpos:'auto'}); syncText(); scheduleOver(); saveState(); }
+        else if(e.key==='Home'){ update(()=>{ if(k==='title') Object.assign(posOf(),{free:null},st.mode==='map'?{pos:'auto'}:{}); else Object.assign(posOf(),{ffree:null,fpos:'auto'}); }); syncText(); scheduleOver(); saveState(); }
         else if(e.key==='Escape') el.blur();
         else return;
         e.preventDefault();
@@ -1108,7 +1109,7 @@ CMS.define('illus', () => {
   }
   function moveLine(k: string,d: number){
     const O=CMS.order.current(), i=O.indexOf(k), j=i+d; if(j<0 || j>=O.length) return;
-    [O[i],O[j]]=[O[j],O[i]]; st.lineOrder=O; syncOrder({k,d}); changed();
+    [O[i],O[j]]=[O[j],O[i]]; update(_s=>(_s.lineOrder=O)); syncOrder({k,d}); changed();
   }
   function syncPlate(){
     const P=st.illusText.plate;
@@ -1132,9 +1133,10 @@ CMS.define('illus', () => {
     colonnes:'Date à gauche, dédicace et noms au centre, coordonnées à droite'};
   /** Mise en forme du bloc du bas. Comme une présentation, elle sort le bloc du gabarit (Carte) ou de la bande (Vignette). */
   function setTpl(v: string){
-    const P=posOf(); P.ftpl=v;
-    if(v!=='classique' && st.mode==='map' && !mapMoved().foot){ Object.assign(P,{fpos:'bc',ffree:null}); toast('Lignes du bas posées sur l\u2019affiche, hors du gabarit'); }
-    if(v!=='classique' && st.mode==='mix' && st.mix.compo==='vig' && zoneOf('foot')==='illus'){ P.zone={...P.zone,foot:'map'}; P.ffree=null; toast('Lignes du bas posées sur la carte'); }
+    const P=posOf();
+    update(()=>{ P.ftpl=v; });
+    if(v!=='classique' && st.mode==='map' && !mapMoved().foot){ update(()=>Object.assign(P,{fpos:'bc',ffree:null})); toast('Lignes du bas posées sur l\u2019affiche, hors du gabarit'); }
+    if(v!=='classique' && st.mode==='mix' && st.mix.compo==='vig' && zoneOf('foot')==='illus'){ update(()=>{ P.zone={...P.zone,foot:'map'}; P.ffree=null; }); toast('Lignes du bas posées sur la carte'); }
     syncText(); scheduleOver(); saveState();
   }
   /** Mises en page prêtes (#86) : elles ne font que remplir zone, position et présentation */
@@ -1148,7 +1150,7 @@ CMS.define('illus', () => {
     ['Cachet en coin', (s: PosterState)=>s.mode==='mix' || (s.mode==='map' && s.layout!=='typo'),
       P=>Object.assign(P,{pos:'hd',free:null,deco:{...P.deco,title:'cachet'}},P.zone ? {zone:{...P.zone,title:'map'}} : {})]];
   /** Présentation d'un bloc. Un bloc encore dans le gabarit (Carte) ou dans la bande de la vignette en sort pour la recevoir. */
-  function setDeco(k: string,d: string){
+  function setDeco(k: string,d: string){update(()=>{
     const P=posOf(); P.deco={...P.deco,[k]:d};
     if(d!=='libre' && st.mode==='map' && !mapMoved()[k]){
       if(k==='title') Object.assign(P,{pos:d==='arc' ? 'mc' : d==='cachet' ? 'hd' : 'hc',free:null}); else Object.assign(P,{fpos:'bc',ffree:null});
@@ -1159,10 +1161,10 @@ CMS.define('illus', () => {
       toast(k==='title' ? 'Titre posé sur la carte' : 'Lignes du bas posées sur la carte');
     }
     syncText(); scheduleOver(); saveState();
-  }
+  });}
   /** Zone d'un bloc (Carte + illustration) : la position libre, relative à l'ancienne zone, est oubliée */
   function setZone(k: string,z: string){
-    const P=st.illusText.mix; P.zone={...P.zone,[k]:z}; if(k==='title') P.free=null; else P.ffree=null;
+    update(_s=>{ const P=_s.illusText.mix; P.zone={...P.zone,[k]:z}; if(k==='title') P.free=null; else P.ffree=null; });
     syncText(); scheduleOver(); saveState();
   }
   function syncDecos(){
@@ -1187,7 +1189,7 @@ CMS.define('illus', () => {
     const box=$('textPresets'), list=PRESETS.filter(([,on])=>on(st));
     if(box.childElementCount!==list.length || [...box.children].some((b,i)=>b.textContent!==list[i][0]))
       box.replaceChildren(...list.map(([name,,apply])=>{ const b=h('button',{type:'button',className:'chip'},name);
-        b.onclick=()=>{ apply(posOf()); syncText(); scheduleOver(); saveState(); toast(`Mise en page « ${name} » appliquée · « Annuler » pour revenir`); }; return b; }));
+        b.onclick=()=>{ update(()=>apply(posOf())); syncText(); scheduleOver(); saveState(); toast(`Mise en page « ${name} » appliquée · « Annuler » pour revenir`); }; return b; }));
     box.hidden=!list.length;
   }
   const ready=()=>!!img && img.ref===refOf(st);
@@ -1297,8 +1299,8 @@ CMS.define('illus', () => {
     if(!quiet && layer()!==was) toast(layer()==='illus' ? 'Cadrage de l\u2019illustration : la carte reste en place' : 'Cadrage de la carte');
   }
   function zoomBy(d: number){
-    if(!ready()) return; const I=st.illus; I.zoom=clamp(I.zoom+d,ZMIN,ZMAX); Object.assign(I,bound(I.ox,I.oy,I.zoom,false));
-    badge(I.zoom); syncInputs(); syncImage(); redraw(); saveState();
+    if(!ready()) return; update(_s=>{ const I=_s.illus; I.zoom=clamp(I.zoom+d,ZMIN,ZMAX); Object.assign(I,bound(I.ox,I.oy,I.zoom,false)); });
+    badge(st.illus.zoom); syncInputs(); syncImage(); redraw(); saveState();
   }
   // ---------- Illustration sur la page : déplacer, agrandir, réduire (#82) ----------
   // Zoom de 30 à 300 % de l'ajustement (« Remplir » ou « Image entière ») dans la zone de l'illustration, celle de la
@@ -1317,7 +1319,7 @@ CMS.define('illus', () => {
   /** Taille affichée pendant le pincement, la molette ou les boutons + et − */
   let badgeT=0;
   function badge(z: number){ const b=$('zoomBadge'); b.textContent=Math.round(z)+' %'; b.hidden=false; clearTimeout(badgeT); badgeT=setTimeout(()=>{ b.hidden=true; },900); }
-  function recenter(){ if(!ready()) return; Object.assign(st.illus,{ox:0,oy:0}); redraw(); saveState(); }
+  function recenter(){ if(!ready()) return; update(_s=>Object.assign(_s.illus,{ox:0,oy:0})); redraw(); saveState(); }
   function exportState(){
     syncLayer();
     const off=st.mode!=='map' && !ready();
@@ -1329,7 +1331,7 @@ CMS.define('illus', () => {
   }
   function setMode(v: string){
     if(!C.MODES.includes(v) || st.mode===v) return;
-    st.mode=v; if(v==='mix' && !ready()) step='compo';
+    update(_s=>(_s.mode=v)); if(v==='mix' && !ready()) step='compo';
     applyMode(); sync();
     if(v==='illus' && ui.tab==='lieu') showTab('illus');   // le parcours continue par le prompt
     layoutPreview(); refreshCards(); loadFonts().then(()=>scheduleOver());
@@ -1358,20 +1360,20 @@ CMS.define('illus', () => {
       const auto=hex==='auto', b=h('button',{type:'button',className:'sw'+(auto?' auto':hex?'':' none'),dataset:{v:hex},title:name,'aria-label':name},
         ...(auto ? [h('span',{},'Auto'),h('i',{'aria-hidden':'true'})] : []));
       if(hex && !auto) b.style.background=hex;
-      b.onclick=()=>{ (st.illusText as Opts)[field]=hex; syncText(); scheduleOver(); saveState(); };
+      b.onclick=()=>{ update(_s=>{ (_s.illusText as Opts)[field]=hex; }); syncText(); scheduleOver(); saveState(); };
       box.append(b);
     }
     if(custom){
       const i=h('input',{type:'color','aria-label':'Autre couleur des lettres'}), l=h('label',{className:'sw custom',title:'Autre couleur'},i);
-      i.oninput=()=>{ (st.illusText as Opts)[field]=i.value.toUpperCase(); syncText(); scheduleOver(); saveState(); };
+      i.oninput=()=>{ update(_s=>{ (_s.illusText as Opts)[field]=i.value.toUpperCase(); }); syncText(); scheduleOver(); saveState(); };
       box.append(l);
     }
   }
   /** Position d'un bloc ('title' | 'foot') : une des 9 positions, ou 'auto' (bas : à l'opposé du titre ; Carte : dans le gabarit) */
-  function setPos(k: string,p: string){
+  function setPos(k: string,p: string){update(()=>{
     Object.assign(posOf(),k==='title' ? {pos:p,free:null} : {fpos:p,ffree:null});
     syncText(); scheduleOver(); saveState();
-  }
+  });}
   function syncText(){
     const T: Opts=st.illusText, R=textStyle(), P=posOf();
     syncFonts();   // Vintage : option de la police du titre (#72)
@@ -1396,15 +1398,15 @@ CMS.define('illus', () => {
     setSeg('momentSeg',P.moment); setSeg('saisonSeg',P.saison); setSeg('paletteSeg',P.palette); setSeg('langSeg',P.lang);
     const box=$('pisteChips'); box.replaceChildren();
     const ia=h('button',{type:'button',className:'chip'},'L’IA propose'); pressed(ia,!P.pistes.length);
-    ia.onclick=()=>{ P.pistes=[]; syncPrompt(); saveState(); }; box.append(ia);
+    ia.onclick=()=>{ update(_s=>{ _s.illus.prompt.pistes=[]; }); syncPrompt(); saveState(); }; box.append(ia);
     for(const p of P.pistes){
       const b=h('button',{type:'button',className:'chip on','aria-label':`Retirer la piste « ${p} »`},p,h('span',{className:'x','aria-hidden':'true'},' ✕'));
-      b.onclick=()=>{ P.pistes=P.pistes.filter(x=>x!==p); syncPrompt(); saveState(); }; box.append(b);
+      b.onclick=()=>{ update(()=>{ P.pistes=P.pistes.filter(x=>x!==p); }); syncPrompt(); saveState(); }; box.append(b);
     }
     $('pisteIn').disabled=P.pistes.length>=C.PISTES_MAX;
     const sug=found.filter(x=>!P.pistes.includes(x)), sb=$('pisteSugg'); sb.hidden=!sug.length;
     sb.replaceChildren(...sug.map(x=>{ const b=h('button',{type:'button',className:'chip','aria-label':`Ajouter la piste « ${x} »`},'+ '+x);
-      b.onclick=()=>{ if(P.pistes.length<C.PISTES_MAX && !P.pistes.includes(x)){ P.pistes.push(x); syncPrompt(); saveState(); } else toast(`${C.PISTES_MAX} pistes au plus`,true); }; return b; }));
+      b.onclick=()=>{ if(P.pistes.length<C.PISTES_MAX && !P.pistes.includes(x)){ update(()=>{ P.pistes.push(x); }); syncPrompt(); saveState(); } else toast(`${C.PISTES_MAX} pistes au plus`,true); }; return b; }));
     updatePrompt();
   }
   function updatePrompt(){
@@ -1446,11 +1448,11 @@ CMS.define('illus', () => {
     $('bToImage').onclick=()=>{ setStep('image'); CMS.panelScroll.to($('illusDrop'),'nearest'); };
     const P=()=>st.illus.prompt as Opts;
     for(const [id,list,f] of [['momentSeg',C.MOMENTS,'moment'],['saisonSeg',C.SAISONS,'saison']])
-      for(const [k,n] of list){ const b=h('button',{type:'button',dataset:{v:k}},n); b.onclick=()=>{ P()[f]=k; syncPrompt(); saveState(); }; $(id).append(b); }
+      for(const [k,n] of list){ const b=h('button',{type:'button',dataset:{v:k}},n); b.onclick=()=>{ update(()=>{ P()[f]=k; }); syncPrompt(); saveState(); }; $(id).append(b); }
     for(const [id,f] of [['paletteSeg','palette'],['langSeg','lang']])
-      document.querySelectorAll<HTMLElement>(`#${id} button`).forEach(b=>b.onclick=()=>{ P()[f]=b.dataset.v!; syncPrompt(); saveState(); });
+      document.querySelectorAll<HTMLElement>(`#${id} button`).forEach(b=>b.onclick=()=>{ update(()=>{ P()[f]=b.dataset.v!; }); syncPrompt(); saveState(); });
     $('pisteForm').onsubmit=e=>{ e.preventDefault(); const v=$('pisteIn').value.replace(/\s+/g,' ').trim().slice(0,80);
-      if(v && !P().pistes.includes(v) && P().pistes.length<C.PISTES_MAX){ P().pistes.push(v); syncPrompt(); saveState(); }
+      if(v && !P().pistes.includes(v) && P().pistes.length<C.PISTES_MAX){ update(()=>{ P().pistes.push(v); }); syncPrompt(); saveState(); }
       $('pisteIn').value=''; };
     $('bCopyPrompt').onclick=async()=>{
       updatePrompt(); const t=$('promptOut').value;
@@ -1489,9 +1491,9 @@ CMS.define('illus', () => {
       if(it){ e.preventDefault(); if(ui.tab!=='illus') showTab('illus'); importFile(it.getAsFile()); }
     });
     $('bIllusDel').onclick=removeImage;
-    document.querySelectorAll<HTMLElement>('#illusFitSeg button').forEach(b=>b.onclick=()=>{ Object.assign(st.illus,{fit:b.dataset.v,ox:0,oy:0}); syncImage(); redraw(); saveState(); });
-    document.querySelectorAll<HTMLElement>('#illusVintageSeg button').forEach(b=>b.onclick=()=>{ st.illus.vintage=b.dataset.v!; syncImage(); redraw(); saveState(); });
-    $('bIllusCenter').onclick=()=>{ Object.assign(st.illus,{zoom:100,ox:0,oy:0}); syncInputs(); redraw(); saveState(); };
+    document.querySelectorAll<HTMLElement>('#illusFitSeg button').forEach(b=>b.onclick=()=>{ update(_s=>Object.assign(_s.illus,{fit:b.dataset.v,ox:0,oy:0})); syncImage(); redraw(); saveState(); });
+    document.querySelectorAll<HTMLElement>('#illusVintageSeg button').forEach(b=>b.onclick=()=>{ update(_s=>(_s.illus.vintage=b.dataset.v!)); syncImage(); redraw(); saveState(); });
+    $('bIllusCenter').onclick=()=>{ update(_s=>Object.assign(_s.illus,{zoom:100,ox:0,oy:0})); syncInputs(); redraw(); saveState(); };
     // Champs liés (data-k) : curseurs et cases (ui.ts émet illus:input)
     CMS.on('illus:input',k=>{
       if(k.startsWith('illusText.')){ syncText(); scheduleOver(); saveState(); return; }   // dont l'épaisseur du trait des plaques
@@ -1517,7 +1519,7 @@ CMS.define('illus', () => {
       const r=geom(st,ui.posterCss.w,ui.posterCss.h).illus!, g0_=g0!, k=z/g0_.z;
       const icx=r.x+r.w/2+g0_.ox*r.w, icy=r.y+r.h/2+g0_.oy*r.h;   // centre de l'image au départ
       const nx=c.x-(g0_.c.x-icx)*k, ny=c.y-(g0_.c.y-icy)*k;
-      Object.assign(st.illus,{zoom:z},bound((nx-r.x-r.w/2)/r.w,(ny-r.y-r.h/2)/r.h,z,snap));
+      update(_s=>Object.assign(_s.illus,{zoom:z},bound((nx-r.x-r.w/2)/r.w,(ny-r.y-r.h/2)/r.h,z,snap)));
     }
     poster.addEventListener('pointerdown',e=>{
       if(!editing() || e.button>0 || (e.target as HTMLInputElement).closest('button')) return;
@@ -1539,7 +1541,7 @@ CMS.define('illus', () => {
       if(pts.size){ base(); return; }
       poster.classList.remove('dragging');
       if(!moved && Date.now()-t0<300){   // double toucher : image ajustée, centrée
-        if(Date.now()-lastTap<350){ Object.assign(st.illus,{zoom:100,ox:0,oy:0}); badge(100); redraw(); lastTap=0; }
+        if(Date.now()-lastTap<350){ update(_s=>Object.assign(_s.illus,{zoom:100,ox:0,oy:0})); badge(100); redraw(); lastTap=0; }
         else lastTap=Date.now();
       }
       syncInputs(); syncImage(); saveState();
@@ -1554,11 +1556,11 @@ CMS.define('illus', () => {
     // Composition (Carte + illustration)
     // Côte à côte impose le paysage ; une autre composition rend l'orientation d'avant (#77)
     let coteFrom: string | null=null;
-    const mixSet=(f: string,v: string)=>{ const was=st.mix.compo; (st.mix as Opts)[f]=v;
+    const mixSet=(f: string,v: string)=>{update(()=>{ const was=st.mix.compo; update(_s=>{ (_s.mix as Opts)[f]=v; });
       if(f==='compo' && v==='cote' && st.orient!=='landscape'){ coteFrom=st.orient; setOrient('landscape'); toast('Côte à côte : affiche passée en paysage'); }
       else if(f==='compo' && was==='cote' && v!=='cote' && coteFrom && st.orient==='landscape'){ setOrient(coteFrom); toast('Affiche revenue en portrait'); }
       if(f==='compo' && v!=='cote') coteFrom=null;
-      syncCompo(); syncImage(); ui.snap=null; layoutPreview(); placeHit(); saveState(); };
+      syncCompo(); syncImage(); ui.snap=null; layoutPreview(); placeHit(); saveState(); });};
     document.querySelectorAll<HTMLElement>('#mixSplitSeg button').forEach(b=>b.onclick=()=>mixSet('split',b.dataset.v!));
     $('bScanPistes').onclick=scanPistes;
     // Wikipédia : cocher l'option vaut accord pour ce service, après l'accord général (needConsent) ; aucune requête avant le bouton
@@ -1579,7 +1581,7 @@ CMS.define('illus', () => {
       f.onclick=()=>setPos('foot',p); $('fPosSeg').append(f); });
     $('fAutoBtn').onclick=()=>setPos('foot','auto'); $('tLayBtn').onclick=()=>setPos('title','auto');
     // Trait des plaques, ordre des lignes (Plus de réglages : mémorisé, ouvert d'office si un de ses réglages est actif)
-    const setPlate=(f: string,v: unknown)=>{ st.illusText.plate={...st.illusText.plate,[f]:v}; syncPlate(); scheduleOver(); saveState(); };
+    const setPlate=(f: string,v: unknown)=>{ update(_s=>(_s.illusText.plate={...st.illusText.plate,[f]:v})); syncPlate(); scheduleOver(); saveState(); };
     $('plateLineSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>setPlate('line',b.dataset.v));
     for(const [hex,name] of SW_PLATE){ const auto=hex==='auto', b=h('button',{type:'button',className:'sw'+(auto?' auto':''),dataset:{v:hex},title:name,'aria-label':name},...(auto ? [h('span',{},'Auto')] : []));
       if(!auto) b.style.background=hex; b.onclick=()=>setPlate('color',hex); $('swPlate').append(b); }
@@ -1589,7 +1591,7 @@ CMS.define('illus', () => {
     { const i=h('input',{type:'color','aria-label':'Autre couleur du fond'}); i.oninput=()=>setPlate('fill',i.value.toUpperCase()); $('swPlateFill').append(h('label',{className:'sw custom',title:'Autre couleur'},i)); }
     // depuis la carte d'un bloc : ouvrir les réglages du fond et du trait
     $('bPlateOpts').onclick=()=>{ $<HTMLDetailsElement>('textMore').open=true; CMS.panelScroll.to($('hPlate'),'start',true); };
-    $('bOrderReset').onclick=()=>{ st.lineOrder=null; syncOrder(); changed(); toast('Lignes dans l\u2019ordre du gabarit · « Annuler » pour revenir'); };
+    $('bOrderReset').onclick=()=>{ update(_s=>(_s.lineOrder=null)); syncOrder(); changed(); toast('Lignes dans l\u2019ordre du gabarit · « Annuler » pour revenir'); };
     try{ if(localStorage.getItem(MORE_KEY)==='1') $<HTMLDetailsElement>('textMore').open=true; }catch(e){}
     $<HTMLDetailsElement>('textMore').addEventListener('input',syncMoreOpen); $<HTMLDetailsElement>('textMore').addEventListener('click',e=>{ if(!(e.target as HTMLInputElement).closest('summary')) setTimeout(syncMoreOpen); });
     $<HTMLDetailsElement>('textMore').addEventListener('toggle',()=>{ if(moreAuto){ moreAuto=false; return; } try{ $<HTMLDetailsElement>('textMore').open ? localStorage.setItem(MORE_KEY,'1') : localStorage.removeItem(MORE_KEY); }catch(e){} });

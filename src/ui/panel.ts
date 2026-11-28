@@ -1,7 +1,7 @@
 /* City Map Studio — Interface : taille du texte, coordonnées, historique, construction de l'interface, recherche, polices.
  * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
 import {AMBIANCES, COLOR_LABELS, DEFAULT_STATE, DUOS, FONTS, FONT_CATS, FONT_LIST, GOLD, LAYOUTS, MARKERS, MARKER_COLORS, OCCASIONS, PRESETS, TEXTURES, THEMES, THEME_CATS} from '../content/config.js';
-import {closeDialog, getPath, mlLib, mlMap, needConsent, osmData, replaceState, saveState, saveT, setMlFailMsg, setOsmData, setPath, st, ui} from '../core/doc/state.js';
+import {closeDialog, getPath, mlLib, mlMap, needConsent, osmData, saveState, saveT, setMlFailMsg, setOsmData, setPath, st, ui} from '../core/doc/state.js';
 import {clamp, coordText, dms, posterDims, viewBounds} from '../core/geo/geo.js';
 import {drawMarker} from '../render/poster.js';
 import {mlRestyle, mlZoom} from '../map/engines.js';
@@ -22,6 +22,7 @@ import {onUi} from '../core/port.js';
 import {exportPoster, importFile, runDiagnostics} from '../features/export.js';
 import {thumb} from '../view/thumbnails.js';
 import {geom} from '../render/layout.js';
+import {replaceState, update} from '../core/doc/store.js';
 // ---------- Taille du texte de l'interface (A− / A+) ----------
 // Préférence d'affichage propre à l'appareil : hors de l'état de l'affiche, non concernée par « Réinitialiser ».
 const UI_SCALE_KEY='cms3.uiScale', UI_SCALES=[0.875,1,1.125,1.25,1.375];
@@ -110,7 +111,7 @@ updateMarkerTxt.remember=(lat: number,lon: number,name?: string,sub?: string)=>{
   try{ localStorage.setItem(updateMarkerTxt.KEY,JSON.stringify(updateMarkerTxt.list)); }catch(e){}
 };
 function syncZoomUI(){ $('zoom').value=st.zoom.toFixed(1); $('oZoom').textContent=st.zoom.toFixed(1); }
-function setZoom(z: number){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'&&st.mode!=='illus'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
+function setZoom(z: number){ update(_s=>(_s.zoom=clamp(z,10,18))); syncZoomUI(); if(mlMap&&st.engine==='maplibre'&&st.mode!=='illus'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
 /** Affiche un onglet (état ARIA, focus clavier). Le panneau coulissant n'est pas modifié. */
 function showTab(name: string, focus?: boolean){
   document.querySelectorAll<HTMLElement>('#tabs button').forEach(x=>{ const on=x.dataset.tab===name; x.classList.toggle('on',on); x.setAttribute('aria-selected',String(on)); x.tabIndex=on?0:-1; if(on&&focus) x.focus(); });
@@ -209,7 +210,7 @@ function buildUI(){
   // date : calendrier natif
   $('dateIn').addEventListener('focus',()=>{ const v=isoFromFr(st.texts.date); if(v) $('dateIn').value=v; });
   $('dateIn').addEventListener('pointerdown',()=>{ const v=isoFromFr(st.texts.date); if(v) $('dateIn').value=v; });
-  $('dateIn').addEventListener('change',e=>{ const t=frDate((e.target as HTMLInputElement).value); if(!t) return; st.texts.date=t; st.show.date=true; syncInputs(); changed(); toast('Date : '+t); });
+  $('dateIn').addEventListener('change',e=>{ const t=frDate((e.target as HTMLInputElement).value); if(!t) return; update(_s=>(_s.texts.date=t)); update(_s=>(_s.show.date=true)); syncInputs(); changed(); toast('Date : '+t); });
   // ma position (géolocalisation de l'appareil, demandée par le navigateur)
   if('geolocation' in navigator){ $('bGeo').hidden=false; $('bGeo').onclick=locateMe; }
   // annuler / rétablir
@@ -224,7 +225,7 @@ function buildUI(){
   // presets
   const pr=$('presets');
   PRESETS.forEach(([lbl,lat,lon,z,title,sub])=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=lbl;
-    b.onclick=()=>{ st.marker={lat,lon}; st.texts.title=title; st.texts.subtitle=sub; syncInputs(); updateMarkerTxt(); setOsmData(null); goTo(lat,lon,z); redrawAll(); };
+    b.onclick=()=>{ update(_s=>(_s.marker={lat,lon})); update(_s=>(_s.texts.title=title)); update(_s=>(_s.texts.subtitle=sub)); syncInputs(); updateMarkerTxt(); setOsmData(null); goTo(lat,lon,z); redrawAll(); };
     pr.appendChild(b); });
   // gabarits
   const lay=$('layouts');
@@ -241,8 +242,8 @@ function buildUI(){
   // ciel
   const tz=$<HTMLSelectElement>('skyTz'); tz.add(new Option('Celui de cet appareil','auto'));
   for(let m=-720;m<=840;m+=30){ const h=Math.trunc(Math.abs(m)/60), mi=Math.abs(m)%60; tz.add(new Option(`UTC${m<0?'−':'+'}${h}${mi?':'+String(mi).padStart(2,'0'):''}`,String(m))); }
-  $('skyWhen').onchange=e=>{ st.sky.when=(e.target as HTMLInputElement).value; drawUnder(); saveState(); };
-  tz.onchange=e=>{ st.sky.tz=(e.target as HTMLInputElement).value==='auto'?'auto':+(e.target as HTMLInputElement).value; drawUnder(); saveState(); };
+  $('skyWhen').onchange=e=>{ update(_s=>(_s.sky.when=(e.target as HTMLInputElement).value)); drawUnder(); saveState(); };
+  tz.onchange=e=>{ update(_s=>(_s.sky.tz=(e.target as HTMLInputElement).value==='auto'?'auto':+(e.target as HTMLInputElement).value)); drawUnder(); saveState(); };
   // deux lieux
   document.querySelectorAll<HTMLElement>('#placeSeg button').forEach(b=>b.onclick=()=>setActivePlace(+b.dataset.v!));
   $('placeSwitch').onclick=()=>setActivePlace(1-(st.active||0));
@@ -254,37 +255,37 @@ function buildUI(){
   THEME_CATS.forEach(([k,n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'+(i?'':' on'); b.textContent=n; b.dataset.v=k;
     b.onclick=()=>{ document.querySelectorAll<HTMLElement>('#themeCats .chip').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll<HTMLElement>('#themes .theme').forEach(t=>t.hidden=!!k && t.dataset.cat!==k); }; $('themeCats').appendChild(b); });
   // papier
-  TEXTURES.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.dataset.v=k; b.textContent=n; b.onclick=()=>{ const before=cmpSnap(); st.texture=k; setSeg('textures',k); noteChange(before,`le papier « ${n} »`); drawTexture(); saveState(); }; $('textures').appendChild(b); });
+  TEXTURES.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.dataset.v=k; b.textContent=n; b.onclick=()=>{ const before=cmpSnap(); update(_s=>(_s.texture=k)); setSeg('textures',k); noteChange(before,`le papier « ${n} »`); drawTexture(); saveState(); }; $('textures').appendChild(b); });
   // modèles de texte
   OCCASIONS.forEach(([k,n])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.onclick=()=>applyOccasion(k); $('occasions').appendChild(b); });
   // polices : duos, catégories, police du titre, police du texte
   const fam=(k: string)=>FONTS[k].fam;
   DUOS.forEach(([k,n,ft,fx])=>{ const b=h('button',{type:'button',dataset:{v:k},role:'radio'},
       h('span',{className:'t',style:{fontFamily:fam(ft)}}),h('span',{className:'d',style:{fontFamily:fam(fx)}}),h('small',{},n));
-    b.onclick=async()=>{ st.fontTitle=ft===fx?'':ft; st.font=fx; st.illusText.style='font'; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('duos').appendChild(b); });
+    b.onclick=async()=>{ update(_s=>(_s.fontTitle=ft===fx?'':ft)); update(_s=>(_s.font=fx)); update(_s=>(_s.illusText.style='font')); syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('duos').appendChild(b); });
   // Vintage parmi les duos (#88) : titre en capitales condensées, police du texte inchangée
   { const b=h('button',{type:'button',dataset:{v:'*vintage'},role:'radio'},h('span',{className:'t',style:{fontFamily:fam('bebas')}}),h('span',{className:'d'}),h('small',{},'Vintage'));
-    b.onclick=async()=>{ st.illusText.style='vintage'; syncFonts(); CMS.emit('state:synced'); saveState(); await loadFonts(); scheduleOver(); }; $('duos').appendChild(b); }
+    b.onclick=async()=>{ update(_s=>(_s.illusText.style='vintage')); syncFonts(); CMS.emit('state:synced'); saveState(); await loadFonts(); scheduleOver(); }; $('duos').appendChild(b); }
   FONT_CATS.forEach(([k,n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'+(i?'':' on'); b.textContent=n;
     b.onclick=()=>{ document.querySelectorAll<HTMLElement>('#fontCats .chip').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll<HTMLElement>('#fontSeg button,#fontTitleSeg button').forEach(f=>f.hidden=!!k && !!f.dataset.cat && f.dataset.cat!==k); }; $('fontCats').appendChild(b); });
   const fbtn=(k: string,n: string,cat?: string)=>h('button',{type:'button',dataset:cat?{v:k,cat}:{v:k},role:'radio'},
     h('span',{className:'smp',style:k?{fontFamily:fam(k),fontSize:FONTS[k].scale?(1.25*FONTS[k].scale).toFixed(2)+'rem':''}:{}}),h('small',{},n));
   // Police du titre : « Vintage » (capitales condensées, #72), puis « Comme le texte » et les polices ; choisir une police quitte Vintage
   const vint=h('button',{type:'button',dataset:{v:'*vintage'},role:'radio'},h('span',{className:'smp',style:{fontFamily:fam('bebas'),fontSize:(1.25*(FONTS.bebas.scale||1)).toFixed(2)+'rem'}}),h('small',{},'Vintage'));
-  vint.onclick=async()=>{ st.illusText.style='vintage'; syncFonts(); CMS.emit('state:synced'); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(vint);
-  const same=fbtn('','Comme le texte'); same.onclick=async()=>{ st.fontTitle=''; st.illusText.style='font'; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(same);
+  vint.onclick=async()=>{ update(_s=>(_s.illusText.style='vintage')); syncFonts(); CMS.emit('state:synced'); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(vint);
+  const same=fbtn('','Comme le texte'); same.onclick=async()=>{ update(_s=>(_s.fontTitle='')); update(_s=>(_s.illusText.style='font')); syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(same);
   FONT_LIST.forEach(([k,n,cat])=>{
-    const t=fbtn(k,n,cat); t.onclick=async()=>{ st.fontTitle=k===st.font?'':k; st.illusText.style='font'; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(t);
-    const x=fbtn(k,n,cat); x.onclick=async()=>{ if(!st.fontTitle && FONTS[k].script) st.fontTitle=st.font; st.font=k; if(st.fontTitle===k) st.fontTitle=''; syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontSeg').appendChild(x); });
+    const t=fbtn(k,n,cat); t.onclick=async()=>{ update(_s=>(_s.fontTitle=k===st.font?'':k)); update(_s=>(_s.illusText.style='font')); syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontTitleSeg').appendChild(t);
+    const x=fbtn(k,n,cat); x.onclick=async()=>{ if(!st.fontTitle && FONTS[k].script) update(_s=>(_s.fontTitle=st.font)); update(_s=>(_s.font=k)); if(st.fontTitle===k) update(_s=>(_s.fontTitle='')); syncFonts(); saveState(); await loadFonts(); scheduleOver(); }; $('fontSeg').appendChild(x); });
   // plusieurs lieux, itinéraire, aperçu au mur, lien
   $('bAddPlace').onclick=addPlace;
   $('gpxIn').onchange=e=>{ const f=(e.target as HTMLInputElement).files![0]; if(f) importGpx(f); (e.target as HTMLInputElement).value=''; };
-  $('routeShow').onchange=e=>{ if(st.route){ st.route.show=(e.target as HTMLInputElement).checked; changed(); } };
-  document.querySelectorAll<HTMLElement>('#routeColor button').forEach(b=>b.onclick=()=>{ st.routeStyle.color=b.dataset.v!; renderRoute(); changed(); });
-  $('routeW').oninput=e=>{ st.routeStyle.width=+(e.target as HTMLInputElement).value; renderRoute(); changed(); };
-  $('routeDash').onchange=e=>{ st.routeStyle.dash=(e.target as HTMLInputElement).checked; changed(); };
+  $('routeShow').onchange=e=>{ if(st.route){ update(_s=>(_s.route!.show=(e.target as HTMLInputElement).checked)); changed(); } };
+  document.querySelectorAll<HTMLElement>('#routeColor button').forEach(b=>b.onclick=()=>{ update(_s=>(_s.routeStyle.color=b.dataset.v!)); renderRoute(); changed(); });
+  $('routeW').oninput=e=>{ update(_s=>(_s.routeStyle.width=+(e.target as HTMLInputElement).value)); renderRoute(); changed(); };
+  $('routeDash').onchange=e=>{ update(_s=>(_s.routeStyle.dash=(e.target as HTMLInputElement).checked)); changed(); };
   $('bFitRoute').onclick=fitRoute;
-  $('bDelRoute').onclick=()=>{ st.route=null; renderRoute(); changed(); toast('Itinéraire retiré · « Annuler » pour le retrouver'); };
+  $('bDelRoute').onclick=()=>{ update(_s=>(_s.route=null)); renderRoute(); changed(); toast('Itinéraire retiré · « Annuler » pour le retrouver'); };
   $('bMockup').onclick=openMockup; $('mockClose').onclick=()=>closeDialog('mockup'); $('mockDl').onclick=downloadMockup;
   WALLS.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.onclick=()=>{ mock.wall=i; drawMockup(); }; $('mockWalls').appendChild(b); });
   FRAMES.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent='Cadre '+n.toLowerCase(); b.onclick=()=>{ mock.frame=i; drawMockup(); }; $('mockFrames').appendChild(b); });
@@ -297,36 +298,36 @@ function buildUI(){
     const d=h('button',{type:'button',className:'theme',dataset:{v:k,cat:t.cat}},
       h('span',{className:'sw'},...['paper','land','water','roadMajor','marker'].map(c=>h('i',{style:{background:t.c[c]}}))),h('span',{className:'n'},t.name));
     d.onclick=()=>{ const before=cmpSnap();
-      st.theme=k; st.colors={...t.c}; noteChange(before,{theme:true}); refreshColors(); changed({all:true,cards:true}); }; th.appendChild(d); });
+      update(_s=>(_s.theme=k)); update(_s=>(_s.colors={...t.c})); noteChange(before,{theme:true}); refreshColors(); changed({all:true,cards:true}); }; th.appendChild(d); });
   initCompare();
   // couleurs
   const co=$('colors');
   Object.entries(COLOR_LABELS).forEach(([k,n])=>{ const l=h('label',{},h('input',{type:'color',dataset:{c:k}}),h('span',{},n));
-    l.querySelector('input')!.oninput=e=>{ st.colors[k]=(e.target as HTMLInputElement).value.toUpperCase(); colorChanged(k); }; co.appendChild(l); });
+    l.querySelector('input')!.oninput=e=>{ update(_s=>(_s.colors[k]=(e.target as HTMLInputElement).value.toUpperCase())); colorChanged(k); }; co.appendChild(l); });
   $('photoIn').onchange=e=>{ const f=(e.target as HTMLInputElement).files![0]; if(f) CMS.palette.fromFile(f); (e.target as HTMLInputElement).value=''; };
   $('bPalIllus').onclick=()=>CMS.palette.fromIllus();
   document.querySelectorAll<HTMLElement>('#photoSeg button').forEach(b=>b.onclick=()=>CMS.palette.apply(b.dataset.v));
-  document.querySelectorAll<HTMLElement>('[data-gold]').forEach(b=>b.onclick=()=>{ st.colors[b.dataset.gold!]=GOLD; refreshColors(); changed({all:true,cards:true}); toast('Touche d\'or appliquée'); });
+  document.querySelectorAll<HTMLElement>('[data-gold]').forEach(b=>b.onclick=()=>{ update(_s=>(_s.colors[b.dataset.gold!]=GOLD)); refreshColors(); changed({all:true,cards:true}); toast('Touche d\'or appliquée'); });
   // repères
   const mk=$('marks');
   MARKERS.forEach(([k,n])=>{ const d=h('button',{type:'button',className:'card',dataset:{v:k}},h('canvas',{width:96,height:96}),n);
-    d.onclick=()=>{ st.markerStyle=k; changed({cards:true}); }; mk.appendChild(d); });
+    d.onclick=()=>{ update(_s=>(_s.markerStyle=k)); changed({cards:true}); }; mk.appendChild(d); });
   const mc=$('mColors');
   // « Auto » (#77) : couleur Repère du thème, comme la couleur « Auto » des textes ; la puce de la couleur en cours est enfoncée
   [['Auto','auto','Auto : couleur Repère du thème'],...MARKER_COLORS].forEach(([n,v,t])=>{ const b=h('button',{type:'button',className:'chip',dataset:{v},title:t||n},n);
-    b.onclick=()=>{ st.colors.marker=v==='auto' ? themeMarker() : v; refreshColors(); changed({cards:true}); }; mc.appendChild(b); });
-  $('mColor').oninput=e=>{ st.colors.marker=(e.target as HTMLInputElement).value.toUpperCase(); colorChanged('marker'); };
+    b.onclick=()=>{ update(_s=>(_s.colors.marker=v==='auto' ? themeMarker() : v)); refreshColors(); changed({cards:true}); }; mc.appendChild(b); });
+  $('mColor').oninput=e=>{ update(_s=>(_s.colors.marker=(e.target as HTMLInputElement).value.toUpperCase())); colorChanged('marker'); };
   // segments
   document.querySelectorAll<HTMLElement>('#engineSeg button').forEach(b=>b.onclick=()=>setEngine(b.dataset.v!));
-  document.querySelectorAll<HTMLElement>('#fillSeg button').forEach(b=>b.onclick=()=>{ st.markerFill=b.dataset.v==='1'; setSeg('fillSeg',b.dataset.v!); changed({cards:true}); });
-  document.querySelectorAll<HTMLElement>('#coordSeg button').forEach(b=>b.onclick=()=>{ st.coordFormat=b.dataset.v!; setSeg('coordSeg',st.coordFormat); updateMarkerTxt(); changed(); });
+  document.querySelectorAll<HTMLElement>('#fillSeg button').forEach(b=>b.onclick=()=>{ update(_s=>(_s.markerFill=b.dataset.v==='1')); setSeg('fillSeg',b.dataset.v!); changed({cards:true}); });
+  document.querySelectorAll<HTMLElement>('#coordSeg button').forEach(b=>b.onclick=()=>{ update(_s=>(_s.coordFormat=b.dataset.v!)); setSeg('coordSeg',st.coordFormat); updateMarkerTxt(); changed(); });
   // champs liés data-k
   document.querySelectorAll<HTMLInputElement>('[data-k]').forEach(el=>{
     const k=el.dataset.k!;
     el.addEventListener('input',()=>{
       const v = el.type==='checkbox' ? el.checked : el.type==='range' ? parseFloat(el.value) : el.value;
       const cmpLabel=el.type==='checkbox' && /^(fx|orn)\.|^folds$/.test(k) ? CMS.compare.fxLabel(el,k) : '', before=cmpLabel && cmpSnap();
-      setPath(st,k,v); syncOutputs();
+      update(_s=>setPath(_s,k,v)); syncOutputs();
       if(cmpLabel) noteChange(before,cmpLabel);
       if(k==='texts.title'||k==='texts.names'||k==='texts.dedication') updateFontSamples();
       if(k.startsWith('sky.')){ drawUnder(); saveState(); return; }
@@ -351,7 +352,7 @@ function buildUI(){
   $('bDiag').onclick=runDiagnostics;
   $('bReset').onclick=askReset;
   $('bUiSmaller').onclick=()=>stepUiScale(-1); $('bUiLarger').onclick=()=>stepUiScale(1);
-  $('bTsReset').onclick=()=>{ st.textScale={...DEFAULT_STATE.textScale}; st.textScaleAll=DEFAULT_STATE.textScaleAll; syncInputs(); changed(); toast('Tailles des textes rétablies'); };
+  $('bTsReset').onclick=()=>{ update(_s=>(_s.textScale={...DEFAULT_STATE.textScale})); update(_s=>(_s.textScaleAll=DEFAULT_STATE.textScaleAll)); syncInputs(); changed(); toast('Tailles des textes rétablies'); };
   $('fileIn').onchange=e=>{ const f=(e.target as HTMLInputElement).files![0]; if(f) importFile(f); (e.target as HTMLInputElement).value=''; };
   const submitSearch=CMS.geocoder.debounceSubmit((q: string)=>search(q),300);
   $('searchForm').onsubmit=e=>{ e.preventDefault(); submitSearch($('q').value); };
@@ -466,7 +467,7 @@ function updateEngineUI(){
 }
 function setEngine(v: string,quiet?: boolean){
   if(v==='maplibre' && mlLib==='fail'){ toast('MapLibre n\'a pas pu être chargé : aucun CDN joignable depuis cette page.',true); return; }
-  st.engine=v; setSeg('engineSeg',v); updateEngineUI(); setPlacing(false); showBanner(false);
+  update(_s=>(_s.engine=v)); setSeg('engineSeg',v); updateEngineUI(); setPlacing(false); showBanner(false);
   if(v!=='maplibre') openAdvanced();
   hist.quietUntil=Date.now()+1500;   // le moteur n'entre pas dans l'historique ; ses recentrages non plus
   if(v==='file'){ renderMap(true); if(!osmData && !quiet) toast('Importez un fichier de données (onglet Lieu).'); }
@@ -537,8 +538,8 @@ function followCity(it: Found){
   if(!city) return '';
   const free=(k: string,i: number)=>{ const v=(st.texts[k]||'').trim(); return !v || v===autoTexts[k] || PRESETS.some(p=>p[i]===v); };
   const t=free('title',4) && st.texts.title!==city, s=!!sub && free('subtitle',5) && st.texts.subtitle!==sub;
-  if(t){ st.texts.title=city; autoTexts.title=city; }
-  if(s){ st.texts.subtitle=sub; autoTexts.subtitle=sub; }
+  if(t){ update(_s=>(_s.texts.title=city)); autoTexts.title=city; }
+  if(s){ update(_s=>(_s.texts.subtitle=sub)); autoTexts.subtitle=sub; }
   if(t||s){ syncInputs(); updateFontSamples(); changed(); }
   return t ? city : '';
 }
@@ -551,7 +552,7 @@ function resultItem(it: Found){
     b.onclick=e=>{ fn(); if(e.detail===0) $('q').focus({preventScroll:true}); };   // activé au clavier : le focus revient au champ
     return b; };
   const remember=()=>updateMarkerTxt.remember(lat,lon,placeName(it),[it.region,it.country].filter(Boolean).join(' • '));
-  const b1=btn('Carte + repère',()=>{ remember(); st.marker={lat,lon}; updateMarkerTxt(); goTo(lat,lon); const t=followCity(it); searchMsg('');
+  const b1=btn('Carte + repère',()=>{ remember(); update(_s=>(_s.marker={lat,lon})); updateMarkerTxt(); goTo(lat,lon); const t=followCity(it); searchMsg('');
     $('resultsStatus').textContent='Carte centrée et repère placé.'+(t?` Titre : ${t}.`:''); if(t) toast('Titre : '+t); });
   const b2=btn('Repère seul',()=>{ remember(); setMarker(lat,lon); searchMsg(''); toast('Repère placé'); });
   return h('li',{className:'res'},t,h('div',{className:'row'},b1,b2));

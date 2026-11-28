@@ -5,7 +5,8 @@
  * resynchroniser les champs, l'aperçu et la vue ; détail {viewChanged}) et « history:changed » (piles modifiées :
  * boutons Annuler / Rétablir). */
 import {STORE_KEY} from '../../content/config.js';
-import {replaceState, saveState, saveT, st} from './state.js';
+import {saveState, saveT, st} from './state.js';
+import {replaceState} from './store.js';
 
 const HIST_MAX=50;
 const hist: {past: string[]; future: string[]; cur: string | null; quietUntil: number}={past:[],future:[],cur:null,quietUntil:0};

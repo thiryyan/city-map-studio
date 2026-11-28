@@ -11,6 +11,7 @@ import {renderPlaces} from './places.js';
 import {saveState, st, ui} from '../core/doc/state.js';
 import {cmpSnap, noteChange} from './compare.js';
 import {onUi, refreshCards, syncInputs} from '../core/port.js';
+import {update} from '../core/doc/store.js';
 // ---------- Ambiances et modèles de texte ----------
 function applyAmbiance(k: string){
   const a=AMBIANCES.find(x=>x[0]===k); if(!a) return; const p=a[2];
@@ -19,10 +20,10 @@ function applyAmbiance(k: string){
   // Seulement ce qui existe dans le type d'affiche courant (#77) : rien ne change en silence pour un autre type.
   // Illustration : ni carte ni repère ; Carte + illustration : sans gabarit (la composition en tient lieu).
   const map=st.mode==='map', withMap=st.mode!=='illus', parts=['thème','polices','papier'];
-  st.theme=p.theme; st.colors={...THEMES[p.theme].c}; st.font=p.font; st.fontTitle=p.fontTitle; st.illusText.style='auto'; st.texture=p.texture; st.folds=!!p.folds;
+  update(_s=>(_s.theme=p.theme)); update(_s=>(_s.colors={...THEMES[p.theme].c})); update(_s=>(_s.font=p.font)); update(_s=>(_s.fontTitle=p.fontTitle)); update(_s=>(_s.illusText.style='auto')); update(_s=>(_s.texture=p.texture)); update(_s=>(_s.folds=!!p.folds));
   const fx={...DEFAULT_STATE.fx,...(p.fx||{})};
-  if(withMap){ st.markerStyle=p.markerStyle; st.fx=fx; st.orn={...DEFAULT_STATE.orn,...(p.orn||{})}; parts.push('repère','effets'); }
-  else st.fx.foil=fx.foil;   // dorure des textes : seul effet d'une affiche illustrée
+  if(withMap){ update(_s=>(_s.markerStyle=p.markerStyle)); update(_s=>(_s.fx=fx)); update(_s=>(_s.orn={...DEFAULT_STATE.orn,...(p.orn||{})})); parts.push('repère','effets'); }
+  else update(_s=>(_s.fx.foil=fx.foil));   // dorure des textes : seul effet d'une affiche illustrée
   if(map){ setLayout(p.layout,true); parts.push('gabarit'); }
   noteChange(before,`l'ambiance « ${a[1]} »`);
   syncInputs(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); redrawAll(true); drawTexture(); commitHistory();
@@ -31,26 +32,26 @@ function applyAmbiance(k: string){
 function applyOccasion(k: string){
   const o=OCCASIONS.find(x=>x[0]===k); if(!o) return; commitHistory(0);
   const before=cmpSnap();
-  st.texts.dedication=o[2]; st.show.dedication=true;
-  if(!st.texts.names.trim() || OCCASIONS.some(x=>x[3]===st.texts.names)) st.texts.names=o[3];
+  update(_s=>(_s.texts.dedication=o[2])); update(_s=>(_s.show.dedication=true));
+  if(!st.texts.names.trim() || OCCASIONS.some(x=>x[3]===st.texts.names)) update(_s=>(_s.texts.names=o[3]));
   noteChange(before,`le modèle « ${o[1]} »`);
   syncInputs(); scheduleOver(); commitHistory(); toast(`Modèle « ${o[1]} » appliqué · « Annuler » pour revenir`);
 }
 /** Gabarit : met à jour l'état propre à certains gabarits (deux lieux, ciel), puis l'aperçu */
 function setLayout(k: string,quiet?: boolean){
-  st.layout=k;
-  if(k==='diptych' && !st.place2) st.place2={center:{...st.center},zoom:st.zoom,marker:{...st.marker}};
-  if(k!=='diptych' && (st.active||0)===1) { st.active=0; const o=st.place2; st.place2={center:st.center,zoom:st.zoom,marker:st.marker}; st.center=o!.center; st.zoom=o!.zoom; st.marker=o!.marker; }
-  if(k==='sky' && !st.sky.when){ st.sky.when=(isoFromFr(st.texts.date)||new Date().toISOString().slice(0,10))+'T22:00'; }
+  update(_s=>(_s.layout=k));
+  if(k==='diptych' && !st.place2) update(_s=>(_s.place2={center:{...st.center},zoom:st.zoom,marker:{...st.marker}}));
+  if(k!=='diptych' && (st.active||0)===1) { update(_s=>(_s.active=0)); const o=st.place2; update(_s=>(_s.place2={center:st.center,zoom:st.zoom,marker:st.marker})); update(_s=>(_s.center=o!.center)); update(_s=>(_s.zoom=o!.zoom)); update(_s=>(_s.marker=o!.marker)); }
+  if(k==='sky' && !st.sky.when){ update(_s=>(_s.sky.when=(isoFromFr(st.texts.date)||new Date().toISOString().slice(0,10))+'T22:00')); }
   ui.snap=null; refreshCards(); updateLayoutUI(); layoutPreview(); saveState();
   if(!quiet && k==='diptych') toast('Deux lieux : touchez la seconde carte pour la cadrer et y placer son repère');
 }
-function setOrient(v: string){ st.orient=v; setSeg('orientSeg',v); updateExportLabel(); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
+function setOrient(v: string){ update(_s=>(_s.orient=v)); setSeg('orientSeg',v); updateExportLabel(); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
 /** Format d'impression : le rapport de l'affiche peut changer (50 × 70 cm) ; aperçu et vignettes suivent */
-function setFormat(v: string){ st.format=v; setSeg('formatSeg',v); updateExportLabel(); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
+function setFormat(v: string){ update(_s=>(_s.format=v)); setSeg('formatSeg',v); updateExportLabel(); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
 /** Retour à la ligne de la dédicace : la carte peut céder de la hauteur (geom), d'où la mise en page complète */
-function setDedWrap(v: string){ st.dedWrap=v; setSeg('dedWrapSeg',v); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
-function setFileType(v: string){ st.fileType=v; setSeg('fileSeg',v); updateExportLabel(); saveState(); }
+function setDedWrap(v: string){ update(_s=>(_s.dedWrap=v)); setSeg('dedWrapSeg',v); ui.snap=null; refreshCards(); layoutPreview(); saveState(); }
+function setFileType(v: string){ update(_s=>(_s.fileType=v)); setSeg('fileSeg',v); updateExportLabel(); saveState(); }
 /** Dimensions affichées sur le bouton d'export et sous le choix du format : suivent le format et l'orientation */
 function updateExportLabel(){
   const e=exportSpec(), pdf=st.fileType==='pdf', cm=(v: number)=>(v/10).toLocaleString('fr-FR');

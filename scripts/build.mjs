@@ -10,7 +10,7 @@
 //   - liste APP de sw.js générée à partir des fichiers réellement publiés ;
 //   - lib/, icons/, manifeste et .nojekyll copiés.
 //
-// Usage : node scripts/build.mjs [dossier de sortie, dist par défaut]
+// Usage : node scripts/build.mjs [dossier de sortie, dist par défaut] ; CMS_DEBUG_BUILD=1 : script non minifié (débogage)
 import {readFile, writeFile, mkdir, rm, cp} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
@@ -30,7 +30,7 @@ const SCRIPT_RE = /<script type="module" src="src\/app\/main\.ts"><\/script>\n?/
 if (!SCRIPT_RE.test(html)) fail('<script type="module" src="src/app/main.ts"> introuvable dans index.html');
 const bundle = async () => (await build({
   entryPoints: [path.join(SRC, 'src/app/main.ts')], bundle: true, format: 'iife', write: false, metafile: true,
-  minify: true, target: 'es2020', legalComments: 'none', charset: 'utf8'
+  minify: !process.env.CMS_DEBUG_BUILD, target: 'es2020', legalComments: 'none', charset: 'utf8'   // CMS_DEBUG_BUILD=1 : noms lisibles dans les piles d'appel
 })).outputFiles[0].text;
 let js = await bundle();
 

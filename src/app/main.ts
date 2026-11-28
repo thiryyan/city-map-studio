@@ -34,7 +34,7 @@ import '../features/illustration.js';
 import '../features/export.js';
 import {AMBIANCES, FONTS, THEMES} from '../content/config.js';
 import {declineConsent, giveConsent} from '../ui/consent.js';
-import {V, consent, dlgCancel, initDialogs, mlLib, mlMap, needConsent, normState, osmData, st, ui, updateConsentInfo} from '../core/doc/state.js';
+import {V, consent, dlgCancel, initDialogs, mlLib, mlMap, needConsent, normState, osmData, rawState, st, ui, updateConsentInfo} from '../core/doc/state.js';
 import {dms, exportSpec, posterDims} from '../core/geo/geo.js';
 import {CART_ROWS, altAz, attributionText, cartDed, dedLines, drawMarker, drawPoster, drawText, foilCtx, markerOpts, metersPerPx, moonSun, planetsAt, skyTime, souvenirFoot, textW, typoFit} from '../render/poster.js';
 import {VEC_CACHE_MAX, buildStyle, drawVectors, hatchTile, loadMaplibre, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, vecCache} from '../map/engines.js';
@@ -57,13 +57,14 @@ import {maybeWelcome, welcomeDone} from '../ui/welcome.js';
 import {paletteOf, photoTheme} from '../features/palette.js';
 import {showBanner} from '../ui/shell.js';
 import {geom} from '../render/layout.js';
+import {update} from '../core/doc/store.js';
 // ---------- Démarrage ----------
 async function boot(){
   buildUI(); CMS.illus.init(); CMS.route.init(); initSaves(); initSheet(); CMS.deps.init(); CMS.safe.init(); CMS.actbar.init(); CMS.changes.init(); applyUiScale();
   $('bConsentYes').onclick=giveConsent; $('bConsentFile').onclick=declineConsent; updateConsentInfo();
   dlgCancel.consent=declineConsent; initDialogs();
   showEnvWarning();
-  if(st.engine==='file') st.engine='maplibre';   // un fichier importé n'est pas conservé entre deux sessions
+  if(st.engine==='file') update(_s=>(_s.engine='maplibre'));   // un fichier importé n'est pas conservé entre deux sessions
   syncInputs();
   hist.cur=histSnap(); hist.quietUntil=Date.now()+2500; updateHistUI();   // l'état chargé est le point de départ de l'historique
   let rafL=0; new ResizeObserver(()=>{ if(!rafL) rafL=requestAnimationFrame(()=>{ rafL=0; layoutPreview(); }); }).observe(stage);
@@ -87,13 +88,13 @@ async function boot(){
   if(!(ok && st.engine==='maplibre' && consent)) requestAnimationFrame(()=>CMS.perf.ready(st.engine==='file'?'moteur Fichier':'aperçu sans carte'));
   CMS.perf.watchFrames($('slot')); CMS.perfUI.init();
   installPwa();
-  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,setFormat,setFileType,setDedWrap,exportSpec,dedLines,renderMaplibreOffscreen,set glMaxTest(v: number){setGlMaxTest(v)},applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll,pwa:CMS.pwa};
+  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,setFormat,setFileType,setDedWrap,exportSpec,dedLines,renderMaplibreOffscreen,set glMaxTest(v: number){setGlMaxTest(v)},applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st:rawState,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll,pwa:CMS.pwa};
   // Façade de test (#102, lot 4b) : les noms que les tests utilisent directement, exposés sur window en mode ?test
   // seulement. Le site construit n'a plus aucun nom global (script enveloppé dans une fonction) : cette liste est la
   // seule dépendance des tests envers la portée de l'application, et suivra la conversion en modules ES.
   if(TEST_HOOKS) Object.defineProperties(window, Object.fromEntries(Object.entries(Object.getOwnPropertyDescriptors({
     $, h, pressed, toast, setStatus, V, normState, THEMES, CART_ROWS,
-    get st(){ return st; }, get consent(){ return consent; }, get foilCtx(){ return foilCtx; },
+    get st(){ return rawState; }, get consent(){ return consent; }, get foilCtx(){ return foilCtx; },
     lum, contrast, attributionText, parseCoords, encodeShare,
     changed, scheduleOver, layoutPreview, loadFonts, refreshColors, drawOver, drawUnder, drawOp, drawText,
     drawMarker, markerOpts, metersPerPx, patTile, moonSun, planetsAt, souvenirFoot, cartDed,

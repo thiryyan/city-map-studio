@@ -1,5 +1,6 @@
 /* City Map Studio — État de l'affiche : validation, chargement, enregistrement ; fenêtres modales ; accord préalable.
  * Module TypeScript (#103), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
+import {TEST_HOOKS} from '../cms.js';
 import {type PosterState, type Route, DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, STORE_KEY, TEXTURES, THEMES} from '../../content/config.js';
 // ---------- Ordre des lignes de texte (Textes, Plus de réglages) ----------
 // st.lineOrder : null (ordre du gabarit) ou permutation de KEYS. Appliqué au cartouche des gabarits centrés et, dans
@@ -140,7 +141,32 @@ function normState(src: unknown): PosterState {
     return R;
   }
 }
-let st: PosterState = loadState();
+// ---------- Garde du magasin (#118) ----------
+// En mode test (?test, cms:debug), l'état est enveloppé dans un Proxy qui refuse toute écriture faite hors d'update()
+// (src/core/doc/store.ts) : une écriture oubliée, par un alias de sous-objet par exemple, fait échouer le test qui la
+// croise (erreur de page). En usage normal, l'état est l'objet lui-même : aucun coût.
+let writing = 0;
+const proxies = new WeakMap<object, object>(), targets = new WeakMap<object, object>();
+const unwrap = (v: unknown) => (v && typeof v === 'object' && targets.get(v)) || v;
+function guard<T extends object>(o: T): T {
+  const known = proxies.get(o); if (known) return known as T;
+  const refuse = (k: PropertyKey) => {   // message : propriété et fonctions appelantes (lisibles avec CMS_DEBUG_BUILD=1)
+    const at = (new Error().stack || '').split('\n').slice(3, 6).map(l => l.trim().replace(/^at /, '').replace(/ \(.*$/, '')).join(' < ');
+    throw new Error(`État modifié hors du magasin (update) : ${String(k)} — ${at}`);
+  };
+  const p = new Proxy(o, {
+    get(t, k, r){ const v = Reflect.get(t, k, r); return v && typeof v === 'object' ? guard(v) : v; },
+    set(t, k, v){ if (!writing) refuse(k); return Reflect.set(t, k, unwrap(v)); },
+    deleteProperty(t, k){ if (!writing) refuse(k); return Reflect.deleteProperty(t, k); },
+    defineProperty(t, k, d){ if (!writing) refuse(k); return Reflect.defineProperty(t, k, {...d, value: unwrap(d.value)}); },
+  });
+  proxies.set(o, p); targets.set(p, o); return p as T;
+}
+/** Écriture autorisée pendant `fn` (seul appelant : update, src/core/doc/store.ts) */
+function writeState<R>(fn: () => R): R { writing++; try { return fn(); } finally { writing--; } }
+/** État brut, sans garde : façade de test seulement (les tests préparent leurs scénarios en écrivant l'état) */
+const rawState: PosterState = loadState();
+let st: PosterState = TEST_HOOKS ? guard(rawState) : rawState;
 /** État de l'interface, non enregistré (champs posés en cours de route par les autres modules : Ext) */
 const ui: Ext = {intent:'map', clean:false, inkSink:null, comparing:false, cmpKeep:null, placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
 let mlMap: any = null, osmData: any = null;   // carte MapLibre, données OSM importées (non typées)
@@ -228,7 +254,6 @@ function getPath(o: unknown, p: string): any {return p.split('.').reduce((a: any
 function setPath(o: unknown, p: string, v: unknown){const ks=p.split('.');const last=ks.pop() as string;ks.reduce((a: any,k)=>a[k],o)[last]=v}
 
 /** Remplace le contenu de l'état (l'objet `st` garde son identité : __cms.st et les fermetures restent valides) */
-function replaceState(next: PosterState,extra?: Partial<PosterState>){ for(const k of Object.keys(st)) delete (st as Record<string, unknown>)[k]; Object.assign(st,next,extra||{}); }
 
 
-export {closeDialog, consent, dlgCancel, getPath, grantConsent, initDialogs, mlCdn, mlFailMsg, mlLib, mlMap, needConsent, normState, openDialog, osmData, refuseConsent, replaceState, saveState, saveT, setBusy, setMlCdn, setMlFailMsg, setMlLib, setMlMap, setOsmData, setPath, SHARE_MAX_BYTES, SHARE_MAX_CHARS, st, ui, updateConsentInfo, V};
+export {closeDialog, consent, dlgCancel, getPath, grantConsent, initDialogs, mlCdn, mlFailMsg, mlLib, mlMap, needConsent, normState, openDialog, osmData, rawState, refuseConsent, saveState, saveT, setBusy, setMlCdn, setMlFailMsg, setMlLib, setMlMap, setOsmData, setPath, SHARE_MAX_BYTES, SHARE_MAX_CHARS, st, ui, updateConsentInfo, V, writeState};

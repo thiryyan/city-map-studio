@@ -11,6 +11,7 @@ import {lum} from '../core/color.js';
 import {fontsReady, loadFonts} from '../render/fonts.js';
 import {placeAt, onUi, refreshCards, setDedWrap, syncOutputs, syncZoomUI, updateMarkerTxt} from '../core/port.js';
 import {geom} from '../render/layout.js';
+import {update} from '../core/doc/store.js';
 // ---------- Aperçu ----------
 const cvU=$<HTMLCanvasElement>('cvUnder'), cvO=$<HTMLCanvasElement>('cvOver'), cvT=$<HTMLCanvasElement>('cvTex'), vecC=$<HTMLCanvasElement>('vecCanvas'), slot=$<HTMLDivElement>('slot'), poster=$<HTMLDivElement>('poster'), stage=$<HTMLDivElement>('stage');
 function layoutPreview(){
@@ -104,7 +105,7 @@ async function renderView(view: Place,wPx: number,hPx: number): Promise<HTMLCanv
 function setActivePlace(i: number){
   if(st.layout!=='diptych' || i===(st.active||0)) return;
   const cur={center:st.center,zoom:st.zoom,marker:st.marker}, o=otherView();
-  st.center=o.center; st.zoom=o.zoom; st.marker=o.marker; st.place2=cur; st.active=i; ui.snap=null;
+  update(_s=>(_s.center=o.center)); update(_s=>(_s.zoom=o.zoom)); update(_s=>(_s.marker=o.marker)); update(_s=>(_s.place2=cur)); update(_s=>(_s.active=i)); ui.snap=null;
   setSeg('placeSeg',String(i)); syncZoomUI(); updateMarkerTxt();
   layoutPreview(); if(mlMap) mlRestyle(); saveState();
   toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
@@ -184,11 +185,11 @@ function changed(o: {all?: boolean; cards?: boolean}={}){
     if(pts.size===2){ const [a,b]=[...pts.values()]; startD=Math.hypot(a.x-b.x,a.y-b.y); startZ=st.zoom; } });
   vecC.addEventListener('pointermove',e=>{
     if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pts.size===2){ const [a,b]=[...pts.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); if(startD>0){ st.zoom=clamp(startZ+Math.log2(d/startD),10,18); moved=true; syncZoomUI(); renderMap(); } return; }
+    if(pts.size===2){ const [a,b]=[...pts.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); if(startD>0){ update(_s=>(_s.zoom=clamp(startZ+Math.log2(d/startD),10,18))); moved=true; syncZoomUI(); renderMap(); } return; }
     const dx=e.clientX-last.x, dy=e.clientY-last.y; if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>4) moved=true;
     last={x:e.clientX,y:e.clientY};
     const S=worldSize(ui.slotCss.w,st.zoom);
-    st.center={lon:st.center.lon-dx/S*360, lat:imerc(merc(st.center.lat)+dy*2*Math.PI/S)};
+    update(_s=>(_s.center={lon:st.center.lon-dx/S*360, lat:imerc(merc(st.center.lat)+dy*2*Math.PI/S)}));
     renderMap();
   });
   const up=(e: PointerEvent)=>{ const wasTap=!moved && pts.size===1; pts.delete(e.pointerId); if(pts.size<2) startD=0; if(pts.size===1){ const q=[...pts.values()][0]; last={x:q.x,y:q.y}; moved=true; }
@@ -200,13 +201,13 @@ function changed(o: {all?: boolean; cards?: boolean}={}){
     if(e.altKey||e.ctrlKey||e.metaKey) return;
     const d=({ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]} as Record<string, number[]>)[e.key];
     if(d){ const f=e.shiftKey?0.5:0.1, S=worldSize(ui.slotCss.w,st.zoom), dx=d[0]*f*ui.slotCss.w, dy=d[1]*f*ui.slotCss.h;
-      st.center={lon:st.center.lon+dx/S*360, lat:imerc(merc(st.center.lat)-dy*2*Math.PI/S)}; }
-    else if(e.key==='+'||e.key==='='||e.key==='-'||e.key==='_'){ st.zoom=clamp(st.zoom+(e.key==='+'||e.key==='='?0.5:-0.5),10,18); syncZoomUI(); }
+      update(_s=>(_s.center={lon:st.center.lon+dx/S*360, lat:imerc(merc(st.center.lat)-dy*2*Math.PI/S)})); }
+    else if(e.key==='+'||e.key==='='||e.key==='-'||e.key==='_'){ update(_s=>(_s.zoom=clamp(st.zoom+(e.key==='+'||e.key==='='?0.5:-0.5),10,18))); syncZoomUI(); }
     else if(e.key==='Enter' && ui.placing){ placeAt(st.center.lat,st.center.lon); }
     else return;
     e.preventDefault(); renderMap(); saveState();
   });
-  vecC.addEventListener('wheel',e=>{ e.preventDefault(); st.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18); syncZoomUI(); renderMap(); saveState(); },{passive:false});
+  vecC.addEventListener('wheel',e=>{ e.preventDefault(); update(_s=>(_s.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18))); syncZoomUI(); renderMap(); saveState(); },{passive:false});
 })();
 
 // ---------- Papier : textures générées (aucune image) ----------

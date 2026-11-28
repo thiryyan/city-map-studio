@@ -8,6 +8,7 @@ import {$, setStatus} from '../core/dom.js';
 import {netMsg} from '../services/network.js';
 import {lum, mix, shade, tint} from '../core/color.js';
 import {placeAt, renderMap, runDiagnostics, scheduleOver, showBanner, syncZoomUI, updateEngineUI} from '../core/port.js';
+import {update} from '../core/doc/store.js';
 /** Point OSM ; objet tracé (anneaux en [lon, merc(lat)], boîte englobante [x0, y0, x1, y1]) ; emprise en degrés */
 type LL = {lat: number; lon: number};
 export interface Feature { rings: number[][][]; bb: number[]; cls?: string; tunnel?: boolean }
@@ -335,7 +336,7 @@ function initMaplibre(){
   }catch(e){ console.error(e); setMlMap(null); return false; }
   mlMap.touchZoomRotate.disableRotation(); mlMap.keyboard.disableRotation();
   // carte masquée (mode Illustration) : cadre de largeur nulle, le zoom ne doit pas en être déduit
-  mlMap.on('move',()=>{ if(mlSync || st.mode==='illus' || !(ui.slotCss.w>0)) return; const cc=mlMap.getCenter(); st.center={lat:cc.lat,lon:cc.lng}; st.zoom=mlMap.getZoom()-Math.log2(ui.slotCss.w/REF_W); scheduleOver(); syncZoomUI(); });
+  mlMap.on('move',()=>{ if(mlSync || st.mode==='illus' || !(ui.slotCss.w>0)) return; const cc=mlMap.getCenter(); update(_s=>(_s.center={lat:cc.lat,lon:cc.lng})); update(_s=>(_s.zoom=mlMap.getZoom()-Math.log2(ui.slotCss.w/REF_W))); scheduleOver(); syncZoomUI(); });
   mlMap.on('styleimagemissing',(e: {id: string})=>onImageMissing(mlMap,e));
   // Fin de geste : les épaisseurs suivent le zoom par expressions ; seul le disque du quartier (rayon en px de l'affiche) est recalculé
   mlMap.on('moveend',()=>{ mlUpdateQuarter(); saveState(); });

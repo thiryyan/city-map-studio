@@ -3,9 +3,9 @@ import {$, h, setSeg, toast} from '../core/dom.js';
 import {Colors} from '../content/config.js';
 import {changed} from '../view/preview.js';
 import {contrast, lum, mix} from '../core/color.js';
-import {st} from '../core/doc/state.js';
 import {cmpSnap, noteChange} from './compare.js';
 import {refreshColors} from '../core/port.js';
+import {update} from '../core/doc/store.js';
 // ---------- Couleurs d'après une image : photo ou illustration importée (#77) ----------
 // L'image est lue et réduite sur l'appareil (aucune adresse ni envoi) ; seules ses couleurs sont gardées.
 // Une seule entrée, onglet Style, pour les trois types d'affiche : la même palette donne la version claire ou sombre.
@@ -67,7 +67,7 @@ CMS.define('palette', () => {
   function apply(v: string){
     if(!photoPal) return;
     const before=cmpSnap();
-    st.colors=photoTheme(photoPal,v==='dark'); setSeg('photoSeg',v);
+    update(_s=>(_s.colors=photoTheme(photoPal!,v==='dark'))); setSeg('photoSeg',v);
     noteChange(before,{theme:true}); refreshColors(); changed({all:true,cards:true});
     toast((photoSrc==='illus' ? 'Couleurs tirées de l\'illustration' : 'Palette de la photo appliquée')+' · « Annuler » pour revenir');
   }

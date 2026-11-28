@@ -9,6 +9,7 @@ import {$, h, setSeg, setStatus, toast} from '../core/dom.js';
 import {netMsg} from '../services/network.js';
 import {slug} from '../core/text.js';
 import {onUi, openAdvanced, showBanner, showTab, syncZoomUI, updateEngineUI, updateMarkerTxt} from '../core/port.js';
+import {update} from '../core/doc/store.js';
 // Module CMS.export : tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier (utilisées par les autres fichiers).
 const EXPORT = CMS.define('export', () => {
 // ---------- Export PNG (résolution inscrite dans le fichier) ----------
@@ -193,10 +194,10 @@ function importText(txt: string,name=''){
   const e=d.extent, inside=(st.center.lat>e.s&&st.center.lat<e.n&&st.center.lon>e.w&&st.center.lon<e.e);
   if(!inside){
     const sx=REF_W*360/Math.max(1e-6,e.e-e.w), z=Math.log2(sx/512);
-    const lat=(e.s+e.n)/2, lon=(e.w+e.e)/2; st.center={lat,lon}; st.zoom=clamp(z,10,18); syncZoomUI();
-    const mk=st.marker; if(!(mk.lat>e.s&&mk.lat<e.n&&mk.lon>e.w&&mk.lon<e.e)){ st.marker={lat,lon}; updateMarkerTxt(); }
+    const lat=(e.s+e.n)/2, lon=(e.w+e.e)/2; update(_s=>(_s.center={lat,lon})); update(_s=>(_s.zoom=clamp(z,10,18))); syncZoomUI();
+    const mk=st.marker; if(!(mk.lat>e.s&&mk.lat<e.n&&mk.lon>e.w&&mk.lon<e.e)){ update(_s=>(_s.marker={lat,lon})); updateMarkerTxt(); }
   }
-  if(st.engine!=='file'){ st.engine='file'; setSeg('engineSeg','file'); updateEngineUI(); }
+  if(st.engine!=='file'){ update(_s=>(_s.engine='file')); setSeg('engineSeg','file'); updateEngineUI(); }
   showBanner(false); renderMap(true); saveState();
   setStatus(`Fichier ${name} importé · ${d.count.toLocaleString('fr-FR')} objets`);
   return d.count;

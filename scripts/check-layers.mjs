@@ -35,8 +35,15 @@ const late = [];
 for (const file of Object.keys(metafile.inputs).filter(f => f.startsWith('src/'))) {
   for (const m of readFileSync(path.join(ROOT, file), 'utf8').matchAll(/(?<![\w$.])late\.([A-Za-z_$][\w$]*)/g)) late.push([file, m[1]]);
 }
-if (process.argv.includes('--json')) console.log(JSON.stringify({imports: bad, late}));
+// Écritures directes de l'état hors de src/core/doc/ : toute écriture passe par update() (src/core/doc/store.ts)
+const WRITE = /(?<![\w$.])st(?:\.[A-Za-z_$][\w$]*|\[[^\]\n]+\])+\s*(?:=(?!=)|\+=|-=|\*=|\/=|\|\|=|&&=|\?\?=|\+\+|--)|(?<![\w$.])st(?:\.[A-Za-z_$][\w$]*)+\.(?:push|pop|splice|shift|unshift|sort|reverse|fill)\(|\(st(?:\.[A-Za-z_$][\w$]*)* as [^)]+\)(?:\.[A-Za-z_$][\w$]*|\[[^\]\n]+\])+\s*=(?!=)|Object\.assign\(st\b|delete st\.|setPath\(st\b|(?:\+\+|--)st\./g;
+const writes = [];
+for (const file of Object.keys(metafile.inputs).filter(f => f.startsWith('src/') && !f.startsWith('src/core/doc/'))) {
+  const text = readFileSync(path.join(ROOT, file), 'utf8');
+  for (const m of text.matchAll(WRITE)) writes.push([file, m[0].replace(/\s+/g, ' ').slice(0, 60)]);
+}
+if (process.argv.includes('--json')) console.log(JSON.stringify({imports: bad, late, writes}));
 else {
   for (const [f, i, why] of bad) console.log(`  ${f} → ${i} (${why})`);
-  console.log(`  imports hors règle : ${bad.length} ; appels par le registre late : ${late.length}`);
+  console.log(`  imports hors règle : ${bad.length} ; appels par le registre late : ${late.length} ; écritures directes de st : ${writes.length}`);
 }
