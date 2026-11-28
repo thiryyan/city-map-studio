@@ -52,6 +52,7 @@ Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chr
 
 ## Avant chaque commit
 - Lancer `npm test` (build, puis la suite sur `dist/`), ou `python tests/run_all.py` sur les sources : « Tous les tests passent » (aucune vérification ✗, aucun `PAGEERROR`, aucune violation de la CSP ; exports A4 de 2480 × 3508 px). La même suite tourne sur `dist/` dans GitHub Actions à chaque pull request et à chaque push sur `main` (un nouveau push annule l'exécution en cours). Un test en échec est relancé seul une fois : s'il passe, il est signalé « INSTABLE » à corriger.
+- Les tests n'atteignent l'application que par `window.__cms`, `CMS` et la façade de test de `js/main.js` (exposée en mode `?test` seulement) : le site construit n'a aucun nom global, un nom utilisé directement par un test doit y figurer (sinon `ReferenceError` sur `dist/`).
 - Les tests ouvrent la page avec `?test` ; pour attendre une condition, utiliser `wait_js` (`tests/jswait.py`), jamais `page.wait_for_function` (refusé par la CSP).
 - Vérifier visuellement l'export avec le gabarit et le thème Souvenir (dossier, § 4.1 et 4.2).
 - Mettre à jour le dossier technique quand un comportement change, et le guide de l'utilisateur quand une commande, une option ou un libellé change.

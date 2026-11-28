@@ -35,6 +35,18 @@ async function boot(){
   CMS.perf.watchFrames($('slot')); CMS.perfUI.init();
   installPwa();
   if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,setFormat,setFileType,setDedWrap,exportSpec,dedLines,renderMaplibreOffscreen,set glMaxTest(v){setGlMaxTest(v)},applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll,pwa:CMS.pwa};
+  // Façade de test (#102, lot 4b) : les noms que les tests utilisent directement, exposés sur window en mode ?test
+  // seulement. Le site construit n'a plus aucun nom global (script enveloppé dans une fonction) : cette liste est la
+  // seule dépendance des tests envers la portée de l'application, et suivra la conversion en modules ES.
+  // Sources (scripts classiques) : ces noms sont déjà globaux ; seuls ceux absents de window sont ajoutés.
+  if(TEST_HOOKS) Object.defineProperties(window, Object.fromEntries(Object.entries(Object.getOwnPropertyDescriptors({
+    $, h, pressed, toast, setStatus, V, normState, THEMES, CART_ROWS,
+    get st(){ return st; }, get consent(){ return consent; }, get foilCtx(){ return foilCtx; },
+    lum, contrast, attributionText, parseCoords, encodeShare,
+    changed, scheduleOver, layoutPreview, loadFonts, refreshColors, drawOver, drawUnder, drawOp, drawText,
+    drawMarker, markerOpts, metersPerPx, patTile, moonSun, planetsAt, souvenirFoot, cartDed,
+    drawVectors, vecCache, VEC_CACHE_MAX, openSaves, deleteSave, downloadConfig, downloadBackup, textW, typoFit, paletteOf, photoTheme
+  })).filter(([k])=>!Object.prototype.hasOwnProperty.call(window,k))));
 }
 /** Application installable et utilisable hors ligne : manifeste et service worker (sw.js), seulement en http(s).
  *  En file://, le navigateur refuse les deux (simple bruit dans la console) : rien n'est déclaré.

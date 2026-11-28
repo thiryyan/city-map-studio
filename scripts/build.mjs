@@ -2,9 +2,9 @@
 //
 // Étape 4a : le code source reste tel quel (scripts classiques, ouvrables directement en file:// ou par
 // python -m http.server). Le build produit dist/, la version publiée :
-//   - les scripts de index.html, dans leur ordre, réunis en un seul script classique js/app.<empreinte>.js, minifié :
-//     même portée globale partagée qu'aujourd'hui (esbuild ne renomme pas les noms de premier niveau d'un script) ;
-//     les noms globaux disparaîtront avec la conversion en modules ES (étape 4b) ;
+//   - les scripts de index.html, dans leur ordre, réunis en un seul script classique js/app.<empreinte>.js, minifié et
+//     enveloppé dans une fonction : les fichiers gardent leur portée commune, mais plus aucun nom n'est global (seuls
+//     CMS, posé sur globalThis, et en mode ?test window.__cms et la façade de test de js/main.js restent visibles) ;
 //   - css/app.css minifiée en css/app.<empreinte>.css ;
 //   - VERSION (sw.js) et CMS.build (js/core.js) générés : cms-AAAA-MM-JJ-<empreinte> ;
 //   - liste APP de sw.js générée à partir des fichiers réellement publiés ;
@@ -44,8 +44,8 @@ const contentHash = hash(js + cssSrc + html).slice(0, 7);
 const version = `cms-${day}-${contentHash}`;
 js = js.replace(VERSION_RE, `const version = '${version}';`);
 
-// Un seul script classique, en mode strict (directive en tête, comme chaque fichier source)
-const bundled = await transform(`'use strict';\n${js}`, {
+// Une seule fonction englobante, en mode strict : portée commune aux fichiers, aucun nom global (lot 4b, #102)
+const bundled = await transform(`(function(){'use strict';\n${js}\n})();`, {
   loader: 'js', minify: true, target: 'es2020', legalComments: 'none', charset: 'utf8'
 });
 const css = await transform(cssSrc, {loader: 'css', minify: true, legalComments: 'none', charset: 'utf8'});
