@@ -17,16 +17,10 @@
  * doit figurer dans APP (tests/pwa.py).
  */
 'use strict';
-const VERSION = 'cms-2026-11-28a';
+const VERSION = 'cms-2026-11-28-49df563';   // remplacée au build (scripts/build.mjs) : cms-AAAA-MM-JJ-<empreinte>
 // Cache propre à ce dossier : une autre copie de l'application sur la même origine ne touche pas à ses fichiers
 const SCOPE = new URL(self.registration.scope).pathname, CACHE = `${VERSION}@${SCOPE}`;
-const APP = [
-  './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png',
-  'css/app.css',
-  'js/core.js', 'js/config.js', 'js/maplibre-loader.js', 'js/geocoder.js', 'js/wiki.js', 'js/state.js', 'js/geo.js', 'js/render.js', 'js/engines.js', 'js/preview.js',
-  'js/features.js', 'js/route.js', 'js/ui.js', 'js/illus.js', 'js/export.js', 'js/main.js',
-  'lib/maplibre-gl.js', 'lib/maplibre-gl.css', 'lib/fonts/fonts.css'
-];
+const APP = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'css/app.6de28c91c0.css', 'js/app.fcde4153ab.js', 'lib/maplibre-gl.js', 'lib/maplibre-gl.css', 'lib/fonts/fonts.css'];
 
 self.addEventListener('install', e => {
   // Pas de skipWaiting() ici : à la première installation, le worker s'active seul (aucun autre en place) ;
