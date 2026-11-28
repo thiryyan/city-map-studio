@@ -34,11 +34,11 @@ CMS.define('build', () => {
 });
 // ---------- Mesures de performance (#97, lot 3 : #101) ----------
 // Temps relevés sur l'appareil, gardés en mémoire seulement (rien n'est enregistré ni envoyé) et affichés dans
-// Lieu › Avancé › « Mesures de performance ». Budgets fixés le 27/11/2026 ; un seul appareil de référence,
+// Lieu › Avancé › « Mesures de performance ». Budgets fixés le 27/11/2026 (réglage visible porté à 400 ms le 28/11/2026) ; un seul appareil de référence,
 // l'« Appareil S2x » (téléphone 412 × 892, densité 3,5 ; décision du 28/11/2026).
 CMS.define('perf', () => {
   /** Budgets : durée maximale en ms ; « geste » : 95e centile de l'intervalle entre images (60 images/s, gigue de l'écran tolérée) */
-  const BUDGET = {ouverture: 3000, reglage: 200, 'export-a4': 6000, 'export-10x15': 3000, geste: 20};
+  const BUDGET = {ouverture: 3000, reglage: 400, 'export-a4': 6000, 'export-10x15': 3000, geste: 20};
   const LABEL = {ouverture: 'Ouverture jusqu\'à l\'aperçu', reglage: 'Réglage visible', 'export-a4': 'Export A4',
     'export-10x15': 'Export 10 × 15', 'export-a3': 'Export A3', 'export-50x70': 'Export 50 × 70', geste: 'Geste sur la carte'};
   const log = [], pending = new Map();

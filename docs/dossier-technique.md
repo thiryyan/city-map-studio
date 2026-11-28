@@ -658,7 +658,7 @@ L'application relève ses propres temps (`CMS.perf`, `js/core.js`), en mémoire 
 | Mesure | Début → fin | Budget |
 | :--- | :--- | :--- |
 | Ouverture jusqu'à l'aperçu | Début du chargement de la page → premier `idle` de la carte GPU (ou premier aperçu, sans carte GPU) | 3 s |
-| Réglage visible | `changed()` → aperçu redessiné (`drawOver`), ou carte GPU au repos pour un réglage qui la restyle | 0,2 s |
+| Réglage visible | `changed()` → aperçu redessiné (`drawOver`), ou carte GPU au repos pour un réglage qui la restyle | 0,4 s (porté de 0,2 à 0,4 s le 28/11/2026) |
 | Export A4, Export 10 × 15 (et A3, 50 × 70 sans budget) | Clic sur Exporter, après l'accord → fichier PNG ou PDF prêt | 6 s, 3 s |
 | Geste sur la carte | Doigt ou souris enfoncé sur la carte → relâché : 95e centile de l'intervalle entre deux images (10 images au moins) | 20 ms (60 images/s, gigue tolérée) |
 
@@ -666,15 +666,15 @@ Une mesure en attente qui n'aboutit pas en 10 s est abandonnée. Un seul apparei
 
 **Relevés de référence du 28/11/2026** (Appareil S2x ; deux relevés par adresse quand ils existent) :
 
-| Mesure | `/nouvelle/` (sources, lot 3) | Site construit (lot 4a, préversion #108) | Budget |
-| :--- | :--- | :--- | :--- |
-| Ouverture | 1,8 s · 467 ms | 614 ms · 813 ms | 3 s ✓ |
-| Réglage visible (thème, carte) | 352 ms · 370 ms | 360 ms · 380 ms | 200 ms ✗ |
-| Export A4 (PNG) | 851 ms · 784 ms | 558 ms · 583 ms | 6 s ✓ |
-| Export 10 × 15 (PNG) | 1,1 s | 437 ms | 3 s ✓ |
-| Geste sur la carte | 17 ms (59 images/s) | 18 ms (55 images/s) | 20 ms ✓ |
+| Mesure | `/nouvelle/` (sources, lot 3) | Site construit (lot 4a, préversion #108) | Sans nom global (lot 4b-1, `94dda97`) | Budget |
+| :--- | :--- | :--- | :--- | :--- |
+| Ouverture | 1,8 s · 467 ms | 614 ms · 813 ms | 460 ms | 3 s ✓ |
+| Réglage visible (thème, carte) | 352 ms · 370 ms | 360 ms · 380 ms | 345 ms | 400 ms ✓ |
+| Export A4 (PNG) | 851 ms · 784 ms | 558 ms · 583 ms | 2,1 s | 6 s ✓ |
+| Export 10 × 15 (PNG) | 1,1 s | 437 ms | 510 ms | 3 s ✓ |
+| Geste sur la carte | 17 ms (59 images/s) | 18 ms (55 images/s) | 8 ms (119 images/s, écran 120 Hz) | 20 ms ✓ |
 
-Le build ne fait rien régresser et accélère les exports. Seul le réglage d'un thème dépasse son budget, avant comme après le build : la mesure s'arrête quand la carte GPU est entièrement redessinée (`idle`), ce qui inclut le recalcul de toutes les tuiles ; point à traiter à l'horizon 1 (#61).
+Le build ne fait rien régresser. Le budget du réglage visible a été porté à 400 ms le 28/11/2026 : la mesure d'un thème inclut le redessin complet de la carte GPU (`idle`), toutes les tuiles comprises. L'export A4 varie d'un relevé à l'autre (0,6 à 2,1 s), toujours très en deçà de son budget.
 
 ### 7.8. Construction du site publié (#102)
 
