@@ -666,15 +666,15 @@ Une mesure en attente qui n'aboutit pas en 10 s est abandonnée. Un seul apparei
 
 **Relevés de référence du 28/11/2026** (Appareil S2x ; deux relevés par adresse quand ils existent) :
 
-| Mesure | `/nouvelle/` (sources, lot 3) | Site construit (lot 4a, préversion #108) | Sans nom global (lot 4b-1, `94dda97`) | Budget |
-| :--- | :--- | :--- | :--- | :--- |
-| Ouverture | 1,8 s · 467 ms | 614 ms · 813 ms | 460 ms | 3 s ✓ |
-| Réglage visible (thème, carte) | 352 ms · 370 ms | 360 ms · 380 ms | 345 ms | 400 ms ✓ |
-| Export A4 (PNG) | 851 ms · 784 ms | 558 ms · 583 ms | 2,1 s | 6 s ✓ |
-| Export 10 × 15 (PNG) | 1,1 s | 437 ms | 510 ms | 3 s ✓ |
-| Geste sur la carte | 17 ms (59 images/s) | 18 ms (55 images/s) | 8 ms (119 images/s, écran 120 Hz) | 20 ms ✓ |
+| Mesure | `/nouvelle/` (sources, lot 3) | Site construit (lot 4a, préversion #108) | Sans nom global (lot 4b-1, `94dda97`) | TypeScript (lot 5, `d158d94`) | Budget |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Ouverture | 1,8 s · 467 ms | 614 ms · 813 ms | 460 ms | 447 ms | 3 s ✓ |
+| Réglage visible (thème, carte) | 352 ms · 370 ms | 360 ms · 380 ms | 345 ms | 344 ms | 400 ms ✓ |
+| Export A4 (PNG) | 851 ms · 784 ms | 558 ms · 583 ms | 2,1 s | 2,9 s · 2 s | 6 s ✓ |
+| Export 10 × 15 (PNG) | 1,1 s | 437 ms | 510 ms | 709 ms | 3 s ✓ |
+| Geste sur la carte | 17 ms (59 images/s) | 18 ms (55 images/s) | 8 ms (119 images/s, écran 120 Hz) | 17 ms (60 images/s) | 20 ms ✓ |
 
-Le build ne fait rien régresser. Le budget du réglage visible a été porté à 400 ms le 28/11/2026 : la mesure d'un thème inclut le redessin complet de la carte GPU (`idle`), toutes les tuiles comprises. L'export A4 varie d'un relevé à l'autre (0,6 à 2,1 s), toujours très en deçà de son budget.
+Le build ne fait rien régresser. Le budget du réglage visible a été porté à 400 ms le 28/11/2026 : la mesure d'un thème inclut le redessin complet de la carte GPU (`idle`), toutes les tuiles comprises. L'export A4 varie d'un relevé à l'autre (0,6 à 2,9 s), toujours en deçà de son budget : il recharge les tuiles de la carte par le réseau. Après le lot 5 (28/11/2026, relevés de 14 h 40), ouverture, réglage, export 10 × 15 et geste sont égaux ou meilleurs que la référence du lot 3 ; l'export A4 (2,9 s puis 2 s) est plus lent que les relevés du lot 3 (0,8 s), du même ordre que celui du lot 4b-1 (2,1 s). Comparaison directe le même jour, sur l'Appareil S2x, avec le moteur GPU : environ 2 s pour la version classique comme pour `/nouvelle/` ; sans réseau (moteur Fichier, Chromium sur ordinateur), l'export A4 a la même durée dans les deux versions (médianes 85 à 106 ms et 88 à 102 ms). L'écart avec le lot 3 tient au chargement des tuiles, pas au code : point « temps au moins égaux » validé (§ 9.4).
 
 ### 7.8. Construction du site publié (#102)
 
