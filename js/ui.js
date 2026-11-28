@@ -139,7 +139,7 @@ function isoFromFr(t){
 // Le moteur cartographique est exclu : le rétablir relancerait des requêtes réseau.
 const HIST_MAX=50, hist={past:[],future:[],cur:null,quietUntil:0};
 function histSnap(){ const {engine,...rest}=st; return JSON.stringify(rest); }
-CMS.on('state:saved',()=>{ recordHistory(); updateMarkerTxt(); });   // émis par saveState (state.js)
+CMS.on('state:saved',()=>{ recordHistory(); updateMarkerTxt(); });   // émis par saveState (state.ts)
 function recordHistory(){
   const s=histSnap(); if(s===hist.cur) return;
   if(Date.now()<hist.quietUntil || hist.cur==null){ hist.cur=s; return; }   // effets de bord d'un retour arrière (recentrage de la carte)
@@ -666,7 +666,7 @@ CMS.define('compare', () => {
 });
 const {snap: cmpSnap, note: noteChange, update: updateCompare, hold: compareBefore, init: initCompare} = CMS.compare;
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
 Object.assign(late, {HIST_MAX, applySnap, cmpSnap, commitHistory, compareBefore, fontsReady, goTo, hist, isoFromFr, loadFonts, noteChange, openAdvanced, pressed, recordHistory, refreshCards, refreshColors, setEngine, setMarker, setSeg, showTab, syncInputs, syncOutputs, syncZoomUI, thumb, thumbMap, updateEngineUI, updateMarkerTxt});
 
 export {HIST_MAX, applySnap, applyUiScale, buildUI, cmpSnap, commitHistory, compareBefore, fontsReady, frDate, goTo, hist, histSnap, isoFromFr, loadFonts, noteChange, openAdvanced, parseCoords, pressed, recordHistory, redo, refreshCards, refreshColors, resetAll, setEngine, setMarker, setSeg, showTab, syncFonts, syncInputs, syncOutputs, syncZoomUI, thumb, thumbMap, undo, updateEngineUI, updateHistUI, updateMarkerTxt};

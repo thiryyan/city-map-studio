@@ -13,7 +13,7 @@
  */
 import {late} from './core.js';
 (function (g) {
-  const CMS = g.CMS;   // js/core.js
+  const CMS = g.CMS;   // js/core.ts
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
   const API = 'https://fr.wikipedia.org/w/api.php', TIMEOUT = testCfg.wikiTimeout ?? 10000, CACHE_MAX = 30, LIMIT = 100;
   const cache = new Map();

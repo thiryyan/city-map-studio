@@ -6,13 +6,15 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "dev": "python3 -m http.server 8000",
+    "dev": "node scripts/build.mjs && python3 -m http.server -d dist 8000",
     "lint": "eslint js",
+    "typecheck": "tsc -p .",
     "test": "python3 tests/run_all.py"
   },
   "devDependencies": {
     "esbuild": "0.28.2",
     "eslint": "9.39.5",
-    "globals": "17.14.0"
+    "globals": "17.14.0",
+    "typescript": "5.9.3"
   }
 }

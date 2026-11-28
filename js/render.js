@@ -689,7 +689,7 @@ function attributionText(sky){
 }
 function hexA(hex){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g=n>>8&255,b=n&255;return a=>`rgba(${r},${g},${b},${a})`}
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
 Object.assign(late, {CART_ROWS, cartDed, souvenirFoot});
 
 export {CART_ROWS, POLA_ROWS, altAz, attributionText, cartDed, contrast, dedLeading, dedLines, drawHalo, drawMarker, drawMarkers, drawOrnaments, drawPoster, drawText, ensureSky, fitSink, focusRadius, foilCtx, fontOf, fontStr, hexA, lum, markerOpts, metersPerPx, mix, moonSun, noteFit, paint, planetsAt, setFitSink, shade, skyTime, souvenirFoot, tScale, textW, tint, typoFit};

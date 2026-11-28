@@ -2,7 +2,7 @@
 
 1. ESLint (eslint.config.js) : aucun nom utilisé sans import (no-undef), aucune variable importée réaffectée
    (no-import-assign) ; un module qui oublie un import échouerait sinon seulement au moment de l'appel.
-2. Registre « late » (js/core.js) : un fichier qui appelle une fonction d'un fichier chargé après lui la lit dans ce
+2. Registre « late » (js/core.ts) : un fichier qui appelle une fonction d'un fichier chargé après lui la lit dans ce
    registre plutôt que de l'importer (l'import créerait un cycle et changerait l'ordre d'exécution). Chaque entrée est
    une dépendance à l'envers entre couches : leur nombre ne peut pas dépasser le plafond de tests/globals.max ; quand
    il baisse, abaisser le plafond.
@@ -20,7 +20,7 @@ if lint.returncode != 0:
     fails.append('ESLint signale des problèmes dans js/ (voir ci-dessus)')
 
 late = {}
-for f in sorted((ROOT / 'js').glob('*.js')):
+for f in sorted([*(ROOT / 'js').glob('*.js'), *(ROOT / 'js').glob('*.ts')]):
     for m in re.finditer(r'Object\.assign\(late, \{([^}]*)\}\)', f.read_text(encoding='utf-8')):
         late[f.name] = [n.strip() for n in m.group(1).split(',') if n.strip()]
 total = sum(len(v) for v in late.values())

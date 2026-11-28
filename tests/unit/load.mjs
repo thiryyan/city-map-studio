@@ -26,11 +26,12 @@ export async function load(files, extra = {}) {
   const mods = ['js/core.js', ...files];
   const entry = mods.map((f, i) => `import * as m${i} from ${JSON.stringify(ROOT + f)};`).join('\n')
     + `\nObject.assign(globalThis, ${mods.map((_, i) => `m${i}`).join(', ')});`;
-  const wanted = new Set(mods.map(f => ROOT + f));
+  const noExt = p => p.replace(/\.[jt]s$/, '');   // js/geo.js désigne aussi js/geo.ts (migration TypeScript, #103)
+  const wanted = new Set(mods.map(f => noExt(ROOT + f)));
   const stub = {
     name: 'bouchons', setup(b) {
-      b.onLoad({ filter: /[\\/]js[\\/][\w-]+\.js$/ }, a => {
-        if (wanted.has(a.path)) return undefined;
+      b.onLoad({ filter: /[\\/]js[\\/][\w-]+\.[jt]s$/ }, a => {
+        if (wanted.has(noExt(a.path))) return undefined;
         const names = [...readFileSync(a.path, 'utf8').matchAll(/^export \{([^}]*)\};$/gm)].flatMap(m => m[1].split(',').map(n => n.trim()).filter(Boolean));
         return { contents: names.length ? `export const ${names.map(n => `${n} = undefined`).join(', ')};` : '', loader: 'js' };
       });

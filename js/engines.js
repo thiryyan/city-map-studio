@@ -460,7 +460,7 @@ return {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, 
 });
 const {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest} = CMS.engines;
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
 Object.assign(late, {loadMaplibre, loadScript, netMsg});
 
 export {VEC_CACHE_MAX, buildStyle, checkDataBanner, drawVectors, hatchTile, initMaplibre, loadMaplibre, loadScript, mlKeepAlive, mlRestyle, mlUpdateView, mlZoom, netMsg, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, vecCache};

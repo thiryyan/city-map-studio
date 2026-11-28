@@ -235,7 +235,7 @@ CMS.define('perfUI', () => {
   return {init, text};
 });
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
 Object.assign(late, {exportPoster, importFile, runDiagnostics, slug});
 
 export {ENV, exportPoster, importFile, importText, runDiagnostics, showEnvWarning, slug};

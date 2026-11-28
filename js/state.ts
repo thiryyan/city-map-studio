@@ -1,30 +1,33 @@
 /* City Map Studio — État de l'affiche : validation, chargement, enregistrement ; fenêtres modales ; accord préalable.
- * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+ * Module TypeScript (#103), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs). */
 import {late} from './core.js';
 import {DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, STORE_KEY, TEXTURES, THEMES} from './config.js';
 // ---------- Validation de l'état (lien partagé, localStorage) ----------
 // Un état venu de l'extérieur n'est jamais repris tel quel : seuls les champs connus sont lus, chacun est vérifié
 // (type, liste de valeurs, bornes) et remplacé par sa valeur par défaut s'il est invalide. Un lien forgé ne peut donc
 // ni casser l'application, ni rester enregistré dans le navigateur.
+/** Donnée venue de l'extérieur (lien, localStorage, fichier) : lue champ par champ, chaque valeur vérifiée */
+type Ext = Record<string, any>;
+export interface LatLon { lat: number; lon: number }
 const V = {
-  num:(v,d,a,b)=>typeof v==='number' && Number.isFinite(v) ? Math.min(b,Math.max(a,v)) : d,
-  bool:(v,d)=>typeof v==='boolean' ? v : d,
-  str:(v,d,max=200)=>typeof v==='string' ? v.slice(0,max) : d,
-  oneOf:(v,list,d)=>list.includes(v) ? v : d,
-  hex:(v,d)=>typeof v==='string' && /^#[0-9A-Fa-f]{6}$/.test(v) ? v : d,
-  obj:v=>v && typeof v==='object' && !Array.isArray(v) ? v : {},
+  num:<D,>(v: unknown, d: D, a: number, b: number): number | D=>typeof v==='number' && Number.isFinite(v) ? Math.min(b,Math.max(a,v)) : d,
+  bool:(v: unknown, d: boolean): boolean=>typeof v==='boolean' ? v : d,
+  str:(v: unknown, d: string, max=200): string=>typeof v==='string' ? v.slice(0,max) : d,
+  oneOf:<T,>(v: unknown, list: readonly T[], d: T): T=>list.includes(v as T) ? v as T : d,
+  hex:(v: unknown, d: string): string=>typeof v==='string' && /^#[0-9A-Fa-f]{6}$/.test(v) ? v : d,
+  obj:(v: unknown): Ext=>v && typeof v==='object' && !Array.isArray(v) ? v as Ext : {},
   /** Point {lat, lon} valide (projection de Mercator : latitude ±85,06°), sinon null */
-  ll:p=>p && typeof p==='object' && Number.isFinite(p.lat) && Number.isFinite(p.lon) && Math.abs(p.lat)<=85.06 && Math.abs(p.lon)<=180 ? {lat:p.lat,lon:p.lon} : null,
+  ll:(p: unknown): LatLon | null=>{ const q=p as Ext; return q && typeof q==='object' && Number.isFinite(q.lat) && Number.isFinite(q.lon) && Math.abs(q.lat)<=85.06 && Math.abs(q.lon)<=180 ? {lat:q.lat,lon:q.lon} : null; },
   /** Chaque clé de `def` : valeur de `src` vérifiée par `check(valeur, défaut)` */
-  each:(src,def,check)=>{ const s=V.obj(src), o={}; for(const k of Object.keys(def)) o[k]=check(s[k],def[k]); return o; }
+  each:<T,>(src: unknown, def: Record<string, T>, check: (v: unknown, d: T)=>T): Record<string, T>=>{ const s=V.obj(src), o: Record<string, T>={}; for(const k of Object.keys(def)) o[k]=check(s[k],def[k]); return o; }
 };
 const SHARE_MAX_CHARS = 64*1024, SHARE_MAX_BYTES = 512*1024, ROUTE_MAX_PTS = 5000;
 /** Complète un état enregistré ou partagé avec les valeurs par défaut (champs ajoutés depuis) et rejette toute valeur invalide */
-function normState(src){
-  const s=V.obj(src), D=structuredClone(DEFAULT_STATE), keys=a=>a.map(x=>x[0]);
-  const view=(v,dv)=>{ const o=V.obj(v), c=V.ll(o.center), m=V.ll(o.marker);
+function normState(src: unknown){
+  const s=V.obj(src), D=structuredClone(DEFAULT_STATE), keys=(a: readonly (readonly unknown[])[])=>a.map(x=>x[0] as string);
+  const view=(v: unknown, dv: {zoom: number})=>{ const o=V.obj(v), c=V.ll(o.center), m=V.ll(o.marker);
     return c && m ? {center:c, zoom:V.num(o.zoom,dv.zoom,1,22), marker:m} : null; };
-  const route=(r)=>{ const o=V.obj(r); if(!Array.isArray(o.pts)) return null;
+  const route=(r: unknown)=>{ const o=V.obj(r); if(!Array.isArray(o.pts)) return null;
     const pts=o.pts.slice(0,ROUTE_MAX_PTS).filter(p=>Array.isArray(p) && V.ll({lat:p[0],lon:p[1]})).map(p=>[p[0],p[1]]);
     if(pts.length<2) return null;
     const wpts=(Array.isArray(o.wpts)?o.wpts:[]).map(p=>{ const q=V.ll(p); return q && {...q,name:V.str(p.name,'',80)}; }).filter(Boolean).slice(0,20);
@@ -52,7 +55,7 @@ function normState(src){
     dedWrap:V.oneOf(s.dedWrap,['auto','one','two'],D.dedWrap),
     lineOrder:CMS.order.norm(s.lineOrder),
     texture:V.oneOf(s.texture,keys(TEXTURES),D.texture),
-    markers2:(Array.isArray(s.markers2)?s.markers2:[]).map(p=>{ const q=V.ll(p); return q && {...q,label:V.str(p.label,'')}; }).filter(Boolean).slice(0,2),
+    markers2:(Array.isArray(s.markers2)?s.markers2:[]).map((p: Ext)=>{ const q=V.ll(p); return q && {...q,label:V.str(p.label,'')}; }).filter((m): m is LatLon & {label: string}=>!!m).slice(0,2),
     markerLabel:V.str(s.markerLabel,''), numbered:V.bool(s.numbered,D.numbered), linkMarkers:V.bool(s.linkMarkers,D.linkMarkers),
     route:route(s.route),
     routeStyle:{color:V.oneOf(V.obj(s.routeStyle).color,['marker','roadMajor','frame'],D.routeStyle.color),
@@ -75,9 +78,9 @@ function normState(src){
     illusText:normIllusText(s.illusText,D.illusText)
   };
   /** Illustration : cadrage, retouches, filtre et choix du prompt (pistes : textes courts, 8 au plus, sans doublon) */
-  function normIllus(src,d){
-    const o=V.obj(src), p=V.obj(o.prompt), C=CMS.illusConf, keys=a=>a.map(x=>x[0]);
-    const pistes=[...new Set((Array.isArray(p.pistes)?p.pistes:[]).filter(x=>typeof x==='string').map(x=>x.replace(/\s+/g,' ').trim().slice(0,80)).filter(Boolean))].slice(0,C.PISTES_MAX);
+  function normIllus(src: unknown, d: typeof DEFAULT_STATE.illus){
+    const o=V.obj(src), p=V.obj(o.prompt), C=CMS.illusConf, keys=(a: readonly (readonly unknown[])[])=>a.map(x=>x[0] as string);
+    const pistes=[...new Set((Array.isArray(p.pistes)?p.pistes:[]).filter((x: unknown): x is string=>typeof x==='string').map((x: string)=>x.replace(/\s+/g,' ').trim().slice(0,80)).filter(Boolean))].slice(0,C.PISTES_MAX);
     return {fit:V.oneOf(o.fit,C.FITS,d.fit), zoom:V.num(o.zoom,d.zoom,30,300), ox:V.num(o.ox,d.ox,-1,1), oy:V.num(o.oy,d.oy,-1,1),
       bright:V.num(o.bright,d.bright,-50,50), contrast:V.num(o.contrast,d.contrast,-50,50), satur:V.num(o.satur,d.satur,-50,50),
       vintage:V.oneOf(o.vintage,C.VINTAGE,d.vintage), grain:V.bool(o.grain,d.grain), paper:V.bool(o.paper,d.paper), flat:V.bool(o.flat,d.flat),
@@ -90,54 +93,56 @@ function normState(src){
   /** Style et position des textes : ombre et contour acceptent '' (aucun) ; style, lettres et ombre acceptent 'auto'.
    *  Migration d'un état antérieur aux valeurs Auto (sans v:2, #74) : style Vintage → Auto (même rendu dans chaque mode) ;
    *  affiche Carte : lettres, ombre et contour reviennent à Auto (le mode Carte ne les dessinait pas : rendu inchangé). */
-  function normIllusText(src,d){
-    const o=V.obj(src), C=CMS.illusConf, hexOrNone=(v,dv)=>v==='' ? '' : V.hex(v,dv), orAuto=(v,f)=>v==='auto' ? 'auto' : f();
-    const pt=p=>{ const q=V.obj(p); return Number.isFinite(q.x) && Number.isFinite(q.y) ? {x:V.num(q.x,0.5,0,1), y:V.num(q.y,0.5,0,1)} : null; };   // position libre
+  function normIllusText(src: unknown, d: typeof DEFAULT_STATE.illusText){
+    const o=V.obj(src), C=CMS.illusConf, hexOrNone=(v: unknown, dv: string)=>v==='' ? '' : V.hex(v,dv), orAuto=(v: unknown, f: ()=>string)=>v==='auto' ? 'auto' : f();
+    const pt=(p: unknown)=>{ const q=V.obj(p); return Number.isFinite(q.x) && Number.isFinite(q.y) ? {x:V.num(q.x,0.5,0,1), y:V.num(q.y,0.5,0,1)} : null; };   // position libre
     const m=V.obj(o.map), dm=d.map;
     // présentation des blocs (#86) ; un état antérieur n'en a pas : texte seul
     // le ruban (avant #90) devient la capsule
-    const deco=x=>{ const q=V.obj(x), t=q.title==='ruban' ? 'capsule' : q.title; return {title:V.oneOf(t,C.DECOS,'libre'), foot:V.oneOf(q.foot,C.FOOT_DECOS,'libre')}; };
-    const ftpl=v=>V.oneOf(v,C.FOOT_TPLS,'classique');
+    const deco=(x: unknown)=>{ const q=V.obj(x), t=q.title==='ruban' ? 'capsule' : q.title; return {title:V.oneOf(t,C.DECOS,'libre'), foot:V.oneOf(q.foot,C.FOOT_DECOS,'libre')}; };
+    const ftpl=(v: unknown)=>V.oneOf(v,C.FOOT_TPLS,'classique');
     const T={v:2, style:V.oneOf(o.style,C.TSTYLES,d.style), color:orAuto(o.color,()=>V.hex(o.color,d.color)), shadow:orAuto(o.shadow,()=>hexOrNone(o.shadow,d.shadow)),
       outline:hexOrNone(o.outline,d.outline), off:V.num(o.off,d.off,1,12), pos:V.oneOf(o.pos,C.POS,d.pos),
       free:pt(o.free), fpos:V.oneOf(o.fpos,['auto',...C.POS],d.fpos), ffree:pt(o.ffree), deco:deco(o.deco),
-      plate:(q=>({line:V.oneOf(q.line,C.PLATE_LINES,d.plate.line), w:V.num(q.w,d.plate.w,0.5,3), color:orAuto(q.color,()=>V.hex(q.color,'#2C2A29')), gap:V.num(q.gap,d.plate.gap,0.5,2.5),
+      plate:((q: Ext)=>({line:V.oneOf(q.line,C.PLATE_LINES,d.plate.line), w:V.num(q.w,d.plate.w,0.5,3), color:orAuto(q.color,()=>V.hex(q.color,'#2C2A29')), gap:V.num(q.gap,d.plate.gap,0.5,2.5),
         fill:orAuto(q.fill,()=>V.hex(q.fill,'#F3EAD8')), alpha:V.num(q.alpha,d.plate.alpha,0,1)}))(V.obj(o.plate)), ftpl:ftpl(o.ftpl),
       map:{pos:V.oneOf(m.pos,['auto',...C.POS],dm.pos), free:pt(m.free), fpos:V.oneOf(m.fpos,['auto',...C.POS],dm.fpos), ffree:pt(m.ffree), deco:deco(m.deco), ftpl:ftpl(m.ftpl)}};
     // Carte + illustration : positions propres (#77). Un état antérieur, où elles étaient partagées avec l'Illustration, les reprend.
-    const x=o.mix ? V.obj(o.mix) : {pos:T.pos,free:T.free,fpos:T.fpos,ffree:T.ffree};
+    const x: Ext=o.mix ? V.obj(o.mix) : {pos:T.pos,free:T.free,fpos:T.fpos,ffree:T.ffree};
     const z=V.obj(x.zone);
-    T.mix={pos:V.oneOf(x.pos,C.POS,d.mix.pos), free:pt(x.free), fpos:V.oneOf(x.fpos,['auto',...C.POS],d.mix.fpos), ffree:pt(x.ffree),
-      deco:deco(o.mix && x.deco), zone:{title:V.oneOf(z.title,C.ZONES,'illus'), foot:V.oneOf(z.foot,C.ZONES,'illus')}, ftpl:ftpl(o.mix && x.ftpl)};
+    const R={...T, mix:{pos:V.oneOf(x.pos,C.POS,d.mix.pos), free:pt(x.free), fpos:V.oneOf(x.fpos,['auto',...C.POS],d.mix.fpos), ffree:pt(x.ffree),
+      deco:deco(o.mix && x.deco), zone:{title:V.oneOf(z.title,C.ZONES,'illus'), foot:V.oneOf(z.foot,C.ZONES,'illus')}, ftpl:ftpl(o.mix && x.ftpl)}};
     if(o.v!==2 && Object.keys(o).length){
-      if(T.style==='vintage') T.style='auto';
-      if(V.oneOf(s.mode,C.MODES,'map')==='map') Object.assign(T,{color:'auto',shadow:'auto',outline:''});
+      if(R.style==='vintage') R.style='auto';
+      if(V.oneOf(s.mode,C.MODES,'map')==='map') Object.assign(R,{color:'auto',shadow:'auto',outline:''});
     }
-    return T;
+    return R;
   }
 }
 let st = loadState();
-const ui = {intent:'map', clean:false, inkSink:null, comparing:false, cmpKeep:null, placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
-let mlMap = null, osmData = null;
+/** État de l'interface, non enregistré (champs posés en cours de route par les autres modules : Ext) */
+const ui: Ext = {intent:'map', clean:false, inkSink:null, comparing:false, cmpKeep:null, placing:false, framing:false, sheet:'half', sheetBefore:null, tab:'lieu', posterCss:{w:0,h:0}, dpr:1, slotCss:{x:0,y:0,w:0,h:0}};
+let mlMap: any = null, osmData: any = null;   // carte MapLibre, données OSM importées (non typées)
 let mlLib = 'loading', mlCdn = '', mlFailMsg = '';   // état de la librairie MapLibre
 // Modules ES : une variable importée ne se réaffecte pas ; les autres fichiers passent par ces fonctions (#102)
-const setMlMap = v => { mlMap = v; }, setOsmData = v => { osmData = v; };
-const setMlLib = v => { mlLib = v; }, setMlCdn = v => { mlCdn = v; }, setMlFailMsg = v => { mlFailMsg = v; };
+const setMlMap = (v: any) => { mlMap = v; }, setOsmData = (v: any) => { osmData = v; };
+const setMlLib = (v: string) => { mlLib = v; }, setMlCdn = (v: string) => { mlCdn = v; }, setMlFailMsg = (v: string) => { mlFailMsg = v; };
 
 // ---------- Fenêtres modales ----------
 // <dialog> + showModal() : focus retenu dans la fenêtre, arrière-plan inerte, touche Échap (événement « cancel »).
 // La classe « show » reste posée sur la fenêtre ouverte (état lisible par les tests et le CSS de secours).
-const dlgOpener=new Map(), dlgCancel={};
-function openDialog(id){
-  const d=document.getElementById(id); if(d.open) return;
+const dlgOpener=new Map<string, Element | null>(), dlgCancel: Record<string, ()=>void>={};
+const dlg=(id: string)=>document.getElementById(id) as HTMLDialogElement;
+function openDialog(id: string){
+  const d=dlg(id); if(d.open) return;
   dlgOpener.set(id,document.activeElement); d.classList.add('show');
   if(typeof d.showModal==='function') d.showModal(); else d.setAttribute('open','');
 }
-function closeDialog(id){
-  const d=document.getElementById(id); d.classList.remove('show');
+function closeDialog(id: string){
+  const d=dlg(id); d.classList.remove('show');
   if(d.open){ if(typeof d.close==='function') d.close(); else d.removeAttribute('open'); }
   const o=dlgOpener.get(id); dlgOpener.delete(id);
-  if(o && o!==document.body && o.isConnected && typeof o.focus==='function') o.focus({preventScroll:true});   // retour à l'élément d'origine
+  if(o && o!==document.body && o.isConnected && typeof (o as HTMLElement).focus==='function') (o as HTMLElement).focus({preventScroll:true});   // retour à l'élément d'origine
 }
 /** Échap : action propre à chaque fenêtre (refuser, passer, fermer) au lieu de la fermeture brute du navigateur */
 function initDialogs(){
@@ -147,22 +152,23 @@ function initDialogs(){
   }
 }
 /** Écran d'attente : annoncé aux lecteurs d'écran, le reste de la page devient inerte */
-let busyFocus=null;
-function setBusy(on,txt){
-  if(txt) document.getElementById('busyTxt').textContent=txt;
+let busyFocus: Element | null=null;
+const byId=(id: string)=>document.getElementById(id) as HTMLElement;
+function setBusy(on: boolean, txt?: string){
+  if(txt) byId('busyTxt').textContent=txt;
   if(on && !busyFocus) busyFocus=document.activeElement;   // la page devient inerte : le focus est rendu à la fin
-  document.getElementById('busy').classList.toggle('show',!!on);
-  document.getElementById('app').inert=!!on; document.getElementById('busy').setAttribute('aria-busy',String(!!on));
-  if(!on && busyFocus){ const f=busyFocus; busyFocus=null; if(f.isConnected && typeof f.focus==='function') f.focus({preventScroll:true}); }
+  byId('busy').classList.toggle('show',!!on);
+  byId('app').inert=!!on; byId('busy').setAttribute('aria-busy',String(!!on));
+  if(!on && busyFocus){ const f=busyFocus; busyFocus=null; if(f.isConnected && typeof (f as HTMLElement).focus==='function') (f as HTMLElement).focus({preventScroll:true}); }
 }
 
 // ---------- Accord préalable aux services tiers (RGPD) ----------
 // Aucune requête vers un service tiers (tuiles, Nominatim, CDN) avant l'accord explicite de l'utilisateur.
 const CONSENT_KEY = 'cms3.consent';
 let consent = (()=>{ try{ return localStorage.getItem(CONSENT_KEY)==='1'; }catch(e){ return false; } })();
-let consentNext = null;
+let consentNext: (()=>void) | null = null;
 /** true si l'accord est donné ; sinon affiche la demande et exécute `next` après acceptation */
-function needConsent(next){
+function needConsent(next?: ()=>void){
   if(consent) return true;
   consentNext = next || null;
   openDialog('consent');
@@ -190,7 +196,7 @@ function withdrawConsent(){
   location.reload();
 }
 function updateConsentInfo(){
-  const el=document.getElementById('consentInfo'); el.textContent='';
+  const el=byId('consentInfo'); el.textContent='';
   el.append(consent ? 'Services cartographiques autorisés (OpenFreeMap, Nominatim). ' : 'Aucun service tiers n\'est contacté sans votre accord. ');
   const b=document.createElement('button'); b.className='btn sm'; b.type='button';
   b.textContent = consent ? 'Retirer l\'accord' : 'Autoriser la carte';
@@ -204,10 +210,10 @@ function loadState(){
 }
 let saveT=0;
 function saveState(){if(ui.comparing) return; clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} CMS.emit('state:saved');},300)}
-function getPath(o,p){return p.split('.').reduce((a,k)=>a?.[k],o)}
-function setPath(o,p,v){const ks=p.split('.');const last=ks.pop();ks.reduce((a,k)=>a[k],o)[last]=v}
+function getPath(o: unknown, p: string): any {return p.split('.').reduce((a: any,k)=>a?.[k],o)}
+function setPath(o: unknown, p: string, v: unknown){const ks=p.split('.');const last=ks.pop() as string;ks.reduce((a: any,k)=>a[k],o)[last]=v}
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
 Object.assign(late, {st});
 
 export {SHARE_MAX_BYTES, SHARE_MAX_CHARS, V, closeDialog, consent, declineConsent, dlgCancel, getPath, giveConsent, initDialogs, mlCdn, mlFailMsg, mlLib, mlMap, needConsent, normState, openDialog, osmData, saveState, saveT, setBusy, setMlCdn, setMlFailMsg, setMlLib, setMlMap, setOsmData, setPath, st, ui, updateConsentInfo};
