@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16161a">
+<meta name="color-scheme" content="dark">
+<!-- Politique de sécurité du contenu (GitHub Pages ne permet pas d'en-têtes HTTP : balise meta).
+     Aucun script ni style en ligne ; réseau limité aux services cartographiques (tous soumis à l'accord préalable)
+     et aux CDN de secours de MapLibre (chargés avec SRI). À tenir à jour avec NOMINATIM, OFM_URL et ML_CDNS (js/config.js). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org https://nominatim.openstreetmap.org https://fr.wikipedia.org; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<title>City Map Studio — Atelier d'affiches cartographiques</title>
+<meta name="description" content="Créez une affiche cartographique souvenir : rues et cours d'eau d'une ville, repère sur le lieu d'une rencontre, textes et thèmes, export PNG A4 à 300 DPI. Gratuit, open source, sans compte.">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- Aperçu des liens partagés (messageries, réseaux) : l'image doit avoir une adresse absolue, celle de la version publiée -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="City Map Studio">
+<meta property="og:title" content="City Map Studio — Atelier d'affiches cartographiques">
+<meta property="og:description" content="Rues, cours d'eau et repère sur le lieu d'une rencontre : une affiche souvenir à imprimer en A4, 300 DPI. Open source, sans compte.">
+<meta property="og:image" content="https://thiryyan.github.io/city-map-studio/icons/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Trois affiches cartographiques de Blois : carte ancienne sur papier plié, médaillon doré de soirée de gala, nuit en ville au néon">
+<meta name="twitter:card" content="summary_large_image">
+<!-- Polices auto-hébergées (SIL OFL 1.1) : aucun appel à un service tiers, fonctionne hors ligne -->
+<link rel="stylesheet" href="lib/fonts/fonts.css">
+<!-- MapLibre (copie locale, aucun tiers) : téléchargé pendant l'analyse de la page, exécuté au démarrage -->
+<link rel="preload" href="lib/maplibre-gl.js" as="script">
+<link rel="stylesheet" href="css/app.6de28c91c0.css">
+</head>
+<body>
+<div id="app">
+  <section id="stage">
+    <div id="poster">
+      <canvas id="cvUnder" aria-hidden="true"></canvas>
+      <div id="slot"><div id="mlMap"></div><canvas id="vecCanvas" tabindex="0" role="application" aria-roledescription="carte" aria-label="Carte. Flèches : déplacer (Maj : plus loin). Plus et moins : zoomer. Entrée : placer le repère au centre en mode placement."></canvas></div>
+      <canvas id="cvOver" role="img" aria-label="Aperçu de l'affiche"></canvas>
+      <div class="illushit" id="illusHit" hidden aria-hidden="true"></div>
+      <div class="texthit" id="hitTitle" tabindex="0" role="button" hidden aria-label="Titre de l'affiche : glisser pour le déplacer, ou flèches (Maj : plus loin) ; Origine : revenir à la grille"></div>
+      <div class="texthit" id="hitFoot" tabindex="0" role="button" hidden aria-label="Lignes du bas (dédicace, noms, date, coordonnées) : glisser pour les déplacer, ou flèches (Maj : plus loin) ; Origine : placement automatique"></div>
+      <canvas id="cvTex" hidden aria-hidden="true"></canvas>
+      <div class="cmpbadge" id="cmpBadge" role="status" hidden></div>
+      <div class="safeguide" id="safeGuide" aria-hidden="true" hidden></div>
+      <button class="shield placeSwitch" id="placeSwitch" type="button" hidden><span>Modifier le lieu 2</span></button>
+      <!-- Lecture (par défaut) : rien ne bouge sur l'affiche ; ce verrou, sur toute l'affiche, ouvre la Modification -->
+      <button class="shield" id="shield" type="button" aria-label="Modifier l'affiche" hidden><span id="shieldHint" hidden>✎ <b>Toucher pour modifier</b></span></button>
+      <div class="illusframe" id="illusFrame" aria-hidden="true"></div>
+    </div>
+    <!-- Sources de la carte : sous l'affiche, hors de celle-ci (l'affiche porte sa propre mention, identique à l'export) -->
+    <p class="mapcredit" id="mapCredit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a><span id="mcOmt"> · © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a></span></p>
+    <div class="stpill quiet" id="stPill"><i class="dot" id="stDot" aria-hidden="true"></i><span id="stTxt">Prêt</span></div>
+    <div class="fab">
+      <button id="bZoomIn" title="Zoom avant" aria-label="Zoom avant"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button id="bZoomOut" title="Zoom arrière" aria-label="Zoom arrière"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button id="bToMarker" title="Centrer sur le repère" aria-label="Centrer sur le repère"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="1.8" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg></button>
+    </div>
+    <button class="cleanexit" id="cleanExit" type="button" aria-label="Revenir aux réglages ; pincer, double toucher, molette ou touches + et − pour zoomer" hidden><span>Toucher pour revenir aux réglages · pincer ou double toucher pour zoomer</span></button>
+    <div class="cleanzoom" id="cleanZoom" hidden>
+      <span class="zsharp" id="zoomSharpBadge" role="status" aria-live="polite" hidden>Mise au net…</span>
+      <button class="btn sm" type="button" id="bZoomFit">Ajuster à l'écran</button>
+      <button class="btn sm" type="button" id="bZoomExit">Revenir aux réglages</button>
+    </div>
+    <div class="stagebar">
+      <div class="placehint" id="placeHint">Touchez la carte pour placer le repère</div>
+      <div class="framebar" id="frameBar" role="status"><span id="frameTxt">Glissez · pincez pour zoomer</span></div>
+      <div class="zoombadge" id="zoomBadge" role="status" hidden></div>
+    </div>
+  </section>
+
+  <aside id="panel">
+    <button class="grab" id="grab" type="button" aria-label="Agrandir le panneau des réglages"><i></i></button>
+    <div class="brand">City Map Studio<small>Atelier d'affiches cartographiques</small></div>
+    <div class="banner" id="banner" role="status"><span id="bannerTxt"></span><button class="btn sm on" id="bBanner" type="button" hidden></button></div>
+    <div class="banner" id="updBanner" role="status"><span>Nouvelle version disponible</span><button class="btn sm on" id="bUpdate" type="button">Mettre à jour</button><button class="btn sm" id="bUpdLater" type="button" aria-label="Plus tard">✕</button></div>
+    <div class="modes top" id="modeSeg" role="group" aria-label="Type d'affiche">
+      <button data-v="map" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Carte</button>
+      <button data-v="illus" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Illustration</button>
+    <button data-v="mix" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 9l3-3 3 3 2-2 4 2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="10" cy="13" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Carte + illus.</button>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Étapes de création">
+      <button data-tab="lieu" class="on" role="tab" id="tb-lieu" aria-controls="tab-lieu" aria-selected="true">Lieu</button>
+      <button data-tab="repere" role="tab" id="tb-repere" aria-controls="tab-repere" aria-selected="false" tabindex="-1">Repère</button>
+      <button data-tab="illus" role="tab" id="tb-illus" aria-controls="tab-illus" aria-selected="false" tabindex="-1" aria-label="Illustration" hidden><span class="tl">Illustration</span><span class="ts" aria-hidden="true">Illus.</span></button>
+      <button data-tab="textes" role="tab" id="tb-textes" aria-controls="tab-textes" aria-selected="false" tabindex="-1">Textes</button>
+      <button data-tab="style" role="tab" id="tb-style" aria-controls="tab-style" aria-selected="false" tabindex="-1">Style</button>
+      <button data-tab="export" role="tab" id="tb-export" aria-controls="tab-export" aria-selected="false" tabindex="-1">Export</button>
+    </nav>
+    <div class="tabbody">
+      <!-- Premier lancement (#59) : proposition d'ambiance non bloquante, fermée d'un toucher ; ne revient plus une fois fermée ou utilisée -->
+      <section class="welstrip" id="welStrip" aria-labelledby="welTitle" hidden>
+        <div class="welhead"><h2 id="welTitle">Essayer une ambiance</h2><button class="btn sm" type="button" id="welClose" aria-label="Fermer la proposition d'ambiance">✕</button></div>
+        <p class="hint">Thème, polices, gabarit, repère et papier assortis, en un toucher ; tout reste modifiable, et « Annuler » revient en arrière.</p>
+        <div class="fonts ambs" id="welAmb" role="group" aria-label="Ambiances proposées"></div>
+      </section>
+      <!-- LIEU -->
+      <div class="tab on" id="tab-lieu" role="tabpanel" aria-labelledby="tb-lieu">
+        <div class="warn" id="envWarn" hidden></div>
+        <div id="placeBox" hidden>
+          <h3>Lieu édité</h3>
+          <div class="seg" id="placeSeg"><button data-v="0" type="button">Lieu 1</button><button data-v="1" type="button">Lieu 2</button></div>
+          <p class="hint">Gabarit « Deux lieux » : la recherche, le repère et le cadrage s'appliquent au lieu choisi. Touchez aussi l'autre carte de l'affiche pour passer d'un lieu à l'autre.</p>
+        </div>
+        <h3>Rechercher une adresse ou une ville</h3>
+        <form class="row" id="searchForm" autocomplete="off">
+          <input class="grow" type="search" id="q" placeholder="Ex. : Château de Blois" enterkeyhint="search" aria-label="Adresse ou ville">
+          <button class="btn" type="submit">Chercher</button>
+        </form>
+        <button class="btn wide mt8" id="bGeo" type="button" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="10" r="2.2" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.8"/></svg>Ma position actuelle</button>
+        <ul class="results" id="results" aria-label="Résultats de la recherche"></ul>
+        <p class="sr-only" id="resultsStatus" role="status" aria-live="polite"></p>
+        <h3>Villes</h3>
+        <div class="cur" id="cityTxt"></div>
+        <div class="chips" id="presets"></div>
+        <h3>Lieu de rencontre</h3>
+        <div class="cur" id="markerTxt"></div>
+        <p class="hint pureillus">Affiche illustrée : le lieu donne le titre, les coordonnées inscrites et les pistes du prompt (aucune carte n'est affichée).</p>
+        <div class="row mt8 maponly">
+          <button class="btn grow" id="bPlace2">Placer le repère sur la carte</button>
+          <button class="btn" id="bMarkerCenter">Au centre</button>
+        </div>
+        <form class="row mt8" id="markerForm" autocomplete="off">
+          <input class="grow" type="text" id="markerIn" inputmode="text" enterkeyhint="done" aria-label="Coordonnées du lieu de rencontre" placeholder="Coordonnées : 47.5861, 1.3359">
+          <button class="btn" type="submit">Placer</button>
+        </form>
+        <p class="hint">Décimal (47.5861, 1.3359 · 47,5861 ; 1,3359), DMS (47° 35′ 10″ N, 1° 20′ 09″ E) ou lien Google Maps / OpenStreetMap. La carte se recentre si le point sort du cadre.</p>
+        <h3 class="maponly">Cadrage</h3>
+        <div class="slider maponly"><label for="zoom">Zoom</label><output id="oZoom"></output><input type="range" id="zoom" min="10" max="18" step="0.1"></div>
+        <details class="adv" id="adv">
+          <summary><span>Avancé</span><small>moteur, connexion, hors ligne</small></summary>
+          <h3>Moteur cartographique</h3>
+          <div class="seg" id="engineSeg">
+            <button data-v="maplibre">Vectoriel GPU</button>
+            <button data-v="file">Fichier (hors ligne)</button>
+          </div>
+          <p class="hint" id="engineHint"></p>
+          <div id="fileBlock" hidden>
+            <ol>
+              <li>Exportez la zone voulue depuis <a href="https://www.openstreetmap.org/export" target="_blank" rel="noopener">openstreetmap.org/export</a> (fichier .osm), ou utilisez un fichier OSM obtenu par un autre outil.</li>
+              <li>Enregistrez le fichier, puis importez-le ici. Formats acceptés : .osm (XML), JSON OSM ou GeoJSON.</li>
+            </ol>
+            <label class="btn wide">Importer un fichier de données<input type="file" id="fileIn" accept=".json,.geojson,.osm,.xml,application/json,application/geo+json,text/xml" hidden></label>
+          </div>
+          <button class="btn wide mt10" id="bDiag" type="button">Diagnostiquer la connexion</button>
+          <p class="hint" id="consentInfo"></p>
+          <div class="diag" id="diag"></div>
+          <h3>Taille du texte de l'interface</h3>
+          <div class="row"><span class="uisz" role="group" aria-label="Taille du texte de l'interface"><button type="button" id="bUiSmaller" aria-label="Réduire le texte de l'interface">A−</button><button type="button" id="bUiLarger" aria-label="Agrandir le texte de l'interface">A+</button></span><span class="hint grow" id="uiScaleTxt">100 %</span></div>
+          <p class="hint">Propre à cet appareil ; « Réinitialiser » n'y touche pas.</p>
+          <p class="hint" id="appVersion">Version : –</p>
+          <h3>Mesures de performance</h3>
+          <p class="hint">Temps relevés sur cet appareil depuis l'ouverture de la page, comparés aux budgets de l'application. Rien n'est envoyé : copiez-les pour les partager.</p>
+          <div class="diag" id="perfOut" aria-live="polite"></div>
+          <button class="btn wide mt10" id="bPerfCopy" type="button">Copier les mesures</button>
+        </details>
+        <button class="btn next pureillus" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next maponly" type="button" data-next="repere">Étape suivante : le repère<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <p class="credit">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL) · Tuiles <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · Rendu MapLibre GL · Géocodage Nominatim</p>
+      </div>
+      <!-- ILLUSTRATION (modes illustrés) : prompt pour une IA externe, puis import et ajustement de l'image -->
+      <div class="tab" id="tab-illus" role="tabpanel" aria-labelledby="tb-illus">
+        <div class="seg mt6" id="illusStepSeg" role="group" aria-label="Étape de l'illustration"><button data-v="compo" type="button" class="mixonly">Composition</button><button data-v="prompt" type="button">Prompt</button><button data-v="image" type="button">Image</button></div>
+        <div id="illusCompo" hidden>
+          <h3>Composition</h3>
+          <div class="compos" id="compoSeg" role="group" aria-label="Composition de l'affiche">
+            <button data-v="med" type="button"><span class="mini" aria-hidden="true"><i class="il full"></i><i class="mp med"></i></span>Médaillon<small>Illustration en pleine page, carte dans une forme</small></button>
+            <button data-v="vig" type="button"><span class="mini" aria-hidden="true"><i class="mp full"></i><i class="il vig"></i></span>Vignette<small>Carte encadrée, illustration en arche</small></button>
+            <button data-v="hb" type="button"><span class="mini" aria-hidden="true"><i class="il top"></i><i class="mp bot"></i></span>Haut / bas<small>Illustration en haut, carte en bas</small></button>
+            <button data-v="cote" type="button"><span class="mini land" aria-hidden="true"><i class="il left"></i><i class="mp right"></i></span>Côte à côte<small>Affiche en paysage</small></button>
+            <button data-v="fondu" type="button"><span class="mini" aria-hidden="true"><i class="il full"></i><i class="mp fade"></i></span>Fondu<small>La carte émerge de l'illustration</small></button>
+          </div>
+          <div id="hbOpts">
+            <h3>Partage de l'affiche</h3>
+            <div class="seg" id="mixSplitSeg" role="group" aria-label="Part de l'illustration"><button data-v="half" type="button">Moitié · moitié</button><button data-v="two" type="button">Deux tiers · un tiers</button></div>
+          </div>
+          <div id="medOpts">
+            <h3>Forme de la carte</h3>
+            <div class="seg" id="mixShapeSeg" role="group" aria-label="Forme de la carte"><button data-v="circle" type="button">Rond</button><button data-v="heart" type="button">Cœur</button><button data-v="arch" type="button">Arche</button></div>
+            <h3>Position de la carte</h3>
+            <div class="seg" id="mixPosSeg" role="group" aria-label="Position de la carte"><button data-v="haut" type="button">Haut</button><button data-v="centre" type="button">Centre</button><button data-v="bas" type="button">Bas</button></div>
+          </div>
+          <div class="cur mt10"><b>Transmis au prompt</b><span class="mono" id="compoPrompt"></span></div>
+          <p class="hint">Couleurs de la carte d'après l'illustration : onglet Style, « Couleurs d'après une image ». Dans l'autre sens, la palette « Thème de l'affiche » de l'étape Prompt transmet à l'IA les couleurs de la carte.</p>
+          <button class="btn wide mt8" type="button" id="bToPrompt">Étape suivante : le prompt</button>
+        </div>
+        <div id="illusPrompt">
+          <p class="hint">L'illustration est créée par l'IA de votre choix (ChatGPT, Gemini…) : l'application rédige la demande, vous l'y collez, puis vous importez l'image obtenue à l'étape 2.</p>
+          <h3>Pistes à proposer à l'IA <small class="opt">facultatif</small></h3>
+          <div class="chips" id="pisteChips" role="group" aria-label="Pistes"></div>
+          <button class="btn wide mt8" type="button" id="bScanPistes"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Trouver des pistes dans la carte</span></button>
+          <div class="chips mt8" id="pisteSugg" role="group" aria-label="Pistes trouvées dans la carte" hidden></div>
+          <p class="hint">Monuments, cours d'eau, sommets et paysages autour du lieu, lus dans la carte (avec le moteur Fichier : dans les données importées). Touchez une piste pour l'ajouter.</p>
+          <label class="tog mt8">Chercher aussi dans Wikipédia<input type="checkbox" id="wikiOn"></label>
+          <div id="wikiBox" hidden>
+            <button class="btn wide mt6" type="button" id="bWikiPistes"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><span>Lieux remarquables (Wikipédia)</span></button>
+            <p class="hint" id="wikiHint" aria-live="polite"></p>
+          </div>
+          <p class="hint" id="wikiPriv">Option désactivée par défaut. Activée, elle envoie à Wikipédia (fr.wikipedia.org) les seules coordonnées du lieu, avec votre adresse IP ; les lieux les plus connus alentour sont proposés comme pistes.</p>
+          <form class="row mt8" id="pisteForm" autocomplete="off"><input class="grow" type="text" id="pisteIn" maxlength="80" enterkeyhint="done" aria-label="Ajouter une piste" placeholder="Château, port, vignobles…"><button class="btn" type="submit">Ajouter</button></form>
+          <h3>Moment de la journée</h3>
+          <div class="seg wrap" id="momentSeg" role="group" aria-label="Moment de la journée"></div>
+          <h3>Saison</h3>
+          <div class="seg wrap" id="saisonSeg" role="group" aria-label="Saison"></div>
+          <h3>Palette</h3>
+          <div class="seg" id="paletteSeg" role="group" aria-label="Palette"><button data-v="ia" type="button">Proposée par l'IA</button><button data-v="theme" type="button">Thème de l'affiche</button><button data-v="photo" type="button">D'une photo</button></div>
+          <h3>Langue du prompt</h3>
+          <div class="seg" id="langSeg" role="group" aria-label="Langue du prompt"><button data-v="fr" type="button">Français</button><button data-v="en" type="button">English</button></div>
+          <p class="hint" id="promptInfo" aria-live="polite"></p>
+          <h3><label for="promptOut">Prompt</label></h3>
+          <textarea id="promptOut" class="prompt" readonly rows="8"></textarea>
+          <button class="btn pri wide mt8" id="bCopyPrompt" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Copier le prompt</button>
+          <p class="hint">Collez-le dans ChatGPT ou Gemini et répondez à ses questions. L'IA doit livrer une image sans aucun texte ni marge : le titre est posé ensuite par l'application.</p>
+          <button class="btn wide mt8" type="button" id="bToImage">J'ai mon image : l'importer</button>
+        </div>
+        <div id="illusImage" hidden>
+          <div class="drop" id="illusDrop">
+            <p class="kbonly"><b>Glissez votre image ici</b><br>ou collez-la (Ctrl + V) · PNG, JPEG ou WebP</p>
+            <p class="touchonly"><b>Importez l'image obtenue</b><br>copiée dans votre IA, ou enregistrée dans vos photos · PNG, JPEG ou WebP</p>
+            <div class="droprow"><button class="btn" type="button" id="bIllusPaste" hidden><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="11.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 3V2h4v1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Coller l'image</button>
+            <label class="btn">Choisir un fichier<input type="file" id="illusIn" accept="image/png,image/jpeg,image/webp" hidden></label></div>
+          </div>
+          <div class="illusfile" id="illusFile" hidden>
+            <img id="illusThumb" alt="Miniature de l'illustration importée">
+            <div class="grow"><span id="illusName"></span><small id="illusInfo"></small></div>
+            <label class="btn sm">Remplacer<input type="file" id="illusIn2" accept="image/png,image/jpeg,image/webp" hidden></label>
+            <button class="btn sm" type="button" id="bIllusDel" aria-label="Retirer l'image">✕</button>
+          </div>
+          <p class="fitnote" id="illusMissing" role="status" hidden></p>
+          <p class="fitnote" id="illusErr" role="alert"></p>
+          <div id="illusTools" hidden>
+            <h3>Qualité d'impression</h3>
+            <ul class="quality" id="illusQuality" aria-label="Qualité d'impression par format"></ul>
+            <label class="tog">Agrandir ×2 dans le navigateur<input type="checkbox" data-k="illus.upscale"></label>
+            <p class="hint" id="illusRatio"></p>
+            <h3 id="hIllusCrop">Cadrage</h3>
+            <div class="seg" id="illusFitSeg" role="group" aria-label="Cadrage de l'image"><button data-v="cover" type="button">Remplir l'affiche</button><button data-v="contain" type="button">Image entière</button></div>
+            <div class="slider"><label for="sIllusZoom">Zoom</label><output id="oIllusZoom"></output><input type="range" id="sIllusZoom" data-k="illus.zoom" min="30" max="300" step="5"></div>
+            <div class="row"><p class="hint grow">Glissez l'image sur l'aperçu pour la déplacer.</p><button class="btn sm" type="button" id="bIllusCenter">Recentrer</button></div>
+            <h3 id="hIllusFx">Retouches</h3>
+            <div class="slider"><label for="sIllusBright">Luminosité</label><output id="oIllusBright"></output><input type="range" id="sIllusBright" data-k="illus.bright" min="-50" max="50" step="1"></div>
+            <div class="slider"><label for="sIllusContrast">Contraste</label><output id="oIllusContrast"></output><input type="range" id="sIllusContrast" data-k="illus.contrast" min="-50" max="50" step="1"></div>
+            <div class="slider"><label for="sIllusSatur">Saturation</label><output id="oIllusSatur"></output><input type="range" id="sIllusSatur" data-k="illus.satur" min="-50" max="50" step="1"></div>
+            <h3>Filtre vintage</h3>
+            <div class="seg" id="illusVintageSeg" role="group" aria-label="Filtre vintage"><button data-v="none" type="button">Aucun</button><button data-v="light" type="button">Léger</button><button data-v="strong" type="button">Marqué</button></div>
+            <label class="tog">Grain<input type="checkbox" data-k="illus.grain"></label>
+            <label class="tog">Aplats (couleurs réduites)<input type="checkbox" data-k="illus.flat"></label>
+          </div>
+        </div>
+        <button class="btn next" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <!-- STYLE -->
+      <div class="tab" id="tab-style" role="tabpanel" aria-labelledby="tb-style">
+        <h3>Ambiances</h3>
+        <p class="hint">Un toucher pour un ensemble assorti (thème, polices, gabarit, repère, papier) ; tout reste modifiable ensuite.</p>
+        <div class="fonts ambs" id="ambiances" role="group" aria-label="Ambiances"></div>
+        <details class="adv" id="themeBox">
+          <summary><span>Thème</span><small id="themeCur"></small></summary>
+          <div class="chips fcats" id="themeCats" role="group" aria-label="Catégories de thèmes"></div>
+          <div class="themes" id="themes" role="group" aria-label="Thèmes"></div>
+          <p class="hint illusonly">Le thème donne le papier et la couleur « Auto » des textes (onglet Textes).</p>
+        </details>
+        <p class="fitnote" id="contrastWarn" aria-live="polite"></p>
+        <!-- Couleurs d'après une image (#77) : une seule entrée pour les trois types d'affiche, depuis l'illustration importée ou une photo -->
+        <h3>Couleurs d'après une image</h3>
+        <div class="row">
+          <button class="btn grow illusonly" type="button" id="bPalIllus">L'illustration</button>
+          <label class="btn grow">Une photo<input type="file" id="photoIn" accept="image/*" hidden></label>
+        </div>
+        <div id="photoPal" hidden>
+          <div class="pal" id="photoSw" aria-hidden="true"></div>
+          <div class="seg" id="photoSeg" role="group" aria-label="Version de la palette"><button data-v="light" type="button">Claire</button><button data-v="dark" type="button">Sombre</button></div>
+          <p class="hint" id="photoNote"></p>
+        </div>
+        <h3 id="hPaper">Papier</h3>
+        <div class="chips" id="textures"></div>
+        <label class="tog illusonly">Papier jauni sur l'illustration<input type="checkbox" data-k="illus.paper"></label>
+        <label class="tog">Plis d'une carte dépliée<input type="checkbox" data-k="folds"></label>
+        <label class="tog">Dorure (reflets métalliques des textes, filets et repères)<input type="checkbox" data-k="fx.foil"></label>
+        <details class="adv maponly" id="styleMore">
+          <summary><span>Plus de réglages</span><small>gabarit, effets, calques, couleurs</small><b class="chg" id="chg-styleMore" hidden></b></summary>
+          <div class="layoutonly">
+          <h3>Gabarit</h3>
+          <div class="cards" id="layouts" role="group" aria-label="Gabarits"></div>
+          </div>
+          <!-- Marge et contour de la forme (#77) : gabarits de la Carte, et compositions de la Carte + illustration où ils agissent -->
+          <h3 class="mixonly" id="mixFormH">Mise en page</h3>
+          <div class="slider" id="marginBox"><label for="sMargin">Marge (passe-partout)</label><output id="oMargin"></output><input type="range" id="sMargin" data-k="margin" min="3" max="12" step="0.5"></div>
+          <label class="tog" id="ringTog">Contour de la forme<input type="checkbox" data-k="ring"></label>
+          <p class="hint mixonly" id="mixFormHint"></p>
+          <div class="layoutonly">
+          <div id="skyBox" hidden>
+            <h3 id="hSky">Ciel du jour J</h3>
+            <p class="hint">Les étoiles visibles au-dessus du repère, à la date et à l'heure choisies.</p>
+            <label class="f" for="skyWhen">Date et heure (heure locale du lieu)</label>
+            <input type="datetime-local" id="skyWhen" class="dt">
+            <label class="f" for="skyTz">Fuseau horaire du lieu</label>
+            <select id="skyTz" class="sel"></select>
+            <label class="tog">Constellations<input type="checkbox" data-k="sky.lines"></label>
+            <label class="tog">Grille de repérage<input type="checkbox" data-k="sky.grid"></label>
+            <label class="tog">Lune et sa phase<input type="checkbox" data-k="sky.moon"></label>
+            <label class="tog">Planètes visibles<input type="checkbox" data-k="sky.planets"></label>
+            <label class="tog">Voie lactée<input type="checkbox" data-k="sky.milky"></label>
+          </div>
+          </div>
+          <h3>Touche d'or</h3>
+          <div class="chips">
+            <button class="chip" data-gold="water">Fleuve</button>
+            <button class="chip" data-gold="roadMajor">Grands axes</button>
+            <button class="chip" data-gold="marker">Repère</button>
+            <button class="chip" data-gold="frame">Filets</button>
+          </div>
+          <h3 id="hTrace">Tracé</h3>
+          <div class="slider"><label for="sStroke">Épaisseur des rues</label><output id="oStroke"></output><input type="range" id="sStroke" data-k="stroke" min="0.5" max="2.5" step="0.05"></div>
+          <div class="slider"><label for="sWater">Mise en valeur des cours d'eau</label><output id="oWater"></output><input type="range" id="sWater" data-k="waterMult" min="0.5" max="3" step="0.1"></div>
+          <h3 id="hFx">Effets de tracé</h3>
+          <label class="tog">Eau hachurée<input type="checkbox" data-k="fx.hatch"></label>
+          <label class="tog">Bâtiments en contour<input type="checkbox" data-k="fx.outline"></label>
+          <label class="tog">Trait crayon (rues tracées deux fois, légèrement décalées)<input type="checkbox" data-k="fx.pencil"></label>
+          <label class="tog">Lueur (rues lumineuses, pour les thèmes sombres)<input type="checkbox" data-k="fx.glow"></label>
+          <label class="tog">Lignes d'eau gravées autour des rives<input type="checkbox" data-k="fx.waterlines"></label>
+          <label class="tog">Bâtiments pointillés<input type="checkbox" data-k="fx.dots"></label>
+          <label class="tog">Parcs hachurés<input type="checkbox" data-k="fx.parkHatch"></label>
+          <label class="tog">Surimpression riso (eau imprimée à part, décalée)<input type="checkbox" data-k="fx.riso"></label>
+          <h3>Autour du repère</h3>
+          <label class="tog">Halo du souvenir (la ville s'efface autour du lieu)<input type="checkbox" data-k="fx.halo"></label>
+          <label class="tog">Quartier en relief (rues proches à la couleur du repère)<input type="checkbox" data-k="fx.quarter"></label>
+          <div class="slider"><label for="sFocus">Rayon autour du repère</label><output id="oFocus"></output><input type="range" id="sFocus" data-k="focusR" min="10" max="60" step="1"></div>
+          <h3 id="hOrn">Ornements</h3>
+          <label class="tog">Échelle graphique<input type="checkbox" data-k="orn.scale"></label>
+          <label class="tog">Rose des vents<input type="checkbox" data-k="orn.compass"></label>
+          <label class="tog">Graduations (latitude et longitude)<input type="checkbox" data-k="orn.grid"></label>
+          <h3>Calques</h3>
+          <label class="tog">Parcs et espaces verts<input type="checkbox" data-k="layers.parks"></label>
+          <label class="tog">Bâtiments<input type="checkbox" data-k="layers.buildings"></label>
+          <label class="tog">Voies ferrées<input type="checkbox" data-k="layers.rail"></label>
+          <details class="adv" id="colorsBox">
+            <summary><span>Personnaliser les couleurs</span><small>12 teintes</small><b class="chg" id="chg-colorsBox" hidden></b></summary>
+            <div class="colors" id="colors"></div>
+          </details>
+          <label class="tog mt8">Mention complète des sources sur l'affiche<input type="checkbox" data-k="attribution"></label>
+          <p class="hint">« © OpenStreetMap » (et « © OpenMapTiles » avec le moteur Vectoriel GPU) reste toujours inscrit : les licences ODbL et CC-BY l'exigent.</p>
+        </details>
+        <button class="btn next" type="button" id="bNextExport">Étape suivante : l'export<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <!-- REPERE -->
+      <div class="tab" id="tab-repere" role="tabpanel" aria-labelledby="tb-repere">
+        <h3 id="hMarker">Style du repère</h3>
+        <div class="marks cards" id="marks" role="group" aria-label="Styles de repère"></div>
+        <div class="seg mt10" id="fillSeg">
+          <button data-v="1">Plein</button><button data-v="0">Contour</button>
+        </div>
+        <div class="slider"><label for="sMSize">Taille</label><output id="oMSize"></output><input type="range" id="sMSize" data-k="markerSize" min="10" max="300" step="5"></div>
+        <div class="slider"><label for="sMOp">Opacité</label><output id="oMOp"></output><input type="range" id="sMOp" data-k="markerOpacity" min="0.2" max="1" step="0.05"></div>
+        <h3>Couleur</h3>
+        <div class="row">
+          <div class="chips grow" id="mColors"></div>
+          <input type="color" id="mColor" aria-label="Couleur personnalisée du repère">
+        </div>
+        <h3 id="hPlaces">Plusieurs lieux</h3>
+        <p class="hint">Jusqu'à trois lieux sur la même carte : rencontre, mariage, maison…</p>
+        <p class="hint" id="placesHint" hidden>Le gabarit « Deux lieux » n'affiche qu'un repère par carte.</p>
+        <div id="mList" class="plist"></div>
+        <button class="btn wide mt6" type="button" id="bAddPlace">+ Ajouter un lieu</button>
+        <label class="tog">Numéroter les lieux (légende sous la carte)<input type="checkbox" data-k="numbered"></label>
+        <label class="tog">Relier les lieux par un trait<input type="checkbox" data-k="linkMarkers"></label>
+        <h3 id="hRoute">Itinéraire</h3>
+        <label class="btn wide">Importer un tracé GPX<input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden></label>
+        <div class="row mt8"><button class="btn grow" type="button" id="bGpxPaste" hidden><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="11.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 3V2h4v1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Coller le GPX</button></div>
+        <textarea id="gpxText" class="prompt gpxtext mt8" rows="3" spellcheck="false" aria-label="GPX à coller (texte)" placeholder="… ou collez ici le GPX, ou toute la réponse de l'IA"></textarea>
+        <button class="btn wide mt6" type="button" id="bGpxImport">Importer le GPX collé</button>
+        <p class="hint" id="routeWarn" role="status" hidden></p>
+        <details class="adv" id="routeAi">
+          <summary><span>Préparer l'itinéraire avec une IA</span><small>pas de GPX ? décrivez les étapes</small></summary>
+          <p class="hint">L'application rédige le prompt ; collez-le dans ChatGPT ou Gemini, validez les étapes, puis rapportez le GPX (Coller le GPX).</p>
+          <h3>Type de parcours</h3>
+          <div class="seg wrap" id="rpKind" role="group" aria-label="Type de parcours"></div>
+          <h3>Étapes</h3>
+          <div id="rpPlaces" class="plist" role="group" aria-label="Lieux de l'affiche à reprendre comme étapes"></div>
+          <textarea id="rpExtra" class="prompt gpxtext plain mt8" rows="2" maxlength="400" aria-label="Autres étapes souhaitées" placeholder="Pont des Arts, puis le Marais, dîner rue…"></textarea>
+          <h3>Parcours</h3>
+          <div class="seg" id="rpLoop" role="group" aria-label="Boucle ou aller simple"><button data-v="0" type="button">Aller simple</button><button data-v="1" type="button">Boucle</button></div>
+          <h3>Langue du prompt</h3>
+          <div class="seg" id="rpLang" role="group" aria-label="Langue du prompt d'itinéraire"><button data-v="fr" type="button">Français</button><button data-v="en" type="button">English</button></div>
+          <h3><label for="routePromptOut">Prompt</label></h3>
+          <textarea id="routePromptOut" class="prompt" readonly rows="8"></textarea>
+          <button class="btn pri wide mt8" id="bCopyRoute" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Copier le prompt</button>
+          <p class="hint">Les tracés des IA restent approximatifs. Pour un tracé exact, préférez un calculateur d'itinéraire qui exporte un GPX (par exemple Komoot, Visorando, OpenRouteService, BRouter ou uMap), puis « Importer un tracé GPX ».</p>
+        </details>
+        <div id="routeBox" hidden>
+          <p class="hint" id="routeInfo"></p>
+          <label class="tog">Afficher l'itinéraire<input type="checkbox" id="routeShow"></label>
+          <div class="seg mt8" id="routeColor"><button data-v="marker" type="button">Couleur du repère</button><button data-v="roadMajor" type="button">Rues</button><button data-v="frame" type="button">Filets</button></div>
+          <div class="slider"><label for="routeW">Épaisseur</label><output id="oRouteW"></output><input type="range" id="routeW" min="0.5" max="3" step="0.25"></div>
+          <label class="tog">Pointillés<input type="checkbox" id="routeDash"></label>
+          <div class="row mt8"><button class="btn grow" type="button" id="bFitRoute">Cadrer sur l'itinéraire</button><button class="btn" type="button" id="bDelRoute">Retirer</button></div>
+        </div>
+        <button class="btn next layoutonly" type="button" data-next="textes">Étape suivante : les textes<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn next mixonly" type="button" data-next="illus">Étape suivante : l'illustration<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <!-- TEXTES -->
+      <div class="tab" id="tab-textes" role="tabpanel" aria-labelledby="tb-textes">
+        <!-- Onglet Textes (#88) : vos textes, mise en page, typographie, puis Plus de réglages -->
+        <h3 id="hLines">Vos textes</h3>
+        <p class="hint">Cochez les lignes à afficher : un texte décoché est conservé.</p>
+        <p class="sublbl">En-tête</p>
+        <label class="f show"><input type="checkbox" data-k="show.title" aria-label="Afficher le titre">Titre (ville)</label><input type="text" data-k="texts.title" aria-label="Titre">
+        <label class="f show"><input type="checkbox" data-k="show.subtitle" aria-label="Afficher le sous-titre">Sous-titre / région</label><input type="text" data-k="texts.subtitle" aria-label="Sous-titre">
+        <p class="sublbl">Bas de l'affiche</p>
+        <label class="f show"><input type="checkbox" data-k="show.dedication" aria-label="Afficher la dédicace">Dédicace</label><input type="text" data-k="texts.dedication" aria-label="Dédicace">
+        <label class="f show"><input type="checkbox" data-k="show.names" aria-label="Afficher les noms">Noms</label><input type="text" data-k="texts.names" aria-label="Noms">
+        <label class="f show"><input type="checkbox" data-k="show.date" aria-label="Afficher la date">Date</label>
+        <div class="row"><input class="grow" type="text" data-k="texts.date" aria-label="Date"><label class="btn datebtn" title="Choisir dans le calendrier"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 8.5h14M7 2.5v4M13 2.5v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span class="xl2">Calendrier</span><input type="date" id="dateIn" aria-label="Choisir la date dans le calendrier"></label></div>
+        <label class="f show"><input type="checkbox" data-k="show.coords" aria-label="Afficher les coordonnées">Coordonnées (vide : celles du repère)</label>
+        <input type="text" data-k="coordsManual" id="coordsManual" aria-label="Coordonnées affichées">
+        <div id="labelsBox" hidden>
+          <p class="sublbl">Deux lieux</p>
+          <label class="f" for="label1In">Légende du lieu 1</label><input type="text" id="label1In" data-k="texts.label1">
+          <label class="f" for="label2In">Légende du lieu 2</label><input type="text" id="label2In" data-k="texts.label2">
+        </div>
+        <p class="fitnote" id="fitNote" aria-live="polite"></p>
+        <p class="sublbl" id="occLbl">Partir d'un modèle</p>
+        <div class="chips" id="occasions" role="group" aria-labelledby="occLbl"></div>
+        <h3 id="hTextLayout">Mise en page</h3>
+        <p class="hint">Sur la carte ou sur une illustration chargée, une plaque (cartouche, bandeau, étiquette, capsule, cachet) garde les lettres lisibles.</p>
+        <div class="chips mb8" id="textPresets" role="group" aria-label="Mises en page prêtes"></div>
+        <section class="tcard" aria-labelledby="hTextPos">
+          <h4 id="hTextPos">Titre et sous-titre</h4>
+          <div class="seg mixonly zseg" id="tZoneSeg" role="group" aria-label="Zone du titre"><button type="button" data-v="illus">Sur l'illustration</button><button type="button" data-v="map">Sur la carte</button><button type="button" data-v="poster">Toute l'affiche</button></div>
+          <div class="row layoutonly"><button class="chip" type="button" id="tLayBtn" aria-pressed="true">Dans le gabarit</button></div>
+          <div class="posgrid mt8" id="tPosSeg" role="group" aria-label="Position du titre"></div>
+          <p class="hint" id="tFreeNote"><span></span>Le titre se glisse aussi directement sur l'aperçu (aimanté sur ces positions et sur les axes du centre), ou au clavier (Tab puis flèches).<span class="illusonly"> La position est reprise dans le prompt : l'IA laisse cette zone calme.</span><span class="layoutonly"> Hors du gabarit, le titre et le sous-titre sont posés sur l'affiche, au-dessus de la carte ; leur place dans le gabarit reste vide. Gabarit Lettres : le titre forme la carte et reste en place.</span></p>
+          <p class="sublbl" id="tDecoLbl">Présentation</p>
+          <div class="chips decos" id="tDecoSeg" role="group" aria-labelledby="tDecoLbl"></div>
+          <p class="hint" id="tDecoNote" aria-live="polite"></p>
+        </section>
+        <section class="tcard" aria-labelledby="hFootPos">
+          <h4 id="hFootPos">Lignes du bas</h4>
+          <p class="hint">Dédicace, noms, date et coordonnées, en un bloc.</p>
+          <div class="seg mixonly zseg mb8" id="fZoneSeg" role="group" aria-label="Zone des lignes du bas"><button type="button" data-v="illus">Sur l'illustration</button><button type="button" data-v="map">Sur la carte</button><button type="button" data-v="poster">Toute l'affiche</button></div>
+          <div class="row"><button class="chip" type="button" id="fAutoBtn" aria-pressed="true">Auto : à l'opposé du titre</button></div>
+          <div class="posgrid mt8" id="fPosSeg" role="group" aria-label="Position des lignes du bas"></div>
+          <p class="hint" id="fFreeNote"><span></span>Ce bloc se glisse aussi sur l'aperçu.<span class="mixonly"> Vignette : titre et lignes se placent à gauche, au centre ou à droite de la bande.</span></p>
+          <p class="sublbl" id="fTplLbl">Mise en forme</p>
+          <div class="chips decos" id="fTplSeg" role="group" aria-labelledby="fTplLbl"></div>
+          <p class="hint" id="fTplNote" aria-live="polite"></p>
+          <p class="sublbl" id="fDecoLbl">Présentation</p>
+          <div class="chips decos" id="fDecoSeg" role="group" aria-labelledby="fDecoLbl"></div>
+          <p class="hint" id="fDecoNote" aria-live="polite"></p>
+        </section>
+        <div class="row end"><button class="lnk" type="button" id="bPlateOpts" hidden>Fond, transparence et trait des plaques…</button></div>
+        <p class="fitnote" id="textWarn" aria-live="polite"></p>
+        <h3 id="hTypo">Typographie</h3>
+        <p class="hint">Les duos accordent la police du titre et celle du texte ; Vintage met le titre en capitales condensées.</p>
+        <div class="fonts duos" id="duos" role="radiogroup" aria-label="Duo de polices"></div>
+        <p class="hint" id="titleAuto" aria-live="polite" hidden></p>
+        <div class="slider" id="hTextSize"><label for="sTsAll">Taille de tous les textes</label><output id="oTsAll"></output><input type="range" id="sTsAll" data-k="textScaleAll" min="70" max="140" step="5"></div>
+        <div class="row end"><button class="lnk" id="bTsReset" type="button">Tailles par défaut</button></div>
+        <div class="swrow"><span id="swTextLbl">Lettres</span><div class="swatches" id="swText" role="group" aria-labelledby="swTextLbl"></div></div>
+        <details class="adv" id="textMore">
+          <summary><span>Plus de réglages</span><small>polices, ombre, tailles, plaques, ordre</small><b class="chg" id="chg-textMore" hidden></b></summary>
+          <h3 id="hFonts">Polices</h3>
+          <div class="chips fcats" id="fontCats" role="group" aria-label="Catégories de polices"></div>
+          <p class="sublbl">Police du titre</p>
+          <div class="fonts" id="fontTitleSeg" role="radiogroup" aria-label="Police du titre"></div>
+          <p class="sublbl">Police du texte</p>
+          <div class="fonts" id="fontSeg" role="radiogroup" aria-label="Police du texte"></div>
+          <p class="hint">Une police manuscrite n'est jamais mise en capitales : réservez-la à la dédicace et aux noms.</p>
+          <h3 id="hTextFx">Ombre et contour</h3>
+          <div class="swrow"><span id="swShadowLbl">Ombre</span><div class="swatches" id="swShadow" role="group" aria-labelledby="swShadowLbl"></div></div>
+          <div class="swrow"><span id="swOutlineLbl">Contour</span><div class="swatches" id="swOutline" role="group" aria-labelledby="swOutlineLbl"></div></div>
+          <div class="slider"><label for="sShadowOff">Décalage de l'ombre</label><output id="oShadowOff"></output><input type="range" id="sShadowOff" data-k="illusText.off" min="1" max="12" step="1"></div>
+          <p class="hint">« Auto » suit le thème (onglet Style). Ombre et contour gardent les lettres lisibles sur une illustration ou sur la carte.</p>
+          <h3 id="hLineSizes">Taille de chaque ligne</h3>
+          <p class="hint">Un texte trop long est réduit pour tenir dans la largeur (↘).</p>
+          <div class="tsz"><span>Titre</span><input type="range" data-k="textScale.title" min="60" max="150" step="5" aria-label="Taille du titre"><output id="oTs-title"></output></div>
+          <div class="tsz"><span>Sous-titre</span><input type="range" data-k="textScale.subtitle" min="60" max="150" step="5" aria-label="Taille du sous-titre"><output id="oTs-subtitle"></output></div>
+          <div class="tsz"><span>Dédicace</span><input type="range" data-k="textScale.dedication" min="60" max="150" step="5" aria-label="Taille de la dédicace"><output id="oTs-dedication"></output></div>
+          <div class="tsz"><span>Noms</span><input type="range" data-k="textScale.names" min="60" max="150" step="5" aria-label="Taille des noms"><output id="oTs-names"></output></div>
+          <div class="tsz"><span>Date</span><input type="range" data-k="textScale.date" min="60" max="150" step="5" aria-label="Taille de la date"><output id="oTs-date"></output></div>
+          <div class="tsz"><span>Coordonnées</span><input type="range" data-k="textScale.coords" min="60" max="150" step="5" aria-label="Taille des coordonnées"><output id="oTs-coords"></output></div>
+          <h3 id="hLineOpts">Dédicace et coordonnées</h3>
+          <p class="sublbl" id="dedWrapLbl">Coupure de la dédicace</p>
+          <div class="seg mt6" id="dedWrapSeg" role="group" aria-label="Retour à la ligne de la dédicace"><button data-v="auto" type="button" title="Deux lignes si, sur une seule, la dédicace devait être trop réduite">Auto</button><button data-v="one" type="button">Une ligne</button><button data-v="two" type="button">Deux lignes</button></div>
+          <p class="sublbl">Format des coordonnées</p>
+          <div class="seg" id="coordSeg" role="group" aria-label="Format des coordonnées"><button data-v="dec" type="button">Décimal</button><button data-v="dms" type="button">Degrés ° ′ ″</button></div>
+          <h3 id="hPlate">Plaques : fond et trait</h3>
+          <p class="hint">Fond : cartouche, bandeau et étiquette. Trait : ces trois plaques, la capsule et les filets art déco. Le cachet garde ses filets.</p>
+          <div class="swrow"><span id="swPlateFillLbl">Fond</span><div class="swatches" id="swPlateFill" role="group" aria-labelledby="swPlateFillLbl"></div></div>
+          <div class="slider"><label for="sPlateAlpha">Opacité du fond</label><output id="oPlateAlpha"></output><input type="range" id="sPlateAlpha" data-k="illusText.plate.alpha" min="0" max="1" step="0.05"></div>
+          <p class="sublbl">Trait</p>
+          <div class="seg wrap" id="plateLineSeg" role="group" aria-label="Style du trait"><button data-v="solid" type="button">Plein</button><button data-v="double" type="button">Double</button><button data-v="dashed" type="button">Tirets</button><button data-v="dotted" type="button">Pointillés</button><button data-v="none" type="button">Aucun</button></div>
+          <div class="slider"><label for="sPlateW">Épaisseur du trait</label><output id="oPlateW"></output><input type="range" id="sPlateW" data-k="illusText.plate.w" min="0.5" max="3" step="0.25"></div>
+          <div class="slider"><label for="sPlateGap">Éloignement du trait et du texte</label><output id="oPlateGap"></output><input type="range" id="sPlateGap" data-k="illusText.plate.gap" min="0.5" max="2.5" step="0.25"></div>
+          <div class="swrow"><span id="swPlateLbl">Couleur du trait</span><div class="swatches" id="swPlate" role="group" aria-labelledby="swPlateLbl"></div></div>
+          <h3 id="hOrder">Ordre des lignes</h3>
+          <p class="hint">Gabarits à cartouche (Cadre, Fondu, Médaillon, Cœur, Arche, Polaroid, Ciel, Lettres) : les lignes suivent cet ordre. Affiches illustrées et blocs posés sur l'affiche : l'ordre s'applique dans chaque bloc (titre et sous-titre ; dédicace, noms, date et coordonnées, ces deux dernières sur une même ligne).</p>
+          <ol class="lorder" id="lineOrderList" aria-labelledby="hOrder"></ol>
+          <div class="row end"><button class="lnk" id="bOrderReset" type="button">Ordre du gabarit</button></div>
+        </details>
+        <button class="btn next" type="button" data-next="style">Étape suivante : le style<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <!-- EXPORT : rendu, sauvegarde, export (issue #51) -->
+      <div class="tab" id="tab-export" role="tabpanel" aria-labelledby="tb-export">
+        <h2 class="sec" id="hChanges">Relecture : ce qui a changé</h2>
+        <p class="hint" id="changesHint">Réglages qui s'écartent des valeurs par défaut, par partie (le lieu, le cadrage et vos textes ne sont jamais comptés). « Voir » ouvre le réglage ; « Réinitialiser » ne rétablit que cette partie, et « Annuler » revient en arrière.</p>
+        <ul class="changes" id="changesList" aria-labelledby="hChanges"></ul>
+        <p class="hint" id="changesEmpty" hidden>Aucun réglage modifié : l'affiche suit les valeurs par défaut.</p>
+        <button class="btn wide" id="bReset" type="button" title="Revenir à tous les réglages par défaut, lieu et textes compris">Tout réinitialiser</button>
+        <h2 class="sec" id="hRender">Rendu</h2>
+        <h3>Orientation</h3>
+        <div class="seg" id="orientSeg"><button data-v="portrait" type="button">Portrait</button><button data-v="landscape" type="button">Paysage</button></div>
+        <h3>Format d'impression</h3>
+        <div class="seg" id="formatSeg" role="group" aria-label="Format d'impression"><button data-v="a4" type="button">A4</button><button data-v="a3" type="button">A3</button><button data-v="50x70" type="button">50 × 70 cm</button><button data-v="10x15" type="button">10 × 15 cm</button></div>
+        <div class="seg mt6" id="fileSeg" role="group" aria-label="Fichier exporté"><button data-v="png" type="button">Image PNG</button><button data-v="pdf" type="button">Document PDF</button></div>
+        <p class="hint" id="formatHint" aria-live="polite"></p>
+        <label class="tog">Afficher la zone de sécurité (5 mm du bord, imprimante de bureau)<input type="checkbox" id="safeTog"></label>
+        <p class="hint" id="safeWarn" aria-live="polite"></p>
+        <button class="btn wide mt8" type="button" id="bMockup">Voir l'affiche au mur</button>
+        <h2 class="sec" id="savesTitle">Sauvegarde : mes affiches</h2>
+        <p class="hint">Enregistrez la configuration de l'affiche (lieu, cadrage, textes, style, effets) pour la retrouver plus tard. Les affiches restent dans ce navigateur ; téléchargez-les en fichier pour les garder ailleurs ou les ouvrir sur un autre appareil. Les données importées (moteur Fichier) ne sont pas incluses.</p>
+        <form id="saveForm" class="row"><input type="text" id="saveName" class="grow" maxlength="80" aria-label="Nom de l'affiche à enregistrer" placeholder="Nom de l'affiche" autocomplete="off"><button class="btn pri" type="submit">Enregistrer</button></form>
+        <ul class="saves" id="savesList" aria-label="Affiches enregistrées"></ul>
+        <p class="hint" id="savesEmpty">Aucune affiche enregistrée pour l'instant. Astuce : Ctrl + S (⌘ + S) enregistre l'affiche en cours.</p>
+        <div class="row"><button class="btn grow" type="button" id="bCfgExport">Télécharger l'affiche en cours</button><label class="btn grow">Ouvrir un fichier<input type="file" id="cfgIn" accept=".json,application/json" hidden></label></div>
+        <button class="btn wide" type="button" id="bSavesBackup">Sauvegarder toutes mes affiches dans un fichier</button>
+        <label class="tog">Inclure les illustrations dans les fichiers<input type="checkbox" id="cfgImg" checked></label>
+        <p class="hint">Les affiches illustrées gardent leur image dans ce navigateur. Incluse dans le fichier, elle voyage avec lui (fichier plus lourd) ; sinon, il faudra la réimporter sur un autre appareil. Le lien partagé ne contient jamais l'image.</p>
+        <h3>Partager par lien</h3>
+        <button class="btn wide" type="button" id="bShare">Copier le lien de l'affiche</button>
+        <div id="shareBox" hidden><input type="text" id="shareOut" readonly aria-label="Lien de l'affiche"><p class="hint">Le lien contient le lieu, les textes et les réglages, encodés dans l'adresse : rien n'est envoyé à un serveur. Partagez-le seulement avec des personnes de confiance.</p></div>
+        <h2 class="sec">Export</h2>
+        <p class="hint">Pour imprimer chez vous, choisissez « Taille réelle » ou « 100 % » dans la fenêtre d'impression, et non « Ajuster à la page ».</p>
+        <button class="btn pri" id="bExport" type="button"><span>Exporter l'affiche HD<span class="xl" id="exportDims">&nbsp;· 2480 × 3508 px</span><span class="nw" id="exportDpi">&nbsp;· 300 DPI</span></span></button>
+        <div class="result" id="result" hidden role="region" aria-label="Affiche exportée">
+          <img id="resImg" alt="Aperçu de l'affiche exportée">
+          <div class="hint" id="resInfo"></div>
+          <div class="hint">Si le téléchargement ne démarre pas, faites un appui long sur l'image puis « Enregistrer l'image ».</div>
+          <div class="row"><a class="btn pri" id="resDl" download>Télécharger</a><button class="btn" id="resShare" type="button" hidden>Partager</button></div>
+          <button class="btn sm" id="resClose" type="button">Masquer l'aperçu</button>
+        </div>
+      </div>
+    </div>
+    <!-- Barre d'actions (toujours visible, panneau réduit compris) : aperçu, historique, comparaison, étape suivante ou export -->
+    <div class="foot">
+      <!-- Que déplacer ? (mobile, mode Cadrer) : un seul choix à la fois ; ce qui n'est pas choisi ne bouge pas -->
+      <div class="intentbar" id="intentBar" hidden>
+        <div class="iseg" id="intentSeg" role="radiogroup" aria-label="Que déplacer sur l'affiche ?"><button type="button" role="radio" aria-checked="false" tabindex="-1" data-v="map" aria-label="Carte" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2zM7 3v12M13 5v12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Carte</span></button><button type="button" role="radio" aria-checked="false" tabindex="-1" data-v="mark" aria-label="Repère" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17.5S3.5 12.6 3.5 7.6A3.6 3.6 0 0 1 10 5.4a3.6 3.6 0 0 1 6.5 2.2c0 5-6.5 9.9-6.5 9.9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Repère</span></button><button type="button" role="radio" aria-checked="false" tabindex="-1" data-v="illus" aria-label="Illustration" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="7" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 15l5-5 4 4 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span class="tl">Illustration</span><span class="ts" aria-hidden="true">Illus.</span></button><button type="button" role="radio" aria-checked="false" tabindex="-1" data-v="text" aria-label="Textes" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M10 5v11M7 16h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Textes</span></button></div>
+      </div>
+      <div class="actbar" role="toolbar" aria-label="Actions">
+        <button class="abtn" id="bClean" type="button" title="Voir l'affiche seule" aria-label="Voir l'affiche seule"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M1.8 10S5 4.5 10 4.5 18.2 10 18.2 10 15 15.5 10 15.5 1.8 10 1.8 10z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span class="al">Aperçu</span></button>
+        <button class="abtn edit" id="bEdit" type="button" aria-pressed="false" title="Modifier l'affiche : déplacer la carte, l'illustration, les textes, poser le repère"><svg class="ie" width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 17l1-4L13.5 3.5a2.1 2.1 0 0 1 3 3L7 16l-4 1zM12 5l3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><svg class="id" width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="al" id="bEditTxt">Modifier</span></button>
+        <button class="abtn" type="button" id="bUndo" aria-label="Annuler" title="Annuler (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 8l4 4M3 8h9a5 5 0 0 1 0 10H8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="abtn" type="button" id="bRedo" aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)" disabled><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="m13 4 4 4-4 4M17 8H8a5 5 0 0 0 0 10h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="abtn compare" id="bCompare" type="button" aria-pressed="false" hidden><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16" stroke="currentColor" stroke-width="1.8"/><rect x="2.5" y="4" width="15" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 5h6.5v10H3.5z" fill="currentColor" opacity=".35"/></svg><span class="al" aria-hidden="true">Comparer</span><span class="sr-only cmpTxt">Maintenir pour comparer</span></button>
+        <button class="btn pri abnext" id="bNext" type="button"><span><span class="nxp" id="bNextPre">Suivant : </span><span id="bNextTxt">Repère</span></span><svg class="nxa" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+    </div>
+  </aside>
+</div>
+<dialog class="modal sheet" id="consent" aria-labelledby="consentTitle"><div class="box">
+  <h2 id="consentTitle">Afficher la carte ?</h2>
+  <p>Le fond de carte vient d'<b>OpenFreeMap</b> : l'afficher lui transmet votre adresse IP. Rien d'autre n'est envoyé, ni cookie ni mesure d'audience.</p>
+  <details><summary>En savoir plus</summary><p>La recherche d'adresse (<b>Nominatim</b>), utilisée seulement à votre demande, reçoit aussi votre adresse IP. Les pistes Wikipédia de l'onglet Illustration, désactivées par défaut, ne sont demandées qu'à votre demande, avec ce même accord. Votre choix est mémorisé dans ce navigateur et reste modifiable dans l'onglet Lieu.</p></details>
+  <div class="row"><button class="btn pri" id="bConsentYes" type="button" autofocus>Afficher la carte</button><button class="btn" id="bConsentFile" type="button">Travailler hors ligne</button></div>
+</div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="busy" role="status" aria-live="polite"><div class="spin" aria-hidden="true"></div><div id="busyTxt">Génération de l'affiche…</div></div>
+<dialog class="modal" id="mockup" aria-label="Aperçu au mur"><div class="box">
+  <canvas id="mockCv"></canvas>
+  <div class="chips" id="mockWalls" aria-label="Couleur du mur"></div>
+  <div class="chips" id="mockFrames" aria-label="Cadre"></div>
+  <label class="tog">Passe-partout<input type="checkbox" id="mockMat"></label>
+  <div class="row"><button class="btn pri" type="button" id="mockDl">Télécharger l'aperçu</button></div>
+  <button class="btn" type="button" id="mockClose">Fermer</button>
+</div></dialog>
+
+<!-- Application : scripts classiques chargés dans l'ordre (aucun module ES, aucune étape de build ; fonctionne en file:// et sur GitHub Pages) -->
+<script src="js/app.0dd32beb11.js"></script>
+</body>
+</html>
