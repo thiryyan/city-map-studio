@@ -680,7 +680,7 @@ Le build ne fait rien régresser et accélère les exports. Seul le réglage d'u
 
 `npm run build` (`scripts/build.mjs`, esbuild) produit `dist/` à partir des sources, sans les modifier :
 
-* les scripts de `index.html`, dans leur ordre, réunis en **un seul script classique** `js/app.<empreinte>.js`, minifié (environ 474 → 311 Ko). Même portée globale partagée qu'avant : esbuild ne renomme pas les noms de premier niveau d'un script ; les noms globaux disparaîtront avec la conversion en modules ES (étape 4b) ;
+* les scripts de `index.html`, dans leur ordre, réunis en **un seul script classique** `js/app.<empreinte>.js`, minifié et **enveloppé dans une fonction** (environ 475 → 299 Ko) : les fichiers gardent leur portée commune, mais **aucun nom n'est global** sur le site publié (seul `CMS`, posé explicitement sur `globalThis`). Les tests n'atteignent l'application que par `window.__cms` et la **façade de test** de `js/main.js` (noms exposés sur `window` en mode `?test` seulement) : un test qui a besoin d'un nouveau nom l'y ajoute. Étape suivante (4b) : conversion des fichiers en modules ES ;
 * `css/app.css` minifiée en `css/app.<empreinte>.css` ;
 * `VERSION` (`sw.js`) et `CMS.build.version` (`js/core.js`) : `cms-AAAA-MM-JJ-<empreinte>` ; liste `APP` de `sw.js` : les fichiers réellement publiés ;
 * `lib/`, `icons/`, `manifest.webmanifest`, `.nojekyll` copiés.
