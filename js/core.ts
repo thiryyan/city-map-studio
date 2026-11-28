@@ -24,11 +24,18 @@
 })(globalThis);
 // ---------- Version de l'application ----------
 // Identique à VERSION de sw.js (les deux générées par le build ; vérifié par tests/pwa.py) : la page connaît sa version
-// même sans service worker (file://, première visite, hors ligne, tests). Format : cms-AAAA-MM-JJ-<empreinte>.
+// même sans service worker (file://, première visite, hors ligne, tests). Format SemVer (#118) : <version de
+// package.json>+<empreinte du contenu>, par exemple 2.0.0-alpha.1+3522713.
 CMS.define('build', () => {
-  const version: string = 'cms-dev';   // remplacée au build (scripts/build.mjs), comme VERSION de sw.js
-  /** Libellé lisible : « 24/11/2026 (h) », « 28/11/2026 (3522713) » pour une version construite ; autre format rendu tel quel */
-  const label = (v?: string): string => { const m = /^cms-(\d{4})-(\d\d)-(\d\d)-?(.*)$/.exec(v || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` + (m[4] ? ` (${m[4]})` : '') : (v || 'inconnue'); };
+  const version: string = '0.0.0-dev';   // remplacée au build (scripts/build.mjs), comme VERSION de sw.js
+  /** Libellé lisible : « 2.0.0-alpha.1 (3522713) » ; ancien format « cms-2026-11-28-3522713 » → « 28/11/2026 (3522713) »
+   *  (copie hors ligne d'avant #118) ; autre format rendu tel quel */
+  const label = (v?: string): string => {
+    const s = /^(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\+([0-9A-Za-z.-]+))?$/.exec(v || '');
+    if (s) return s[1] + (s[2] ? ` (${s[2]})` : '');
+    const m = /^cms-(\d{4})-(\d\d)-(\d\d)-?(.*)$/.exec(v || '');
+    return m ? `${m[3]}/${m[2]}/${m[1]}` + (m[4] ? ` (${m[4]})` : '') : (v || 'inconnue');
+  };
   return { version, label };
 });
 // ---------- Mesures de performance (#97, lot 3 : #101) ----------

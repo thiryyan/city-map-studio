@@ -31,7 +31,10 @@ MAIN = 'js/main.ts' if (ROOT / 'js' / 'main.ts').is_file() else re.search(r'<scr
 
 
 def label(v):
-    """Libellé affiché (CMS.build.label) : cms-2026-11-24h → 24/11/2026 (h) ; cms-2026-11-28-3522713 → 28/11/2026 (3522713)"""
+    """Libellé affiché (CMS.build.label) : 2.0.0-alpha.1+3522713 → 2.0.0-alpha.1 (3522713) ; ancien format
+    cms-2026-11-28-3522713 → 28/11/2026 (3522713)"""
+    s = re.match(r'(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\+([0-9A-Za-z.-]+))?$', v)
+    if s: return s[1] + (f' ({s[2]})' if s[2] else '')
     m = re.match(r'cms-(\d{4})-(\d\d)-(\d\d)-?(.*)$', v)
     return (f'{m[3]}/{m[2]}/{m[1]}' + (f' ({m[4]})' if m[4] else '')) if m else v
 

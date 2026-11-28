@@ -49,7 +49,8 @@ async def main():
         # 1. Version de la page, sans service worker (file://)
         check(await page.text_content('#appVersion') != 'Version : –' and await ev("document.getElementById('appVersion').dataset.version") == VERSION,
               f"version connue en file:// : {await page.text_content('#appVersion')}")
-        check(await ev("CMS.build.label('cms-2026-11-24h')") == '24/11/2026 (h)', 'libellé de version : date et lettre')
+        check(await ev("CMS.build.label('2.0.0-alpha.1+3522713')") == '2.0.0-alpha.1 (3522713)', 'libellé de version : SemVer et empreinte')
+        check(await ev("CMS.build.label('cms-2026-11-24h')") == '24/11/2026 (h)', 'libellé de version : ancien format (copie hors ligne)')
 
         # 2. État par défaut : aucun écart
         check(await badges() == [] and await groups() == [] and await ev("!document.getElementById('changesEmpty').hidden"),

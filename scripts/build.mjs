@@ -6,7 +6,7 @@
 //     nom global (seuls CMS, posé sur globalThis, et en mode ?test window.__cms et la façade de test de js/main.ts) ;
 //     dist/index.html s'ouvre donc aussi en file:// ;
 //   - css/app.css minifiée en css/app.<empreinte>.css ;
-//   - VERSION (sw.js) et CMS.build (js/core.ts) générés : cms-AAAA-MM-JJ-<empreinte> ;
+//   - VERSION (sw.js) et CMS.build (js/core.ts) générés, au format SemVer : <version de package.json>+<empreinte> ;
 //   - liste APP de sw.js générée à partir des fichiers réellement publiés ;
 //   - lib/, icons/, manifeste et .nojekyll copiés.
 //
@@ -37,13 +37,14 @@ let js = await bundle();
 // 2. CSS
 const cssSrc = await read('css/app.css');
 
-// 3. Version : date du jour (UTC) + empreinte du contenu publié
-const day = new Date().toISOString().slice(0, 10);
-// CMS.build (js/core.ts) vaut 'cms-dev' dans les sources : remplacé dans le script construit
-if ((js.match(/"cms-dev"/g) || []).length !== 1) fail('CMS.build : version « cms-dev » introuvable (ou en double) dans le script construit');
+// 3. Version (SemVer, #118) : version de package.json + empreinte du contenu publié en métadonnée de build
+const pkg = JSON.parse(await read('package.json'));
+if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(pkg.version || '')) fail(`package.json : version « ${pkg.version} » non conforme à SemVer`);
+// CMS.build (js/core.ts) vaut '0.0.0-dev' dans les sources : remplacé dans le script construit
+if ((js.match(/"0\.0\.0-dev"/g) || []).length !== 1) fail('CMS.build : version « 0.0.0-dev » introuvable (ou en double) dans le script construit');
 const contentHash = hash(js + cssSrc + html).slice(0, 7);
-const version = `cms-${day}-${contentHash}`;
-const bundled = {code: js.replace('"cms-dev"', JSON.stringify(version))};
+const version = `${pkg.version}+${contentHash}`;
+const bundled = {code: js.replace('"0.0.0-dev"', JSON.stringify(version))};
 const css = await transform(cssSrc, {loader: 'css', minify: true, legalComments: 'none', charset: 'utf8'});
 const jsName = `js/app.${hash(bundled.code).slice(0, 10)}.js`;
 const cssName = `css/app.${hash(css.code).slice(0, 10)}.css`;

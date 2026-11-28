@@ -17,7 +17,7 @@
  * doit figurer dans APP (tests/pwa.py).
  */
 'use strict';
-const VERSION = 'cms-dev';   // remplacée au build (scripts/build.mjs) : cms-AAAA-MM-JJ-<empreinte>
+const VERSION = '0.0.0-dev';   // remplacée au build (scripts/build.mjs) : <version de package.json>+<empreinte> (SemVer)
 // Cache propre à ce dossier : une autre copie de l'application sur la même origine ne touche pas à ses fichiers
 const SCOPE = new URL(self.registration.scope).pathname, CACHE = `${VERSION}@${SCOPE}`;
 const APP = [
