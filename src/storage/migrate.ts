@@ -1,37 +1,37 @@
-/* City Map Studio — Migration unique des données d'avant le #118 (clés localStorage « cms3.* », base « cms3 »).
- * 1. Copie brute de toutes les clés cms3.* dans le magasin « legacy » (gardée jusqu'à la porte 2 de l'Horizon 1).
- * 2. Affiche en cours (cms3.affiche) et Mes affiches (cms3.saves) converties en PosterDoc dans « documents » ;
- *    les préférences ont déjà été reprises sous « cms:* » au chargement (src/core/prefs.ts).
- * 3. Clés cms3.* effacées, seulement une fois la copie brute enregistrée.
- * 4. Images de l'ancienne base « cms3 » recopiées dans « images » ; l'ancienne base est gardée telle quelle.
- * Rejouable : une clé cms3.* présente (données posées par un test, ou migration interrompue) est reprise à chaque
- * démarrage. Les données de la version classique (cityMapStudio.*) ne sont jamais lues ni modifiées. */
-import {LEGACY} from '../core/prefs.js';
+/* City Map Studio — Reprise des données d'avant le #118 (clés localStorage « cms3.* », base « cms3 »).
+ * Seulement si ces données ont changé depuis la dernière reprise (src/core/prefs.ts : legacyChanged) :
+ * 1. copie brute de toutes les clés cms3.* dans le magasin « legacy » ;
+ * 2. affiche en cours (cms3.affiche) et Mes affiches (cms3.saves) converties en PosterDoc dans « documents » ;
+ *    les préférences ont déjà été reprises sous « cms:* » au chargement ;
+ * 3. images de l'ancienne base « cms3 » recopiées dans « images » (celles qui manquent).
+ * Rien n'est effacé : la version publiée et les préversions partagent l'origine, et la version publiée d'avant la
+ * fusion du lot 1 lit encore cms3.* ; l'effacement des clés cms3.* et de la base cms3 vient à la porte 2.
+ * Les données de la version classique (cityMapStudio.*) ne sont jamais lues ni modifiées. */
+import {LEGACY, legacyChanged} from '../core/prefs.js';
 import {parseDoc, toDoc} from '../core/doc/poster-doc.js';
 import {dbGet, dbPut, idb} from './db.js';
 
-const LEGACY_DOC = LEGACY + 'affiche', LEGACY_SAVES = LEGACY + 'saves', OLD_DB = 'cms3', IMAGES_DONE = 'images-cms3';
+const LEGACY_DOC = LEGACY + 'affiche', LEGACY_SAVES = LEGACY + 'saves', OLD_DB = 'cms3';
 
 async function migrateLegacy(): Promise<void> {
+  if (!legacyChanged) return;
   let keys: string[] = [];
   try { keys = Object.keys(localStorage).filter(k => k.startsWith(LEGACY)); } catch (e) {}
   if (keys.length) {
     const items: Record<string, string | null> = {};
     for (const k of keys) items[k] = localStorage.getItem(k);
     const at = new Date().toISOString();
-    await dbPut('legacy', 'localStorage@' + at, {at, items});   // échec : rien n'est effacé, nouvel essai au prochain démarrage
+    await dbPut('legacy', 'localStorage@' + at, {at, items});
     if (items[LEGACY_DOC]) { try { await dbPut('documents', 'current', toDoc(parseDoc(JSON.parse(items[LEGACY_DOC]!)))); } catch (e) {} }
     if (items[LEGACY_SAVES]) {
       try { const list = JSON.parse(items[LEGACY_SAVES]!); if (Array.isArray(list)) await dbPut('documents', 'saves', {list}); } catch (e) {}
     }
-    for (const k of keys) localStorage.removeItem(k);
   }
   await copyOldImages();
 }
 
-/** Images de la base « cms3 » (avant le #118) recopiées une fois ; base d'origine laissée intacte */
+/** Images de la base « cms3 » (avant le #118) qui manquent recopiées ; base d'origine laissée intacte */
 async function copyOldImages(){
-  if (await dbGet('legacy', IMAGES_DONE).catch(() => true)) return;
   const exists = typeof indexedDB.databases === 'function'
     ? (await indexedDB.databases().catch(() => [])).some(d => d.name === OLD_DB) : false;
   if (exists) {
@@ -47,9 +47,8 @@ async function copyOldImages(){
         rq.onerror = () => res([]);
       } catch (e) { res([]); }
     });
-    for (const [k, v] of recs) await idb('images', 'readwrite', s => { s.put(v, k); });
+    for (const [k, v] of recs) if (!(await dbGet('images', String(k)))) await idb('images', 'readwrite', s => { s.put(v, k); });
   }
-  await dbPut('legacy', IMAGES_DONE, {at: new Date().toISOString()});
 }
 
 export {migrateLegacy};

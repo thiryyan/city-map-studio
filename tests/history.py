@@ -2,7 +2,8 @@
 
 1. Données « cms3.* » posées comme par l'ancienne version (affiche en cours, Mes affiches, préférences) : au
    démarrage suivant, l'affiche et Mes affiches sont reprises (IndexedDB « city-map-studio »), les préférences
-   sous « cms:* », les clés « cms3.* » effacées, et leur copie brute gardée dans le magasin « legacy ».
+   sous « cms:* », leur copie brute gardée dans le magasin « legacy » ; les clés « cms3.* » restent (effacées à la porte 2),
+   et ne sont reprises de nouveau que si elles changent : l'affiche modifiée ensuite n'est pas écrasée au rechargement.
 2. Une ambiance appliquée, puis la page rechargée : « Annuler » reste disponible et rétablit l'affiche d'avant.
 """
 import asyncio, json, os, pathlib
@@ -41,7 +42,7 @@ async def main():
         check(await ev("__cms.st.texts.title") == 'Migrée' and await ev("__cms.st.theme") == 'nuit', 'affiche en cours reprise')
         check([s['name'] for s in await ev("__cms.loadSaves()")] == ['Ancienne'], 'Mes affiches reprises')
         check(await ev("localStorage.getItem('cms:uiScale')") == '1.25' and await ev("localStorage.getItem('cms:consent')") == '1', 'préférences reprises sous « cms: »')
-        check(await ev("Object.keys(localStorage).filter(k=>k.startsWith('cms3.'))") == [], 'clés « cms3. » effacées')
+        check(sorted(await ev("Object.keys(localStorage).filter(k=>k.startsWith('cms3.'))")) == sorted(LEGACY), 'clés « cms3. » laissées intactes (version publiée d\'avant le lot 1, même origine)')
         legacy = [r for r in await ev(READ_LEGACY) if 'items' in r]
         check(legacy and json.loads(legacy[0]['items']['cms3.affiche'])['texts']['title'] == 'Migrée', 'copie brute gardée dans « legacy »')
         await page.reload(); await page.wait_for_timeout(1200)
