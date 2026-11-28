@@ -126,7 +126,7 @@ async def main():
         check(f1 >= f0 * 1.2, f'A+ : texte de l\'interface agrandi ({f0} → {f1} px)')
         check(await page.evaluate("document.documentElement.scrollWidth <= innerWidth"), 'A+ : aucun défilement horizontal')
         await page.screenshot(path=str(T / 'mobile-uiscale.png'))
-        check(await page.evaluate("localStorage.getItem('cms3.uiScale')") == '1.25', 'A+ : préférence enregistrée (125 %)')
+        check(await page.evaluate("localStorage.getItem('cms:uiScale')") == '1.25', 'A+ : préférence enregistrée (125 %)')
         # Relecture au démarrage : nouvelle page avec la préférence déjà enregistrée (un rechargement immédiat
         # peut précéder l'écriture différée de localStorage par Chromium)
         p2 = await ctx.new_page()
@@ -137,7 +137,7 @@ async def main():
         check(f2 == f1, f'taille de l\'interface reprise au démarrage suivant ({f1} → {f2} px)')
         await p2.close()
         await page.tap('#bUiSmaller'); await page.tap('#bUiSmaller'); await page.wait_for_timeout(200)
-        check(await page.evaluate("!localStorage.getItem('cms3.uiScale')"), 'retour à 100 % : préférence effacée (taille du système)')
+        check(await page.evaluate("!localStorage.getItem('cms:uiScale')"), 'retour à 100 % : préférence effacée (taille du système)')
         check(not errs, f'portrait : aucune erreur de page {errs}')
         await ctx.close()
 

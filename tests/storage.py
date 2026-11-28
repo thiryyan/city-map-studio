@@ -4,7 +4,8 @@ La version classique (/classique/ depuis la bascule, #104) et cette version (rac
 même localStorage et le même IndexedDB. Vérifie que cette version :
 - ne lit pas les données de la version classique (clés « cityMapStudio.* », base « cityMapStudio ») ;
 - n'en modifie, n'en ajoute ni n'en supprime aucune, même en enregistrant une affiche et une illustration ;
-- range ses propres données sous « cms3.* » et dans la base « cms3 ».
+- range ses propres données dans la base IndexedDB « city-map-studio » (#118) et ses préférences sous « cms:* » ;
+  les clés « cms3.* » d'avant le #118 sont reprises puis effacées (migration unique).
 """
 import pathlib, os, asyncio, json
 from playwright.async_api import async_playwright
@@ -77,11 +78,12 @@ async def main():
         await ev("CMS.illus.setMode('map')")
         await page.wait_for_timeout(600)
 
-        # 3. Données de cette version sous « cms3 »
-        own = await ev("Object.keys(localStorage).filter(k=>k.startsWith('cms3.')).sort()")
-        check('cms3.affiche' in own and 'cms3.saves' in own, f'données de cette version sous « cms3. » {own}')
-        check('Nouvelle' in (await ev("localStorage.getItem('cms3.affiche')") or ''), 'affiche en cours enregistrée sous cms3.affiche')
-        check(await ev(READ_DB, 'cms3') == [ref], f'illustration rangée dans la base « cms3 » ({(ref or "")[:12]}…)')
+        # 3. Données de cette version : base « city-map-studio », préférences « cms:* », plus aucune clé « cms3.* »
+        legacy = await ev("Object.keys(localStorage).filter(k=>k.startsWith('cms3.'))")
+        prefs = await ev("Object.keys(localStorage).filter(k=>k.startsWith('cms:')).sort()")
+        check(not legacy and 'cms:consent' in prefs, f'préférences sous « cms: », clés « cms3. » migrées puis effacées ({prefs}, {legacy})')
+        check('Nouvelle' in (await ev("__cms.saved()") or ''), 'affiche en cours enregistrée (IndexedDB)')
+        check(ref in (await ev(READ_DB, 'city-map-studio') or []), f'illustration rangée dans la base « city-map-studio » ({(ref or "")[:12]}…)')
 
         # 4. Données de la version classique intactes
         check(await ev(SNAP_LS) == before_ls, 'clés « cityMapStudio.* » inchangées (aucune modifiée, ajoutée ni supprimée)')

@@ -16,7 +16,7 @@ CMS.define('intent', () => {
   const NAMES={map:'Carte',mark:'Repère',illus:'Illustration',text:'Textes'};
   const HINT_TOUCH: Record<string, string>={map:'Glissez · pincez pour zoomer', illus:'Glissez ou pincez l’illustration', text:'Glissez un texte pour le déplacer'};
   const HINT_MOUSE: Record<string, string>={map:'Glissez · molette pour zoomer', illus:'Glissez l’illustration · molette : taille', text:'Glissez un texte pour le déplacer'};
-  const USES_KEY='cms3.editUses', HINT_USES=2;
+  const USES_KEY='cms:editUses', HINT_USES=2;
   let sig='', shown=false, pending: string | null=null, prev='map';
   const uses=()=>{ try{ return parseInt(localStorage.getItem(USES_KEY)||'',10)||0; }catch(e){ return HINT_USES; } };
   const illusReady=()=>!!CMS.illus?.ready?.();

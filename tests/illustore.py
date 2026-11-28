@@ -21,10 +21,10 @@ MAKE = """async ([w,h,c1,c2])=>{ const c=document.createElement('canvas'); c.wid
   const g=x.createLinearGradient(0,0,0,h); g.addColorStop(0,c1); g.addColorStop(1,c2); x.fillStyle=g; x.fillRect(0,0,w,h);
   x.fillStyle='#fff'; x.fillRect(w*0.3,h*0.4,w*0.2,h*0.1);
   const b=await new Promise(r=>c.toBlob(r,'image/png')); const u=new Uint8Array(await b.arrayBuffer()); let s=''; for(const v of u) s+=String.fromCharCode(v); return btoa(s); }"""
-KEYS = """()=>new Promise(r=>{ const q=indexedDB.open('cms3'); q.onsuccess=()=>{ const d=q.result;
+KEYS = """()=>new Promise(r=>{ const q=indexedDB.open('city-map-studio'); q.onsuccess=()=>{ const d=q.result;
   if(!d.objectStoreNames.contains('images')){ d.close(); return r([]); }
   const g=d.transaction('images').objectStore('images').getAllKeys(); g.onsuccess=()=>{ d.close(); r(g.result); }; }; q.onerror=()=>r(null); })"""
-CLEAR = """()=>new Promise(r=>{ const q=indexedDB.open('cms3'); q.onsuccess=()=>{ const d=q.result; const tx=d.transaction('images','readwrite');
+CLEAR = """()=>new Promise(r=>{ const q=indexedDB.open('city-map-studio'); q.onsuccess=()=>{ const d=q.result; const tx=d.transaction('images','readwrite');
   tx.objectStore('images').clear(); tx.oncomplete=()=>{ d.close(); r(true); }; }; })"""
 
 
@@ -54,8 +54,8 @@ async def main():
 
         async def save_now(page):   # enregistrement immédiat (saveState est différé de 300 ms), relu pour s'en assurer
             await page.wait_for_timeout(400)
-            await page.evaluate("localStorage.setItem('cms3.affiche',JSON.stringify(__cms.st))")
-            await wait_js(page, "localStorage.getItem('cms3.affiche')===JSON.stringify(__cms.st)", 3000)
+            await page.evaluate("CMS.emit('state:commit')")   # enregistrement immédiat dans IndexedDB (#118)
+            await wait_js(page, "__cms.saved()===JSON.stringify(__cms.st)", 3000)
 
         ctx, page, errs = await open_ctx()
         A = await page.evaluate(MAKE, [900, 1300, '#7FB2D6', '#3F6B2A'])
@@ -70,7 +70,7 @@ async def main():
         await page.wait_for_timeout(600)
         keys = await page.evaluate(KEYS)
         check(keys == [ref], f'image rangée dans IndexedDB sous son empreinte {keys}')
-        stored = await page.evaluate("""()=>new Promise(r=>{ const q=indexedDB.open('cms3'); q.onsuccess=()=>{ const d=q.result;
+        stored = await page.evaluate("""()=>new Promise(r=>{ const q=indexedDB.open('city-map-studio'); q.onsuccess=()=>{ const d=q.result;
           const g=d.transaction('images').objectStore('images').get(__cms.st.illus.img.ref); g.onsuccess=()=>{ d.close(); const v=g.result; r([v.blob.type,v.w,v.h,v.name]); }; }; })""")
         check(stored == ['image/webp', 900, 1300, 'blois.png'], f'image ré-encodée en WebP avec ses dimensions {stored}')
         check(not await page.evaluate("JSON.stringify(localStorage).includes('data:image')"), 'aucune donnée d\'image dans localStorage')
@@ -110,12 +110,12 @@ async def main():
         cfg_path = await (await dl.value).path()
         cfg = json.loads(pathlib.Path(cfg_path).read_text())
         check(cfg['version'] == 2 and list(cfg['images']) == [ref] and cfg['images'][ref]['data'].startswith('data:image/webp;base64,'), 'fichier avec image : version 2, image WebP intégrée sous son empreinte')
-        check(cfg['state']['illus']['img']['ref'] == ref, 'fichier : l\'état désigne l\'image par son empreinte')
+        check(cfg['state']['poster']['illus']['img']['ref'] == ref, 'fichier : l\'état désigne l\'image par son empreinte')
         await page.evaluate("$('cfgImg').checked=false")
         async with page.expect_download() as dl:
             await page.evaluate("downloadConfig(null)")
         cfg0 = json.loads(pathlib.Path(await (await dl.value).path()).read_text())
-        check(cfg0['version'] == 1 and 'images' not in cfg0, 'fichier sans image : version 1, empreinte seule')
+        check(cfg0['version'] == 2 and 'images' not in cfg0, 'fichier sans image : version 2 (PosterDoc), empreinte seule')
         await page.evaluate("$('cfgImg').checked=true")
         async with page.expect_download() as dl:
             await page.evaluate("downloadBackup()")
@@ -173,7 +173,7 @@ async def main():
         forged = json.loads(json.dumps(cfg)); bad = '0' * 64
         forged['images'] = {bad: {'data': 'data:image/png;base64,QUJD', 'name': 'x'}, 'pas-une-empreinte': cfg['images'][ref],
                             ref: {'data': 'data:image/png;base64,' + B, 'name': 'pirate.png'}}
-        forged['state']['illus']['img']['ref'] = bad
+        forged['state']['poster']['illus']['img']['ref'] = bad
         await page.evaluate("openSaves()")
         await page.set_input_files('#cfgIn', files=[{'name': 'piege.json', 'mimeType': 'application/json', 'buffer': json.dumps(forged).encode()}])
         await wait_js(page, "CMS.illus.missing", 8000)
@@ -190,7 +190,7 @@ async def main():
         await page.set_input_files('#cfgIn', files=[{'name': 'mes-affiches.json', 'mimeType': 'application/json', 'buffer': json.dumps(bak).encode()}])
         await page.wait_for_timeout(1500)
         check(await page.evaluate("__cms.loadSaves().length") == 1 and await page.evaluate(KEYS) == [ref], 'navigateur vierge : sauvegarde complète et ses images importées')
-        await page.set_input_files('#cfgIn', files=[{'name': 'sans-image.json', 'mimeType': 'application/json', 'buffer': json.dumps({**cfg0, 'state': {**cfg0['state'], 'illus': {**cfg0['state']['illus'], 'img': {**cfg0['state']['illus']['img'], 'ref': 'a' * 64}}}}).encode()}])
+        await page.set_input_files('#cfgIn', files=[{'name': 'sans-image.json', 'mimeType': 'application/json', 'buffer': json.dumps({**cfg0, 'state': {**cfg0['state'], 'poster': {**cfg0['state']['poster'], 'illus': {**cfg0['state']['poster']['illus'], 'img': {**cfg0['state']['poster']['illus']['img'], 'ref': 'a' * 64}}}}}).encode()}])
         await wait_js(page, "CMS.illus.missing", 8000)
         check(True, 'fichier sans image d\'une image inconnue : illustration à importer')
         sid = await page.evaluate("__cms.loadSaves()[0].id")

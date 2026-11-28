@@ -19,9 +19,9 @@ APP = (ROOT / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None
 FIX = open(T / 'osm.json').read()
 SNAP = "(()=>[document.getElementById('cvUnder').toDataURL(), document.getElementById('vecCanvas').toDataURL(), document.getElementById('cvOver').toDataURL()].join())()"
-SAVED = "JSON.parse(localStorage.getItem('cms3.affiche')).theme"
+SAVED = "JSON.parse(__cms.saved()).theme"
 STATE = "JSON.stringify(__cms.st)"
-STORED = "localStorage.getItem('cms3.affiche')"
+STORED = "__cms.saved()"
 
 async def main():
     fails = []

@@ -141,7 +141,7 @@ async def main():
 
         # 3 quater. Déploiement simulé : bandeau, « Mettre à jour », un seul rechargement, état conservé
         await page.evaluate("""()=>{ const i=document.querySelector('input[data-k="texts.title"]'); i.value='Mise à jour 65'; i.dispatchEvent(new Event('input',{bubbles:true})); }""")
-        await wait_js(page, "(localStorage.getItem('cms3.affiche')||'').includes('Mise à jour 65') || false", timeout=5000)
+        await wait_js(page, "(__cms.saved()||'').includes('Mise à jour 65') || false", timeout=5000)
         # Cache d'une autre copie de l'application sur la même origine (/nouvelle/, /pr-N/ ; #97) : jamais purgé par celle-ci
         await page.evaluate("caches.open('cms-autre@/autre-copie/').then(c=>c.put('autre-copie.txt', new Response('x')))")
         Q.deploy = True

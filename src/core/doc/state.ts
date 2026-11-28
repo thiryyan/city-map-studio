@@ -1,7 +1,7 @@
 /* City Map Studio — État de l'affiche : validation, chargement, enregistrement ; fenêtres modales ; accord préalable.
  * Module TypeScript (#103), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
 import {TEST_HOOKS} from '../cms.js';
-import {type PosterState, type Route, DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, STORE_KEY, TEXTURES, THEMES} from '../../content/config.js';
+import {type PosterState, type Route, DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, TEXTURES, THEMES} from '../../content/config.js';
 // ---------- Ordre des lignes de texte (Textes, Plus de réglages) ----------
 // st.lineOrder : null (ordre du gabarit) ou permutation de KEYS. Appliqué au cartouche des gabarits centrés et, dans
 // chaque bloc, aux mises en page des modes illustrés (titre et sous-titre ; dédicace, noms, date · coordonnées).
@@ -211,7 +211,7 @@ function setBusy(on: boolean, txt?: string){
 
 // ---------- Accord préalable aux services tiers (RGPD) ----------
 // Aucune requête vers un service tiers (tuiles, Nominatim, CDN) avant l'accord explicite de l'utilisateur.
-const CONSENT_KEY = 'cms3.consent';
+const CONSENT_KEY = 'cms:consent';
 let consent = (()=>{ try{ return localStorage.getItem(CONSENT_KEY)==='1'; }catch(e){ return false; } })();
 let consentNext: (()=>void) | null = null;
 /** true si l'accord est donné ; sinon affiche la demande et exécute `next` après acceptation */
@@ -245,11 +245,10 @@ function updateConsentInfo(){
 }
 
 function loadState(): PosterState {
-  try{ const s=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(s && typeof s==='object') return normState(s); }catch(e){}
-  return structuredClone(DEFAULT_STATE);
+  return structuredClone(DEFAULT_STATE);   // affiche enregistrée relue avant le démarrage (src/storage/documents.ts)
 }
 let saveT=0;
-function saveState(){if(ui.comparing) return; clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} CMS.emit('state:saved');},300)}
+function saveState(){if(ui.comparing) return; clearTimeout(saveT);saveT=setTimeout(()=>{ CMS.emit('state:saved'); },300)}   // enregistré par src/storage/documents.ts
 function getPath(o: unknown, p: string): any {return p.split('.').reduce((a: any,k)=>a?.[k],o)}
 function setPath(o: unknown, p: string, v: unknown){const ks=p.split('.');const last=ks.pop() as string;ks.reduce((a: any,k)=>a[k],o)[last]=v}
 

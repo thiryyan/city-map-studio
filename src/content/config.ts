@@ -31,7 +31,6 @@ const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 // Stockage local : toutes les clés de cette version commencent par « cms3. » et sa base IndexedDB s'appelle « cms3 »
 // (#100). La version classique (racine du site, même origine) garde « cityMapStudio.* » : aucune des deux ne lit
 // ni n'écrit les données de l'autre.
-const STORE_KEY = 'cms3.affiche';
 
 // ---------- Types partagés (#103) ----------
 /** Police : familles CSS, échelle (petit œil), graisse, manuscrite (jamais en capitales), descripteurs à charger */
@@ -238,4 +237,4 @@ CMS.define('illusConf', () => ({
   PISTES_MAX:8
 }));
 
-export {AMBIANCES, CANVAS_MAX_PX, COLOR_LABELS, DEFAULT_STATE, DUOS, EXPORT_MAX_DPI, FONTS, FONT_CATS, FONT_LIST, FORMATS, GL_TILE_MAX, GOLD, HW_CLASS, LAYOUTS, MARKERS, MARKER_BASE, MARKER_COLORS, ML_CDNS, ML_SRI, ML_VERSION, NOMINATIM, OCCASIONS, OFM_ATTRIBUTION, OFM_URL, PRESETS, REF_W, ROADS, STORE_KEY, TEXTURES, THEMES, THEME_CATS, WATERWAY_W};
+export {AMBIANCES, CANVAS_MAX_PX, COLOR_LABELS, DEFAULT_STATE, DUOS, EXPORT_MAX_DPI, FONTS, FONT_CATS, FONT_LIST, FORMATS, GL_TILE_MAX, GOLD, HW_CLASS, LAYOUTS, MARKERS, MARKER_BASE, MARKER_COLORS, ML_CDNS, ML_SRI, ML_VERSION, NOMINATIM, OCCASIONS, OFM_ATTRIBUTION, OFM_URL, PRESETS, REF_W, ROADS, TEXTURES, THEMES, THEME_CATS, WATERWAY_W};

@@ -141,7 +141,7 @@ async def main():
         await page.evaluate(PINCH, [cx, cy, 60, 0.5]); await page.wait_for_timeout(300)
         i2 = await illus(page)
         check(i2[0] < 70 and i2[0] >= 30, f'pincer (rapprocher) : l\'image rapetisse sous 100 % {i2}')
-        check(await ev(page, "__cms.st.illus.zoom") == await ev(page, "JSON.parse(localStorage.getItem('cms3.affiche')).illus.zoom") or True, 'zoom enregistré')
+        check(await ev(page, "__cms.st.illus.zoom") == await ev(page, "JSON.parse(__cms.saved()).illus.zoom") or True, 'zoom enregistré')
         await page.evaluate(PINCH, [cx, cy, 30, 0.2]); await page.wait_for_timeout(200)
         check((await illus(page))[0] == 30, f'pincer : 30 % au plus petit {await illus(page)}')
         await page.evaluate(PINCH, [cx, cy, 20, 12]); await page.wait_for_timeout(200)

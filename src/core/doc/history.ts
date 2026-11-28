@@ -3,8 +3,8 @@
  * cartographique est exclu : le rétablir relancerait des requêtes réseau.
  * Événements (synchrones) pour l'interface : « history:applied » (un instantané vient de remplacer l'état :
  * resynchroniser les champs, l'aperçu et la vue ; détail {viewChanged}) et « history:changed » (piles modifiées :
- * boutons Annuler / Rétablir). */
-import {STORE_KEY} from '../../content/config.js';
+ * boutons Annuler / Rétablir). « state:commit » : étape figée, l'affiche est enregistrée tout de suite
+ * (src/storage/documents.ts) ; les piles sont enregistrées aussi, pour être reprises après un rechargement (#16). */
 import {saveState, saveT, st} from './state.js';
 import {replaceState} from './store.js';
 
@@ -27,6 +27,6 @@ function applySnap(s: string){
 }
 /** Fige tout de suite l'étape en cours (action ponctuelle : réinitialisation, changement de moteur), puis ignore
  *  pendant un instant les petits recentrages de la carte qui suivent, pour ne pas créer de fausses étapes. */
-function commitHistory(quietMs=1500){ clearTimeout(saveT); try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} hist.quietUntil=0; recordHistory(); hist.quietUntil=Date.now()+quietMs; }
+function commitHistory(quietMs=1500){ clearTimeout(saveT); CMS.emit('state:commit'); hist.quietUntil=0; recordHistory(); hist.quietUntil=Date.now()+quietMs; }
 
 export {applySnap, commitHistory, hist, HIST_MAX, histSnap, recordHistory};

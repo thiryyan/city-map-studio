@@ -21,6 +21,7 @@ import {setOrient, updateLayoutUI} from './presets.js';
 import {refreshCards, showTab, syncFonts, syncInputs, updateEngineUI} from '../core/port.js';
 import {geom} from '../render/layout.js';
 import {update} from '../core/doc/store.js';
+import {idb as idbStore} from '../storage/db.js';
 /** Contexte 2D ; réglages de l'illustration (st.illus) ; sacs d'options */
 type Ctx = CanvasRenderingContext2D;
 type Illus = PosterState['illus'];
@@ -316,28 +317,14 @@ CMS.define('illus', () => {
   }
   // ---------- Conservation : IndexedDB (images binaires), l'état ne garde qu'une référence ----------
   // update(_s=>(_s.illus.img = {ref, name, w, h})) : ref = empreinte SHA-256 du fichier importé (64 hexa). L'image ré-encodée (WebP,
-  // PNG si le navigateur n'encode pas le WebP) est rangée sous cette clé. Les configurations restent dans localStorage.
+  // PNG si le navigateur n'encode pas le WebP) est rangée sous cette clé. Base commune « city-map-studio », magasin « images » (src/storage/db.ts, #118).
   // Sans IndexedDB (navigation privée stricte, stockage bloqué) : l'image n'est gardée que pendant la visite.
-  const DB_NAME='cms3', DB_STORE='images', REF_RE=/^[0-9a-f]{64}$/, DATA_RE=/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/]+=*$/;
+  const REF_RE=/^[0-9a-f]{64}$/, DATA_RE=/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/]+=*$/;
   /** Image rangée (IndexedDB, ou mémoire de la visite) */
   type Rec = {blob: Blob; w: number; h: number; name: string; size: number};
-  const memStore=new Map<string, Rec>(); let dbP: Promise<IDBDatabase | null> | null=null, dbWarned=false, persistAsked=false;
-  function db(){
-    if(dbP) return dbP;
-    dbP=new Promise<IDBDatabase | null>(res=>{
-      try{
-        const rq=indexedDB.open(DB_NAME,1);
-        rq.onupgradeneeded=()=>rq.result.createObjectStore(DB_STORE);
-        rq.onsuccess=()=>res(rq.result); rq.onerror=()=>res(null); rq.onblocked=()=>res(null);
-      }catch(e){ res(null); }
-    });
-    return dbP;
-  }
-  async function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore)=>IDBRequest | void): Promise<T | undefined> {
-    const d=await db(); if(!d) throw new Error('IndexedDB indisponible');
-    return new Promise((res,rej)=>{ try{ const tx=d.transaction(DB_STORE,mode), rq=fn(tx.objectStore(DB_STORE));
-      tx.oncomplete=()=>res(rq?.result); tx.onerror=tx.onabort=()=>rej(tx.error||new Error('IndexedDB')); }catch(e){ rej(e); } });
-  }
+  const memStore=new Map<string, Rec>(); let dbWarned=false, persistAsked=false;
+  /** Requête sur le magasin des images (base commune) */
+  const idb=<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore)=>IDBRequest | void): Promise<T | undefined> => idbStore<T>('images',mode,fn);
   const store={
     async get(ref: string): Promise<Rec | undefined> { try{ const v=await idb<Rec>('readonly',(s: IDBObjectStore)=>s.get(ref)); return v ?? memStore.get(ref); }catch(e){ return memStore.get(ref); } },
     async put(ref: string,rec: Rec){
@@ -1082,7 +1069,7 @@ CMS.define('illus', () => {
   const SW_FILL=[['auto','Auto : couleur du papier'],['#F3EAD8','Crème'],['#D9CDB5','Sable'],['#FFFFFF','Blanc'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#C5A059','Or']];
   const SW_PLATE=[['auto','Auto : encre de la plaque (couleur papier sur la capsule, couleur des lettres pour les filets)'],['#24365A','Bleu nuit'],['#2C2A29','Encre'],['#B5654B','Terracotta'],['#C5A059','Or'],['#F3EAD8','Crème'],['#FFFFFF','Blanc']];
   const LINE_NAMES: Record<string, string>={title:'Titre',subtitle:'Sous-titre',coords:'Coordonnées',dedication:'Dédicace',names:'Noms',date:'Date'};
-  const MORE_KEY='cms3.textMoreOpen';
+  const MORE_KEY='cms:textMoreOpen';
   let moreAuto=false;
   /** Un réglage de « Plus de réglages » diffère du défaut : polices hors duo, ombre, contour, tailles par ligne, coupure de la
    *  dédicace, format des coordonnées, trait des plaques, ordre des lignes (#88). La section s'ouvre alors d'office. */
@@ -1230,7 +1217,7 @@ CMS.define('illus', () => {
     finally{ btn.disabled=false; lab!.textContent='Trouver des pistes dans la carte'; }
   }
   // ---------- Pistes Wikipédia (#46) : option désactivée par défaut, accord préalable, coordonnées du lieu seulement ----------
-  const WIKI_KEY='cms3.wiki';
+  const WIKI_KEY='cms:wiki';
   let wikiOn=(()=>{ try{ return localStorage.getItem(WIKI_KEY)==='1'; }catch(e){ return false; } })(), wikiBusy=false;
   function setWiki(on: boolean){
     wikiOn=!!on; try{ on ? localStorage.setItem(WIKI_KEY,'1') : localStorage.removeItem(WIKI_KEY); }catch(e){}

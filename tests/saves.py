@@ -80,15 +80,16 @@ async def main():
         async with page.expect_download() as dl: await page.click('#savesList button[aria-label="Télécharger « Carte ancienne »"]')
         d = await dl.value; cfg_path = str(T / 'saves-config.json'); await d.save_as(cfg_path)
         cfg = json.load(open(cfg_path))
-        check(cfg['format'] == 'city-map-studio/configuration' and cfg['version'] == 1 and 'engine' not in cfg['state'] and d.suggested_filename == 'affiche-carte-ancienne.json',
-              f'fichier de configuration : format, version, sans moteur ({d.suggested_filename})')
+        check(cfg['format'] == 'city-map-studio/configuration' and cfg['version'] == 2 and cfg['state'].get('schemaVersion') == 1
+              and 'engine' not in cfg['state']['poster'] and d.suggested_filename == 'affiche-carte-ancienne.json',
+              f'fichier de configuration : format, version 2, état PosterDoc sans moteur ({d.suggested_filename})')
         await ev("()=>{ __cms.applyAmbiance('souvenir'); __cms.st.texts.title='Autre'; }")
         await page.set_input_files('#cfgIn', cfg_path); await page.wait_for_timeout(700)
         check(await ev(SNAP) == a_snap, 'fichier rouvert : affiche restaurée à l\'identique')
         async with page.expect_download() as dl:
             await page.click('#tb-export'); await page.click('#bCfgExport')
         cur = json.loads(open(await (await dl.value).path()).read())
-        check(cur['state']['texts']['title'] == 'Blois' and cur['state']['layout'] == 'classic', 'affiche en cours téléchargée')
+        check(cur['state']['poster']['texts']['title'] == 'Blois' and cur['state']['poster']['layout'] == 'classic', 'affiche en cours téléchargée')
 
         # 6. Sauvegarde complète : exportée, réimportée sans doublon, fusionnée
         async with page.expect_download() as dl: await page.click('#bSavesBackup')
@@ -128,15 +129,16 @@ async def main():
         check(len(l) == 40, f'nombre de sauvegardes borné à 40 ({len(l)})')
         check(all(x['thumb'] == '' for x in l if x['name'].startswith('A')), 'vignette piégée (javascript:) écartée')
         check(not await ev("[...document.querySelectorAll('#savesList img')].some(i=>!i.src.startsWith('data:image/'))"), 'vignettes affichées : images data: seulement')
-        await ev("()=>localStorage.setItem('cms3.saves','{pas du json')")
+        await ev("()=>{ const l=__cms.savedList(); l.length=0; l.push(1,'x',null,{state:'?'},{state:{schemaVersion:99,poster:{}}}); }")
         check(await ev("__cms.loadSaves().length") == 0, 'sauvegardes illisibles dans le navigateur : ignorées sans erreur')
 
         # 8. Navigateur plein : message clair, liste intacte
-        await ev("()=>localStorage.removeItem('cms3.saves')")
-        await ev("()=>__cms.saveCurrent('Gardée')")
-        full = await ev("""()=>{ const orig=Storage.prototype.setItem; Storage.prototype.setItem=function(k,v){ if(k==='cms3.saves') throw new DOMException('quota','QuotaExceededError'); return orig.call(this,k,v); };
-          const ok=__cms.saveCurrent('Trop'); Storage.prototype.setItem=orig; return {ok, toast:document.getElementById('toast').textContent, n:__cms.loadSaves().length}; }""")
-        check(full['ok'] is False and 'plein' in full['toast'] and full['n'] == 1, f'navigateur plein : refus expliqué, aucune perte ({full["toast"][:60]})')
+        await ev("()=>{ __cms.savedList().length=0; }")
+        await ev("()=>__cms.saveCurrent('Gardée')"); await page.wait_for_timeout(300)
+        full = await ev("""async ()=>{ const orig=IDBObjectStore.prototype.put; IDBObjectStore.prototype.put=function(){ throw new DOMException('quota','QuotaExceededError'); };
+          __cms.saveCurrent('Trop'); await new Promise(r=>setTimeout(r,300)); IDBObjectStore.prototype.put=orig;
+          return {toast:document.getElementById('toast').textContent, n:__cms.loadSaves().length}; }""")
+        check('plein' in full['toast'] and full['n'] == 1, f'navigateur plein : refus expliqué, aucune perte ({full["toast"][:60]})')
 
         # 9. Accessibilité : noms accessibles, fenêtre modale, Échap
         a11y = await ev("""[...document.querySelectorAll('#tab-export button, #tab-export input')].every(e=>(e.getAttribute('aria-label')||e.textContent.trim()||e.labels?.[0]?.textContent.trim()||e.closest('label')?.textContent.trim()))""")

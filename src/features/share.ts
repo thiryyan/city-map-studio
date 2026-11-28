@@ -1,7 +1,7 @@
 /* City Map Studio — Partage par lien et application d'une configuration (#118, issu de features.ts). */
 import {$, toast} from '../core/dom.js';
 import {PosterState} from '../content/config.js';
-import {normState, SHARE_MAX_BYTES, SHARE_MAX_CHARS, st} from '../core/doc/state.js';
+import {SHARE_MAX_BYTES, SHARE_MAX_CHARS, st} from '../core/doc/state.js';
 import {commitHistory} from '../core/doc/history.js';
 import {drawTexture, layoutPreview, redrawAll, scheduleOver} from '../view/preview.js';
 import {loadFonts} from '../render/fonts.js';
@@ -9,6 +9,7 @@ import {goTo, renderPlaces} from './places.js';
 import {renderRoute} from './gpx.js';
 import {refreshCards, setPlacing, syncInputs} from '../core/port.js';
 import {replaceState, snapshotDoc} from '../core/doc/store.js';
+import {parseDoc, toDoc} from '../core/doc/poster-doc.js';
 // ---------- Partage par lien ----------
 // L'état de l'affiche (sans le moteur, ni un itinéraire long) est compressé dans l'ancre de l'adresse (#a=…) :
 // rien n'est envoyé à un serveur ; le lien contient le lieu et les textes.
@@ -25,7 +26,7 @@ async function pipeBytes(bytes: Uint8Array,stream: CompressionStream | Decompres
 async function encodeShare(){
   const o=JSON.parse(JSON.stringify(st)); delete o.engine; let dropped=false;
   if(o.route && o.route.pts.length>400){ o.route=null; dropped=true; }
-  const raw=new TextEncoder().encode(JSON.stringify(o));
+  const raw=new TextEncoder().encode(JSON.stringify(toDoc(o)));   // PosterDoc (#118)
   const data=window.CompressionStream ? 'z'+b64u.enc(await pipeBytes(raw,new CompressionStream('deflate-raw'))) : 'j'+b64u.enc(raw);
   return {url:location.href.split('#')[0]+'#a='+data, dropped};
 }
@@ -36,7 +37,7 @@ async function decodeShare(t: string){
   if(raw.length>SHARE_MAX_BYTES) throw new Error('contenu trop volumineux');
   const o=JSON.parse(new TextDecoder().decode(raw));
   if(!o || typeof o!=='object' || Array.isArray(o)) throw new Error('contenu invalide');
-  return o;
+  return parseDoc(o);   // PosterDoc, ou état nu d'un lien d'avant #118
 }
 async function shareLink(){
   try{ const {url,dropped}=await encodeShare(); $('shareOut').value=url; $('shareBox').hidden=false; $('shareOut').select();
@@ -56,7 +57,7 @@ function applyConfig(o: unknown,msg?: string){
   let before: PosterState | null=null;
   try{
     commitHistory(0);
-    const eng=st.engine, fresh=normState(o); before=snapshotDoc();
+    const eng=st.engine, fresh=parseDoc(o); before=snapshotDoc();   // PosterDoc, ou état nu des liens et fichiers d'avant #118
     replaceState(fresh,{engine:eng});
     setPlacing(false); syncInputs(); renderPlaces(); renderRoute(); layoutPreview(); loadFonts().then(()=>{ scheduleOver(); refreshCards(); }); goTo(st.center.lat,st.center.lon,st.zoom); redrawAll(true); drawTexture();
     commitHistory(); if(msg) toast(msg);

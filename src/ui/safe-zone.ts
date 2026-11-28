@@ -8,7 +8,7 @@ import {ui} from '../core/doc/state.js';
 // Les textes et repères relevés pendant le rendu de l'aperçu (CMS.ink) qui entrent dans cette bande sont signalés.
 // Réglage de l'appareil, hors de l'état de l'affiche (comme A− / A+).
 CMS.define('safe', () => {
-  const KEY='cms3.safeZone', MM=5;
+  const KEY='cms:safeZone', MM=5;
   const LABELS: Record<string, string>={title:'le titre',subtitle:'le sous-titre',coords:'les coordonnées',dedication:'la dédicace',names:'les noms',date:'la date',
     legend:'la légende',marker:'un repère',attribution:'la mention des sources',text:'un texte'};
   let on=(()=>{ try{ return localStorage.getItem(KEY)==='1'; }catch(e){ return false; } })(), prev='';

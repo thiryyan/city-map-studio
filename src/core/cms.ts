@@ -7,6 +7,7 @@
  * demandes nommées de src/core/port.ts. CMS.define('nom', …) range des fonctions sous CMS.nom (testées seules :
  * tests/unit).
  */
+import './prefs.js';   // préférences reprises de cms3.* avant toute lecture (#118)
 (function (g: typeof globalThis) {
   const CMS = g.CMS = g.CMS || ({} as CmsNamespace);
   const bus = new EventTarget();
@@ -91,7 +92,7 @@ CMS.define('perf', () => {
 /** Clés d'un objet, typées (Object.keys renvoie string[]) */
 const keysOf=<T extends object>(o: T)=>Object.keys(o) as (keyof T)[];
 // Fonctions internes exposées (window.__cms) seulement pour les tests et le débogage : adresse avec ?test,
-// ou localStorage['cms3.debug']='1'. En usage normal, rien n'est exposé.
-const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ return localStorage.getItem('cms3.debug')==='1'; }catch(e){ return false; } })();
+// ou localStorage['cms:debug']='1'. En usage normal, rien n'est exposé.
+const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ return localStorage.getItem('cms:debug')==='1'; }catch(e){ return false; } })();
 
 export {keysOf, TEST_HOOKS};

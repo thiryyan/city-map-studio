@@ -53,20 +53,26 @@ import {applySheet, setFraming, setSheet} from '../ui/sheet.js';
 import {deleteSave, downloadBackup, downloadConfig, importConfigFile, initSaves, loadSaves, openSaves, restoreSave, saveCurrent} from '../features/saves.js';
 import {fitRoute, parseGpx} from '../features/gpx.js';
 import {initSheet} from '../ui/changes.js';
-import {maybeWelcome, welcomeDone} from '../ui/welcome.js';
+import {initWelcome, maybeWelcome, welcomeDone} from '../ui/welcome.js';
 import {paletteOf, photoTheme} from '../features/palette.js';
 import {showBanner} from '../ui/shell.js';
 import {geom} from '../render/layout.js';
-import {update} from '../core/doc/store.js';
+import {replaceState, update} from '../core/doc/store.js';
+import {adoptHistory, loadStorage, savedCurrent, savedList} from '../storage/documents.js';
 // ---------- Démarrage ----------
 async function boot(){
+  // Affiche en cours, Mes affiches et historique relus d'IndexedDB (après la migration unique des données cms3.*, #118)
+  const stored=await loadStorage();
+  if(stored.doc) replaceState(stored.doc);
+  initWelcome(!!stored.doc);
   buildUI(); CMS.illus.init(); CMS.route.init(); initSaves(); initSheet(); CMS.deps.init(); CMS.safe.init(); CMS.actbar.init(); CMS.changes.init(); applyUiScale();
   $('bConsentYes').onclick=giveConsent; $('bConsentFile').onclick=declineConsent; updateConsentInfo();
   dlgCancel.consent=declineConsent; initDialogs();
   showEnvWarning();
   if(st.engine==='file') update(_s=>(_s.engine='maplibre'));   // un fichier importé n'est pas conservé entre deux sessions
   syncInputs();
-  hist.cur=histSnap(); hist.quietUntil=Date.now()+2500; updateHistUI();   // l'état chargé est le point de départ de l'historique
+  hist.cur=histSnap(); adoptHistory(stored.history);   // historique repris s'il correspond à l'affiche relue (#16)
+  hist.quietUntil=Date.now()+2500; updateHistUI();   // l'état chargé est le point de départ des nouvelles étapes
   let rafL=0; new ResizeObserver(()=>{ if(!rafL) rafL=requestAnimationFrame(()=>{ rafL=0; layoutPreview(); }); }).observe(stage);
   addEventListener('resize',()=>applySheet());
   CMS.surface.watchDpr(()=>layoutPreview());   // densité changée sans redimensionnement : aperçu redessiné à la nouvelle densité
@@ -88,7 +94,7 @@ async function boot(){
   if(!(ok && st.engine==='maplibre' && consent)) requestAnimationFrame(()=>CMS.perf.ready(st.engine==='file'?'moteur Fichier':'aperçu sans carte'));
   CMS.perf.watchFrames($('slot')); CMS.perfUI.init();
   installPwa();
-  if(TEST_HOOKS) window.__cms={get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,setFormat,setFileType,setDedWrap,exportSpec,dedLines,renderMaplibreOffscreen,set glMaxTest(v: number){setGlMaxTest(v)},applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st:rawState,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll,pwa:CMS.pwa};
+  if(TEST_HOOKS) window.__cms={saved:savedCurrent,savedList,get mlMap(){return mlMap},buildStyle,hatchTile,get welcomeDone(){return welcomeDone},get ui(){return ui},setLayout,setOrient,setFormat,setFileType,setDedWrap,exportSpec,dedLines,renderMaplibreOffscreen,set glMaxTest(v: number){setGlMaxTest(v)},applyAmbiance,applyOccasion,setActivePlace,parseGpx,fitRoute,encodeShare,decodeShare,altAz,skyTime,contrast,THEMES,FONTS,AMBIANCES,composePoster,posterDims,saveCurrent,loadSaves,restoreSave,importConfigFile,applyConfig,textureBase,placeAt,addPlace,undo,redo,get hist(){return hist},frDate,isoFromFr,showTab,setSheet,setFraming,st:rawState,drawPoster,dms,geom,parseOsm,stitch,setEngine,exportPoster,importText,runDiagnostics,ENV,get osmData(){return osmData},get mlLib(){return mlLib},parseCoords,get consent(){return consent},resetAll,pwa:CMS.pwa};
   // Façade de test (#102, lot 4b) : les noms que les tests utilisent directement, exposés sur window en mode ?test
   // seulement. Le site construit n'a plus aucun nom global (script enveloppé dans une fonction) : cette liste est la
   // seule dépendance des tests envers la portée de l'application, et suivra la conversion en modules ES.

@@ -1,7 +1,7 @@
 /* City Map Studio — Mes affiches : sauvegarde et restauration de la configuration (#118, issu de features.ts). */
 import {$, h, toast} from '../core/dom.js';
 import {LAYOUTS, PosterState, THEMES} from '../content/config.js';
-import {normState, osmData, st, ui, V} from '../core/doc/state.js';
+import {osmData, st, ui, V} from '../core/doc/state.js';
 import {applyConfig} from './share.js';
 import {applyTexture} from '../view/preview.js';
 import {drawPoster} from '../render/poster.js';
@@ -9,13 +9,15 @@ import {drawVectors} from '../map/engines.js';
 import {slug} from '../core/text.js';
 import {showTab} from '../core/port.js';
 import {thumbMap} from '../view/thumbnails.js';
+import {savedList, storeSavedList} from '../storage/documents.js';
+import {parseDoc, toDoc} from '../core/doc/poster-doc.js';
 // ---------- Mes affiches : sauvegarde et restauration de la configuration ----------
-// Sauvegardes nommées dans ce navigateur (localStorage, avec une vignette), fichier de configuration d'une affiche,
+// Sauvegardes nommées dans ce navigateur (IndexedDB, avec une vignette), fichier de configuration d'une affiche,
 // fichier de sauvegarde de toutes les affiches. Tout ce qui est relu (navigateur ou fichier) est validé comme un lien
 // partagé : champs connus seulement, normState, tailles bornées ; une restauration est une étape annulable.
 // Ne sont pas inclus : le moteur cartographique (choix de l'appareil) et les données importées (fichier OSM).
 // Fichiers avec illustrations intégrées : version 2 et limites propres (CMS.illus.FILE) ; la version 1 reste lue.
-const SAVES_KEY='cms3.saves', SAVES_MAX=40, CFG_FORMAT='city-map-studio/configuration', BAK_FORMAT='city-map-studio/sauvegardes', CFG_VERSION=1;
+const SAVES_MAX=40, CFG_FORMAT='city-map-studio/configuration', BAK_FORMAT='city-map-studio/sauvegardes', CFG_VERSION=2;   // 2 : états au format PosterDoc (#118) ; version 1 (état nu) relue et convertie
 const CFG_MAX_BYTES=1024*1024, BAK_MAX_BYTES=16*1024*1024, THUMB_MAX=120*1024;
 const THUMB_RE=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
@@ -26,18 +28,18 @@ function savedState(): Save['state'] { const o=JSON.parse(JSON.stringify(st)); d
 /** Une sauvegarde relue : chaque champ vérifié, l'état normalisé ; null si inexploitable */
 function normSave(o: any): Save | null {
   if(!o || typeof o!=='object' || Array.isArray(o) || !o.state || typeof o.state!=='object') return null;
-  const t=Date.parse(o.savedAt), state: Save['state']=normState(o.state); delete state.engine;
+  let state: Save['state']; try{ state=parseDoc(o.state); }catch(e){ return null; } delete state.engine;   // PosterDoc, ou état nu (avant #118)
+  const t=Date.parse(o.savedAt);
   return {id:typeof o.id==='string' && /^[a-z0-9]{6,24}$/.test(o.id) ? o.id : newId(),
     name:(V.str(o.name,'',80).trim()||'Sans titre'), savedAt:Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString(), state,
     thumb:typeof o.thumb==='string' && o.thumb.length<=THUMB_MAX && THUMB_RE.test(o.thumb) ? o.thumb : ''};
 }
 function loadSaves(){
-  try{ const a=JSON.parse(localStorage.getItem(SAVES_KEY)||'[]'); return Array.isArray(a) ? a.map(normSave).filter((x): x is Save=>!!x).slice(0,SAVES_MAX) : []; }
-  catch(e){ return []; }
+  return savedList().map(normSave).filter((x): x is Save=>!!x).slice(0,SAVES_MAX);   // IndexedDB (src/storage/documents.ts)
 }
 function storeSaves(list: Save[]){
-  try{ localStorage.setItem(SAVES_KEY,JSON.stringify(list.slice(0,SAVES_MAX))); }
-  catch(e){ throw new Error('espace du navigateur plein : supprimez des affiches ou téléchargez la sauvegarde complète'); }
+  storeSavedList(list.slice(0,SAVES_MAX).map(e=>({...e,state:toDoc(e.state)})))
+    .catch(()=>{ renderSaves(); toast('Enregistrement impossible : espace du navigateur plein ou indisponible, rien n’a été perdu ; téléchargez la sauvegarde complète',true); });
 }
 /** Vignette de l'affiche courante (JPEG, ~150 px) : carte réelle avec le moteur Fichier, schématique sinon */
 function saveThumb(){
@@ -69,15 +71,15 @@ function downloadJson(obj: unknown,file: string){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,1)],{type:'application/json'})); a.download=file;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
 }
-const configOf=(name: string,state: Save['state'],savedAt?: string)=>({format:CFG_FORMAT, version:CFG_VERSION, app:'City Map Studio', name, savedAt:savedAt||new Date().toISOString(), state});
+const configOf=(name: string,state: Save['state'],savedAt?: string)=>({format:CFG_FORMAT, version:CFG_VERSION, app:'City Map Studio', name, savedAt:savedAt||new Date().toISOString(), state:toDoc(state)});
 async function downloadConfig(entry: Save | null){
   const c = entry ? configOf(entry.name,entry.state,entry.savedAt) : configOf(defaultSaveName(),savedState());
-  const {o,note}=await CMS.illus.attachImages(c,[c.state],$('cfgImg').checked);
+  const {o,note}=await CMS.illus.attachImages(c,[c.state.poster],$('cfgImg').checked);
   downloadJson(o,`affiche-${slug(c.name)}.json`); toast('Configuration téléchargée'+note);
 }
 async function downloadBackup(){
   const saves=loadSaves(); if(!saves.length){ toast('Aucune affiche enregistrée à sauvegarder',true); return; }
-  const {o,note}=await CMS.illus.attachImages({format:BAK_FORMAT, version:CFG_VERSION, app:'City Map Studio', savedAt:new Date().toISOString(), saves},saves.map(e=>e.state),$('cfgImg').checked);
+  const {o,note}=await CMS.illus.attachImages({format:BAK_FORMAT, version:CFG_VERSION, app:'City Map Studio', savedAt:new Date().toISOString(), saves:saves.map(e=>({...e,state:toDoc(e.state)}))},saves.map(e=>e.state),$('cfgImg').checked);
   downloadJson(o, `mes-affiches-${new Date().toISOString().slice(0,10)}.json`);
   toast(`${saves.length} affiche${saves.length>1?'s':''} sauvegardée${saves.length>1?'s':''} dans un fichier`+note);
 }
@@ -133,8 +135,7 @@ function initSaves(){
   $('saveForm').onsubmit=e=>{ e.preventDefault(); saveCurrent($('saveName').value); };
   $('bCfgExport').onclick=()=>downloadConfig(null); $('bSavesBackup').onclick=downloadBackup;
   $('cfgIn').onchange=e=>{ const f=(e.target as HTMLInputElement).files![0]; if(f) importConfigFile(f); (e.target as HTMLInputElement).value=''; };
-  addEventListener('storage',e=>{ if(e.key===SAVES_KEY) renderSaves(); });   // autre onglet
   addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase()==='s'){ e.preventDefault(); saveCurrent(defaultSaveName()); } });
 }
 
-export {BAK_MAX_BYTES, CFG_MAX_BYTES, configOf, defaultSaveName, deleteSave, downloadBackup, downloadConfig, downloadJson, importConfigFile, initSaves, LAYOUT_NAME, loadSaves, newId, normSave, openSaves, renderSaves, restoreSave, saveCurrent, savedState, SAVES_KEY, SAVES_MAX, saveThumb, storeSaves, THUMB_RE};
+export {BAK_MAX_BYTES, CFG_MAX_BYTES, configOf, defaultSaveName, deleteSave, downloadBackup, downloadConfig, downloadJson, importConfigFile, initSaves, LAYOUT_NAME, loadSaves, newId, normSave, openSaves, renderSaves, restoreSave, saveCurrent, savedState, SAVES_MAX, saveThumb, storeSaves, THUMB_RE};

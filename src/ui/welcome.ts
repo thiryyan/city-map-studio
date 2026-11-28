@@ -1,13 +1,17 @@
 /* City Map Studio — Ambiance proposée au premier lancement (#59) (#118, issu de features.ts). */
 import {$, h, pressed} from '../core/dom.js';
-import {AMBIANCES, FONTS, STORE_KEY, THEMES} from '../content/config.js';
+import {AMBIANCES, FONTS, THEMES} from '../content/config.js';
 import {applyAmbiance} from '../features/presets.js';
 import {thumb} from '../view/thumbnails.js';
 // ---------- Ambiance au premier lancement ----------
 // Proposée une seule fois : première visite sans affiche enregistrée, ni lien partagé ; après la demande d'accord.
-const WELCOME_KEY='cms3.welcomed';
-const firstVisit=(()=>{ try{ return !localStorage.getItem(WELCOME_KEY) && !localStorage.getItem(STORE_KEY); }catch(e){ return false; } })();
-let welcomeDone=!firstVisit || /^#a=/.test(location.hash);
+const WELCOME_KEY='cms:welcomed';
+let welcomeDone=true;
+/** Au démarrage, une fois le stockage relu : première visite = ni proposition déjà vue, ni affiche enregistrée, ni lien partagé */
+function initWelcome(hadDoc: boolean){
+  let seen=true; try{ seen=!!localStorage.getItem(WELCOME_KEY); }catch(e){}
+  welcomeDone=seen || hadDoc || /^#a=/.test(location.hash);
+}
 /** Premier lancement (#59) : une proposition d'ambiance non bloquante en tête des réglages, après l'éventuelle demande d'accord.
  *  L'affiche par défaut est visible tout de suite ; la proposition se ferme d'un toucher et ne revient plus, une fois fermée ou utilisée. */
 function maybeWelcome(){
@@ -33,4 +37,4 @@ function closeWelcome(hide=true){
   if(had) document.querySelector<HTMLElement>('#tabs .on')?.focus();
 }
 
-export {closeWelcome, firstVisit, maybeWelcome, WELCOME_KEY, welcomeDone};
+export {closeWelcome, initWelcome, maybeWelcome, WELCOME_KEY, welcomeDone};

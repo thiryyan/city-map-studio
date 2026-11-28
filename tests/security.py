@@ -52,7 +52,7 @@ async def main():
         check(s['markerSize'] == 300 and len(s['markers2']) == 1 and s['markers2'][0]['label'] == 'Ici' and s['route'] is None and s['sky']['when'] == '',
               'lien forgé : nombres bornés, lieux, itinéraire et date du ciel filtrés')
         check('inattendu' not in s and 'pollue' not in s and not await page.evaluate("({}).pollue"), 'lien forgé : champs inconnus ignorés, aucune pollution de prototype')
-        saved = json.loads(await page.evaluate("localStorage.getItem('cms3.affiche')"))
+        saved = json.loads(await page.evaluate("__cms.saved()"))
         check(saved['marker']['lat'] == 47.5861 and await page.evaluate("location.hash") == '', 'lien forgé : état enregistré valide, ancre retirée')
         check(await page.inner_text('#markerTxt') != '' and not errs, f'lien forgé : interface utilisable, aucune erreur de page {errs}')
 
