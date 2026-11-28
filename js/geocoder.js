@@ -12,7 +12,7 @@
 import {late} from './core.js';
 import {NOMINATIM} from './config.js';
 (function (g) {
-  const CMS = g.CMS;   // js/core.js
+  const CMS = g.CMS;   // js/core.ts
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};
   const MIN_INTERVAL = testCfg.geoInterval ?? 1100, TIMEOUT = testCfg.geoTimeout ?? 10000, RETRY_DELAY = testCfg.geoRetry ?? 1500;
   const CACHE_MAX = 50, DEFAULT_COOLDOWN = 60000;

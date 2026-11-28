@@ -1117,7 +1117,7 @@ function initSaves(){
   addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase()==='s'){ e.preventDefault(); saveCurrent(defaultSaveName()); } });
 }
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.ts)
 Object.assign(late, {maybeWelcome, placeAt, setDedWrap, setStatus, showBanner, toast});
 
 export {addPlace, applyAmbiance, applyConfig, applyOccasion, applySheet, closeWelcome, decodeShare, deleteSave, downloadBackup, downloadConfig, encodeShare, fitRoute, importConfigFile, importGpx, initSaves, initSheet, isSheet, loadFromHash, loadSaves, maybeWelcome, openSaves, paletteOf, parseGpx, photoTheme, placeAt, renderRoute, replaceState, restoreSave, saveCurrent, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setPlacing, setSheet, setStatus, shareLink, showBanner, toast, updateContrast, updateExportLabel, updateLayoutUI, welcomeDone};

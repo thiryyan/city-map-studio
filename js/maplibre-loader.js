@@ -11,7 +11,7 @@
  */
 import {ML_CDNS, ML_SRI, ML_VERSION} from './config.js';
 (function (g) {
-  const CMS = g.CMS;   // js/core.js
+  const CMS = g.CMS;   // js/core.ts
   const S = Object.freeze({ IDLE: 'idle', LOADING: 'loading', OK: 'ok', NEED_CONSENT: 'local-fail', FAIL: 'fail' });
   // Délais réglables par les tests seulement (adresse avec ?test et objet __cmsTestConfig posé avant le chargement)
   const testCfg = /[?&]test(?:[=&]|$)/.test(g.location?.search ?? '') ? (g.__cmsTestConfig ?? {}) : {};

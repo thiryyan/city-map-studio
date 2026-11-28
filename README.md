@@ -9,16 +9,16 @@ Atelier web de création d'affiches cartographiques souvenir : tracé minimalist
 - **Affiche illustrée** : un mode Illustration pour une affiche de voyage façon vintage, et un mode Carte + illustration (carte en médaillon sur l'illustration, ou illustration en vignette sur la carte). L'application rédige le prompt à coller dans votre IA (ChatGPT, Gemini…), puis importe l'image obtenue, la cadre, la retouche (filtre vintage, grain) et pose un grand titre ; indicateur de qualité d'impression par format.
 - **Plus que la carte** : jusqu'à trois lieux, itinéraire GPX, carte du ciel du jour J (Lune en phase, planètes, Voie lactée), aperçu au mur, partage par lien.
 - **Mes affiches** : configurations enregistrées dans le navigateur (avec vignette), restaurées en un toucher et annulables ; fichier de configuration d'une affiche et sauvegarde complète à garder ou à ouvrir sur un autre appareil ; Ctrl + S.
-- **Simple à développer** : HTML, CSS et JavaScript natifs (`index.html`, `css/`, `js/`), ouvrables tels quels ; le site publié est construit par `npm run build` (un script et une feuille minifiés), pensé d'abord pour le mobile.
+- **Simple à développer** : HTML, CSS, JavaScript et TypeScript (`index.html`, `css/`, `js/`), sans framework ; le site publié est construit par `npm run build` (un script et une feuille minifiés), pensé d'abord pour le mobile.
 - **Sûre, accessible, hors ligne** : politique de sécurité du contenu stricte, liens partagés validés, fenêtres et commandes accessibles au clavier ; installable, et utilisable sans réseau après une première visite (moteur Fichier).
 
 ## Utilisation
 Ouvrir la version publiée sur GitHub Pages, ou servir le dépôt localement. Pendant la refonte ([#97](https://github.com/thiryyan/city-map-studio/issues/97)), la version de référence reste à l'adresse habituelle ; la version en cours de refonte est publiée sous `/nouvelle/`, et chaque pull request sous `/pr-N/` (dossier technique, § 7.6).
 
 ```bash
-python3 -m http.server 8000   # puis http://localhost:8000
+npm ci && npm run dev   # construit dist/ puis le sert : http://localhost:8000
 ```
-Les sources sont des modules ES : elles se servent en http, pas en `file://`. Le site construit (`npm ci && npm run build`, dossier `dist/`) s'ouvre aussi directement en `file://`, mais n'est alors ni installable ni mis en cache.
+Les sources (modules ES, en partie en TypeScript) passent par le build : `dist/` se sert en http, ou s'ouvre directement en `file://` (ni installable ni mis en cache alors).
 
 ## Documentation
 - [Guide de l'utilisateur](USER_GUIDE.md) : toutes les fonctions, leurs options et des astuces.

@@ -19,7 +19,7 @@
 | E7 | Libellés | Aucun libellé sur la carte : le tracé est purement graphique. |
 | E8 | Ville au lancement | Blois et la Loire. |
 | E9 | Export | PNG A4 300 DPI (2480 × 3508 px) par défaut ; A3, 50 × 70 cm et 10 × 15 cm (tirage photo) ; PDF à la taille d'impression (§ 5). |
-| E10 | Livraison | Sources : `index.html` (balisage), `css/app.css`, `js/*.js` (**modules ES**, point d'entrée `js/main.js`), servies en http pour développer (`npm run dev`). **Site publié construit** par `scripts/build.mjs` (#102, § 7.8) : `dist/`, un seul script et une seule feuille minifiés, `sw.js` généré ; il s'ouvre aussi en `file://`. MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
+| E10 | Livraison | Sources : `index.html` (balisage), `css/app.css`, `js/*.ts` et `js/*.js` (**modules ES**, en cours de migration vers TypeScript strict, #103 ; point d'entrée `js/main.js`), construites puis servies en http pour développer (`npm run dev`). **Site publié construit** par `scripts/build.mjs` (#102, § 7.8) : `dist/`, un seul script et une seule feuille minifiés, `sw.js` généré ; il s'ouvre aussi en `file://`. MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
 | E11 | Écrans | Mobile en priorité, ordinateur en second. Interface en français. |
 | E12 | Hébergement | **GitHub Pages**, publié depuis la branche `gh-pages` par GitHub Actions (§ 7.6) : racine = version classique (branche `classique`), `/nouvelle/` = branche `main`, `/pr-N/` = préversions. |
 | E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU : mention complète active par défaut. Décochée, la case laisse une **mention minimale toujours inscrite** (« © OpenStreetMap », plus « © OpenMapTiles » avec le moteur GPU ; `attributionText`). À l'écran, les sources de la carte sont rappelées en légende discrète **sous l'aperçu**, hors de l'affiche (`#mapCredit`, placée par `layoutPreview`) : l'aperçu montre ainsi exactement la mention de l'export. |
@@ -617,7 +617,7 @@ Les deux services distants (tuiles OpenFreeMap, Nominatim) et, en secours, les C
 | Mode | Moteurs disponibles | Remarque |
 | :--- | :--- | :--- |
 | **GitHub Pages** (E12, § 7.6) | 1, 2 | **Recommandé**, surtout sur mobile : URL HTTPS stable, application installable, téléchargements fiables. |
-| Serveur local (`python3 -m http.server`) | 1, 2 | Pour développer. |
+| Serveur local (`npm run dev` : build puis `python3 -m http.server -d dist`) | 1, 2 | Pour développer. |
 | Site construit (`dist/`) ouvert dans un navigateur (`file://`) | 1, 2 | Ni installable ni mis en cache. Les sources (modules ES) ne s'ouvrent pas en `file://`. |
 | Aperçu intégré d'une application ou visionneuse | 2 uniquement | Réseau et téléchargements bloqués. |
 | Entièrement hors ligne | 2 uniquement | Après une première visite en http(s) (application en cache, § 7.5), ou en `file://`. Le moteur 1 exige le réseau : l'adresse des tuiles est fixe (`OFM_URL`) ; des tuiles autohébergées (extraction PMTiles, par exemple) demanderaient une évolution. |
@@ -629,7 +629,7 @@ L'application installée (Chrome, Android, iOS) est le site dans une fenêtre d�
 * **Stratégies de cache** : application (HTML, CSS, JS, manifeste, icônes) en **réseau d'abord**, avec une requête `cache: 'no-cache'` : le navigateur revalide auprès du serveur (304 peu coûteux) et ne sert jamais une copie périmée de son cache HTTP (GitHub Pages répond `Cache-Control: max-age=600`, sans possibilité de changer les en-têtes). `lib/` (versions figées) en cache d'abord. Le worker est enregistré avec `updateViaCache: 'none'`.
 * **Détection** : `reg.update()` au démarrage, puis au retour au premier plan (`visibilitychange`), au plus une fois par heure : une PWA peut rester des jours en arrière-plan sur mobile.
 * **Pas d'activation sans accord** : le nouveau worker reste en attente (`waiting`, pas de `skipWaiting()` à l'installation). Si la page est déjà contrôlée (donc pas à la première installation), un bandeau `#updBanner` affiche « Nouvelle version disponible » / **Mettre à jour** (✕ pour plus tard). Le bouton envoie `{type:'SKIP_WAITING'}` au worker ; `controllerchange` recharge alors la page **une seule fois**. Pas de rechargement automatique : un export ou un import d'illustration peut être en cours. L'état de l'affiche, enregistré en local, est retrouvé après le rechargement. Si un autre onglet a déjà activé la nouvelle version, le bandeau propose simplement de recharger.
-* **Version visible** : onglet Lieu, section Avancé, sous le diagnostic (`#appVersion`). La page porte sa propre version (`CMS.build.version`, `js/core.js`), copie exacte de `VERSION` : elle est donc connue partout (`file://`, première visite, hors ligne, tests), affichée en date (« Version : 28/11/2026 (3522713) » pour `cms-2026-11-28-3522713` ; « (h) » pour l'ancien format `cms-2026-11-24h`). La version du worker actif est demandée en plus (`{type:'GET_VERSION'}` sur un `MessageChannel`) ; si elle diffère (mise à jour activée dans un autre onglet, copie hors ligne en retard), elle est ajoutée : « · copie hors ligne : 23/11/2026 (c) ». Identifiants bruts dans `data-version` et `data-sw`. Le diagnostic (« Diagnostiquer la connexion ») commence par une ligne **Version** : page, copie hors ligne à jour ou en retard (« Mettre à jour » ou recharger).
+* **Version visible** : onglet Lieu, section Avancé, sous le diagnostic (`#appVersion`). La page porte sa propre version (`CMS.build.version`, `js/core.ts`), copie exacte de `VERSION` : elle est donc connue partout (`file://`, première visite, hors ligne, tests), affichée en date (« Version : 28/11/2026 (3522713) » pour `cms-2026-11-28-3522713` ; « (h) » pour l'ancien format `cms-2026-11-24h`). La version du worker actif est demandée en plus (`{type:'GET_VERSION'}` sur un `MessageChannel`) ; si elle diffère (mise à jour activée dans un autre onglet, copie hors ligne en retard), elle est ajoutée : « · copie hors ligne : 23/11/2026 (c) ». Identifiants bruts dans `data-version` et `data-sw`. Le diagnostic (« Diagnostiquer la connexion ») commence par une ligne **Version** : page, copie hors ligne à jour ou en retard (« Mettre à jour » ou recharger).
 * **Identité** : le manifeste fixe `"id": "./"` (identique à l'identité dérivée de `start_url`) : changer un jour `start_url` ne créera pas une seconde application.
 * **Garde-fous** : `tests/pwa.py` vérifie que tout fichier `.js` et `.css` de `js/`, `css/` et `lib/` (hors `lib/sky/`, chargé à la demande) figure dans `APP` et que tout élément de `APP` existe ; les polices woff2 sont mises en cache à leur premier usage. `VERSION`, la version de la page (`CMS.build`) et la liste `APP` sont produites ensemble par le build : plus de mise à jour à la main ni de contrôle en CI (l'ancien `tests/swversion.py` est retiré) ; `tests/pwa.py` vérifie toujours leur égalité et la liste.
 * **Plusieurs copies sur la même origine** (#97) : la racine, `/nouvelle/` et les préversions `/pr-N/` partagent le stockage des caches du navigateur. Chaque worker nomme son cache `VERSION@dossier` (ex. `cms-2026-11-27d@/city-map-studio/nouvelle/`) et, à l'activation, ne purge que les anciens caches de son propre dossier : une préversion ne vide jamais le cache hors ligne de la version classique (vérifié par `tests/pwa.py`). La version classique figée (`v1-classique`) garde l'ancien nommage, sans `@`.
@@ -653,7 +653,7 @@ Pendant la refonte, la version actuelle reste l'application de référence à l'
 
 ### 7.7. Mesures de performance (#101)
 
-L'application relève ses propres temps (`CMS.perf`, `js/core.js`), en mémoire seulement : rien n'est enregistré ni envoyé. Lieu › Avancé › « Mesures de performance » affiche la dernière mesure de chaque type, son budget et ✓ / ✗ ; « Copier les mesures » copie la version, l'appareil (navigateur, écran, densité) et les mesures, à coller dans une issue.
+L'application relève ses propres temps (`CMS.perf`, `js/core.ts`), en mémoire seulement : rien n'est enregistré ni envoyé. Lieu › Avancé › « Mesures de performance » affiche la dernière mesure de chaque type, son budget et ✓ / ✗ ; « Copier les mesures » copie la version, l'appareil (navigateur, écran, densité) et les mesures, à coller dans une issue.
 
 | Mesure | Début → fin | Budget |
 | :--- | :--- | :--- |
@@ -682,7 +682,7 @@ Le build ne fait rien régresser. Le budget du réglage visible a été porté �
 
 * les modules ES, à partir de `js/main.js`, réunis par esbuild en **un seul script classique** `js/app.<empreinte>.js` (format IIFE), minifié (environ 475 → 298 Ko) : **aucun nom n'est global** sur le site publié (seul `CMS`, posé explicitement sur `globalThis`), et `dist/index.html` s'ouvre en `file://`. Les tests n'atteignent l'application que par `window.__cms` et la **façade de test** de `js/main.js` (noms exposés sur `window` en mode `?test` seulement) : un test qui a besoin d'un nouveau nom l'y ajoute. ;
 * `css/app.css` minifiée en `css/app.<empreinte>.css` ;
-* `VERSION` (`sw.js`) et `CMS.build.version` (`js/core.js`) : `cms-AAAA-MM-JJ-<empreinte>` ; liste `APP` de `sw.js` : les fichiers réellement publiés ;
+* `VERSION` (`sw.js`) et `CMS.build.version` (`js/core.ts`) : `cms-AAAA-MM-JJ-<empreinte>` ; liste `APP` de `sw.js` : les fichiers réellement publiés ;
 * `lib/`, `icons/`, `manifest.webmanifest`, `.nojekyll` copiés.
 
 Les noms de fichiers à empreinte changent avec leur contenu : jamais de copie périmée d'un ancien script. La CI construit puis teste `dist/` ; `.github/scripts/pages.sh` construit `main` et chaque pull request avant de les publier (la version classique, sans build, est copiée telle quelle). `dist/index.html` s'ouvre en `file://` comme la source.
@@ -698,7 +698,7 @@ city-map-studio/
 ├── index.html              # balisage, CSP, métadonnées ; charge css/ et js/ (sources ; dist/ = site construit, § 7.8)
 ├── css/app.css             # feuille de styles de l'application
 ├── js/                     # modules ES, importés dans cet ordre par main.js (cf. § 8.2)
-│   ├── core.js  config.js  maplibre-loader.js  geocoder.js  state.js  geo.js  render.js
+│   ├── core.ts  config.js  maplibre-loader.js  geocoder.js  state.ts  geo.ts  render.js
 │   └── engines.js  preview.js  features.js  ui.js  illus.js  export.js  main.js
 ├── sw.js                   # service worker (cache de l'application, http(s) seulement ; VERSION et liste APP générées au build)
 ├── package.json            # build : npm run build (scripts/build.mjs, esbuild) → dist/ ; npm test
@@ -730,7 +730,7 @@ city-map-studio/
 ### 8.2. Fichiers et sections du script
 
 Le script est découpé en fichiers `js/*.js`, eux-mêmes organisés en sections balisées `// ---------- Titre ----------`.
-Ce sont des **modules ES** (#102) : chaque fichier importe ce qu'il utilise et exporte ce que les autres utilisent ; plus aucune portée partagée. `js/main.js` importe tous les fichiers dans l'ordre ci-dessous, et **un fichier n'importe que des fichiers antérieurs** : l'ordre d'exécution reste celui des anciens scripts. Les appels vers un fichier postérieur (49 au 28/11/2026, surtout vers `ui.js`) passent par le **registre `late`** de `js/core.js`, rempli par le fichier qui définit la fonction : ce sont des dépendances à l'envers entre couches, plafonnées par `tests/globals.max` et à faire disparaître (événements, injection). Une variable partagée ne se réaffecte que dans son module, les autres passent par un setter (`setMlMap`, `setOsmData`, `setFitSink`…). `CMS.define('nom', () => {…})` range des fonctions testées seules sous `CMS.nom`. Les fichiers se parlent aussi par des événements synchrones (`CMS.on` / `CMS.emit`) :
+Ce sont des **modules ES** (#102) : chaque fichier importe ce qu'il utilise et exporte ce que les autres utilisent ; plus aucune portée partagée. `js/main.js` importe tous les fichiers dans l'ordre ci-dessous, et **un fichier n'importe que des fichiers antérieurs** : l'ordre d'exécution reste celui des anciens scripts. Les appels vers un fichier postérieur (49 au 28/11/2026, surtout vers `ui.js`) passent par le **registre `late`** de `js/core.ts`, rempli par le fichier qui définit la fonction : ce sont des dépendances à l'envers entre couches, plafonnées par `tests/globals.max` et à faire disparaître (événements, injection). Une variable partagée ne se réaffecte que dans son module, les autres passent par un setter (`setMlMap`, `setOsmData`, `setFitSink`…). `CMS.define('nom', () => {…})` range des fonctions testées seules sous `CMS.nom`. Les fichiers se parlent aussi par des événements synchrones (`CMS.on` / `CMS.emit`) :
 
 | Événement | Émis par | Écouté par |
 | :--- | :--- | :--- |
@@ -740,17 +740,17 @@ Ce sont des **modules ES** (#102) : chaque fichier importe ce qu'il utilise et e
 | `illus:input` | champs liés `illus.*` / `illusText.*` | `CMS.illus` |
 | `illus:loaded` | `CMS.illus` (image rechargée depuis IndexedDB) | — (point d'accroche) |
 
-`tests/globals.py` lance ESLint (`eslint.config.js` : aucun nom sans import, aucun import réaffecté) et interdit toute hausse du registre `late` (plafond `tests/globals.max` : 49) ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur (modules réunis par esbuild, `tests/unit/load.mjs`).
+`tests/globals.py` lance ESLint (`eslint.config.js` : aucun nom sans import, aucun import réaffecté) et interdit toute hausse du registre `late` (plafond `tests/globals.max` : 49) ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur (modules réunis par esbuild, `tests/unit/load.mjs`). **TypeScript** (#103) : `tsconfig.json` (strict, `noEmit`, `allowJs` sans vérifier les `.js`) ; les fichiers sont migrés un à un (`core.ts`, `geo.ts`, `state.ts`), les imports gardent l'extension `.js`, esbuild compile les `.ts` au build ; `tests/typecheck.py` lance `tsc` et échoue à la moindre erreur. Types partagés : `Rect`, `View`, `Geom`, `ExportSpec` (`geo.ts`), `LatLon` (`state.ts`), espace `CMS` (`js/types.d.ts`).
 
 | Fichier | Contenu |
 | :--- | :--- |
-| `core.js` | Socle : espace de noms `CMS`, `CMS.define` (module défini une seule fois, figé), bus d'événements `CMS.on` / `CMS.emit`. Chargé en premier. |
+| `core.ts` | Socle : espace de noms `CMS`, `CMS.define` (module défini une seule fois, figé), bus d'événements `CMS.on` / `CMS.emit`. Chargé en premier. |
 | `config.js` | Constantes : formats, polices, thèmes, gabarits, repères, ambiances, villes, hiérarchie routière, `DEFAULT_STATE` ; `CMS.illusConf` (listes de valeurs des modes illustrés, partagées avec `normState`). |
 | `maplibre-loader.js` | `CMS.maplibre` : chargement résilient de MapLibre (sources, délais, version, CSS de secours). |
 | `geocoder.js` | `CMS.geocoder` : client Nominatim (délai, annulation, une requête par seconde, quota 429 / 403, relance 5xx, cache, réponses validées). |
 | `wiki.js` | `CMS.wiki` : lieux remarquables de Wikipédia autour du lieu (recherche géographique, délai, annulation, cache, réponses validées, classement `rankWiki`). |
-| `state.js` | Validation (`normState`), état `st`, fenêtres modales (`openDialog`, `closeDialog`, `setBusy`), accord préalable, enregistrement. |
-| `geo.js` | `CMS.geo` : Mercator, `geom` (géométrie des gabarits), formes (`shapeD`), `exportSpec`. |
+| `state.ts` | Validation (`normState`), état `st`, fenêtres modales (`openDialog`, `closeDialog`, `setBusy`), accord préalable, enregistrement. |
+| `geo.ts` | `CMS.geo` : Mercator, `geom` (géométrie des gabarits), formes (`shapeD`), `exportSpec`. |
 | `render.js` | Typographie (`CMS.glyphs` : graphèmes et largeurs), relevé des zones d'encre pour la zone de sécurité (`CMS.ink`), cartouche, repères, ciel, `drawPoster`. |
 | `engines.js` | `CMS.engines` : données OSM, cache de tracés et tracé Canvas (moteur Fichier), effets de tracé, moteur MapLibre, rendus hors écran (`gpuQueue`, `mlQuery`). |
 | `preview.js` | `$`, `h` (création d'éléments sans `innerHTML`), canevas de l'aperçu (`CMS.surface`), défilement du panneau (`CMS.panelScroll`), aperçu, deux lieux, gestes, papier, `composePoster`, aperçu au mur. |
@@ -834,6 +834,7 @@ Tests de bout en bout Playwright (Python), un fichier par domaine, avec un **ré
 | `unit.py` | Fonctions pures (Node) | Socle `CMS`, Mercator, `zoomFactor`, `dms`, `exportSpec`, `normState`, `CMS.geocoder.sanitize` ; `CMS.illus` : qualité, placement, retouches, prompt, pistes, proportions ; `CMS.route` : prompt d'itinéraire (FR / EN, réglages), `extractGpx`, contrôle de vraisemblance, `routePrompt` et `wpts` dans `normState` ; `CMS.wiki` : classement sur une réponse réelle autour de Blois (`tests/wiki_blois.json`), validation, requête limitée aux coordonnées. |
 | `wiki.py` | Pistes Wikipédia (#46) | Option désactivée par défaut ; sans accord : aucune requête (option refusée si l'accord général l'est) ; Blois : château et cathédrale en tête ; requête limitée aux coordonnées et au rayon ; cache ; service muet : message en moins de 11 s, interface utilisable ; hors ligne : bouton grisé, pistes de la carte disponibles. |
 | `routeai.py` | Itinéraire préparé avec une IA (#85) | Prompt : lieux (noms, coordonnées), type, emprise, format, mis à jour à chaque réglage, anglais ; réponse d'IA collée telle quelle importée (étapes nommées), texte sans GPX refusé sans toucher à l'affiche, « Coller le GPX » (presse-papiers simulé), Annuler ; tracé à 50 km et tracé rectiligne signalés, « Pointillés » ; aucun appel réseau, `connect-src` sans hôte pour l'itinéraire. |
+| `typecheck.py` | Types (#103) | `tsc -p .` sans erreur (mode strict) sur les fichiers migrés en TypeScript ; liste des fichiers migrés et restants. |
 | `globals.py` | Architecture | ESLint sur `js/` : aucun nom utilisé sans import, aucun import réaffecté ; entrées du registre `late` ≤ `tests/globals.max`. |
 
 Outils hors suite : `layouts.py` (captures des 11 gabarits, contrôle visuel) et `make_og.py` (régénère `icons/og-image.jpg` à partir du rendu actuel).
