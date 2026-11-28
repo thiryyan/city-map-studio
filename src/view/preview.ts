@@ -1,14 +1,16 @@
 /* City Map Studio — Aperçu à l'écran, deux lieux, gestes, papier, composition complète, aperçu au mur.
  * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from '../core/cms.js';
 import {type Place, LAYOUTS, THEMES} from '../content/config.js';
 import {consent, mlLib, mlMap, needConsent, openDialog, osmData, saveState, setBusy, st, ui} from '../core/doc/state.js';
-import {type Rect, clamp, clipMap, geom, imerc, merc, posterDims, ratio, shapeD, textLine, unproject, worldSize} from '../core/geo/geo.js';
+import {type Rect, clamp, clipMap, imerc, merc, posterDims, ratio, shapeD, textLine, unproject, worldSize} from '../core/geo/geo.js';
 import {CART_ROWS, POLA_ROWS, cartDed, drawPoster, ensureSky, fitSink, setFitSink, souvenirFoot} from '../render/poster.js';
 import {checkDataBanner, drawVectors, initMaplibre, mlKeepAlive, mlRestyle, mlUpdateView, renderMaplibreOffscreen} from '../map/engines.js';
 import {$, h, setSeg, setStatus, toast} from '../core/dom.js';
 import {slug} from '../core/text.js';
 import {lum} from '../core/color.js';
+import {fontsReady, loadFonts} from '../render/fonts.js';
+import {placeAt, onUi, refreshCards, setDedWrap, syncOutputs, syncZoomUI, updateMarkerTxt} from '../core/port.js';
+import {geom} from '../render/layout.js';
 // ---------- Aperçu ----------
 const cvU=$<HTMLCanvasElement>('cvUnder'), cvO=$<HTMLCanvasElement>('cvOver'), cvT=$<HTMLCanvasElement>('cvTex'), vecC=$<HTMLCanvasElement>('vecCanvas'), slot=$<HTMLDivElement>('slot'), poster=$<HTMLDivElement>('poster'), stage=$<HTMLDivElement>('stage');
 function layoutPreview(){
@@ -103,7 +105,7 @@ function setActivePlace(i: number){
   if(st.layout!=='diptych' || i===(st.active||0)) return;
   const cur={center:st.center,zoom:st.zoom,marker:st.marker}, o=otherView();
   st.center=o.center; st.zoom=o.zoom; st.marker=o.marker; st.place2=cur; st.active=i; ui.snap=null;
-  setSeg('placeSeg',String(i)); late.syncZoomUI(); late.updateMarkerTxt();
+  setSeg('placeSeg',String(i)); syncZoomUI(); updateMarkerTxt();
   layoutPreview(); if(mlMap) mlRestyle(); saveState();
   toast(`Lieu ${i+1} : cadrez la carte et placez son repère`);
 }
@@ -130,14 +132,14 @@ function showFit(fit: Record<string, number>){
   const key=JSON.stringify([fit,st.dedWrap]); if(key===fitPrev) return; fitPrev=key;
   for(const k of Object.keys(FIT_NAMES)){ const o=$('oTs-'+k); if(!o) continue; const f=fit[k];
     o.classList.toggle('shrunk',!!f); o.title = f ? `Réduit à ${Math.round(f*100)} % pour tenir dans l'affiche` : ''; }
-  late.syncOutputs();
+  syncOutputs();
   const ks=Object.keys(fit);
   const note=$('fitNote');
   note.textContent = ks.length ? '↘ Réduit pour tenir dans l\'affiche : '+ks.map(k=>`${FIT_NAMES[k]} (${Math.round(fit[k]*100)} %)`).join(', ')+'. Raccourcissez le texte ou baissez une autre taille.' : '';
   // Dédicace réduite sur une seule ligne : proposer de la passer sur deux lignes
   if(fit.dedication && st.dedWrap!=='two' && textLine('dedication').includes(' ') && dedWrapsOnce()<2){
     const b=h('button',{type:'button',className:'lnk'},'Passer la dédicace sur deux lignes');
-    b.onclick=()=>late.setDedWrap('two'); note.append(' ',b);
+    b.onclick=()=>setDedWrap('two'); note.append(' ',b);
   }
 }
 /** Nombre de lignes de la dédicace dans le rendu courant (gabarit Souvenir ou cartouche) */
@@ -170,7 +172,7 @@ function redrawAll(restyle?: boolean){ drawUnder(); if(restyle) mlRestyle(); ren
  *  Par défaut, la couche du dessus (textes, repères) ; cards : vignettes ; all : fond, carte et style MapLibre. */
 function changed(o: {all?: boolean; cards?: boolean}={}){
   CMS.perf.start('reglage', o.all && st.engine==='maplibre' && mlMap ? 'carte' : '');   // mesuré jusqu'à l'aperçu (ou la carte GPU) redessiné
-  if(o.cards) late.refreshCards();
+  if(o.cards) refreshCards();
   if(o.all) redrawAll(true);
   else { scheduleOver(); saveState(); }
 }
@@ -182,7 +184,7 @@ function changed(o: {all?: boolean; cards?: boolean}={}){
     if(pts.size===2){ const [a,b]=[...pts.values()]; startD=Math.hypot(a.x-b.x,a.y-b.y); startZ=st.zoom; } });
   vecC.addEventListener('pointermove',e=>{
     if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pts.size===2){ const [a,b]=[...pts.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); if(startD>0){ st.zoom=clamp(startZ+Math.log2(d/startD),10,18); moved=true; late.syncZoomUI(); renderMap(); } return; }
+    if(pts.size===2){ const [a,b]=[...pts.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); if(startD>0){ st.zoom=clamp(startZ+Math.log2(d/startD),10,18); moved=true; syncZoomUI(); renderMap(); } return; }
     const dx=e.clientX-last.x, dy=e.clientY-last.y; if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>4) moved=true;
     last={x:e.clientX,y:e.clientY};
     const S=worldSize(ui.slotCss.w,st.zoom);
@@ -190,7 +192,7 @@ function changed(o: {all?: boolean; cards?: boolean}={}){
     renderMap();
   });
   const up=(e: PointerEvent)=>{ const wasTap=!moved && pts.size===1; pts.delete(e.pointerId); if(pts.size<2) startD=0; if(pts.size===1){ const q=[...pts.values()][0]; last={x:q.x,y:q.y}; moved=true; }
-    if(wasTap && ui.placing){ const rc=vecC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); late.placeAt(ll.lat,ll.lon); }
+    if(wasTap && ui.placing){ const rc=vecC.getBoundingClientRect(); const ll=unproject(e.clientX-rc.left,e.clientY-rc.top,{x:0,y:0,w:rc.width,h:rc.height},st); placeAt(ll.lat,ll.lon); }
     if(pts.size===0) saveState(); };
   vecC.addEventListener('pointerup',up); vecC.addEventListener('pointercancel',up);
   // Clavier (la carte MapLibre a le sien) : flèches = 10 % du cadre (Maj : 50 %), + / − = zoom, Entrée = repère au centre en mode placement
@@ -199,12 +201,12 @@ function changed(o: {all?: boolean; cards?: boolean}={}){
     const d=({ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]} as Record<string, number[]>)[e.key];
     if(d){ const f=e.shiftKey?0.5:0.1, S=worldSize(ui.slotCss.w,st.zoom), dx=d[0]*f*ui.slotCss.w, dy=d[1]*f*ui.slotCss.h;
       st.center={lon:st.center.lon+dx/S*360, lat:imerc(merc(st.center.lat)-dy*2*Math.PI/S)}; }
-    else if(e.key==='+'||e.key==='='||e.key==='-'||e.key==='_'){ st.zoom=clamp(st.zoom+(e.key==='+'||e.key==='='?0.5:-0.5),10,18); late.syncZoomUI(); }
-    else if(e.key==='Enter' && ui.placing){ late.placeAt(st.center.lat,st.center.lon); }
+    else if(e.key==='+'||e.key==='='||e.key==='-'||e.key==='_'){ st.zoom=clamp(st.zoom+(e.key==='+'||e.key==='='?0.5:-0.5),10,18); syncZoomUI(); }
+    else if(e.key==='Enter' && ui.placing){ placeAt(st.center.lat,st.center.lon); }
     else return;
     e.preventDefault(); renderMap(); saveState();
   });
-  vecC.addEventListener('wheel',e=>{ e.preventDefault(); st.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18); late.syncZoomUI(); renderMap(); saveState(); },{passive:false});
+  vecC.addEventListener('wheel',e=>{ e.preventDefault(); st.zoom=clamp(st.zoom-e.deltaY*0.0025,10,18); syncZoomUI(); renderMap(); saveState(); },{passive:false});
 })();
 
 // ---------- Papier : textures générées (aucune image) ----------
@@ -281,7 +283,7 @@ function drawTexture(){
 
 // ---------- Composition complète (export et aperçu au mur) ----------
 async function composePoster(W: number,H: number,step: (msg: string)=>void=()=>{}){
-  step('Chargement des polices…'); await late.loadFonts(); const fontWarn=!late.fontsReady();
+  step('Chargement des polices…'); await loadFonts(); const fontWarn=!fontsReady();
   const g=geom(st,W,H); if(g.sky){ step('Chargement du ciel…'); await ensureSky(); }
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d')!;
   let warn=false; const imgs: HTMLCanvasElement[]=[];
@@ -338,7 +340,10 @@ function downloadMockup(){
   $<HTMLCanvasElement>('mockCv').toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`apercu-au-mur-${slug(st.texts.title)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); },'image/png');
 }
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
-Object.assign(late, {drawUnder, renderMap, scheduleOver});
+// Demandes du port (src/core/port.ts) réalisées ici
+onUi('renderMap', renderMap);
+onUi('scheduleOver', scheduleOver);
+onUi('drawUnder', drawUnder);
+
 
 export {FIT_NAMES, FRAMES, WALLS, applyTexture, changed, composePoster, downloadMockup, drawMockup, drawOp, drawOver, drawTexture, drawUnder, layoutPreview, mock, openMockup, poster, redrawAll, renderMap, scheduleOver, setActivePlace, slot, stage, textureBase};

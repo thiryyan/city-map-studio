@@ -293,7 +293,7 @@ Les textes trop longs sont réduits automatiquement pour tenir dans leur zone.
 Le bouton **« Tout réinitialiser »** (`#bReset`), en bas de la relecture de l'onglet Export (ci-dessous), rétablit tous les réglages par défaut : lieu et cadrage (Blois), gabarit, thème et couleurs, repère, police, textes et lignes affichées, marge, épaisseurs et calques. Un premier appui affiche « Confirmer ? » pendant 4 s ; un second appui réinitialise (`resetAll`). La confirmation est intégrée à la page, car `confirm()` est bloqué dans les aperçus intégrés.
 L'état est remplacé par `DEFAULT_STATE`, moteur compris : l'application revient au moteur Vectoriel GPU (la demande d'accord s'affiche s'il manque). Sont conservés : l'accord aux services tiers, les données déjà importées (en mémoire : un retour au moteur Fichier les retrouve), Mes affiches, les illustrations et les réglages de l'appareil (taille de l'interface, zone de sécurité). La réinitialisation est une étape d'historique (`commitHistory`) : « Annuler » revient en arrière, moteur excepté.
 
-**Relecture : ce qui a changé** (`CMS.changes`, `src/features/features.ts`). Une table unique de **parties** (repère, plusieurs lieux, itinéraire, cadrage et retouches de l'image, typographie, positions, tailles et lignes des textes, papier et dorure, couleurs, effets de tracé, ornements, ciel du jour J, tracé / calques / mise en page, rendu) dit, pour chacune, quels réglages s'écartent de `DEFAULT_STATE` (pour les couleurs : de la palette du thème choisi) et sait les rétablir. Ne comptent jamais : le lieu, le cadrage, les textes saisis, le type d'affiche, le gabarit et le thème (des choix, pas des écarts). Seules les parties qui agissent dans le type d'affiche courant sont listées (onglet visible, condition propre : ciel avec le gabarit Ciel, positions des textes du type courant…). Trois affichages :
+**Relecture : ce qui a changé** (`CMS.changes`, `src/ui/changes.ts`). Une table unique de **parties** (repère, plusieurs lieux, itinéraire, cadrage et retouches de l'image, typographie, positions, tailles et lignes des textes, papier et dorure, couleurs, effets de tracé, ornements, ciel du jour J, tracé / calques / mise en page, rendu) dit, pour chacune, quels réglages s'écartent de `DEFAULT_STATE` (pour les couleurs : de la palette du thème choisi) et sait les rétablir. Ne comptent jamais : le lieu, le cadrage, les textes saisis, le type d'affiche, le gabarit et le thème (des choix, pas des écarts). Seules les parties qui agissent dans le type d'affiche courant sont listées (onglet visible, condition propre : ciel avec le gabarit Ciel, positions des textes du type courant…). Trois affichages :
 * **pastille** sur l'onglet qui contient un réglage modifié, avec sa description (`aria-describedby`, bulle au survol) : « Réglages modifiés : Itinéraire : GPX actif ; Plusieurs lieux : 3 lieux » ;
 * **compte** dans le titre des sections repliables (« Plus de réglages · 4 modifiés », « Personnaliser les couleurs ») ;
 * **liste de relecture**, en tête de l'onglet Export : par partie, l'onglet, le nom, les écarts en clair, **Voir** (ouvre l'onglet, la sous-étape et les sections repliées, puis fait défiler jusqu'au réglage) et **Réinitialiser** (cette partie seule). Une réinitialisation partielle est une étape d'historique : « Annuler » la défait.
@@ -495,7 +495,7 @@ L'usage de chaque commande est décrit dans le [guide de l'utilisateur](../USER_
 
 ### 6.1. Réglages dépendants d'un autre choix (issue #58)
 
-Règle unique, appliquée par une table (`CMS.deps`, `src/features/features.ts`) : un réglage qui **n'a aucun sens** dans le contexte est **masqué** ; un réglage **activé mais empêché** par un autre choix reçoit une **note d'une ligne** sous lui, avec un **bouton** qui fait la bascule. La bascule passe par les mêmes chemins que l'interface : elle entre dans l'historique et s'annule. Inventaire (vérifié par rendu : chaque réglage comparé avec et sans, pour chaque gabarit) :
+Règle unique, appliquée par une table (`CMS.deps`, `src/ui/dependent-settings.ts`) : un réglage qui **n'a aucun sens** dans le contexte est **masqué** ; un réglage **activé mais empêché** par un autre choix reçoit une **note d'une ligne** sous lui, avec un **bouton** qui fait la bascule. La bascule passe par les mêmes chemins que l'interface : elle entre dans l'historique et s'annule. Inventaire (vérifié par rendu : chaque réglage comparé avec et sans, pour chaque gabarit) :
 
 | Réglage | Condition | Comportement |
 | :--- | :--- | :--- |
@@ -529,7 +529,7 @@ Aucun réglage ne dépend du moteur : les effets de tracé, motifs, calques, orn
   On glisse la poignée (aimantation au cran le plus proche, avec une préférence pour le sens du geste), ou on la touche pour passer d'un cran à l'autre (flèches haut et bas au clavier). Toucher un onglet depuis le cran réduit ouvre la mi-hauteur ; toucher l'onglet actif bascule entre mi-hauteur et déplié. Le panneau se déplie pendant la saisie d'un texte, puis reprend sa place.
 * **Deux colonnes** (`TWO_COL` : largeur ≥ 900 px, ou paysage et largeur ≥ 560 px) : panneau à gauche (`min(400px, 46vw)`), table lumineuse à droite. Pas de poignée ; Lecture et Modification comme sur mobile (souris : glisser, molette).
 * **Lecture et Modification** (#82 ; mobile et ordinateur) : en **Lecture** (par défaut), rien ne bouge sur l'affiche : un calque transparent (`#shield`) la couvre entièrement ; les zones de texte et de vignette sont inertes au pointeur (le clavier reste possible). Une invitation visible (« ✎ Toucher pour modifier », « Cliquer pour modifier » à la souris) s'affiche aux deux premières utilisations (`cms3.editUses`). Le bouton **Modifier** de la barre d'actions (`#bEdit`), ou un toucher sur l'affiche, ouvre la **Modification** (`ui.framing`) : sur mobile, panneau réduit ; indication en haut de la scène (`#frameBar`) ; sélecteur « Que déplacer ? » dans le pied ; Modifier devient **Terminer**, et Comparer et l'étape suivante laissent la place. « Placer le repère » (onglet Lieu) reste possible en Lecture : il réduit le panneau et le rétablit une fois le repère posé (`stageMode`). « Modifier » est inactif quand rien ne peut bouger (Illustration sans image importée) ; une Modification où plus rien ne peut bouger (image retirée) revient en Lecture. « Modifier le lieu 2 » (Deux lieux) reste au-dessus du verrou : choisir le lieu édité ne déplace rien.
-* **« Que déplacer ? »** (`CMS.intent`, `src/features/features.ts` ; `#intentBar`) : en Modification, **un seul choix est actif à la fois**, parmi **Carte · Repère · Illustration · Textes** (boutons radio ARIA, flèches au clavier, cibles de 44 px). Ce qui est choisi reçoit les gestes ; le reste est inerte (CSS `#app[data-intent]` ; gestes de l'image dans `src/features/illustration.ts`). Les choix suivent le type d'affiche :
+* **« Que déplacer ? »** (`CMS.intent`, `src/ui/edit-intent.ts` ; `#intentBar`) : en Modification, **un seul choix est actif à la fois**, parmi **Carte · Repère · Illustration · Textes** (boutons radio ARIA, flèches au clavier, cibles de 44 px). Ce qui est choisi reçoit les gestes ; le reste est inerte (CSS `#app[data-intent]` ; gestes de l'image dans `src/features/illustration.ts`). Les choix suivent le type d'affiche :
 
   | Type | Choix proposés |
   |---|---|
@@ -698,14 +698,13 @@ Les noms de fichiers à empreinte changent avec leur contenu : jamais de copie p
 city-map-studio/
 ├── index.html              # balisage, CSP, métadonnées ; charge css/ et src/app/main.ts (sources ; dist/ = site construit, § 7.8)
 ├── css/app.css             # feuille de styles de l'application
-├── src/                    # modules ES par domaine (#118), importés dans l'ordre de § 8.2 par app/main.ts
-│   ├── core/               # cms.ts (espace de noms, bus) ; doc/state.ts ; geo/geo.ts
-│   ├── content/config.ts   # thèmes, gabarits, polices, ambiances, état par défaut
-│   ├── services/           # geocoder.ts, wikipedia.ts
-│   ├── map/                # maplibre-loader.ts, engines.ts
-│   ├── render/poster.ts    # rendu de l'affiche
-│   ├── features/           # features.ts, route.ts, illustration.ts, export.ts
-│   ├── ui/                 # preview.ts, panel.ts
+├── src/                    # modules ES par couche (#118, § 8.2), point d'entrée app/main.ts
+│   ├── content/            # données pures (config.ts)
+│   ├── core/               # cms.ts, dom.ts, port.ts, color.ts, text.ts ; doc/ (état, historique) ; geo/
+│   ├── render/  services/  # rendu de l'affiche (layout, poster, fonts) ; géocodeur, Wikipédia, réseau
+│   ├── map/  view/         # moteurs cartographiques ; aperçu et vignettes
+│   ├── features/           # lieux, GPX, itinéraire IA, partage, Mes affiches, export, ambiances, palette, comparaison, illustration
+│   ├── ui/                 # panneau et contrôleurs d'interface
 │   ├── app/main.ts         # démarrage, PWA, façade de test
 │   └── types.d.ts          # noms globaux
 ├── sw.js                   # service worker (cache de l'application, http(s) seulement ; VERSION et liste APP générées au build)
@@ -738,7 +737,7 @@ city-map-studio/
 ### 8.2. Fichiers et sections du script
 
 Le script est découpé en fichiers `src/<domaine>/*.ts` (#118), eux-mêmes organisés en sections balisées `// ---------- Titre ----------`.
-Ce sont des **modules ES** (#102) : chaque fichier importe ce qu'il utilise et exporte ce que les autres utilisent ; plus aucune portée partagée. `src/app/main.ts` importe tous les fichiers dans l'ordre ci-dessous, et **un fichier n'importe que des fichiers antérieurs** : l'ordre d'exécution reste celui des anciens scripts. Les appels vers un fichier postérieur (44 au 28/11/2026, surtout vers `ui.ts`) passent par le **registre `late`** de `src/core/cms.ts`, rempli par le fichier qui définit la fonction : ce sont des dépendances à l'envers entre couches, plafonnées par `tests/globals.max` et à faire disparaître (événements, injection). Une variable partagée ne se réaffecte que dans son module, les autres passent par un setter (`setMlMap`, `setOsmData`, `setFitSink`…). `CMS.define('nom', () => {…})` range des fonctions testées seules sous `CMS.nom`. Les fichiers se parlent aussi par des événements synchrones (`CMS.on` / `CMS.emit`) :
+Ce sont des **modules ES** (#102), rangés par couche (#118) : chaque fichier importe ce qu'il utilise et exporte ce que les autres utilisent ; plus aucune portée partagée. **Une couche n'importe que des couches inférieures** : `content` (données pures) < `core` < `render`, `services`, `storage` < `map` < `view` < `features` < `ui` < `app` (`scripts/check-layers.mjs`, `tests/layers.py`, plafonds à 0 dans `tests/layers.max`). Une couche basse s'adresse à une couche supérieure par une **demande nommée du port** (`src/core/port.ts` : `syncInputs`, `refreshCards`, `showTab`, `showBanner`, `setPlacing`, `renderMap`, `placeAt`… ; événement synchrone `ui:<nom>`, réalisé par le module propriétaire abonné avec `onUi`) ou par un événement du bus. Le registre `late` de l'Horizon 0 (49 appels à rebours) a disparu au lot 1 de l'Horizon 1 (#118). Une variable partagée ne se réaffecte que dans son module, les autres passent par un setter (`setMlMap`, `setOsmData`, `setFitSink`…). `CMS.define('nom', () => {…})` range des fonctions testées seules sous `CMS.nom`. Les fichiers se parlent aussi par des événements synchrones (`CMS.on` / `CMS.emit`) :
 
 | Événement | Émis par | Écouté par |
 | :--- | :--- | :--- |
@@ -747,28 +746,36 @@ Ce sont des **modules ES** (#102) : chaque fichier importe ce qu'il utilise et e
 | `tab:export` | `showTab('export')` | Mes affiches (nom proposé, liste) |
 | `illus:input` | champs liés `illus.*` / `illusText.*` | `CMS.illus` |
 | `illus:loaded` | `CMS.illus` (image rechargée depuis IndexedDB) | — (point d'accroche) |
+| `history:applied` | `applySnap` (`src/core/doc/history.ts` : annuler, rétablir, relecture) | interface : champs, aperçu, vue (`src/ui/panel.ts`) |
+| `history:changed` | historique (piles modifiées) | boutons Annuler / Rétablir |
+| `ui:<nom>` | demandes du port (`src/core/port.ts`) | module propriétaire de la fonction (`onUi`) |
 
-**Règle des couches** (#118, `scripts/check-layers.mjs`, `tests/layers.py`) : `content` (données pures) < `core` < `render`, `services`, `storage` < `map` < `view` < `features` < `ui` < `app` ; une couche n'importe que des couches inférieures. Les imports hors règle et les appels par le registre `late` sont plafonnés (`tests/layers.max`) et ramenés à 0 au lot 1 de l'Horizon 1 ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur (Vitest ; modules réunis par esbuild, `tests/unit/load.mjs`). **TypeScript** (#103) : les 16 modules sont en TypeScript, vérifiés en mode strict (`tsconfig.json`, `noEmit`) ; les imports gardent l'extension `.js`, esbuild compile les `.ts` au build ; `tests/typecheck.py` lance `tsc`, échoue à la moindre erreur et refuse tout `.js` dans `js/`. TypeScript refuse aussi les noms non importés et les imports réaffectés (contrôles d'ESLint jusqu'au lot 5, retiré). Types partagés : `PosterState`, `Colors`, `Route`, `Font`, `Theme` (`config.ts`), `Rect`, `View`, `Geom`, `ExportSpec` (`geo.ts`), `OsmData`, `Feature` (`engines.ts`), `LatLon` (`state.ts`) ; noms globaux (`src/types.d.ts`) : `CMS`, `maplibregl`, `SKY_DATA`, `SKY_MW`, façade de test. Les modules définis par `CMS.define` sont réexportés depuis la valeur rendue (`const GEO = CMS.define('geo', …)`), donc typés partout. **Poids** : `tests/poids.py` borne le script, la feuille de style, la page, MapLibre et le site entier (brut et compressé, § 9.2).
+`tests/unit/` teste les fonctions pures sous Node, sans navigateur (Vitest ; modules réunis par esbuild, `tests/unit/load.mjs`). **TypeScript** (#103) : tous les modules sont en TypeScript, vérifiés en mode strict (`tsconfig.json`, `noEmit`) ; les imports gardent l'extension `.js`, esbuild compile les `.ts` au build ; `tests/typecheck.py` lance `tsc`, échoue à la moindre erreur et refuse tout `.js` dans `src/`. TypeScript refuse aussi les noms non importés et les imports réaffectés (contrôles d'ESLint jusqu'au lot 5, retiré). Types partagés : `PosterState`, `Colors`, `Route`, `Font`, `Theme` (`src/content/config.ts`), `Rect`, `View`, `Geom`, `ExportSpec` (`src/core/geo/geo.ts`), `OsmData`, `Feature` (`src/map/engines.ts`), `LatLon` (`src/core/doc/state.ts`) ; noms globaux (`src/types.d.ts`) : `CMS`, `maplibregl`, `SKY_DATA`, `SKY_MW`, façade de test. Les modules définis par `CMS.define` sont réexportés depuis la valeur rendue (`const GEO = CMS.define('geo', …)`), donc typés partout. **Poids** : `tests/poids.py` borne le script, la feuille de style, la page, MapLibre et le site entier (brut et compressé, § 9.2).
 
-| Fichier | Contenu |
-| :--- | :--- |
-| `src/core/cms.ts` | Socle : espace de noms `CMS`, `CMS.define` (module défini une seule fois, figé), bus d'événements `CMS.on` / `CMS.emit`. Chargé en premier. |
-| `src/content/config.ts` | Constantes : formats, polices, thèmes, gabarits, repères, ambiances, villes, hiérarchie routière, `DEFAULT_STATE` ; `CMS.illusConf` (listes de valeurs des modes illustrés, partagées avec `normState`). |
-| `src/map/maplibre-loader.ts` | `CMS.maplibre` : chargement résilient de MapLibre (sources, délais, version, CSS de secours). |
-| `src/services/geocoder.ts` | `CMS.geocoder` : client Nominatim (délai, annulation, une requête par seconde, quota 429 / 403, relance 5xx, cache, réponses validées). |
-| `src/services/wikipedia.ts` | `CMS.wiki` : lieux remarquables de Wikipédia autour du lieu (recherche géographique, délai, annulation, cache, réponses validées, classement `rankWiki`). |
-| `src/core/doc/state.ts` | Validation (`normState`), état `st`, fenêtres modales (`openDialog`, `closeDialog`, `setBusy`), accord préalable, enregistrement. |
-| `src/core/geo/geo.ts` | `CMS.geo` : Mercator, `geom` (géométrie des gabarits), formes (`shapeD`), `exportSpec`. |
-| `src/render/poster.ts` | Typographie (`CMS.glyphs` : graphèmes et largeurs), relevé des zones d'encre pour la zone de sécurité (`CMS.ink`), cartouche, repères, ciel, `drawPoster`. |
-| `src/map/engines.ts` | `CMS.engines` : données OSM, cache de tracés et tracé Canvas (moteur Fichier), effets de tracé, moteur MapLibre, rendus hors écran (`gpuQueue`, `mlQuery`). |
-| `src/ui/dom.ts` | Couche basse de l'interface (#118), sans import : `$`, `h` (création d'éléments sans `innerHTML`), `pressed`, `setSeg`, ligne d'état `setStatus`, message `toast`. |
-| `src/ui/preview.ts` | Canevas de l'aperçu (`CMS.surface`), défilement du panneau (`CMS.panelScroll`), aperçu, deux lieux, gestes, papier, `composePoster`, aperçu au mur. |
-| `src/features/features.ts` | Lieux multiples, GPX, partage par lien et `applyConfig`, proposition d'ambiance, ambiances et modèles, panneau coulissant, réglages dépendants (`CMS.deps`), zone de sécurité (`CMS.safe`), affiche seule (`CMS.clean`), palette d'une photo, Mes affiches. |
-| `src/features/route.ts` | `CMS.route` : itinéraire préparé avec une IA (prompt `buildRoutePrompt`), GPX collé (`extractGpx`), contrôle de vraisemblance (`routeChecks`). |
-| `src/ui/panel.ts` | Taille de l'interface, coordonnées, historique, `buildUI`, `changed`, vignettes, recherche (`CMS.searchUI`), polices, comparaison avant / après un changement (`CMS.compare`). |
-| `src/features/illustration.ts` | `CMS.illus` : modes Illustration et Carte + illustration (§ 4.13 et 4.14) : prompt, pistes lues dans la carte, conservation dans IndexedDB, import et ré-encodage de l'image, qualité d'impression, retouches, rendu de l'image et des textes, interface (sélecteur de mode, onglet Illustration, style du titre). |
-| `src/features/export.ts` | `CMS.export` : export PNG et PDF, contexte d'exécution, diagnostic, import de fichier. |
-| `src/app/main.ts` | `boot`, application installable et mises à jour (`CMS.pwa` : `install`, `check`, `version`), crochets de test. |
+| Fichier | Couche | Contenu |
+| :--- | :--- | :--- |
+| `src/content/config.ts` | content | Constantes : formats, polices, thèmes, gabarits, repères, ambiances, villes, hiérarchie routière, `DEFAULT_STATE` ; `CMS.illusConf`. |
+| `src/core/cms.ts` | core | Espace de noms `CMS`, `CMS.define`, bus d'événements `CMS.on` / `CMS.emit`, version (`CMS.build`), mesures (`CMS.perf`), `TEST_HOOKS`. |
+| `src/core/dom.ts` | core | Socle navigateur, sans import : `$`, `h` (éléments sans `innerHTML`), `pressed`, `setSeg`, `setStatus`, `toast`, `loadScript`. |
+| `src/core/port.ts` | core | Demandes vers les couches supérieures (`ui:<nom>`, `onUi`). |
+| `src/core/color.ts`, `src/core/text.ts` | core | Couleurs (luminance, contraste, teintes) ; textes (`slug`, `frDate`, `isoFromFr`). |
+| `src/core/doc/state.ts` | core | Validation (`normState`), état `st`, `replaceState`, ordre des lignes (`CMS.order`), fenêtres modales, accord préalable (donnée), enregistrement. |
+| `src/core/doc/history.ts` | core | Historique annuler / rétablir (instantanés ; événements `history:*`). |
+| `src/core/geo/geo.ts` | core | `CMS.geo` : Mercator, formes (`shapeD`), `exportSpec`, rayon du halo. |
+| `src/render/layout.ts` | render | `geom` : rectangle ou cercle de la carte et zone des textes selon le gabarit. |
+| `src/render/poster.ts` | render | Typographie (`CMS.glyphs`), zones d'encre (`CMS.ink`), cartouche, repères, ciel, `drawPoster`. |
+| `src/render/fonts.ts` | render | Chargement et vérification des polices de l'affiche. |
+| `src/services/geocoder.ts`, `wikipedia.ts`, `network.ts` | services | `CMS.geocoder` (Nominatim), `CMS.wiki` (Wikipédia), messages d'erreur réseau. |
+| `src/map/maplibre-loader.ts`, `engines.ts` | map | Chargement résilient de MapLibre (`CMS.maplibre`) ; données OSM, moteur Fichier, effets de tracé, MapLibre, rendus hors écran (`CMS.engines`). |
+| `src/view/preview.ts`, `thumbnails.ts` | view | Aperçu (`CMS.surface`, `changed`, `composePoster`, gestes, papier, aperçu au mur) ; vignettes. |
+| `src/features/places.ts`, `gpx.ts`, `route.ts` | features | Lieux multiples, `goTo`, `setMarker` ; itinéraire GPX importé ; itinéraire préparé avec une IA (`CMS.route`). |
+| `src/features/share.ts`, `saves.ts`, `export.ts` | features | Partage par lien et `applyConfig` ; Mes affiches ; export PNG et PDF, diagnostic, import de fichier (`CMS.export`). |
+| `src/features/presets.ts`, `palette.ts`, `compare.ts` | features | Ambiances, modèles, gabarit, orientation, format ; couleurs d'après une image ; comparer avant / après (`CMS.compare`). |
+| `src/features/illustration.ts` | features | `CMS.illus` : modes Illustration et Carte + illustration (§ 4.13 et 4.14). À découper (#118). |
+| `src/ui/panel.ts` | ui | Taille de l'interface, coordonnées, `buildUI`, `syncInputs`, vignettes du panneau, recherche (`CMS.searchUI`), moteur. |
+| `src/ui/sheet.ts`, `shell.ts`, `action-bar.ts`, `edit-intent.ts`, `clean-view.ts` | ui | Panneau coulissant ; repère à placer et bandeau ; barre d'actions ; « Que déplacer ? » (`CMS.intent`) ; affiche seule et loupe (`CMS.clean`). |
+| `src/ui/changes.ts`, `dependent-settings.ts`, `safe-zone.ts`, `welcome.ts`, `consent.ts` | ui | Réglages modifiés (`CMS.changes`) ; réglages dépendants (`CMS.deps`) ; zone de sécurité (`CMS.safe`) ; ambiance du premier lancement ; réponse à la demande d'accord. |
+| `src/app/main.ts` | app | `boot`, application installable et mises à jour (`CMS.pwa`), façade de test. |
 
 Principales sections :
 

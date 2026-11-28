@@ -9,14 +9,17 @@
  */
 import {type PosterState, type Pt, CANVAS_MAX_PX, DEFAULT_STATE, DUOS, FONTS, FORMATS} from '../content/config.js';
 import {V, needConsent, osmData, saveState, st, ui} from '../core/doc/state.js';
-import {type Geom, type Rect, clamp, clipMap, exportSpec, geom, posterDims, ratio, shapeD, strokeShape, textLine, viewBounds} from '../core/geo/geo.js';
+import {type Geom, type Rect, clamp, clipMap, exportSpec, posterDims, ratio, shapeD, strokeShape, textLine, viewBounds} from '../core/geo/geo.js';
 import {attributionText, dedLeading, dedLines, drawHalo, drawMarkers, drawOrnaments, drawText, fontOf, fontStr, hexA, noteFit, paint, tScale, textW} from '../render/poster.js';
 import {loadMaplibre} from '../map/engines.js';
 import {changed, drawUnder, layoutPreview, poster, scheduleOver, slot, stage} from '../view/preview.js';
-import {loadSaves, setOrient, updateLayoutUI} from './features.js';
-import {loadFonts, refreshCards, showTab, syncFonts, syncInputs, updateEngineUI} from '../ui/panel.js';
 import {$, h, pressed, setSeg, setStatus, toast} from '../core/dom.js';
 import {contrast} from '../core/color.js';
+import {loadFonts} from '../render/fonts.js';
+import {loadSaves} from './saves.js';
+import {setOrient, updateLayoutUI} from './presets.js';
+import {refreshCards, showTab, syncFonts, syncInputs, updateEngineUI} from '../core/port.js';
+import {geom} from '../render/layout.js';
 /** Contexte 2D ; réglages de l'illustration (st.illus) ; sacs d'options */
 type Ctx = CanvasRenderingContext2D;
 type Illus = PosterState['illus'];

@@ -1,16 +1,14 @@
 /* City Map Studio — Export PNG et PDF, contexte d'exécution, diagnostic réseau, import de fichier.
  * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from '../core/cms.js';
 import {OFM_URL, REF_W} from '../content/config.js';
 import {mlCdn, mlLib, needConsent, osmData, saveState, setBusy, setOsmData, st, ui} from '../core/doc/state.js';
 import {clamp, exportSpec} from '../core/geo/geo.js';
 import {parseOsm} from '../map/engines.js';
 import {composePoster, renderMap} from '../view/preview.js';
-import {showBanner} from './features.js';
-import {openAdvanced, showTab, syncZoomUI, updateEngineUI, updateMarkerTxt} from '../ui/panel.js';
 import {$, h, setSeg, setStatus, toast} from '../core/dom.js';
 import {netMsg} from '../services/network.js';
 import {slug} from '../core/text.js';
+import {onUi, openAdvanced, showBanner, showTab, syncZoomUI, updateEngineUI, updateMarkerTxt} from '../core/port.js';
 // Module CMS.export : tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier (utilisées par les autres fichiers).
 const EXPORT = CMS.define('export', () => {
 // ---------- Export PNG (résolution inscrite dans le fichier) ----------
@@ -241,7 +239,9 @@ CMS.define('perfUI', () => {
   return {init, text};
 });
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
-Object.assign(late, {exportPoster, importFile, runDiagnostics});
+// Demandes du port (src/core/port.ts) réalisées ici
+onUi('runDiagnostics', runDiagnostics);
+
+
 
 export {ENV, exportPoster, importFile, importText, runDiagnostics, showEnvWarning};

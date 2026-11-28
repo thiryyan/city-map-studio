@@ -11,8 +11,8 @@ import type {PosterState, Route} from '../content/config.js';
 import {saveState, st, ui} from '../core/doc/state.js';
 import {ratio, viewBounds} from '../core/geo/geo.js';
 import {changed} from '../view/preview.js';
-import {fitRoute, parseGpx, renderRoute} from './features.js';
 import {$, h, setSeg, toast} from '../core/dom.js';
+import {fitRoute, parseGpx, renderRoute} from './gpx.js';
 /** Emprise {s, w, n, e} (degrés) */
 type Bounds = {s: number; w: number; n: number; e: number};
 type Kind = 'walk' | 'bike' | 'car' | 'trip';

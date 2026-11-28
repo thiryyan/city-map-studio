@@ -2,10 +2,10 @@
  * Module TypeScript (#103), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs, esbuild).
  * Types de l'espace de noms CMS : src/types.d.ts.
  *
- * Chaque fichier de src/ est un module ES : il importe ce qu'il utilise des fichiers chargés avant lui, et lit dans le
- * registre late (fin de ce fichier) ce qu'il appelle des fichiers chargés après lui. CMS.define('nom', …) range des
- * fonctions sous CMS.nom (testées seules : tests/unit) ; les modules se parlent aussi par événements :
- * CMS.on('state:saved', …), CMS.emit('state:saved'). Garde-fous : tests/layers.py (règle des couches, plafond du registre late, #118).
+ * Chaque fichier de src/ est un module ES rangé dans une couche (#118) : il n'importe que des couches inférieures
+ * (tests/layers.py). Une couche basse s'adresse à une couche supérieure par événement : CMS.on / CMS.emit, ou les
+ * demandes nommées de src/core/port.ts. CMS.define('nom', …) range des fonctions sous CMS.nom (testées seules :
+ * tests/unit).
  */
 (function (g: typeof globalThis) {
   const CMS = g.CMS = g.CMS || ({} as CmsNamespace);
@@ -88,16 +88,10 @@ CMS.define('perf', () => {
   return {BUDGET, LABEL, add, since, ready, start, end, watchFrames, latest, ok, get log() { return log.slice(); }};
 });
 
-// ---------- Références vers l'avant (modules ES, #102) ----------
-// Un fichier qui appelle une fonction d'un fichier chargé APRÈS lui ne l'importe pas (l'import créerait un cycle et
-// changerait l'ordre d'exécution des modules) : il la lit dans ce registre, rempli par le fichier qui la définit.
-// Chaque entrée est une dépendance « à l'envers » entre couches, à faire disparaître (événements, injection).
-// Registre volontairement non typé : chaque entrée est une dette à résorber, pas une interface à figer.
-const late: Record<string, any> = Object.create(null);
 /** Clés d'un objet, typées (Object.keys renvoie string[]) */
 const keysOf=<T extends object>(o: T)=>Object.keys(o) as (keyof T)[];
 // Fonctions internes exposées (window.__cms) seulement pour les tests et le débogage : adresse avec ?test,
 // ou localStorage['cms3.debug']='1'. En usage normal, rien n'est exposé.
 const TEST_HOOKS = /[?&]test(?:[=&]|$)/.test(location.search) || (()=>{ try{ return localStorage.getItem('cms3.debug')==='1'; }catch(e){ return false; } })();
 
-export {keysOf, late, TEST_HOOKS};
+export {keysOf, TEST_HOOKS};

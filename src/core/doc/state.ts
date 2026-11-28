@@ -1,8 +1,28 @@
 /* City Map Studio — État de l'affiche : validation, chargement, enregistrement ; fenêtres modales ; accord préalable.
  * Module TypeScript (#103), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from '../cms.js';
 import {type PosterState, type Route, DEFAULT_STATE, FONTS, FORMATS, LAYOUTS, MARKERS, STORE_KEY, TEXTURES, THEMES} from '../../content/config.js';
-import {setStatus} from '../dom.js';
+// ---------- Ordre des lignes de texte (Textes, Plus de réglages) ----------
+// st.lineOrder : null (ordre du gabarit) ou permutation de KEYS. Appliqué au cartouche des gabarits centrés et, dans
+// chaque bloc, aux mises en page des modes illustrés (titre et sous-titre ; dédicace, noms, date · coordonnées).
+CMS.define('order', () => {
+  const KEYS=['title','subtitle','coords','dedication','names','date'];
+  /** Ordre valide (permutation complète de KEYS) ou null */
+  const norm=(v: unknown): string[] | null=>Array.isArray(v) && v.length===KEYS.length && KEYS.every(k=>v.includes(k)) ? [...v] : null;
+  /** Clés triées selon l'ordre choisi (tri stable ; une clé hors de KEYS, comme la légende, reste en fin) ; sans ordre : inchangées */
+  function sort(keys: string[], s=st): string[] {
+    const O=s.lineOrder; if(!O) return keys;
+    const r=(k: string)=>{ const i=O.indexOf(k); return i<0 ? 99 : i; };
+    return keys.map((k,i)=>[k,i] as [string, number]).sort((a,b)=>r(a[0])-r(b[0]) || a[1]-b[1]).map(x=>x[0]);
+  }
+  /** Ordre affiché : celui choisi, sinon celui du gabarit (Polaroid : dédicace en tête ; modes illustrés : titre, puis bloc du bas) */
+  function current(s=st){
+    if(s.lineOrder) return [...s.lineOrder];
+    if(s.mode==='map' && s.layout==='polaroid') return ['dedication','names','title','date','coords','subtitle'];
+    if(s.mode!=='map') return ['title','subtitle','dedication','names','date','coords'];
+    return [...KEYS];
+  }
+  return {KEYS, norm, sort, current};
+});
 // ---------- Validation de l'état (lien partagé, localStorage) ----------
 // Un état venu de l'extérieur n'est jamais repris tel quel : seuls les champs connus sont lus, chacun est vérifié
 // (type, liste de valeurs, bornes) et remplacé par sa valeur par défaut s'il est invalide. Un lien forgé ne peut donc
@@ -175,23 +195,16 @@ function needConsent(next?: ()=>void){
   openDialog('consent');
   return false;
 }
-function giveConsent(){
+/** Accord donné (bouton de la demande) : enregistré ; renvoie l'action en attente (needConsent), à exécuter par
+ *  l'interface après le chargement de la carte (src/ui/consent.ts) */
+function grantConsent(): (()=>void) | null {
   consent=true; try{ localStorage.setItem(CONSENT_KEY,'1'); }catch(e){}
   closeDialog('consent');
   updateConsentInfo();
-  const next=consentNext; consentNext=null;
-  (async()=>{
-    if(mlLib==='fail'||mlLib==='local-fail'){ await late.loadMaplibre(); late.updateEngineUI(); }
-    if(next) next();
-    late.maybeWelcome();
-    if(st.engine==='maplibre') late.renderMap(true);                              // la carte s'affiche dans tous les cas
-  })();
+  const next=consentNext; consentNext=null; return next;
 }
-function declineConsent(){
-  consentNext=null; closeDialog('consent');
-  late.setEngine('file',true); late.openAdvanced(true); late.maybeWelcome();   // consigne d'import : ligne d'état et section Avancé
-  if(!osmData) setStatus('Hors ligne · importez un fichier de données (onglet Lieu)','wait');
-}
+/** Accord refusé : la demande se ferme, l'action en attente est abandonnée */
+function refuseConsent(){ consentNext=null; closeDialog('consent'); }
 function withdrawConsent(){
   try{ localStorage.removeItem(CONSENT_KEY); }catch(e){}
   location.reload();
@@ -214,29 +227,8 @@ function saveState(){if(ui.comparing) return; clearTimeout(saveT);saveT=setTimeo
 function getPath(o: unknown, p: string): any {return p.split('.').reduce((a: any,k)=>a?.[k],o)}
 function setPath(o: unknown, p: string, v: unknown){const ks=p.split('.');const last=ks.pop() as string;ks.reduce((a: any,k)=>a[k],o)[last]=v}
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
-// ---------- Ordre des lignes de texte (Textes, Plus de réglages) ----------
-// st.lineOrder : null (ordre du gabarit) ou permutation de KEYS. Appliqué au cartouche des gabarits centrés et, dans
-// chaque bloc, aux mises en page des modes illustrés (titre et sous-titre ; dédicace, noms, date · coordonnées).
-CMS.define('order', () => {
-  const KEYS=['title','subtitle','coords','dedication','names','date'];
-  /** Ordre valide (permutation complète de KEYS) ou null */
-  const norm=(v: unknown): string[] | null=>Array.isArray(v) && v.length===KEYS.length && KEYS.every(k=>v.includes(k)) ? [...v] : null;
-  /** Clés triées selon l'ordre choisi (tri stable ; une clé hors de KEYS, comme la légende, reste en fin) ; sans ordre : inchangées */
-  function sort(keys: string[], s=st): string[] {
-    const O=s.lineOrder; if(!O) return keys;
-    const r=(k: string)=>{ const i=O.indexOf(k); return i<0 ? 99 : i; };
-    return keys.map((k,i)=>[k,i] as [string, number]).sort((a,b)=>r(a[0])-r(b[0]) || a[1]-b[1]).map(x=>x[0]);
-  }
-  /** Ordre affiché : celui choisi, sinon celui du gabarit (Polaroid : dédicace en tête ; modes illustrés : titre, puis bloc du bas) */
-  function current(s=st){
-    if(s.lineOrder) return [...s.lineOrder];
-    if(s.mode==='map' && s.layout==='polaroid') return ['dedication','names','title','date','coords','subtitle'];
-    if(s.mode!=='map') return ['title','subtitle','dedication','names','date','coords'];
-    return [...KEYS];
-  }
-  return {KEYS, norm, sort, current};
-});
-Object.assign(late, {st});
+/** Remplace le contenu de l'état (l'objet `st` garde son identité : __cms.st et les fermetures restent valides) */
+function replaceState(next: PosterState,extra?: Partial<PosterState>){ for(const k of Object.keys(st)) delete (st as Record<string, unknown>)[k]; Object.assign(st,next,extra||{}); }
 
-export {SHARE_MAX_BYTES, SHARE_MAX_CHARS, V, closeDialog, consent, declineConsent, dlgCancel, getPath, giveConsent, initDialogs, mlCdn, mlFailMsg, mlLib, mlMap, needConsent, normState, openDialog, osmData, saveState, saveT, setBusy, setMlCdn, setMlFailMsg, setMlLib, setMlMap, setOsmData, setPath, st, ui, updateConsentInfo};
+
+export {closeDialog, consent, dlgCancel, getPath, grantConsent, initDialogs, mlCdn, mlFailMsg, mlLib, mlMap, needConsent, normState, openDialog, osmData, refuseConsent, replaceState, saveState, saveT, setBusy, setMlCdn, setMlFailMsg, setMlLib, setMlMap, setOsmData, setPath, SHARE_MAX_BYTES, SHARE_MAX_CHARS, st, ui, updateConsentInfo, V};

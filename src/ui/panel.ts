@@ -1,14 +1,27 @@
 /* City Map Studio — Interface : taille du texte, coordonnées, historique, construction de l'interface, recherche, polices.
  * Module ES (#102), importé par src/app/main.ts ; réuni en un seul script par le build (scripts/build.mjs). */
-import {late} from '../core/cms.js';
-import {AMBIANCES, COLOR_LABELS, DEFAULT_STATE, DUOS, FONTS, FONT_CATS, FONT_LIST, GOLD, LAYOUTS, MARKERS, MARKER_COLORS, OCCASIONS, PRESETS, STORE_KEY, TEXTURES, THEMES, THEME_CATS} from '../content/config.js';
-import {closeDialog, getPath, mlLib, mlMap, needConsent, osmData, saveState, saveT, setMlFailMsg, setOsmData, setPath, st, ui} from '../core/doc/state.js';
-import {type Rect, clamp, coordText, dms, geom, posterDims, viewBounds} from '../core/geo/geo.js';
-import {drawMarker, drawPoster, fontOf} from '../render/poster.js';
+import {AMBIANCES, COLOR_LABELS, DEFAULT_STATE, DUOS, FONTS, FONT_CATS, FONT_LIST, GOLD, LAYOUTS, MARKERS, MARKER_COLORS, OCCASIONS, PRESETS, TEXTURES, THEMES, THEME_CATS} from '../content/config.js';
+import {closeDialog, getPath, mlLib, mlMap, needConsent, osmData, replaceState, saveState, saveT, setMlFailMsg, setOsmData, setPath, st, ui} from '../core/doc/state.js';
+import {clamp, coordText, dms, posterDims, viewBounds} from '../core/geo/geo.js';
+import {drawMarker} from '../render/poster.js';
 import {mlRestyle, mlZoom} from '../map/engines.js';
 import {FIT_NAMES, FRAMES, WALLS, changed, downloadMockup, drawMockup, drawTexture, drawUnder, layoutPreview, mock, openMockup, redrawAll, renderMap, scheduleOver, setActivePlace} from '../view/preview.js';
-import {addPlace, applyAmbiance, applyOccasion, applySheet, closeWelcome, fitRoute, importGpx, isSheet, renderRoute, replaceState, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setPlacing, setSheet, shareLink, showBanner, updateContrast, updateExportLabel, updateLayoutUI} from '../features/features.js';
 import {$, h, pressed, setSeg, setStatus, toast} from '../core/dom.js';
+import {applySnap, commitHistory, hist, recordHistory} from '../core/doc/history.js';
+import {frDate, isoFromFr} from '../core/text.js';
+import {cmpSnap, compareBefore, initCompare, noteChange, updateCompare} from '../features/compare.js';
+import {loadFonts} from '../render/fonts.js';
+import {addPlace, goTo, setMarker} from '../features/places.js';
+import {applyAmbiance, applyOccasion, setDedWrap, setFileType, setFormat, setLayout, setOrient, updateContrast, updateExportLabel, updateLayoutUI} from '../features/presets.js';
+import {applySheet, isSheet, setFraming, setSheet} from './sheet.js';
+import {closeWelcome} from './welcome.js';
+import {fitRoute, importGpx, renderRoute} from '../features/gpx.js';
+import {setPlacing, showBanner} from './shell.js';
+import {shareLink} from '../features/share.js';
+import {onUi} from '../core/port.js';
+import {exportPoster, importFile, runDiagnostics} from '../features/export.js';
+import {thumb} from '../view/thumbnails.js';
+import {geom} from '../render/layout.js';
 // ---------- Taille du texte de l'interface (A− / A+) ----------
 // Préférence d'affichage propre à l'appareil : hors de l'état de l'affiche, non concernée par « Réinitialiser ».
 const UI_SCALE_KEY='cms3.uiScale', UI_SCALES=[0.875,1,1.125,1.25,1.375];
@@ -64,7 +77,6 @@ function placeMarkerFromInput(){
   $('markerIn').value=''; $('markerIn').blur();
   toast('Repère placé'+(out?' · carte recentrée':''));
 }
-function setMarker(lat: number,lon: number){ st.marker={lat,lon}; setPlacing(false); updateMarkerTxt(); if(st.fx.quarter){ ui.snap=null; redrawAll(true); } else changed(); }
 /** Indications du panneau Lieu, sur le même modèle pour la ville (centre de la carte) et le lieu de rencontre (repère) :
  *  nom de la ville la plus proche (5 km au plus) parmi les villes proposées et celles choisies par la recherche
  *  (updateMarkerTxt.remember), sinon « Autre lieu », puis les coordonnées ; bouton de la ville proposée en surbrillance */
@@ -99,11 +111,6 @@ updateMarkerTxt.remember=(lat: number,lon: number,name?: string,sub?: string)=>{
 };
 function syncZoomUI(){ $('zoom').value=st.zoom.toFixed(1); $('oZoom').textContent=st.zoom.toFixed(1); }
 function setZoom(z: number){ st.zoom=clamp(z,10,18); syncZoomUI(); if(mlMap&&st.engine==='maplibre'&&st.mode!=='illus'){ mlMap.easeTo({zoom:mlZoom(ui.slotCss.w),duration:250}); } else renderMap(); saveState(); }
-function goTo(lat: number,lon: number,zoom?: number){
-  st.center={lat,lon}; if(zoom!=null) st.zoom=zoom; syncZoomUI();
-  if(mlMap&&st.engine==='maplibre'&&st.mode!=='illus'){ mlMap.jumpTo({center:[lon,lat],zoom:mlZoom(ui.slotCss.w)}); mlRestyle(); }   // carte masquée : recadrée au retour en mode Carte
-  renderMap(true); saveState(); updateMarkerTxt();
-}
 /** Affiche un onglet (état ARIA, focus clavier). Le panneau coulissant n'est pas modifié. */
 function showTab(name: string, focus?: boolean){
   document.querySelectorAll<HTMLElement>('#tabs button').forEach(x=>{ const on=x.dataset.tab===name; x.classList.toggle('on',on); x.setAttribute('aria-selected',String(on)); x.tabIndex=on?0:-1; if(on&&focus) x.focus(); });
@@ -122,45 +129,16 @@ function updateFontSamples(){
   document.querySelectorAll<HTMLElement>('#fontSeg .smp').forEach(e=>e.textContent=x);
   document.querySelectorAll<HTMLElement>('#duos .t').forEach(e=>e.textContent=t); document.querySelectorAll<HTMLElement>('#duos .d').forEach(e=>e.textContent=x);
 }
-/** Date au format de l'affiche : « Le 1er juillet 2023 » */
-function frDate(iso: string){
-  const [y,m,d]=iso.split('-').map(Number); if(!y||!m||!d) return '';
-  const mois=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][m-1];
-  return `Le ${d===1?'1er':d} ${mois} ${y}`;
-}
-/** Lecture inverse (pour ouvrir le calendrier sur la date déjà saisie) ; '' si le texte n'est pas une date */
-function isoFromFr(t: string){
-  const M=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  const r=String(t||'').toLowerCase().match(/(\d{1,2})(?:er)?\s+([a-zéû]+)\s+(\d{4})/); if(!r) return '';
-  const m=M.indexOf(r[2]); if(m<0) return '';
-  return `${r[3]}-${String(m+1).padStart(2,'0')}-${String(+r[1]).padStart(2,'0')}`;
-}
-
 // ---------- Historique : annuler / rétablir ----------
-// Un instantané de l'état par modification (regroupées comme l'enregistrement, après 300 ms de calme).
-// Le moteur cartographique est exclu : le rétablir relancerait des requêtes réseau.
-const HIST_MAX=50, hist: {past: string[]; future: string[]; cur: string | null; quietUntil: number}={past:[],future:[],cur:null,quietUntil:0};
-function histSnap(){ const {engine,...rest}=st; return JSON.stringify(rest); }
 CMS.on('state:saved',()=>{ recordHistory(); updateMarkerTxt(); });   // émis par saveState (state.ts)
-function recordHistory(){
-  const s=histSnap(); if(s===hist.cur) return;
-  if(Date.now()<hist.quietUntil || hist.cur==null){ hist.cur=s; return; }   // effets de bord d'un retour arrière (recentrage de la carte)
-  hist.past.push(hist.cur); if(hist.past.length>HIST_MAX) hist.past.shift();
-  hist.cur=s; hist.future=[]; updateHistUI();
-}
 function updateHistUI(){ $('bUndo').disabled=!hist.past.length; $('bRedo').disabled=!hist.future.length; }
-function applySnap(s: string){
-  hist.quietUntil=Date.now()+900;
-  const o=JSON.parse(s), eng=st.engine, view=JSON.stringify([st.center,st.zoom]);
-  replaceState(o,{engine:eng});
+CMS.on('history:changed', updateHistUI);   // piles modifiées (src/core/doc/history.ts)
+// Instantané appliqué (annuler, rétablir, relecture des réglages) : interface, aperçu et vue resynchronisés
+CMS.on('history:applied', (d: {viewChanged: boolean})=>{
   setPlacing(false); syncInputs(); layoutPreview();
   loadFonts().then(()=>scheduleOver());
-  if(JSON.stringify([st.center,st.zoom])!==view) goTo(st.center.lat,st.center.lon,st.zoom); else redrawAll(true);
-  hist.cur=s; saveState(); updateHistUI();
-}
-/** Fige tout de suite l'étape en cours (action ponctuelle : réinitialisation, changement de moteur), puis ignore
- *  pendant un instant les petits recentrages de la carte qui suivent, pour ne pas créer de fausses étapes. */
-function commitHistory(quietMs=1500){ clearTimeout(saveT); try{localStorage.setItem(STORE_KEY,JSON.stringify(st))}catch(e){} hist.quietUntil=0; recordHistory(); hist.quietUntil=Date.now()+quietMs; }
+  if(d.viewChanged) goTo(st.center.lat,st.center.lon,st.zoom); else redrawAll(true);
+});
 function undo(){ compareBefore(false); if(!hist.past.length) return; clearTimeout(saveT); recordHistory(); if(!hist.past.length) return; hist.future.push(hist.cur!); applySnap(hist.past.pop()!); toast('Modification annulée'); }
 function redo(){ compareBefore(false); if(!hist.future.length) return; hist.past.push(hist.cur!); applySnap(hist.future.pop()!); toast('Modification rétablie'); }
 
@@ -370,15 +348,15 @@ function buildUI(){
   $('markerForm').onsubmit=e=>{ e.preventDefault(); placeMarkerFromInput(); };
   $('bMarkerCenter').onclick=()=>setMarker(st.center.lat,st.center.lon);
   $('bToMarker').onclick=()=>onIllus() ? CMS.illus.recenter() : goTo(st.marker.lat,st.marker.lon);
-  $('bDiag').onclick=late.runDiagnostics;
+  $('bDiag').onclick=runDiagnostics;
   $('bReset').onclick=askReset;
   $('bUiSmaller').onclick=()=>stepUiScale(-1); $('bUiLarger').onclick=()=>stepUiScale(1);
   $('bTsReset').onclick=()=>{ st.textScale={...DEFAULT_STATE.textScale}; st.textScaleAll=DEFAULT_STATE.textScaleAll; syncInputs(); changed(); toast('Tailles des textes rétablies'); };
-  $('fileIn').onchange=e=>{ const f=(e.target as HTMLInputElement).files![0]; if(f) late.importFile(f); (e.target as HTMLInputElement).value=''; };
+  $('fileIn').onchange=e=>{ const f=(e.target as HTMLInputElement).files![0]; if(f) importFile(f); (e.target as HTMLInputElement).value=''; };
   const submitSearch=CMS.geocoder.debounceSubmit((q: string)=>search(q),300);
   $('searchForm').onsubmit=e=>{ e.preventDefault(); submitSearch($('q').value); };
   $('results').addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeResults(); } });
-  $('bExport').onclick=late.exportPoster;
+  $('bExport').onclick=exportPoster;
   $('resClose').onclick=()=>{ $('result').hidden=true; $('bExport').focus(); };
 }
 /** Réinitialisation : un premier appui demande confirmation (pas de confirm(), bloqué dans les aperçus intégrés) */
@@ -449,17 +427,6 @@ function refreshColors(){ document.querySelectorAll<HTMLInputElement>('[data-c]'
   const mk=st.colors.marker.toUpperCase(); let any=false;
   $('mColors').querySelectorAll('button').forEach(b=>{ const on=!any && (b.dataset.v==='auto' ? themeMarker()===mk : b.dataset.v!.toUpperCase()===mk); any=any||on; pressed(b,on); });
   updateContrast(); drawTexture(); CMS.emit('colors:changed'); }
-/** Exécute fn avec un état provisoirement modifié (vignettes) */
-/** Vignettes : drawPoster lit l'état global ; il est modifié le temps d'un rendu SYNCHRONE puis rétabli.
- *  Une fonction asynchrone rendrait la main avec l'état modifié : elle est refusée. */
-function withState<T>(patch: Record<string, unknown>,fn: ()=>T): T {
-  const S=st as Record<string, unknown>, saved: Record<string, unknown>={}; for(const k in patch){ saved[k]=S[k]; S[k]=patch[k]; } ui.thumb=true;
-  try{ const r=fn(); if(r && typeof (r as {then?: unknown}).then==='function') throw new Error('withState : fonction asynchrone interdite'); return r; }
-  finally{ Object.assign(st,saved); ui.thumb=false; }
-}
-const thumbMap=(c: CanvasRenderingContext2D,r: Rect)=>{ c.strokeStyle=st.colors.roadMinor; c.globalAlpha=.35; c.lineWidth=.5; for(let i=0;i<14;i++){c.beginPath();c.moveTo(r.x+i*7,r.y);c.lineTo(r.x+i*7-20,r.y+r.h);c.stroke();c.beginPath();c.moveTo(r.x,r.y+i*8);c.lineTo(r.x+r.w,r.y+i*8+6);c.stroke()} c.globalAlpha=1; c.fillStyle=st.colors.water; c.fillRect(r.x,r.y+r.h*0.45,r.w,r.h*0.08); };
-function thumb(cv: HTMLCanvasElement,patch: Record<string, unknown>){ const land=st.orient==='landscape'; if(cv.width!==(land?99:70)){ cv.width=land?99:70; cv.height=land?70:99; }
-  const ctx=cv.getContext('2d')!; withState(patch,()=>{ drawPoster(ctx,cv.width,cv.height,'all',thumbMap); drawPoster(ctx,cv.width,cv.height,'over'); }); }
 /** Vignettes (gabarits, ambiances, repères) : l'état choisi est mis à jour tout de suite ; le dessin, coûteux
  *  (28 vignettes, deux passes de drawPoster chacune), une fois par image et seulement pour l'onglet affiché.
  *  Les vignettes d'un onglet masqué sont redessinées à son ouverture (showTab). */
@@ -594,83 +561,19 @@ return {search, closeResults};
 });
 const {search, closeResults} = SEARCH_UI;
 
-// ---------- Polices ----------
-/** Polices utilisées par l'affiche : titre, texte, police manuscrite éventuelle ; Bebas Neue pour le titre « Vintage » des modes illustrés */
-async function loadFonts(){
-  try{ await Promise.all(loadFonts.used().flatMap(f=>f.load).map(f=>document.fonts.load(f))); }catch(e){}
-  CMS.glyphs.clear();   // largeurs mesurées avec une police de secours pendant le chargement
-}
-/** true si toutes les variantes de la famille active sont chargées (sinon l'export utiliserait une police de secours) */
-loadFonts.used=()=>[fontOf('title'),fontOf('','dedication'),fontOf('','date'),...(CMS.illus.textStyle().vint ? [FONTS.bebas] : [])];
-function fontsReady(){ try{ return loadFonts.used().flatMap(f=>f.load).every(f=>document.fonts.check(f)); }catch(e){ return true; } }
-
 // ---------- Comparer avant / après un changement (thème, ambiance, modèle, effet) ----------
-/** Dernier changement « comparable » (issue #63) : thème ou palette, ambiance, modèle de texte, effet de tracé, ornement,
- *  plis, papier. On retient les seuls champs modifiés (valeurs d'avant et d'après) : le bouton disparaît dès que l'un
- *  d'eux change de nouveau (autre choix, retouche, annulation), mais pas pour une autre modification (titre, cadrage).
- *  Un appui maintenu sur « Comparer » montre l'affiche avec les valeurs d'avant ; le relâcher rétablit les valeurs
- *  choisies, à l'identique. Ni l'état enregistré ni l'historique ne voient l'aperçu. Moteur et cadrage ne sont jamais
- *  comparés : ils relanceraient des requêtes réseau ou n'apporteraient rien. */
-const COMPARE = CMS.define('compare', () => {
-  const CMP_SKIP=new Set(['engine','center','zoom','marker','active','place2']);
-  type Cmp = {keys: string[]; vals: Record<string, unknown>; after: string; pick: (o: Record<string, unknown>)=>string; button: string; badge: string};
-  let cmp: Cmp | null=null;
-  const S=()=>st as Record<string, any>;
-  /** Instantané à prendre juste avant le changement */
-  const cmpSnap=()=>JSON.parse(JSON.stringify(st));
-  /** À appeler juste après le changement : before (cmpSnap), label (badge « Avant … » et bouton), ou {theme:true} */
-  function noteChange(before: Record<string, any>,label: string | {theme: boolean}){
-    const keys=Object.keys(st).filter(k=>!CMP_SKIP.has(k) && JSON.stringify(before[k])!==JSON.stringify(S()[k]));
-    if(!keys.length) return;   // même choix reconfirmé : la comparaison précédente reste valable
-    const pick=(o: Record<string, unknown>)=>JSON.stringify(keys.map(k=>o[k]));
-    const vals: Record<string, unknown>={}; for(const k of keys) vals[k]=before[k];
-    const name=typeof label==='object' && label.theme ? themeName(before) : '';
-    cmp={keys,vals,after:pick(st),pick,
-      button: name ? `Maintenir pour comparer avec « ${name} »` : `Maintenir pour comparer : avant ${label}`,
-      badge: name ? 'Avant · '+name : 'Avant '+label};
-    updateCompare();
-  }
-  /** Libellé d'un effet, d'un ornement ou des plis : « l'effet « Lueur » », « le retrait de « Lueur » » */
-  function fxLabel(el: HTMLInputElement,k: string){
-    if(k==='folds') return el.checked ? 'les plis' : 'le retrait des plis';
-    const n=(el.closest('label')?.textContent||k).trim().replace(/\s*\(.*\)$/,''), what=`${k.startsWith('orn.')?'l\'ornement':'l\'effet'} « ${n} »`;
-    return el.checked ? what : 'le retrait de '+what;
-  }
-  const compareAvailable=()=>!!cmp && cmp.after===cmp.pick(ui.comparing?{...st,...ui.cmpKeep}:st);
-  const themeName=(t: Record<string, any>)=>THEMES[t.theme] && JSON.stringify(THEMES[t.theme].c)===JSON.stringify(t.colors) ? THEMES[t.theme].name : 'couleurs précédentes';
-  function updateCompare(){
-    const b=$('bCompare'), ok=compareAvailable(), was=!b.hidden;
-    b.hidden=!ok; if(!ok) cmp=null;   // champs modifiés depuis : comparaison périmée
-    else { b.querySelector<HTMLElement>('.cmpTxt')!.textContent=cmp!.button; b.title=cmp!.button; }
-    if(was!==ok && ui.sheet==='peek') applySheet();   // bouton dans le pied du panneau
-  }
-  CMS.on('state:saved',updateCompare);
-  function compareBefore(on: boolean){
-    if(on===!!ui.comparing) return;
-    if(on && !compareAvailable()) return;
-    if(on){ commitHistory(0); ui.cmpKeep={}; for(const k of cmp!.keys){ ui.cmpKeep[k]=S()[k]; S()[k]=JSON.parse(JSON.stringify(cmp!.vals[k])); } }
-    else { Object.assign(st,ui.cmpKeep); ui.cmpKeep=null; }
-    ui.comparing=on;
-    const b=$('bCompare'); b.setAttribute('aria-pressed',String(on)); b.classList.toggle('on',on);
-    const badge=$('cmpBadge'); badge.hidden=!on; if(on) badge.textContent=cmp!.badge;
-    // rendu seulement : rien n'est enregistré (saveState est inactif pendant la comparaison)
-    ui.snap=null; layoutPreview(); drawUnder(); drawTexture(); mlRestyle(); renderMap(false); scheduleOver();
-    loadFonts().then(()=>scheduleOver());
-  }
-  function initCompare(){
-    const b=$('bCompare'), stop=()=>compareBefore(false);
-    b.addEventListener('pointerdown',e=>{ if(e.button) return; e.preventDefault(); b.setPointerCapture(e.pointerId); compareBefore(true); });
-    b.addEventListener('pointerup',stop); b.addEventListener('pointercancel',stop); b.addEventListener('lostpointercapture',stop);
-    b.addEventListener('keydown',e=>{ if((e.key===' '||e.key==='Enter') && !e.repeat){ e.preventDefault(); compareBefore(true); } });
-    b.addEventListener('keyup',e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); stop(); } });
-    b.addEventListener('blur',stop); b.addEventListener('contextmenu',e=>e.preventDefault());   // appui long sur mobile : pas de menu
-    addEventListener('blur',stop); document.addEventListener('visibilitychange',stop);
-  }
-  return {snap:cmpSnap,note:noteChange,update:updateCompare,hold:compareBefore,init:initCompare,fxLabel};
-});
-const {snap: cmpSnap, note: noteChange, update: updateCompare, hold: compareBefore, init: initCompare} = COMPARE;
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
-Object.assign(late, {HIST_MAX, applySnap, cmpSnap, commitHistory, compareBefore, fontsReady, goTo, hist, isoFromFr, loadFonts, noteChange, openAdvanced, recordHistory, refreshCards, refreshColors, setEngine, setMarker, showTab, syncInputs, syncOutputs, syncZoomUI, thumb, thumbMap, updateEngineUI, updateMarkerTxt});
+// Commandes du port de l'interface (src/core/port.ts) réalisées ici
+onUi('syncInputs', syncInputs);
+onUi('syncOutputs', syncOutputs);
+onUi('syncZoomUI', syncZoomUI);
+onUi('refreshCards', refreshCards);
+onUi('refreshColors', refreshColors);
+onUi('updateMarkerTxt', updateMarkerTxt);
+onUi('updateEngineUI', updateEngineUI);
+onUi('showTab', showTab);
+onUi('openAdvanced', openAdvanced);
+onUi('syncFonts', syncFonts);
 
-export {HIST_MAX, applySnap, applyUiScale, buildUI, cmpSnap, commitHistory, compareBefore, fontsReady, frDate, goTo, hist, histSnap, isoFromFr, loadFonts, noteChange, openAdvanced, parseCoords, recordHistory, redo, refreshCards, refreshColors, resetAll, setEngine, setMarker, showTab, syncFonts, syncInputs, syncOutputs, syncZoomUI, thumb, thumbMap, undo, updateEngineUI, updateHistUI, updateMarkerTxt};
+
+export {applyUiScale, buildUI, openAdvanced, parseCoords, redo, refreshCards, refreshColors, resetAll, setEngine, showTab, syncFonts, syncInputs, syncOutputs, syncZoomUI, undo, updateEngineUI, updateHistUI, updateMarkerTxt};

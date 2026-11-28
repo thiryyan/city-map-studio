@@ -13,22 +13,50 @@ import '../core/geo/geo.js';
 import '../render/poster.js';
 import '../map/engines.js';
 import '../view/preview.js';
-import '../features/features.js';
+import '../features/places.js';
+import '../features/gpx.js';
+import '../features/share.js';
+import '../ui/welcome.js';
+import '../features/presets.js';
+import '../ui/shell.js';
+import '../ui/sheet.js';
+import '../ui/dependent-settings.js';
+import '../ui/safe-zone.js';
+import '../ui/clean-view.js';
+import '../ui/action-bar.js';
+import '../ui/edit-intent.js';
+import '../ui/changes.js';
+import '../features/palette.js';
+import '../features/saves.js';
 import '../features/route.js';
 import '../ui/panel.js';
 import '../features/illustration.js';
 import '../features/export.js';
 import {AMBIANCES, FONTS, THEMES} from '../content/config.js';
-import {V, consent, declineConsent, dlgCancel, giveConsent, initDialogs, mlLib, mlMap, needConsent, normState, osmData, st, ui, updateConsentInfo} from '../core/doc/state.js';
-import {dms, exportSpec, geom, posterDims} from '../core/geo/geo.js';
+import {declineConsent, giveConsent} from '../ui/consent.js';
+import {V, consent, dlgCancel, initDialogs, mlLib, mlMap, needConsent, normState, osmData, st, ui, updateConsentInfo} from '../core/doc/state.js';
+import {dms, exportSpec, posterDims} from '../core/geo/geo.js';
 import {CART_ROWS, altAz, attributionText, cartDed, dedLines, drawMarker, drawPoster, drawText, foilCtx, markerOpts, metersPerPx, moonSun, planetsAt, skyTime, souvenirFoot, textW, typoFit} from '../render/poster.js';
 import {VEC_CACHE_MAX, buildStyle, drawVectors, hatchTile, loadMaplibre, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, vecCache} from '../map/engines.js';
 import {changed, composePoster, drawOp, drawOver, drawUnder, layoutPreview, renderMap, scheduleOver, setActivePlace, stage, textureBase} from '../view/preview.js';
-import {addPlace, applyAmbiance, applyConfig, applyOccasion, applySheet, decodeShare, deleteSave, downloadBackup, downloadConfig, encodeShare, fitRoute, importConfigFile, initSaves, initSheet, loadFromHash, loadSaves, maybeWelcome, openSaves, paletteOf, parseGpx, photoTheme, placeAt, restoreSave, saveCurrent, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setSheet, showBanner, welcomeDone} from '../features/features.js';
-import {applyUiScale, buildUI, frDate, hist, histSnap, isoFromFr, loadFonts, parseCoords, redo, refreshCards, refreshColors, resetAll, setEngine, showTab, syncInputs, undo, updateEngineUI, updateHistUI} from '../ui/panel.js';
+import {applyUiScale, buildUI, parseCoords, redo, refreshCards, refreshColors, resetAll, setEngine, showTab, syncInputs, undo, updateEngineUI, updateHistUI} from '../ui/panel.js';
 import {ENV, exportPoster, importText, runDiagnostics, showEnvWarning} from '../features/export.js';
 import {$, h, pressed, setStatus, toast} from '../core/dom.js';
 import {contrast, lum} from '../core/color.js';
+import {hist, histSnap} from '../core/doc/history.js';
+import {frDate, isoFromFr} from '../core/text.js';
+import {loadFonts} from '../render/fonts.js';
+import {addPlace, placeAt} from '../features/places.js';
+import {applyAmbiance, applyOccasion, setDedWrap, setFileType, setFormat, setLayout, setOrient} from '../features/presets.js';
+import {applyConfig, decodeShare, encodeShare, loadFromHash} from '../features/share.js';
+import {applySheet, setFraming, setSheet} from '../ui/sheet.js';
+import {deleteSave, downloadBackup, downloadConfig, importConfigFile, initSaves, loadSaves, openSaves, restoreSave, saveCurrent} from '../features/saves.js';
+import {fitRoute, parseGpx} from '../features/gpx.js';
+import {initSheet} from '../ui/changes.js';
+import {maybeWelcome, welcomeDone} from '../ui/welcome.js';
+import {paletteOf, photoTheme} from '../features/palette.js';
+import {showBanner} from '../ui/shell.js';
+import {geom} from '../render/layout.js';
 // ---------- Démarrage ----------
 async function boot(){
   buildUI(); CMS.illus.init(); CMS.route.init(); initSaves(); initSheet(); CMS.deps.init(); CMS.safe.init(); CMS.actbar.init(); CMS.changes.init(); applyUiScale();
@@ -146,6 +174,5 @@ CMS.define('pwa', () => {
 const {install: installPwa} = CMS.pwa;
 boot();
 
-// Fonctions lues par des fichiers chargés avant celui-ci (registre late de src/core/cms.ts)
 
 
