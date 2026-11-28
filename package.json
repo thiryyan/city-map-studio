@@ -6,10 +6,13 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node scripts/build.mjs && CMS_ROOT=dist python3 tests/run_all.py",
-    "test:source": "python3 tests/run_all.py"
+    "dev": "python3 -m http.server 8000",
+    "lint": "eslint js",
+    "test": "python3 tests/run_all.py"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "eslint": "9.39.5",
+    "globals": "17.14.0"
   }
 }

@@ -19,7 +19,7 @@
 | E7 | Libellés | Aucun libellé sur la carte : le tracé est purement graphique. |
 | E8 | Ville au lancement | Blois et la Loire. |
 | E9 | Export | PNG A4 300 DPI (2480 × 3508 px) par défaut ; A3, 50 × 70 cm et 10 × 15 cm (tirage photo) ; PDF à la taille d'impression (§ 5). |
-| E10 | Livraison | Sources : `index.html` (balisage), `css/app.css`, `js/*.js` (scripts classiques chargés dans l'ordre), ouvrables telles quelles (`file://` ou serveur local). **Site publié construit** par `scripts/build.mjs` (#102, § 7.8) : `dist/`, un seul script et une seule feuille minifiés, `sw.js` généré ; il s'ouvre aussi en `file://`. MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
+| E10 | Livraison | Sources : `index.html` (balisage), `css/app.css`, `js/*.js` (**modules ES**, point d'entrée `js/main.js`), servies en http pour développer (`npm run dev`). **Site publié construit** par `scripts/build.mjs` (#102, § 7.8) : `dist/`, un seul script et une seule feuille minifiés, `sw.js` généré ; il s'ouvre aussi en `file://`. MapLibre et les polices sont fournis dans `lib/`. Tous les chemins sont relatifs (site servi sous `/city-map-studio/`). |
 | E11 | Écrans | Mobile en priorité, ordinateur en second. Interface en français. |
 | E12 | Hébergement | **GitHub Pages**, publié depuis la branche `gh-pages` par GitHub Actions (§ 7.6) : racine = version classique (branche `classique`), `/nouvelle/` = branche `main`, `/pr-N/` = préversions. |
 | E13 | Données | Attribution « © contributeurs OpenStreetMap » (ODbL), complétée de « OpenFreeMap © OpenMapTiles » (schéma CC-BY 4.0) avec le moteur Vectoriel GPU : mention complète active par défaut. Décochée, la case laisse une **mention minimale toujours inscrite** (« © OpenStreetMap », plus « © OpenMapTiles » avec le moteur GPU ; `attributionText`). À l'écran, les sources de la carte sont rappelées en légende discrète **sous l'aperçu**, hors de l'affiche (`#mapCredit`, placée par `layoutPreview`) : l'aperçu montre ainsi exactement la mention de l'export. |
@@ -618,7 +618,7 @@ Les deux services distants (tuiles OpenFreeMap, Nominatim) et, en secours, les C
 | :--- | :--- | :--- |
 | **GitHub Pages** (E12, § 7.6) | 1, 2 | **Recommandé**, surtout sur mobile : URL HTTPS stable, application installable, téléchargements fiables. |
 | Serveur local (`python3 -m http.server`) | 1, 2 | Pour développer. |
-| Fichier ouvert dans un navigateur (`file://`) | 1, 2 | Ni installable ni mis en cache. |
+| Site construit (`dist/`) ouvert dans un navigateur (`file://`) | 1, 2 | Ni installable ni mis en cache. Les sources (modules ES) ne s'ouvrent pas en `file://`. |
 | Aperçu intégré d'une application ou visionneuse | 2 uniquement | Réseau et téléchargements bloqués. |
 | Entièrement hors ligne | 2 uniquement | Après une première visite en http(s) (application en cache, § 7.5), ou en `file://`. Le moteur 1 exige le réseau : l'adresse des tuiles est fixe (`OFM_URL`) ; des tuiles autohébergées (extraction PMTiles, par exemple) demanderaient une évolution. |
 
@@ -680,7 +680,7 @@ Le build ne fait rien régresser. Le budget du réglage visible a été porté �
 
 `npm run build` (`scripts/build.mjs`, esbuild) produit `dist/` à partir des sources, sans les modifier :
 
-* les scripts de `index.html`, dans leur ordre, réunis en **un seul script classique** `js/app.<empreinte>.js`, minifié et **enveloppé dans une fonction** (environ 475 → 299 Ko) : les fichiers gardent leur portée commune, mais **aucun nom n'est global** sur le site publié (seul `CMS`, posé explicitement sur `globalThis`). Les tests n'atteignent l'application que par `window.__cms` et la **façade de test** de `js/main.js` (noms exposés sur `window` en mode `?test` seulement) : un test qui a besoin d'un nouveau nom l'y ajoute. Étape suivante (4b) : conversion des fichiers en modules ES ;
+* les modules ES, à partir de `js/main.js`, réunis par esbuild en **un seul script classique** `js/app.<empreinte>.js` (format IIFE), minifié (environ 475 → 298 Ko) : **aucun nom n'est global** sur le site publié (seul `CMS`, posé explicitement sur `globalThis`), et `dist/index.html` s'ouvre en `file://`. Les tests n'atteignent l'application que par `window.__cms` et la **façade de test** de `js/main.js` (noms exposés sur `window` en mode `?test` seulement) : un test qui a besoin d'un nouveau nom l'y ajoute. ;
 * `css/app.css` minifiée en `css/app.<empreinte>.css` ;
 * `VERSION` (`sw.js`) et `CMS.build.version` (`js/core.js`) : `cms-AAAA-MM-JJ-<empreinte>` ; liste `APP` de `sw.js` : les fichiers réellement publiés ;
 * `lib/`, `icons/`, `manifest.webmanifest`, `.nojekyll` copiés.
@@ -697,7 +697,7 @@ Les noms de fichiers à empreinte changent avec leur contenu : jamais de copie p
 city-map-studio/
 ├── index.html              # balisage, CSP, métadonnées ; charge css/ et js/ (sources ; dist/ = site construit, § 7.8)
 ├── css/app.css             # feuille de styles de l'application
-├── js/                     # scripts classiques, chargés dans cet ordre (cf. § 8.2)
+├── js/                     # modules ES, importés dans cet ordre par main.js (cf. § 8.2)
 │   ├── core.js  config.js  maplibre-loader.js  geocoder.js  state.js  geo.js  render.js
 │   └── engines.js  preview.js  features.js  ui.js  illus.js  export.js  main.js
 ├── sw.js                   # service worker (cache de l'application, http(s) seulement ; VERSION et liste APP générées au build)
@@ -723,16 +723,14 @@ city-map-studio/
     ├── run_all.py          # génère les données puis lance toute la suite (utilisé par la CI)
     ├── fixture.py, make_formats.py, make_city.py   # données de test : osm.json, data.osm, data.geojson, frame.html, city.json
     ├── jswait.py, seed.py  # attente d'une condition compatible avec la CSP ; préparation du localStorage (§ 9.1)
-    ├── globals.max         # plafond des déclarations globales (tests/globals.py)
+    ├── globals.max         # plafond du registre late, dépendances vers l'avant (tests/globals.py)
     └── layouts.py, make_og.py   # outils hors suite : captures des gabarits, image d'aperçu des liens
 ```
 
 ### 8.2. Fichiers et sections du script
 
 Le script est découpé en fichiers `js/*.js`, eux-mêmes organisés en sections balisées `// ---------- Titre ----------`.
-Ce sont des scripts classiques : leurs déclarations de premier niveau sont partagées et le **code exécuté au chargement
-d'un fichier ne peut utiliser que les fichiers précédents** (les fonctions, elles, peuvent s'appeler d'un fichier à l'autre).
-Pour réduire cette portée partagée, le code migre vers des modules `CMS.define('nom', () => {…})` : leur code est privé, seules leurs fonctions publiques sont reprises en tête de portée (`const {a, b} = CMS.nom`). Les fichiers se parlent par des événements synchrones (`CMS.on` / `CMS.emit`) plutôt que par des tests de présence :
+Ce sont des **modules ES** (#102) : chaque fichier importe ce qu'il utilise et exporte ce que les autres utilisent ; plus aucune portée partagée. `js/main.js` importe tous les fichiers dans l'ordre ci-dessous, et **un fichier n'importe que des fichiers antérieurs** : l'ordre d'exécution reste celui des anciens scripts. Les appels vers un fichier postérieur (49 au 28/11/2026, surtout vers `ui.js`) passent par le **registre `late`** de `js/core.js`, rempli par le fichier qui définit la fonction : ce sont des dépendances à l'envers entre couches, plafonnées par `tests/globals.max` et à faire disparaître (événements, injection). Une variable partagée ne se réaffecte que dans son module, les autres passent par un setter (`setMlMap`, `setOsmData`, `setFitSink`…). `CMS.define('nom', () => {…})` range des fonctions testées seules sous `CMS.nom`. Les fichiers se parlent aussi par des événements synchrones (`CMS.on` / `CMS.emit`) :
 
 | Événement | Émis par | Écouté par |
 | :--- | :--- | :--- |
@@ -742,7 +740,7 @@ Pour réduire cette portée partagée, le code migre vers des modules `CMS.defin
 | `illus:input` | champs liés `illus.*` / `illusText.*` | `CMS.illus` |
 | `illus:loaded` | `CMS.illus` (image rechargée depuis IndexedDB) | — (point d'accroche) |
 
-`tests/globals.py` interdit toute hausse du nombre de déclarations globales (plafond `tests/globals.max` : 378, à abaisser quand il baisse) ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur.
+`tests/globals.py` lance ESLint (`eslint.config.js` : aucun nom sans import, aucun import réaffecté) et interdit toute hausse du registre `late` (plafond `tests/globals.max` : 49) ; `tests/unit/` teste les fonctions pures sous Node, sans navigateur (modules réunis par esbuild, `tests/unit/load.mjs`).
 
 | Fichier | Contenu |
 | :--- | :--- |
@@ -836,7 +834,7 @@ Tests de bout en bout Playwright (Python), un fichier par domaine, avec un **ré
 | `unit.py` | Fonctions pures (Node) | Socle `CMS`, Mercator, `zoomFactor`, `dms`, `exportSpec`, `normState`, `CMS.geocoder.sanitize` ; `CMS.illus` : qualité, placement, retouches, prompt, pistes, proportions ; `CMS.route` : prompt d'itinéraire (FR / EN, réglages), `extractGpx`, contrôle de vraisemblance, `routePrompt` et `wpts` dans `normState` ; `CMS.wiki` : classement sur une réponse réelle autour de Blois (`tests/wiki_blois.json`), validation, requête limitée aux coordonnées. |
 | `wiki.py` | Pistes Wikipédia (#46) | Option désactivée par défaut ; sans accord : aucune requête (option refusée si l'accord général l'est) ; Blois : château et cathédrale en tête ; requête limitée aux coordonnées et au rayon ; cache ; service muet : message en moins de 11 s, interface utilisable ; hors ligne : bouton grisé, pistes de la carte disponibles. |
 | `routeai.py` | Itinéraire préparé avec une IA (#85) | Prompt : lieux (noms, coordonnées), type, emprise, format, mis à jour à chaque réglage, anglais ; réponse d'IA collée telle quelle importée (étapes nommées), texte sans GPX refusé sans toucher à l'affiche, « Coller le GPX » (presse-papiers simulé), Annuler ; tracé à 50 km et tracé rectiligne signalés, « Pointillés » ; aucun appel réseau, `connect-src` sans hôte pour l'itinéraire. |
-| `globals.py` | Architecture | Aucun nom global déclaré deux fois ; nombre de déclarations globales ≤ `tests/globals.max`. |
+| `globals.py` | Architecture | ESLint sur `js/` : aucun nom utilisé sans import, aucun import réaffecté ; entrées du registre `late` ≤ `tests/globals.max`. |
 
 Outils hors suite : `layouts.py` (captures des 11 gabarits, contrôle visuel) et `make_og.py` (régénère `icons/og-image.jpg` à partir du rendu actuel).
 

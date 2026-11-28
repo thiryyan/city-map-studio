@@ -23,7 +23,7 @@ from playwright.async_api import async_playwright
 from jswait import wait_js
 
 T = pathlib.Path(__file__).resolve().parent
-ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent / 'dist').resolve()   # site testé : dist/ (construit par run_all.py), ou CMS_ROOT
 CHROME = os.environ.get('CHROME') or None
 R = 6378137.0
 def m(lon, lat): return (math.radians(lon) * R, math.log(math.tan(math.pi / 4 + math.radians(lat) / 2)) * R)

@@ -1,6 +1,10 @@
 /* City Map Studio — Moteurs cartographiques : données OSM + Canvas (moteur Fichier), effets de tracé, MapLibre + OpenFreeMap.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
-'use strict';
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+import {late} from './core.js';
+import {GL_TILE_MAX, HW_CLASS, OFM_ATTRIBUTION, OFM_URL, REF_W, ROADS, WATERWAY_W} from './config.js';
+import {consent, mlCdn, mlFailMsg, mlLib, mlMap, needConsent, osmData, saveState, setMlCdn, setMlFailMsg, setMlLib, setMlMap, st, ui} from './state.js';
+import {imerc, merc, project, worldSize, zoomFactor} from './geo.js';
+import {focusRadius, lum, mix, shade, tint} from './render.js';
 // Module CMS.engines : tout ce fichier lui est privé, sauf les fonctions reprises en fin de fichier (utilisées par les autres fichiers ou par les tests).
 CMS.define('engines', () => {
 // ---------- Données OSM + Canvas (moteur Fichier) ----------
@@ -182,7 +186,7 @@ function drawVectors(ctx, r, data, view=st){
 }
 /** Bandeau du moteur Fichier : invite à importer tant qu'aucune donnée n'est chargée */
 function checkDataBanner(){
-  if(st.engine==='file') showBanner(!osmData,'Aucun fichier importé','Importer',()=>$('fileIn').click());
+  if(st.engine==='file') late.showBanner(!osmData,'Aucun fichier importé','Importer',()=>late.$('fileIn').click());
 }
 function netMsg(e){
   const m=(e&&e.message)||String(e);
@@ -297,49 +301,49 @@ function loadScript(src,ms,integrity){
 }
 /** Charge MapLibre (js/maplibre-loader.js) et reporte son état dans mlLib / mlCdn */
 async function loadMaplibre(){
-  if(mlLib!=='ok') mlLib='loading';
+  if(mlLib!=='ok') setMlLib('loading');
   const ok=await CMS.maplibre.load({consent});
-  mlLib=CMS.maplibre.state; mlCdn=CMS.maplibre.source;
+  setMlLib(CMS.maplibre.state); setMlCdn(CMS.maplibre.source);
   return ok;
 }
 /** Librairie arrivée après l'échec de toutes les sources (réseau lent) : la carte est relancée */
 addEventListener('cms:maplibre-ready',()=>{
-  mlLib='ok'; mlCdn=CMS.maplibre.source; mlFailMsg=''; showBanner(false); updateEngineUI();
-  if(st.engine==='maplibre') renderMap(true);
+  setMlLib('ok'); setMlCdn(CMS.maplibre.source); setMlFailMsg(''); late.showBanner(false); late.updateEngineUI();
+  if(st.engine==='maplibre') late.renderMap(true);
 });
 function mlFail(msg){
-  if(mlFailMsg) return; mlFailMsg=msg;
-  setStatus(msg,'err');
-  if(st.engine==='maplibre') showBanner(true,'Carte indisponible','Diagnostiquer',runDiagnostics);
+  if(mlFailMsg) return; setMlFailMsg(msg);
+  late.setStatus(msg,'err');
+  if(st.engine==='maplibre') late.showBanner(true,'Carte indisponible','Diagnostiquer',late.runDiagnostics);
 }
 const mlK = cssW => cssW/REF_W*st.stroke*zoomFactor(st.zoom);
 const mlZoom = cssW => st.zoom + Math.log2(cssW/REF_W);
 let mlSync=false;
 function initMaplibre(){
   if(mlMap || mlLib!=='ok') return !!mlMap;
-  if(!needConsent()){ setStatus('Carte en attente de votre accord','wait'); return false; }
+  if(!needConsent()){ late.setStatus('Carte en attente de votre accord','wait'); return false; }
   const w=ui.slotCss.w||300;
   try{
     mlStyledW=w;
-    mlMap=new CMS.maplibre.lib.Map({container:'mlMap',style:liveStyle(w),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
-      attributionControl:false,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,fadeDuration:0,renderWorldCopies:false});
-  }catch(e){ console.error(e); mlMap=null; return false; }
+    setMlMap(new CMS.maplibre.lib.Map({container:'mlMap',style:liveStyle(w),center:[st.center.lon,st.center.lat],zoom:mlZoom(w),
+      attributionControl:false,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,fadeDuration:0,renderWorldCopies:false}));
+  }catch(e){ console.error(e); setMlMap(null); return false; }
   mlMap.touchZoomRotate.disableRotation(); mlMap.keyboard.disableRotation();
   // carte masquée (mode Illustration) : cadre de largeur nulle, le zoom ne doit pas en être déduit
-  mlMap.on('move',()=>{ if(mlSync || st.mode==='illus' || !(ui.slotCss.w>0)) return; const cc=mlMap.getCenter(); st.center={lat:cc.lat,lon:cc.lng}; st.zoom=mlMap.getZoom()-Math.log2(ui.slotCss.w/REF_W); scheduleOver(); syncZoomUI(); });
+  mlMap.on('move',()=>{ if(mlSync || st.mode==='illus' || !(ui.slotCss.w>0)) return; const cc=mlMap.getCenter(); st.center={lat:cc.lat,lon:cc.lng}; st.zoom=mlMap.getZoom()-Math.log2(ui.slotCss.w/REF_W); late.scheduleOver(); late.syncZoomUI(); });
   mlMap.on('styleimagemissing',e=>onImageMissing(mlMap,e));
   // Fin de geste : les épaisseurs suivent le zoom par expressions ; seul le disque du quartier (rayon en px de l'affiche) est recalculé
   mlMap.on('moveend',()=>{ mlUpdateQuarter(); saveState(); });
-  mlMap.on('click',e=>{ if(ui.placing){ placeAt(e.lngLat.lat,e.lngLat.lng); } });
+  mlMap.on('click',e=>{ if(ui.placing){ late.placeAt(e.lngLat.lat,e.lngLat.lng); } });
   // Perte du contexte WebGL (mémoire graphique saturée, onglet en arrière-plan sur mobile) : MapLibre le rétablit seul,
   // l'interface le signale et l'export attend
-  mlMap.on('webglcontextlost',()=>{ ui.glLost=true; if(st.engine==='maplibre') setStatus('Carte GPU suspendue (mémoire graphique) : rétablissement…','wait'); });
-  mlMap.on('webglcontextrestored',()=>{ ui.glLost=false; mlRestyle(); if(st.engine==='maplibre') setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'); });
+  mlMap.on('webglcontextlost',()=>{ ui.glLost=true; if(st.engine==='maplibre') late.setStatus('Carte GPU suspendue (mémoire graphique) : rétablissement…','wait'); });
+  mlMap.on('webglcontextrestored',()=>{ ui.glLost=false; mlRestyle(); if(st.engine==='maplibre') late.setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'); });
   // Messages du moteur GPU seulement quand il est actif : sinon ils écraseraient l'état du moteur Fichier
-  mlMap.on('dataloading',()=>{ if(st.engine==='maplibre') setStatus('Chargement des tuiles…','busy'); });
-  mlMap.on('idle',()=>{ if(st.engine==='maplibre') setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'); CMS.perf.ready('carte GPU affichée'); CMS.perf.end('reglage','carte'); });
+  mlMap.on('dataloading',()=>{ if(st.engine==='maplibre') late.setStatus('Chargement des tuiles…','busy'); });
+  mlMap.on('idle',()=>{ if(st.engine==='maplibre') late.setStatus('Prêt · Vectoriel GPU (OpenFreeMap)'); CMS.perf.ready('carte GPU affichée'); CMS.perf.end('reglage','carte'); });
   let gotTiles=false;
-  mlMap.on('data',e=>{ if(e.dataType==='source' && e.sourceId==='omt' && e.isSourceLoaded){ gotTiles=true; if(mlFailMsg){ mlFailMsg=''; showBanner(false); } } });
+  mlMap.on('data',e=>{ if(e.dataType==='source' && e.sourceId==='omt' && e.isSourceLoaded){ gotTiles=true; if(mlFailMsg){ setMlFailMsg(''); late.showBanner(false); } } });
   mlMap.on('error',e=>{ const m=(e&&e.error&&e.error.message)||''; console.warn('MapLibre',m);
     if(!gotTiles && /fetch|network|AJAX|status|blocked|Load failed|CORS/i.test(m)) mlFail('Tuiles OpenFreeMap inaccessibles ('+netMsg(e.error)+')'); });
   setTimeout(()=>{ if(!gotTiles && mlMap && st.engine==='maplibre') mlFail('Les tuiles OpenFreeMap ne se chargent pas (15 s).'); },15000);
@@ -351,11 +355,11 @@ let mlReleaseT=0;
 function mlKeepAlive(active){
   if(active){ clearTimeout(mlReleaseT); mlReleaseT=0; return; }
   if(!mlMap || mlReleaseT) return;
-  const ms=(typeof TEST_HOOKS!=='undefined' && TEST_HOOKS && globalThis.__cmsTestConfig?.mlRelease) || ML_RELEASE_MS;
+  const ms=(typeof late.TEST_HOOKS!=='undefined' && late.TEST_HOOKS && globalThis.__cmsTestConfig?.mlRelease) || ML_RELEASE_MS;
   mlReleaseT=setTimeout(()=>{ mlReleaseT=0;
     if(st.engine==='maplibre' || !mlMap) return;
     try{ mlMap.remove(); }catch(e){ console.warn('MapLibre',e); }
-    mlMap=null; ui.glLost=false;
+    setMlMap(null); ui.glLost=false;
   },ms);
 }
 function mlUpdateView(){
@@ -455,3 +459,8 @@ async function renderMaplibreOffscreen(wPx,hPx,view=st){
 return {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest, mlQuery};
 });
 const {stitch, normalizeElements, parseOsm, vecCache, VEC_CACHE_MAX, VEC_CELL, drawVectors, checkDataBanner, netMsg, patTile, hatchTile, buildStyle, loadScript, loadMaplibre, mlZoom, initMaplibre, mlKeepAlive, mlUpdateView, mlRestyle, renderMaplibreOffscreen, setGlMaxTest} = CMS.engines;
+
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+Object.assign(late, {loadMaplibre, loadScript, netMsg});
+
+export {VEC_CACHE_MAX, buildStyle, checkDataBanner, drawVectors, hatchTile, initMaplibre, loadMaplibre, loadScript, mlKeepAlive, mlRestyle, mlUpdateView, mlZoom, netMsg, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, vecCache};

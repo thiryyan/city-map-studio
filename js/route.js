@@ -1,5 +1,5 @@
 /* City Map Studio — Itinéraire préparé avec une IA externe (issue #85), espace CMS.route.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé après features.js.
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).js.
  *
  * Comme pour l'illustration : l'application rédige le prompt (buildRoutePrompt), l'utilisateur le colle dans son IA (ChatGPT,
  * Gemini…) et ramène le GPX, en fichier ou collé tel quel (extractGpx tolère les phrases et les clôtures de code autour).
@@ -7,7 +7,11 @@
  * du lieu de l'affiche ou fait de longs tronçons rectilignes (étapes reliées en ligne droite).
  * Fonctions pures testées sans navigateur : tests/unit/route.test.mjs.
  */
-'use strict';
+import {late} from './core.js';
+import {saveState, st, ui} from './state.js';
+import {ratio, viewBounds} from './geo.js';
+import {$, changed, h} from './preview.js';
+import {fitRoute, parseGpx, renderRoute, toast} from './features.js';
 CMS.define('route', () => {
   // ---------- Fonctions pures ----------
   const KINDS=['walk','bike','car','trip'], STEPS_MAX=10, EXTRA_MAX=400;
@@ -143,7 +147,7 @@ CMS.define('route', () => {
     const o=$('routePromptOut'), t=buildRoutePrompt(st); if(o.value!==t) o.value=t;
   }
   function sync(){
-    setSeg('rpKind',P().kind); setSeg('rpLoop',P().loop?'1':'0'); setSeg('rpLang',P().lang);
+    late.setSeg('rpKind',P().kind); late.setSeg('rpLoop',P().loop?'1':'0'); late.setSeg('rpLang',P().lang);
     const x=$('rpExtra'); if(document.activeElement!==x && x.value!==P().extra) x.value=P().extra;
     syncPlaces(); update();
   }

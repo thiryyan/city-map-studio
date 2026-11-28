@@ -1,5 +1,5 @@
 /* City Map Studio — Modes illustrés : affiche de voyage façon vintage à partir d'une illustration importée.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html.
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html.
  *
  * L'application ne génère pas l'image : elle rédige un prompt pour l'IA de l'utilisateur (ChatGPT, Gemini…), qui pose
  * ses questions puis livre une illustration sans texte ni marge ; l'image importée est cadrée, retouchée, et le titre
@@ -7,7 +7,14 @@
  * demande et après accord, lire les tuiles de la carte ou interroger Wikipédia (option désactivée par défaut, CMS.wiki).
  * L'image n'est pas dans l'état (st) : elle est tenue ici (image source ré-encodée, copie réduite pour l'aperçu).
  */
-'use strict';
+import {CANVAS_MAX_PX, DEFAULT_STATE, DUOS, FONTS, FORMATS} from './config.js';
+import {V, needConsent, osmData, saveState, st, ui} from './state.js';
+import {clamp, clipMap, exportSpec, geom, posterDims, ratio, shapeD, strokeShape, textLine, viewBounds} from './geo.js';
+import {attributionText, contrast, dedLeading, dedLines, drawHalo, drawMarkers, drawOrnaments, drawText, fontOf, fontStr, hexA, noteFit, paint, tScale, textW} from './render.js';
+import {loadMaplibre} from './engines.js';
+import {$, changed, drawUnder, h, layoutPreview, poster, scheduleOver, slot, stage} from './preview.js';
+import {loadSaves, setOrient, setStatus, toast, updateLayoutUI} from './features.js';
+import {loadFonts, pressed, refreshCards, setSeg, showTab, syncFonts, syncInputs, updateEngineUI} from './ui.js';
 CMS.define('illus', () => {
   const C = CMS.illusConf;
   // ---------- Fonctions pures (testées sans navigateur : tests/unit/illus.test.mjs) ----------

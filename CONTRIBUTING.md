@@ -4,7 +4,7 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 
 ## Règles non négociables
 - **100 % open source** : aucune clé API, aucun service propriétaire (ni ArcGIS, ni Mapbox, ni Google Maps).
-- **HTML, CSS et JavaScript natifs**, ouvrables tels quels pour développer ; le site publié est construit par `npm run build` (`dist/` : un seul script et une feuille minifiés, `sw.js` généré ; dossier § 7.8), puis publié par la CI sur la branche `gh-pages` (§ 7.6). Sources : `index.html`, `css/app.css`, `js/*.js`. Chemins toujours relatifs (le site est servi sous `/city-map-studio/`). Scripts **classiques**, pas de module ES : l'application doit rester utilisable en `file://`. Dépendances embarquées dans `lib/` (MapLibre, polices), chacune avec sa licence.
+- **HTML, CSS et JavaScript natifs**, en **modules ES** (`js/main.js` et ses imports), servis en http pour développer (`npm run dev`, pas `file://`) ; le site publié est construit par `npm run build` (`dist/` : un seul script et une feuille minifiés, `sw.js` généré ; dossier § 7.8), puis publié par la CI sur la branche `gh-pages` (§ 7.6). Sources : `index.html`, `css/app.css`, `js/*.js`. Chemins toujours relatifs (le site est servi sous `/city-map-studio/`). Le site construit (`dist/`, un seul script classique) reste utilisable en `file://`. Dépendances embarquées dans `lib/` (MapLibre, polices), chacune avec sa licence.
 - **Mobile en priorité**, puis ordinateur. Interface en français.
 - `drawPoster(ctx, W, H, pass, mapFn)` est la **seule** fonction de rendu de l'affiche : l'aperçu et l'export doivent rester identiques.
 - Attributions : « © OpenStreetMap » (et « © OpenMapTiles » avec le moteur GPU) toujours inscrit sur l'affiche, mention complète active par défaut (`attributionText`) ; sources rappelées en légende sous l'aperçu, hors de l'affiche (`#mapCredit`). Licences ODbL et CC-BY 4.0.
@@ -26,7 +26,8 @@ Spécification complète : [`docs/dossier-technique.md`](docs/dossier-technique.
 
 ## Organisation
 - `index.html` : balisage, CSP et métadonnées seulement. `css/app.css` : styles. `js/*.js` : scripts chargés dans l'ordre (dossier, § 8.2), organisés en sections `// ---------- Titre ----------`. Le code exécuté au chargement d'un fichier ne doit utiliser que les fichiers précédents.
-- **Modules `CMS`** (`js/core.js`, chargé en premier) : un fichier déclare son code dans `CMS.define('nom', () => { …; return {publiques}; });` puis reprend ses seules fonctions publiques en tête de portée (`const {a, b} = CMS.nom;`) ; le reste lui est privé. Les fichiers se parlent par événements (`CMS.on` / `CMS.emit`, ex. `state:saved`) plutôt que par `typeof f === 'function'`. Le nombre de déclarations globales ne peut pas augmenter (`tests/globals.py`, plafond `tests/globals.max`, à abaisser quand il baisse). Une fonction pure gagne un test dans `tests/unit/`.
+- **Modules ES** (#102) : chaque fichier de `js/` importe ce qu'il utilise et exporte ce que les autres utilisent. Un fichier n'importe **que des fichiers chargés avant lui** (ordre des `import './x.js'` en tête de `js/main.js`) : sinon l'import crée un cycle et change l'ordre d'exécution. Pour appeler une fonction d'un fichier chargé après lui, il la lit dans le **registre `late`** (`js/core.js`), rempli par le fichier qui la définit (`Object.assign(late, {…})`) ; ces dépendances à l'envers sont plafonnées (`tests/globals.max`, à abaisser quand le nombre baisse). Une variable partagée ne se réaffecte que dans son module : les autres passent par un setter (`setMlMap`, `setOsmData`…). `npm run lint` (ESLint, `eslint.config.js`) signale tout nom non importé ou import réaffecté ; il tourne dans `tests/globals.py`.
+- **Modules `CMS`** (`js/core.js`) : `CMS.define('nom', () => { …; return {publiques}; })` range des fonctions sous `CMS.nom` ; les fichiers se parlent aussi par événements (`CMS.on` / `CMS.emit`, ex. `state:saved`). Une fonction pure gagne un test dans `tests/unit/` (chargeur `tests/unit/load.mjs` : modules réunis par esbuild, exports visibles par leur nom).
 - `window.__cms` expose l'état et les fonctions pour la console et les tests, seulement avec `?test` dans l'adresse (ou `localStorage['cms3.debug']='1'`).
 - `sw.js`, `manifest.webmanifest`, `icons/` : application installable et cache hors ligne.
 - `lib/` : MapLibre GL JS 4.7.1 et sa licence BSD-3. `lib/sky/` : données du ciel (d3-celestial, BSD-3), chargées seulement par le gabarit Ciel. Pour changer de version, remplacer les fichiers et mettre à jour `ML_VERSION`.
@@ -44,7 +45,8 @@ npm ci && npm run build         # site publié dans dist/ (Node 22)
 CMS_ROOT=dist python tests/run_all.py   # la suite sur dist/, comme la CI (npm test fait les deux)
 python tests/layouts.py          # captures des 11 gabarits (contrôle visuel, hors suite)
 python tests/make_og.py          # régénère icons/og-image.jpg (aperçu des liens partagés) avec le rendu actuel
-python -m http.server 8000       # aperçu local : http://localhost:8000
+npm run dev                      # aperçu des sources (modules ES) : http://localhost:8000 (python3 -m http.server)
+npm run lint                     # ESLint sur js/
 ```
 Variable optionnelle `CHROME=/chemin/vers/chrome` pour utiliser un Chrome ou Chromium installé. Le rôle et les critères de chaque test sont décrits dans le [catalogue des tests](docs/dossier-technique.md#92-catalogue-et-critères-dacceptation) (dossier, § 9.2) ; un nouveau test y est ajouté, ainsi que dans la liste `TESTS` de `tests/run_all.py`.
 

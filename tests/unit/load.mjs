@@ -1,12 +1,17 @@
-// Charge des scripts classiques de l'application dans un contexte isolé (node:vm), sans navigateur ni build.
-// Les API du navigateur utilisées au chargement sont remplacées par des bouchons minimaux.
-import { readFileSync } from 'node:fs';
+// Charge des modules de l'application dans un contexte isolé (node:vm), sans navigateur.
+// Les modules demandés (et leurs imports) sont réunis par esbuild en un script, puis exécutés dans le contexte ;
+// leurs exports y sont posés en variables globales, pour que les tests les évaluent par leur nom (#102).
+// Les API du navigateur utilisées au chargement sont remplacées par des bouchons minimaux. Les modules de js/ non
+// demandés (interface, rendu…) sont remplacés par des bouchons dont les exports valent undefined, comme lorsque ces
+// fichiers n'étaient pas chargés.
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { readFileSync } from 'node:fs';
+import { build } from 'esbuild';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 
-export function load(files, extra = {}) {
+export async function load(files, extra = {}) {
   const store = new Map();
   const ctx = vm.createContext({
     console, structuredClone, URL, URLSearchParams, EventTarget, Event, AbortController, setTimeout, clearTimeout,
@@ -18,8 +23,22 @@ export function load(files, extra = {}) {
     ...extra,
   });
   ctx.globalThis = ctx; ctx.window = ctx;
-  for (const f of ['js/core.js', ...files]) vm.runInContext(readFileSync(ROOT + f, 'utf8'), ctx, { filename: f });
+  const mods = ['js/core.js', ...files];
+  const entry = mods.map((f, i) => `import * as m${i} from ${JSON.stringify(ROOT + f)};`).join('\n')
+    + `\nObject.assign(globalThis, ${mods.map((_, i) => `m${i}`).join(', ')});`;
+  const wanted = new Set(mods.map(f => ROOT + f));
+  const stub = {
+    name: 'bouchons', setup(b) {
+      b.onLoad({ filter: /[\\/]js[\\/][\w-]+\.js$/ }, a => {
+        if (wanted.has(a.path)) return undefined;
+        const names = [...readFileSync(a.path, 'utf8').matchAll(/^export \{([^}]*)\};$/gm)].flatMap(m => m[1].split(',').map(n => n.trim()).filter(Boolean));
+        return { contents: names.length ? `export const ${names.map(n => `${n} = undefined`).join(', ')};` : '', loader: 'js' };
+      });
+    }
+  };
+  const { outputFiles } = await build({ stdin: { contents: entry, resolveDir: ROOT, loader: 'js' }, bundle: true, format: 'iife', write: false, logLevel: 'error', plugins: [stub] });
+  vm.runInContext(outputFiles[0].text, ctx, { filename: 'modules.js' });
   return ctx;
 }
-/** Évalue une expression dans le contexte (les déclarations de premier niveau des scripts y sont visibles) */
+/** Évalue une expression dans le contexte (les exports des modules chargés y sont visibles) */
 export const ev = (ctx, expr) => vm.runInContext(expr, ctx);

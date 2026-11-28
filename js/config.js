@@ -1,6 +1,6 @@
 /* City Map Studio — Constantes et réglages (thèmes, polices, gabarits, état par défaut).
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
-'use strict';
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+import {late} from './core.js';
 /* =========================================================================
    City Map Studio — 100 % open source
    Licence MIT © Contributeurs de City Map Studio (cf. LICENSE)
@@ -229,13 +229,13 @@ CMS.define('order', () => {
   /** Ordre valide (permutation complète de KEYS) ou null */
   const norm=v=>Array.isArray(v) && v.length===KEYS.length && KEYS.every(k=>v.includes(k)) ? [...v] : null;
   /** Clés triées selon l'ordre choisi (tri stable ; une clé hors de KEYS, comme la légende, reste en fin) ; sans ordre : inchangées */
-  function sort(keys, s=st){
+  function sort(keys, s=late.st){
     const O=s.lineOrder; if(!O) return keys;
     const r=k=>{ const i=O.indexOf(k); return i<0 ? 99 : i; };
     return keys.map((k,i)=>[k,i]).sort((a,b)=>r(a[0])-r(b[0]) || a[1]-b[1]).map(x=>x[0]);
   }
   /** Ordre affiché : celui choisi, sinon celui du gabarit (Polaroid : dédicace en tête ; modes illustrés : titre, puis bloc du bas) */
-  function current(s=st){
+  function current(s=late.st){
     if(s.lineOrder) return [...s.lineOrder];
     if(s.mode==='map' && s.layout==='polaroid') return ['dedication','names','title','date','coords','subtitle'];
     if(s.mode!=='map') return ['title','subtitle','dedication','names','date','coords'];
@@ -243,3 +243,5 @@ CMS.define('order', () => {
   }
   return {KEYS, norm, sort, current};
 });
+
+export {AMBIANCES, CANVAS_MAX_PX, COLOR_LABELS, DEFAULT_STATE, DUOS, EXPORT_MAX_DPI, FONTS, FONT_CATS, FONT_LIST, FORMATS, GL_TILE_MAX, GOLD, HW_CLASS, LAYOUTS, MARKERS, MARKER_BASE, MARKER_COLORS, ML_CDNS, ML_SRI, ML_VERSION, NOMINATIM, OCCASIONS, OFM_ATTRIBUTION, OFM_URL, PRESETS, REF_W, ROADS, STORE_KEY, TEXTURES, THEMES, THEME_CATS, WATERWAY_W};

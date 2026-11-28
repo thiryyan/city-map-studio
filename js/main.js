@@ -1,6 +1,32 @@
 /* City Map Studio — Démarrage.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
-'use strict';
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+// Ordre d'exécution des modules : celui des anciens scripts classiques (aucun import vers un fichier postérieur :
+// registre late de js/core.js), donc chaque fichier s'exécute après ceux dont il dépend
+import {late} from './core.js';
+import './core.js';
+import './config.js';
+import './maplibre-loader.js';
+import './geocoder.js';
+import './wiki.js';
+import './state.js';
+import './geo.js';
+import './render.js';
+import './engines.js';
+import './preview.js';
+import './features.js';
+import './route.js';
+import './ui.js';
+import './illus.js';
+import './export.js';
+import {AMBIANCES, FONTS, THEMES} from './config.js';
+import {V, consent, declineConsent, dlgCancel, giveConsent, initDialogs, mlLib, mlMap, needConsent, normState, osmData, st, ui, updateConsentInfo} from './state.js';
+import {dms, exportSpec, geom, posterDims} from './geo.js';
+import {CART_ROWS, altAz, attributionText, cartDed, contrast, dedLines, drawMarker, drawPoster, drawText, foilCtx, lum, markerOpts, metersPerPx, moonSun, planetsAt, skyTime, souvenirFoot, textW, typoFit} from './render.js';
+import {VEC_CACHE_MAX, buildStyle, drawVectors, hatchTile, loadMaplibre, parseOsm, patTile, renderMaplibreOffscreen, setGlMaxTest, stitch, vecCache} from './engines.js';
+import {$, changed, composePoster, drawOp, drawOver, drawUnder, h, layoutPreview, renderMap, scheduleOver, setActivePlace, stage, textureBase} from './preview.js';
+import {addPlace, applyAmbiance, applyConfig, applyOccasion, applySheet, decodeShare, deleteSave, downloadBackup, downloadConfig, encodeShare, fitRoute, importConfigFile, initSaves, initSheet, loadFromHash, loadSaves, maybeWelcome, openSaves, paletteOf, parseGpx, photoTheme, placeAt, restoreSave, saveCurrent, setDedWrap, setFileType, setFormat, setFraming, setLayout, setOrient, setSheet, setStatus, showBanner, toast, welcomeDone} from './features.js';
+import {applyUiScale, buildUI, frDate, hist, histSnap, isoFromFr, loadFonts, parseCoords, pressed, redo, refreshCards, refreshColors, resetAll, setEngine, showTab, syncInputs, undo, updateEngineUI, updateHistUI} from './ui.js';
+import {ENV, exportPoster, importText, runDiagnostics, showEnvWarning} from './export.js';
 // ---------- Démarrage ----------
 // Fonctions internes exposées (window.__cms) seulement pour les tests et le débogage : adresse avec ?test,
 // ou localStorage['cms3.debug']='1'. En usage normal, rien n'est exposé.
@@ -38,7 +64,6 @@ async function boot(){
   // Façade de test (#102, lot 4b) : les noms que les tests utilisent directement, exposés sur window en mode ?test
   // seulement. Le site construit n'a plus aucun nom global (script enveloppé dans une fonction) : cette liste est la
   // seule dépendance des tests envers la portée de l'application, et suivra la conversion en modules ES.
-  // Sources (scripts classiques) : ces noms sont déjà globaux ; seuls ceux absents de window sont ajoutés.
   if(TEST_HOOKS) Object.defineProperties(window, Object.fromEntries(Object.entries(Object.getOwnPropertyDescriptors({
     $, h, pressed, toast, setStatus, V, normState, THEMES, CART_ROWS,
     get st(){ return st; }, get consent(){ return consent; }, get foilCtx(){ return foilCtx; },
@@ -121,3 +146,8 @@ CMS.define('pwa', () => {
 });
 const {install: installPwa} = CMS.pwa;
 boot();
+
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+Object.assign(late, {TEST_HOOKS});
+
+export {TEST_HOOKS};

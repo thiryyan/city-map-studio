@@ -1,6 +1,9 @@
 /* City Map Studio — Rendu de l'affiche (drawPoster) : textes, repères, ciel — commun à l'aperçu et à l'export.
- * Script classique (pas de module ES : l'application s'ouvre aussi en file://), chargé dans l'ordre par index.html. */
-'use strict';
+ * Module ES (#102), importé par js/main.js ; réuni en un seul script par le build (scripts/build.mjs).html. */
+import {late} from './core.js';
+import {FONTS, MARKER_BASE} from './config.js';
+import {st, ui} from './state.js';
+import {D2R, clipMap, geom, placeCoordText, project, strokeShape, textLine, unproject, worldSize} from './geo.js';
 // ---------- Typographie ----------
 /** Police d'un rôle : 'title' (titre) ou texte (autres lignes). Une police manuscrite ne sert qu'aux lignes
  *  d'émotion (dédicace, noms, légendes des lieux) : sous-titre, coordonnées, date et légende prennent la police du titre. */
@@ -38,6 +41,7 @@ function textW(ctx, t, sp, size){
 function tScale(k){ return (st.textScale?.[k]??100)/100 * (st.textScaleAll??100)/100; }
 /** Réductions automatiques relevées pendant le rendu de l'aperçu (clé de ligne → facteur appliqué < 1) */
 let fitSink=null;
+const setFitSink = v => { fitSink = v; };   // modules ES : réaffectation depuis preview.js (#102)
 const FIT_WARN=0.9;   // en deçà de 10 % de réduction, pas d'avertissement
 function noteFit(k,f){ if(fitSink && k && f<FIT_WARN) fitSink[k]=Math.min(fitSink[k]??1,f); }
 /** Emprise des textes et repères, relevée pendant le rendu de l'aperçu quand ui.inkSink est un tableau (zone de sécurité, #60).
@@ -325,7 +329,7 @@ function drawMarkers(ctx, r, view, U, W, main){
 // Étoiles (magnitude ≤ 5,5) et constellations : lib/sky/sky-data.js (d3-celestial, BSD-3), chargé à la demande.
 let skyLoading=null;
 function ensureSky(){ if(window.SKY_DATA) return Promise.resolve(true);
-  if(!skyLoading) skyLoading=loadScript('lib/sky/sky-data.js',15000).then(()=>{ drawUnder(); refreshCards(); return true; }).catch(e=>{ skyLoading=null; toast('Données du ciel indisponibles : '+e.message,true); return false; });
+  if(!skyLoading) skyLoading=late.loadScript('lib/sky/sky-data.js',15000).then(()=>{ late.drawUnder(); late.refreshCards(); return true; }).catch(e=>{ skyLoading=null; late.toast('Données du ciel indisponibles : '+e.message,true); return false; });
   return skyLoading; }
 /** Instant observé, en ms UTC : date et heure locales du lieu, fuseau choisi (« auto » : celui de l'appareil à cette date) */
 function skyTime(s=st.sky){
@@ -345,7 +349,7 @@ function altAz(ra, dec, lat, lon, ms){
 // ---------- Ciel : Voie lactée, planètes, Lune ----------
 let mwLoading=null;
 function ensureMilkyWay(){ if(window.SKY_MW) return Promise.resolve(true);
-  if(!mwLoading) mwLoading=loadScript('lib/sky/milkyway.js',15000).then(()=>{ drawUnder(); return true; }).catch(e=>{ mwLoading=null; toast('Voie lactée indisponible : '+e.message,true); return false; });
+  if(!mwLoading) mwLoading=late.loadScript('lib/sky/milkyway.js',15000).then(()=>{ late.drawUnder(); return true; }).catch(e=>{ mwLoading=null; late.toast('Voie lactée indisponible : '+e.message,true); return false; });
   return mwLoading; }
 const OBLIQ=23.43928*D2R;
 /** Coordonnées écliptiques (degrés) → équatoriales {ra, dec} (degrés) */
@@ -684,3 +688,8 @@ function attributionText(sky){
   return '© contributeurs OpenStreetMap'+(gpu?' · OpenFreeMap © OpenMapTiles':'')+(sky?' · Ciel : d3-celestial (XHIP)':'');
 }
 function hexA(hex){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g=n>>8&255,b=n&255;return a=>`rgba(${r},${g},${b},${a})`}
+
+// Fonctions lues par des fichiers chargés avant celui-ci (registre late de js/core.js)
+Object.assign(late, {CART_ROWS, cartDed, souvenirFoot});
+
+export {CART_ROWS, POLA_ROWS, altAz, attributionText, cartDed, contrast, dedLeading, dedLines, drawHalo, drawMarker, drawMarkers, drawOrnaments, drawPoster, drawText, ensureSky, fitSink, focusRadius, foilCtx, fontOf, fontStr, hexA, lum, markerOpts, metersPerPx, mix, moonSun, noteFit, paint, planetsAt, setFitSink, shade, skyTime, souvenirFoot, tScale, textW, tint, typoFit};

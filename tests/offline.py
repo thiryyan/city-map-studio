@@ -9,7 +9,7 @@ avertissement d'aperçu intégré dans l'onglet Lieu ; aucune erreur de page.
 import pathlib, os, asyncio, struct
 from playwright.async_api import async_playwright
 T = pathlib.Path(__file__).resolve().parent
-ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent).resolve()   # site testé : source, ou dist/ (CI)
+ROOT = pathlib.Path(os.environ.get('CMS_ROOT') or T.parent / 'dist').resolve()   # site testé : dist/ (construit par run_all.py), ou CMS_ROOT
 APP = (ROOT / 'index.html').as_uri() + '?test'
 CHROME = os.environ.get('CHROME') or None   # Chrome/Chromium ; vide = Chromium de Playwright
 INIT = "try{localStorage.setItem('cms3.consent','1');localStorage.setItem('cms3.advOpen','1');localStorage.setItem('cms3.styleMoreOpen','1');localStorage.setItem('cms3.themeOpen','1');localStorage.setItem('cms3.welcomed','1')}catch(e){}"   # accord préalable donné (cf. tests/consent.py)

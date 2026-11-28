@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load, ev } from './load.mjs';
 
-const ctx = load(['js/config.js', 'js/maplibre-loader.js', 'js/geocoder.js', 'js/state.js', 'js/geo.js', 'js/illus.js']);
+const ctx = await load(['js/config.js', 'js/maplibre-loader.js', 'js/geocoder.js', 'js/state.js', 'js/geo.js', 'js/illus.js']);
 const J = expr => JSON.parse(JSON.stringify(ev(ctx, expr)));
 const S = patch => `Object.assign(structuredClone(DEFAULT_STATE), ${patch})`;
 
