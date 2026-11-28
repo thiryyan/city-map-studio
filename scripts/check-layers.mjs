@@ -42,8 +42,15 @@ for (const file of Object.keys(metafile.inputs).filter(f => f.startsWith('src/')
   const text = readFileSync(path.join(ROOT, file), 'utf8');
   for (const m of text.matchAll(WRITE)) writes.push([file, m[0].replace(/\s+/g, ' ').slice(0, 60)]);
 }
-if (process.argv.includes('--json')) console.log(JSON.stringify({imports: bad, late, writes}));
+// Taille des fichiers source : 40 Ko au plus (lot 2 de l'Horizon 1, #119) ; chaque fichier trop gros est signalé
+const MAX_KB = 40, big = [];
+for (const file of Object.keys(metafile.inputs).filter(f => f.startsWith('src/'))) {
+  const kb = readFileSync(path.join(ROOT, file)).length / 1024;
+  if (kb > MAX_KB) big.push([file, `${kb.toFixed(1)} Ko`, `plus de ${MAX_KB} Ko`]);
+}
+if (process.argv.includes('--json')) console.log(JSON.stringify({imports: bad, late, writes, big}));
 else {
   for (const [f, i, why] of bad) console.log(`  ${f} → ${i} (${why})`);
-  console.log(`  imports hors règle : ${bad.length} ; appels par le registre late : ${late.length} ; écritures directes de st : ${writes.length}`);
+  console.log(`  imports hors règle : ${bad.length} ; appels par le registre late : ${late.length} ; écritures directes de st : ${writes.length} ; fichiers de plus de ${MAX_KB} Ko : ${big.length}`);
+  for (const [f, kb] of big) console.log(`  ${f} : ${kb}`);
 }

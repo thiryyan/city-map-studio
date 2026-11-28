@@ -5,6 +5,7 @@ que des couches inférieures (scripts/check-layers.mjs, sur le graphe d'imports 
 tests/layers.max, qui ne peuvent que baisser jusqu'à 0 (lot 1 de l'Horizon 1) :
 - imports hors règle ;
 - appels par le registre « late » (supprimé au #118) ;
+- fichiers source de plus de 40 Ko (lot 2 de l'Horizon 1, #119) ;
 - écritures directes de l'état (st.x = …, Object.assign(st, …)…) hors de src/core/doc/ : toute écriture passe par
   update() de src/core/doc/store.ts, seul point d'écriture.
 Les noms utilisés sans import et les variables importées réaffectées sont refusés par TypeScript (tests/typecheck.py).
@@ -20,7 +21,8 @@ if r.returncode:
 d = json.loads(r.stdout)
 fails = []
 for key, label, items in [('imports', 'imports hors règle', d['imports']), ('late', 'appels par le registre late', d['late']),
-                          ('writes', "écritures directes de l'état hors du magasin", d['writes'])]:
+                          ('writes', "écritures directes de l'état hors du magasin", d['writes']),
+                          ('big', 'fichiers source de plus de 40 Ko', d['big'])]:
     n, cap = len(items), int(MAX[key])
     for it in items[:60]: print('  ', ' → '.join(it[:2]) + (f' ({it[2]})' if len(it) > 2 else ''))
     print(f'  {label} : {n} (plafond {cap})')
